@@ -1,0 +1,30 @@
+server:
+  app_port: 6789
+  tseries_servers:
+    - name: time_series
+      enabled: true
+      sources:
+        - name: source_time_series
+          type: pubsub
+          properties:
+            pubsub: core-pubsub
+            topics: ts
+      batch_queue:
+        name: queue_tseries
+        max_batching: 1000
+        max_pending_messages: 5
+        batching_max_flush_delay: 10
+api_config:
+  event_api_config:
+    pubsub_name: core-pubsub
+    store_name: core-state
+    raw_topic: raw
+    time_series_topic: ts
+    property_topic: property
+    relationship_topic: relation
+  entity_api_config:
+    table_name: entity
+    state_name: core-state
+    binding_name: entity
+logger:
+  output_json: true

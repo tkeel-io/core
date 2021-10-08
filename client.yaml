@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  labels:
+    app: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "client"
+    spec:
+      containers:
+      - name: client
+        image: curlimages/curl:latest
+        command: ["sleep", "10000"]

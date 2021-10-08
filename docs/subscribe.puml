@@ -1,0 +1,20 @@
+@startuml
+title seq_3
+
+participant Plubgin
+participant Kcore
+
+
+Plubgin->Kcore: 创建订阅(Subscribe)
+activate Kcore
+Kcore --> Kcore: 验证订阅请求是否合法
+Kcore -> Plubgin: Response
+deactivate Kcore
+
+
+Kcore -> Kcore: 执行Subscription
+
+
+
+
+@enduml

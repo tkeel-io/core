@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  labels:
+    app: core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core
+  template:
+    metadata:
+      labels:
+        app: core
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "core"
+        dapr.io/app-port: "6789"
+        dapr.io/app-protocol: "http"
+        dapr.io/log-level: "debug"
+        dapr.io/config: "core"
+    spec:
+      containers:
+      - name: core
+        image: tkeelio/core:0.0.1
+        ports:
+          - containerPort: 6789
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: core
+  namespace: keel-system
+  labels:
+    app: core
+spec:
+  selector:
+    app: core
+  ports:
+    - protocol: TCP
+      port: 6789
+      targetPort: 6789
+
+
+---
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: core
+  namespace: keel-system
+spec:
+  accessControl:
+    defaultAction: allow
+    trustDomain: "keel"
+    policies:
+      - appId: plugins
+        defaultAction: allow
+        trustDomain: 'keel'
+        namespace: "keel-system"
+      - appId: keel
+        defaultAction: allow
+        trustDomain: 'keel'
+        namespace: "keel-system"
+      - appId: client
+        defaultAction: deny
+        trustDomain: 'keel'
+        namespace: "keel-system"
+  httpPipeline:
+    handlers:
+      - name: core-oauth2-client
+        type: middleware.http.oauth2clientcredentials
+
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: core-oauth2-client
+  namespace: keel-system
+spec:
+  type: middleware.http.oauth2clientcredentials
+  version: v1
+  metadata:
+    - name: clientId
+      value: "core"
+    - name: clientSecret
+      value: "zhu88jie"
+    - name: scopes
+      value: "http://iothub.com"
+    - name: tokenURL
+      value: "http://plugins:8080/oauth2/token"
+    - name: headerName
+      value: "x-plugin-jwt"
+    - name: authStyle
+      value: 0
+

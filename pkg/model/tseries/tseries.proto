@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package tseries;
+
+option go_package = ".;tseries";
+
+import "google/protobuf/timestamp.proto";
+
+
+
+message TValue {
+    double value = 1;
+    google.protobuf.Timestamp timestamp = 2;
+}
+
+message Sample {
+    TValue value = 1;
+    map<string,string> tags = 2;
+}
+
+
+message SampleSequence {
+   repeated TValue values = 1;
+    map<string,string> tags = 2;
+}
+
+
+message SampleBundle {
+    repeated SampleSequence values = 1;
+}
+
+
+

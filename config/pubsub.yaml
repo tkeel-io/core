@@ -1,0 +1,23 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: core-pubsub
+spec:
+  type: pubsub.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: localhost:6379
+  - name: redisPassword
+    value: ""
+  - name: redisDB
+    value: 4
+  - name: publishingScopes
+    value: "core=raw,ts,property,relation"
+  - name: subscriptionScopes
+    value: "app2=raw"
+  - name: allowedTopics
+    value: "raw,ts,property,relation"
+scopes:
+  - kcore
+  - app2
