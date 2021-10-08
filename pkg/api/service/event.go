@@ -135,6 +135,9 @@ func (s *EventService) writeEvent(ctx context.Context, in *common.InvocationEven
 
 	pubsubTopic := ""
 	data, err := json.Marshal(ev)
+	if err != nil {
+		log.Error(err)
+	}
 	switch ev.Type {
 	case model.EventTypeRaw:
 		pubsubTopic = s.rawTopic

@@ -48,17 +48,17 @@ const (
 
 var (
 	errEntityIdRequired = entityFieldRequired("entityId")
-	errBodyMustBeJson   = errors.New("body must be json(kv).")
-	errEntityNotExist   = errors.New("entity not exists.")
-	errEntityInternal   = errors.New("entity internal error.")
+	errBodyMustBeJson   = errors.New("body must be json(kv)")
+	errEntityNotExist   = errors.New("entity not exists")
+	errEntityInternal   = errors.New("entity internal error")
 )
 
 func entityExisted(entityId string) error {
-	return errors.New(fmt.Sprintf("entity(%s)  exised.", entityId))
+	return fmt.Errorf("entity(%s)  exised.", entityId)
 }
 
 func entityFieldRequired(fieldName string) error {
-	return errors.New(fmt.Sprintf("entity field(%s) required.", fieldName))
+	return fmt.Errorf("entity field(%s) required", fieldName)
 }
 
 func internalFieldName(fieldName string) string {
@@ -386,6 +386,7 @@ func (this *EntityService) entityUpdate(ctx context.Context, in *common.Invocati
 		return
 	} else if err = this.daprClient.SaveState(ctx, this.stateName, entity.Id, out.Data); nil != err {
 		//redo binding...
+		fmt.Println("TODO")
 	}
 
 	return
@@ -466,6 +467,7 @@ func (this *EntityService) entityUpsert(ctx context.Context, in *common.Invocati
 		return
 	} else if err = this.daprClient.SaveState(ctx, this.stateName, entity.Id, out.Data); nil != err {
 		//redo binding...
+		fmt.Println("TODO")
 	}
 
 	return

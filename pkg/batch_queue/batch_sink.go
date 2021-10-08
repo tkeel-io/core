@@ -206,7 +206,7 @@ func (p *batchSink) internalSend(request *sendRequest) {
 	msg := request.msg
 
 	isFull := p.batchBuilder.Add(msg)
-	if isFull == true {
+	if isFull {
 		// The current batch is full.. flush it
 		p.internalFlushCurrentBatch()
 	}

@@ -15,6 +15,8 @@ import (
 	"go.uber.org/atomic"
 )
 
+type ContextKey string
+
 type TSeriesServer struct {
 	name    string
 	service common.Service
@@ -98,10 +100,10 @@ func (this *TSeriesServer) isReady() bool {
 }
 
 func childContext(ctx context.Context, name string) context.Context {
-	return context.WithValue(ctx, "__parent_name__", name)
+	return context.WithValue(ctx, ContextKey("__parent_name__"), name)
 }
 
 func batchHandler(msgs []interface{}) (err error) {
-	fmt.Println("batch handle messages, len(%d)", len(msgs))
+	fmt.Printf("batch handle messages, len(%d)", len(msgs))
 	return errors.New("not implement.")
 }
