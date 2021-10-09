@@ -1,13 +1,11 @@
 # Keel
 [English](README.md)
 
-![img.png](docs/images/img/architecture.png)
+![img.png](docs/images/architecture.png)
 
 TKeel 解决了构建高性能、模块化数据接入平台的关键要求。 它利用微服务架构模式并提供可拔插架构以及高速数据平面，帮助您快速构建健壮可复用的物联网解决方案。
 
 ## How it works
-
-![img.png](docs/images/img/layer.png)
 
  - Core 代表了一种模式，它包含一些数据组织形式以及处理方式。
     - Core 通过时序数据、属性数据、关系数据来构建不同的对象。节点的唯一性由 ID 来保证
