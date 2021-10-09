@@ -1,47 +1,35 @@
-# Keel
+# Core
 [English](README.md)
 
 ![img.png](docs/images/architecture.png)
 
-TKeel 解决了构建高性能、模块化数据接入平台的关键要求。 它利用微服务架构模式并提供可拔插架构以及高速数据平面，帮助您快速构建健壮可复用的物联网解决方案。
-
-## How it works
-
- - Core 代表了一种模式，它包含一些数据组织形式以及处理方式。
-    - Core 通过时序数据、属性数据、关系数据来构建不同的对象。节点的唯一性由 ID 来保证
-    - 通过 快照+订阅（Event数据） 来解决数据交换。
+Core通过api对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务
     
-    
-
 ## 实体
-
+物联网世界里的操作对象，以及这些对象组合抽象出来的对象，包括网关，设备，设备的聚合抽象等等。 
+实体具有属性，属性对一个实体某种信息的描述
 ## 关系
-关系是实体与实体之间的关系（包括自己与自己之间的关系）
-
-
-	// select sum(light1.a, light2.a) as house.a
-	// select light1.b as house.b
-	// select sum(light1.a, light1.b) as house.d
-	// select house.a as house.c
-	// select sum(2*light1.a, light2.a) as house.e
+关系是实体与实体之间的关系（包括自己与自己之间的关系，以及属性与属性的映射数据）
 
 
 1. 简单映射
     ```sql
-    select light1.b as house.b
+    select light1.a as house.a
     ``` 
 2. 计算+映射
     ```sql
-    select sum(light1.a, light2.a) as house.a
+    select sum(light1.b, light2.b) as house.b
     ```
 3. 多对一映射+计算
     ```sql
    	select sum(2*light1.a, light2.a) as house.e
-	
     ```
 4. 自身映射+计算
     ```sql
-	select sum(light1.a, light2.a) as house.a
+	select sum(light1.c, light1.d) as light1.e
     ```
-    
+
+## 数据的传递
+![img.png](docs/images/message_passing.png)
  
+ 蓝色线条代表上行，黑色代表下行
