@@ -9,4 +9,6 @@ const (
 	QueryType         = "type"
 )
 
+type ContextKey string
+
 var HeaderList = []string{HeaderSource, HeaderTopic, HeaderUser, HeaderMetadata, HeaderContentType}

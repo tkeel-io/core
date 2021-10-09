@@ -18,8 +18,8 @@ import (
 
 const (
 	//
-	EmptyEntityId = ""
-	resultNull    = "null"
+	//	EmptyEntityId = ""
+	resultNull = "null"
 
 	//entity table fields.
 	entityFieldId             = "id"
@@ -33,13 +33,13 @@ const (
 	entityDeleteIdFieldPrefix = "deleted_"
 
 	//entity status
-	entityStatusActive   = "active"
+	//	entityStatusActive   = "active"
 	entityStatusDeactive = "deactive"
 	entityStatusDeleted  = "deleted"
 
-	kvPair          = "%s='%s'"
-	whereText       = "where id='%s' and user_id='%s' and source='%s' and status != 'deleted'"
-	entityGetSql    = "select * from %s %s"
+	kvPair    = "%s='%s'"
+	whereText = "where id='%s' and user_id='%s' and source='%s' and status != 'deleted'"
+	//	entityGetSql    = "select * from %s %s"
 	entityUpdateSql = "update %s set %s, version=version+1 %s"
 	entityDeleteSql = "update %s set %s %s"
 	entityExistsSql = "select 1 from %s %s"
@@ -47,18 +47,18 @@ const (
 )
 
 var (
-	errEntityIdRequired = entityFieldRequired("entityId")
-	errBodyMustBeJson   = errors.New("body must be json(kv).")
-	errEntityNotExist   = errors.New("entity not exists.")
-	errEntityInternal   = errors.New("entity internal error.")
+	//	errEntityIdRequired = entityFieldRequired("entityId")
+	errBodyMustBeJson = errors.New("body must be json(kv).")
+	errEntityNotExist = errors.New("entity not exists.")
+	errEntityInternal = errors.New("entity internal error.")
 )
 
 func entityExisted(entityId string) error {
-	return errors.New(fmt.Sprintf("entity(%s)  exised.", entityId))
+	return fmt.Errorf("entity(%s)  exised.", entityId)
 }
 
 func entityFieldRequired(fieldName string) error {
-	return errors.New(fmt.Sprintf("entity field(%s) required.", fieldName))
+	return fmt.Errorf("entity field(%s) required.", fieldName)
 }
 
 func internalFieldName(fieldName string) string {
@@ -111,7 +111,7 @@ func (this *EntityService) RegisterService(daprService common.Service) error {
 	//register all handlers.
 	if err := daprService.AddServiceInvocationHandler("entities", this.entityHandler); nil != err {
 		return err
-	} else if daprService.AddServiceInvocationHandler("entitylist", this.entityList); nil != err {
+	} else if err = daprService.AddServiceInvocationHandler("entitylist", this.entityList); nil != err {
 		return err
 	}
 	return nil
@@ -136,6 +136,9 @@ func (this *EntityService) entityHandler(ctx context.Context, in *common.Invocat
 		return this.entityUpdate(ctx, in)
 	case http.MethodDelete:
 		return this.entityDelete(ctx, in)
+		// 临时
+	case http.MethodPatch:
+		return this.entityCreate(ctx, in)
 	default:
 	}
 
@@ -386,6 +389,7 @@ func (this *EntityService) entityUpdate(ctx context.Context, in *common.Invocati
 		return
 	} else if err = this.daprClient.SaveState(ctx, this.stateName, entity.Id, out.Data); nil != err {
 		//redo binding...
+		fmt.Println("TODO")
 	}
 
 	return
@@ -466,6 +470,7 @@ func (this *EntityService) entityUpsert(ctx context.Context, in *common.Invocati
 		return
 	} else if err = this.daprClient.SaveState(ctx, this.stateName, entity.Id, out.Data); nil != err {
 		//redo binding...
+		fmt.Println("TODO")
 	}
 
 	return

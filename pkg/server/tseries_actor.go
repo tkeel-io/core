@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/action"
 	tseries_action "github.com/tkeel-io/core/pkg/action/tseries"
 	batchqueue "github.com/tkeel-io/core/pkg/batch_queue"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/source"
-	"github.com/dapr/go-sdk/service/common"
 	"go.uber.org/atomic"
 )
 
@@ -98,10 +98,12 @@ func (this *TSeriesServer) isReady() bool {
 }
 
 func childContext(ctx context.Context, name string) context.Context {
-	return context.WithValue(ctx, "__parent_name__", name)
+	return context.WithValue(ctx, ContextKey("__parent_name__"), name)
 }
 
 func batchHandler(msgs []interface{}) (err error) {
-	fmt.Println("batch handle messages, len(%d)", len(msgs))
+	fmt.Printf("batch handle messages, len(%d)", len(msgs))
 	return errors.New("not implement.")
 }
+
+type ContextKey string

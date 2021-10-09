@@ -114,7 +114,7 @@ type batchSink struct {
 	processFn ProcessFn
 	state     sinkBatchState
 	sinkName  string
-	lock      sync.Mutex
+	//	lock      sync.Mutex
 
 	conf *BatchQueueConfig
 
@@ -152,7 +152,7 @@ func (this *BatchQueueConfig) GetMaxBatching() uint {
 	return uint(this.MaxBatching)
 }
 
-const defaultMaxBatching = 1000
+//const defaultMaxBatching = 1000
 const defaultMaxPendingMessages = 5
 const defaultBatchingMaxFlushDelay = 10 * time.Millisecond
 
@@ -195,7 +195,7 @@ func (p *batchSink) runEventsLoop() {
 				return
 			}
 
-		case _ = <-p.batchFlushTicker.C:
+		case <-p.batchFlushTicker.C:
 			p.internalFlushCurrentBatch()
 		}
 	}
@@ -206,7 +206,7 @@ func (p *batchSink) internalSend(request *sendRequest) {
 	msg := request.msg
 
 	isFull := p.batchBuilder.Add(msg)
-	if isFull == true {
+	if isFull {
 		// The current batch is full.. flush it
 		p.internalFlushCurrentBatch()
 	}
@@ -270,7 +270,7 @@ func (p *batchSink) internalClose(req *closeRequest) {
 }
 
 func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
-	//log.Debugf("Response receipt:%d", item.sequenceID)
+	log.Debugf("Response receipt:%d", item.sequenceID)
 	item.status = processIdle
 	item.err = err
 	p.sendCnt = p.sendCnt - int64(len(item.batchData))

@@ -52,7 +52,7 @@ func (this *BlockingQueueUnit) TestBlockingQueue() {
 	time.Sleep(100 * time.Millisecond)
 
 	select {
-	case _ = <-ch:
+	case <-ch:
 		this.Error("Should not have had a value at this point")
 	default:
 		// Good, no value yet
@@ -97,7 +97,7 @@ func (this *BlockingQueueUnit) TestBlockingQueueWaitWhenFull() {
 	time.Sleep(100 * time.Millisecond)
 
 	select {
-	case _ = <-ch:
+	case <-ch:
 		this.Error("Should not have had a value at this point")
 	default:
 		// Good, no value yet
@@ -106,7 +106,7 @@ func (this *BlockingQueueUnit) TestBlockingQueueWaitWhenFull() {
 	this.AssertEqual("test-1", q.Poll())
 
 	// Now the go-routine should have completed
-	_ = <-ch
+	<-ch
 	this.AssertEqual(3, q.Size())
 
 	this.AssertEqual("test-2", q.Take())

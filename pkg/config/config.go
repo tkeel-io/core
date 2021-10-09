@@ -76,8 +76,8 @@ func InitConfig(cfgFile string) {
 
 func onConfigChanged(in fsnotify.Event) {
 	//unmarshal
-	fmt.Println("watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
-	viper.Unmarshal(&config)
+	fmt.Printf("watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
+	_ = viper.Unmarshal(&config)
 	bytes, _ := json.MarshalIndent(config, "	", "	")
 	fmt.Println(string(bytes))
 }

@@ -2,8 +2,8 @@ package model
 
 import (
 	"context"
-	"github.com/tkeel-io/core/pkg/service"
 	"github.com/google/uuid"
+	"github.com/tkeel-io/core/pkg/service"
 	"time"
 )
 

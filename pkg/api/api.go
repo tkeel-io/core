@@ -2,11 +2,10 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/tkeel-io/core/pkg/logger"
 )
 
 var log = logger.NewLogger("core.api")
@@ -32,7 +31,7 @@ func NewAPIRegistry(ctx context.Context, service common.Service) (*APIRegistry, 
 func (this *APIRegistry) AddService(s IService) error {
 
 	if _, exists := this.services[s.Name()]; exists {
-		return errors.New(fmt.Sprintf("service %s aready existed.", s.Name()))
+		return fmt.Errorf("service %s aready existed.", s.Name())
 	}
 
 	this.services[s.Name()] = s
