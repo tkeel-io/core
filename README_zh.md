@@ -19,6 +19,22 @@ Core通过api对外提供属性搜索，时序查询，数据写入，数据查�
 ## 映射
 映射的操作包含两个部分: 写复制和计算更新
 ![img.png](docs/images/mapping.png)
+1. 简单映射
+    ```sql
+    select light1.a as house.a
+    ``` 
+2. 计算+映射
+    ```sql
+    select sum(light1.b, light2.b) as house.b
+    ```
+3. 多对一映射+计算
+    ```sql
+   	select sum(2*light1.a, light2.a) as house.e
+    ```
+4. 自身映射+计算
+    ```sql
+	select sum(light1.c, light1.d) as light1.e
+    ```
 ### 映射（写复制）
 自身属性的变更可能触发写复制到其他实体
 
@@ -67,22 +83,6 @@ insert into subB2 select A.* from pluginB
 
 
 
-1. 简单映射
-    ```sql
-    select light1.a as house.a
-    ``` 
-2. 计算+映射
-    ```sql
-    select sum(light1.b, light2.b) as house.b
-    ```
-3. 多对一映射+计算
-    ```sql
-   	select sum(2*light1.a, light2.a) as house.e
-    ```
-4. 自身映射+计算
-    ```sql
-	select sum(light1.c, light1.d) as light1.e
-    ```
 
 ## 数据的传递
 ![img.png](docs/images/message_passing.png)
