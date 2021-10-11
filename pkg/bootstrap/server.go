@@ -10,8 +10,8 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/server"
 
-	daprd "github.com/tkeel-io/core/pkg/service/http"
 	"github.com/dapr/go-sdk/service/common"
+	daprd "github.com/tkeel-io/core/pkg/service/http"
 	//daprd "github.com/dapr/go-sdk/service/http"
 )
 
@@ -56,7 +56,7 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	ser.apiRegistry = apiRegistry
 
 	//actor manager init.
-	ser.serverManager.Init()
+	_ = ser.serverManager.Init()
 
 	return &ser
 }

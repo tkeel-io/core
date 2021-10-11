@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/tkeel-io/core/pkg/config"
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/tkeel-io/core/pkg/config"
 )
 
 type ServerManager struct {
@@ -37,7 +37,7 @@ func (this *ServerManager) Init() error {
 	//init tseries srevers.
 	for _, serverCfg := range this.conf.Server.TSeriesServers {
 		if !serverCfg.Enabled {
-			fmt.Println("%s Not Enabled.", serverCfg.Name)
+			fmt.Printf("%s Not Enabled.", serverCfg.Name)
 		} else {
 			Server := NewTSeriesServer(childContext(this.ctx, this.name), serverCfg.Name, this.service)
 			if err := Server.Init(serverCfg); nil != err {

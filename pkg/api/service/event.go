@@ -9,9 +9,9 @@ import (
 
 	dapr "github.com/dapr/go-sdk/client"
 
+	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/model"
 	"github.com/tkeel-io/core/pkg/service"
-	"github.com/dapr/go-sdk/service/common"
 )
 
 type EventServiceConfig struct {
@@ -135,6 +135,9 @@ func (s *EventService) writeEvent(ctx context.Context, in *common.InvocationEven
 
 	pubsubTopic := ""
 	data, err := json.Marshal(ev)
+	if err != nil {
+		log.Error(err)
+	}
 	switch ev.Type {
 	case model.EventTypeRaw:
 		pubsubTopic = s.rawTopic

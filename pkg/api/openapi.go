@@ -27,7 +27,7 @@ func identifyHandler(rw http.ResponseWriter, r *http.Request) {
 
 	bytes, _ := json.Marshal(in)
 
-	rw.Write([]byte(bytes))
+	_, _ = rw.Write([]byte(bytes))
 }
 
 func statusHandler(rw http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func statusHandler(rw http.ResponseWriter, r *http.Request) {
 
 	bytes, _ := json.Marshal(in)
 
-	rw.Write([]byte(bytes))
+	_, _ = rw.Write([]byte(bytes))
 
 }
 

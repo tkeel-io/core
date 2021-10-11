@@ -6,9 +6,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/tkeel-io/core/pkg/source"
 	"github.com/dapr/go-sdk/service/common"
-	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/tkeel-io/core/pkg/source"
 )
 
 type PubSubMeta struct {
@@ -30,7 +29,7 @@ func OpenSource(ctx context.Context, metadata source.Metadata, service common.Se
 
 	var (
 		err  error
-		meta PubSubMeta
+		meta *PubSubMeta
 	)
 
 	if meta, err = getMeta(metadata); err != nil {
@@ -50,7 +49,7 @@ func (this *PubSubSource) String() string {
 	return this.name
 }
 
-func (this *PubSubSource) StartReceiver(handler SourceHandler) error {
+func (this *PubSubSource) StartReceiver(handler source.SourceHandler) error {
 	for _, topic := range this.topics {
 		if err := this.service.AddTopicEventHandler(
 			&common.Subscription{
@@ -80,20 +79,20 @@ func getMeta(metadata source.Metadata) (*PubSubMeta, error) {
 	}
 
 	meta.name = metadata.Name
-	meta.topics = strings.Split(meta.topics, ",")
+	meta.topics = strings.Split(meta.Topics, ",")
 
 	//meta.Name = metadata.Name
 
 	//check name
-	if "" == meta.pubsub {
-		return meta, errors.New("field Name required.")
+	if "" == meta.Pubsub {
+		return &meta, errors.New("field Name required.")
 	} else if 0 == len(meta.topics) {
-		return meta, errors.New("field Topics required.")
+		return &meta, errors.New("field Topics required.")
 	} else {
 		return &meta, nil
 	}
 }
 
 func init() {
-	source.Register(source.BaseSourceGenerator{SourceType: source.SourceTypePubSub, Generator: OpenSource})
+	source.Register(&source.BaseSourceGenerator{SourceType: source.SourceTypePubSub, Generator: OpenSource})
 }

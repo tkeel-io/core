@@ -16,7 +16,7 @@ func header2context(header http.Header, keyList []string) context.Context {
 	ctx := context.Background()
 	for _, key := range keyList {
 		if values := header.Values(key); len(values) > 0 {
-			ctx = context.WithValue(ctx, key, values[0])
+			ctx = context.WithValue(ctx, service.ContextKey(key), values[0])
 		}
 	}
 	return ctx

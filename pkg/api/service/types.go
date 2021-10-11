@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/tkeel-io/core/pkg/logger"
 )
 
 var log = logger.NewLogger("core.api.service")

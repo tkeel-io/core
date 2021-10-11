@@ -24,8 +24,8 @@ import (
 	"github.com/tkeel-io/core/pkg/bootstrap"
 	"github.com/tkeel-io/core/pkg/config"
 
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/spf13/cobra"
+	"github.com/tkeel-io/core/pkg/logger"
 )
 
 var cfgFile string
