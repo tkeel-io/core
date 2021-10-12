@@ -143,9 +143,14 @@ func (e *entity) GetTentacles(requestId, entityId string) []mapper.Tentacler {
 	e.lock.Lock(&requestId)
 	defer e.lock.Unlock()
 
-	//返回吸在entityId上的所有触手。
+	result := make([]mapper.Tentacler)
+	tentacles := e.indexTentacles[entities]
 
-	return []mapper.Tentacler{}
+	for _, tentacle := range tentacles {
+		result = append(result, tentacle.Copy())
+	}
+
+	return result
 }
 
 // GetProperty returns entity property.
