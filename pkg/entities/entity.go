@@ -45,6 +45,9 @@ func NewEntity(ctx context.Context, mgr *manager, entityId string, source string
 		KValues:       make(map[string]map[string]interface{}),
 	}
 
+	//default this properties.
+	et.KValues[entityId] = make(map[string]interface{})
+
 	return et, mgr.Load(et)
 }
 
@@ -102,8 +105,17 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 	defer e.lock.Unlock()
 
 	e.mappers[m.Id()] = m
-	e.indexTentacles[m.Id()] = m.Tentacles()
-	sourceEntities := m.SourceEntities() //include target entity id.
+
+	// generate indexTentacles again.
+	for _, mp := range e.mappers {
+		tentacles := m.Tentacles()
+		for _, tentacle := range tentacles {
+			e.indexTentacles[mp.TargetEntity()] =
+				append(e.indexTentacles[mp.TargetEntity()], tentacle)
+		}
+	}
+
+	sourceEntities := m.SourceEntities()
 	for _, entityId := range sourceEntities {
 		var et *entity
 		if et = e.getEntity(entityId); nil == et {
@@ -123,7 +135,9 @@ func (e *entity) TentacleModify(requestId, entityId string) {
 	e.lock.Lock(&requestId)
 	defer e.lock.Unlock()
 
-	e.indexTentacles[entityId] = tentacles
+	if e.Id != entityId {
+		e.indexTentacles[entityId] = tentacles
+	}
 
 	//generate tentacles again.
 	e.tentacles = make(map[string][]mapper.Tentacler)
@@ -134,7 +148,6 @@ func (e *entity) TentacleModify(requestId, entityId string) {
 			}
 		}
 	}
-
 }
 
 // GetTentacles returns tentacles.
@@ -143,19 +156,23 @@ func (e *entity) GetTentacles(requestId, entityId string) []mapper.Tentacler {
 	e.lock.Lock(&requestId)
 	defer e.lock.Unlock()
 
-	result := make([]mapper.Tentacler)
-	tentacles := e.indexTentacles[entities]
+	tentacles := e.indexTentacles[entityId]
+	result := make([]mapper.Tentacler, len(tentacles))
 
-	for _, tentacle := range tentacles {
-		result = append(result, tentacle.Copy())
+	for index, tentacle := range tentacles {
+		result[index] = tentacle.Copy()
 	}
 
 	return result
 }
 
 // GetProperty returns entity property.
-func (e *entity) GetProperty(string) interface{} {
-	panic("implement me.")
+func (e *entity) GetProperty(key string) interface{} {
+
+	e.lock.Lock(&requestId)
+	defer e.lock.Unlock()
+
+	return e.kvalues[e.Id][key]
 }
 
 // SetProperty set entity property.

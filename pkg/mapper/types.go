@@ -1,40 +1,12 @@
 package mapper
 
-/*
+import "fmt"
 
-MQL:
-	select
-		entity1.property1 as property1,
-		entity2.property2 as property2,
-		entity1.property3 + entity2.property3 as property3,
-	from
-		entity3;
-
-Parse:
-	TargetEntity() returns:
-		entity3
-	SourceEntities() returns:
-		entity1, entity2
-
-Input:
-	```{
-		"entity3": {
-			"property1": "",
-			"property2": "",
-			"property3": ""
-		}
-		"entity1": {
-			"property1": "",
-			"property2": "",
-			"property3": ""
-		}
-		"entity2": {
-			"property1": "",
-			"property2": "",
-			"property3": ""
-		}
-	}```
-*/
+const (
+	TentacleTypeUndefine = "undefine"
+	TentacleTypeEntity   = "entity"
+	TentacleTypeMapper   = "mapper"
+)
 
 type Mapper interface {
 	// Id returns mapper id.
@@ -62,4 +34,10 @@ type Tentacler interface {
 	TargetId() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).
 	Items() []string
+	// Copy duplicate a mapper.
+	Copy() Tentacler
+}
+
+func GenTentacleKey(entityId, propertyKey string) string {
+	return fmt.Sprintf("%s#%s", entityId, propertyKey)
 }
