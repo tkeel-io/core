@@ -10,6 +10,10 @@ Core通过api对外提供属性搜索，时序查询，数据写入，数据查�
 
 实体具有属性，属性对一个实体某种信息的描述  
 
+1. 内置属性
+2. 映射属性
+3. 自身属性
+
 ## actor
 实体在程序中的存在形式，内存中存储了自己的属性，以及其他实体映射过来的属性
 
@@ -52,26 +56,29 @@ Core通过api对外提供属性搜索，时序查询，数据写入，数据查�
 3. 周期订阅（周期性上报所有属性）
 
 
-每个plugin可以申请一个pub的topic，用于向core发送消息
-可以申请3（？）个以内sub的topic，用于从core订阅消息
-
-pluginA：
-pubA
-subA1，subA2， subA3
-
-pluginB
-pubB
-subB1, subB2, subB3
-
-
+每个plugin在注册的时候自动创建一个与core交互的pubsub, topic统一为pubcore，subcore，只有core与改plugin有相关权限
+比如
+pluginA: a-pubsub
+pluginB: b-pubsub
 
 ### 长期订阅
 
-insert into subB1 select * from pluginA
+订阅才有类sql语句表达，如何体现不同的订阅方式，待定
 
-insert into subB1 select A.a from pluginA
+insert into pluginB select * from pluginA
 
-insert into subB2 select A.* from pluginB
+insert into pluginB select A.a from pluginA
+
+insert into pluginB select A.* from pluginB
+
+订阅分为三步
+1. 筛选数据
+2. 数据计算和变换
+3. 发送数据
+
+对于订阅的实现，有两种方式待定
+1. 和映射一样在实体内部进行
+2. 作为一个独立的actor运行
 
 
 ### 临时订阅
@@ -96,7 +103,11 @@ insert into subB2 select A.* from pluginB
 ### 消息通道
 
 ![img.png](docs/images/level1.png)
-作为消息通道，每个连接为一个实体，只有一个二进制的属性，没有关系，没有映射，只需要支持订阅就可以
+
+1. 作为消息通道，每个连接为一个实体，除内置属性外只有一个二进制的属性，没有关系，没有映射，需要支持订阅
+2. 实体内置属性的变更
+3. 二进制属性的解析为多个属性
+4. 审计
 
 
 实体 + 订阅
