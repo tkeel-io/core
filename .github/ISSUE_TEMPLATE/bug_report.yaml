@@ -61,11 +61,11 @@ body:
       placeholder: ex. email@example.com
     validations:
       required: false
-    - type: checkboxes
-      id: terms
-      attributes:
-        label: Code of Conduct
-        description: By submitting this issue, you agree to follow our [core](https://github.com/tkeel-io/core)
-        options:
-          - label: I agree to follow this project
-            required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [core](https://github.com/tkeel-io/core)
+      options:
+        - label: I agree to follow this project
+          required: false
