@@ -44,19 +44,11 @@ body:
       render: shell
     validations:
       required: false
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [core](https://github.com/tkeel-io/core)
-      options:
-        - label: I agree to follow this project's Code of Conduct
-          required: true
   - type: textarea
     id: other
     attributes:
       label: Other
-      description: Anything else you would like to tell us?
+      description: (Option) Anything else you would like to tell us?
       placeholder: We are good listeners.
       value: "None"
     validations:
@@ -65,7 +57,15 @@ body:
     id: contact
     attributes:
       label: Contact Details
-      description: How can we get in touch with you if we need more info?
+      description: (Option) How can we get in touch with you if we need more info?
       placeholder: ex. email@example.com
     validations:
       required: false
+    - type: checkboxes
+      id: terms
+      attributes:
+        label: Code of Conduct
+        description: By submitting this issue, you agree to follow our [core](https://github.com/tkeel-io/core)
+        options:
+          - label: I agree to follow this project
+            required: false
