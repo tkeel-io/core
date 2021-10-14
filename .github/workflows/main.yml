@@ -22,7 +22,6 @@ jobs:
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
           version: v1.42
-
   test_amd64:
     name: Test in ${{ matrix.target_os }}_${{ matrix.target_arch }}
     runs-on: ${{ matrix.os }}
@@ -36,7 +35,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macOS-latest ]
-        go: [1.17.2, 1.16, 1.15]
+        go: [ 1.17.2, 1.16, 1.15 ]
         target_arch: [ amd64 ]
         include:
           - os: ubuntu-latest
@@ -54,12 +53,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Run make go.mod check-diff
-        if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
+        if: matrix.target_os == 'linux'
         run: git diff --exit-code ./go.mod
       - name: run test in widnows
-        if: matrix.target_arch == 'amd64' && matrox.target_os == 'windows'
+        if: matrox.target_os == 'windows'
         run: go test -v -cover -gcflags=all=-l -coverprofile=coverage.out .\...
-      - name: run test
+      - name: run tests
         if: matrix.target_os != 'windows'
         run: go test -v -cover -gcflags=all=-l -coverprofile=coverage.out ./...
   test_ARM64:
@@ -67,16 +66,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [ lint ]
     env:
-      GOVER: ${{ matrix.go }}
-      GOOS: ${{ matrix.target_os }}
-      GOARCH: ${{ matrix.target_arch }}
       GOPROXY: https://proxy.golang.org
-      ARCHIVE_OUTDIR: dist/archives
     strategy:
       matrix:
         os: [ self-hosted, linux, ARM64 ]
         go: [ 1.17.2, 1.16, 1.15 ]
-        target_arch: [ arm64 ]
       fail-fast: false
     steps:
       - name: Set up Go ${{ matrix.go }}
@@ -86,14 +80,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
       - name: Run make go.mod check-diff
-        if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
+        if: matrix.target_os == 'linux'
         run: git diff --exit-code ./go.mod
-      - name: run test
+      - name: run tests
         run: go test -v -cover -gcflags=all=-l -coverprofile=coverage.out ./...
   build:
     name: Build ${{ matrix.target_os }}_${{ matrix.target_arch }} binaries
     runs-on: ${{ matrix.os }}
-    needs: [lint, test]
+    needs: [ lint, test ]
     env:
       GOVER: 1.17.2
       GOOS: ${{ matrix.target_os }}
