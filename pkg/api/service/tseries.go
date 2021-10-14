@@ -17,14 +17,14 @@ func NewTimeSeriesService() *TimeSeriesService {
 }
 
 // Name return the name.
-func (this *TimeSeriesService) Name() string {
+func (s *TimeSeriesService) Name() string {
 	return "time_series"
 }
 
 // RegisterService register some method
-func (this *TimeSeriesService) RegisterService(daprService common.Service) error {
-	//register all handlers.
-	if err := daprService.AddServiceInvocationHandler("echo", this.Echo); nil != err {
+func (s *TimeSeriesService) RegisterService(daprService common.Service) error {
+	// register all handlers.
+	if err := daprService.AddServiceInvocationHandler("echo", s.Echo); nil != err {
 		log.Error("add service handler failed.", err)
 		return err
 	}
@@ -32,7 +32,7 @@ func (this *TimeSeriesService) RegisterService(daprService common.Service) error
 }
 
 // Echo test for RegisterService.
-func (this *TimeSeriesService) Echo(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+func (s *TimeSeriesService) Echo(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 
 	if in == nil {
 		err = errors.New("nil invocation parameter")

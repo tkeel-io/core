@@ -18,8 +18,8 @@ import (
 type Server struct {
 	conf          *config.Config
 	daprService   common.Service
-	apiRegistry   *api.APIRegistry
-	serverManager *server.ServerManager
+	apiRegistry   *api.Registry
+	serverManager *server.Manager
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -30,16 +30,16 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// create a Dapr service server
-	api.SetDefaultPluginId(conf.Server.AppId)
+	api.SetDefaultPluginID(conf.Server.AppID)
 	address := fmt.Sprintf(":%d", conf.Server.AppPort)
-	daprService := daprd.NewServiceWithMux(address, api.NewOpenApiServeMux())
+	daprService := daprd.NewServiceWithMux(address, api.NewOpenAPIServeMux())
 
 	ser := Server{
 		ctx:           ctx,
 		cancel:        cancel,
 		conf:          conf,
 		daprService:   daprService,
-		serverManager: server.NewServerManager(ctx, daprService, conf),
+		serverManager: server.NewManager(ctx, daprService, conf),
 	}
 
 	//create a api registry.
@@ -73,7 +73,7 @@ func (this *Server) Run() error {
 
 func (this *Server) Close() {}
 
-func initApiRegistry(apiRegistry *api.APIRegistry, apiConfig *config.ApiConfig) error {
+func initApiRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
 
 	var (
 		err       error
@@ -83,12 +83,12 @@ func initApiRegistry(apiRegistry *api.APIRegistry, apiConfig *config.ApiConfig) 
 
 	// register event api.
 	if eventApi, err = service.NewEventService(&service.EventServiceConfig{
-		RawTopic:          apiConfig.EventApiConfig.RawTopic,
-		TimeSeriesTopic:   apiConfig.EventApiConfig.TimeSeriesTopic,
-		PropertyTopic:     apiConfig.EventApiConfig.PropertyTopic,
-		RelationShipTopic: apiConfig.EventApiConfig.RelationShipTopic,
-		StoreName:         apiConfig.EventApiConfig.StoreName,
-		PubsubName:        apiConfig.EventApiConfig.PubsubName,
+		RawTopic:          apiConfig.EventAPIConfig.RawTopic,
+		TimeSeriesTopic:   apiConfig.EventAPIConfig.TimeSeriesTopic,
+		PropertyTopic:     apiConfig.EventAPIConfig.PropertyTopic,
+		RelationShipTopic: apiConfig.EventAPIConfig.RelationShipTopic,
+		StoreName:         apiConfig.EventAPIConfig.StoreName,
+		PubsubName:        apiConfig.EventAPIConfig.PubsubName,
 	}); nil != err {
 		return err
 	}
@@ -104,9 +104,9 @@ func initApiRegistry(apiRegistry *api.APIRegistry, apiConfig *config.ApiConfig) 
 
 	//init entity api
 	if entityApi, err = service.NewEntityService(&service.EntityServiceConfig{
-		TableName:   apiConfig.EntityApiConfig.TableName,
-		StateName:   apiConfig.EntityApiConfig.StateName,
-		BindingName: apiConfig.EntityApiConfig.BindingName,
+		TableName:   apiConfig.EntityAPIConfig.TableName,
+		StateName:   apiConfig.EntityAPIConfig.StateName,
+		BindingName: apiConfig.EntityAPIConfig.BindingName,
 	}); nil != err {
 		return err
 	}

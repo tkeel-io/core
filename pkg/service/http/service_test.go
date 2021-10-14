@@ -21,6 +21,7 @@ func TestSettingOptions(t *testing.T) {
 	w := httptest.NewRecorder()
 	setOptions(w, req)
 	resp := w.Result()
+	defer resp.Body.Close()
 	assert.NotNil(t, resp)
 	assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 	assert.Equal(t, "POST,OPTIONS", resp.Header.Get("Access-Control-Allow-Methods"))
@@ -32,6 +33,7 @@ func testRequest(t *testing.T, s *Server, r *http.Request, expectedStatusCode in
 	rr := httptest.NewRecorder()
 	s.mux.ServeHTTP(rr, r)
 	rez := rr.Result()
+	defer rez.Body.Close()
 	assert.NotNil(t, rez)
 	assert.Equal(t, expectedStatusCode, rez.StatusCode)
 }

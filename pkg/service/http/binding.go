@@ -10,7 +10,7 @@ import (
 	"github.com/dapr/go-sdk/service/common"
 )
 
-// AddBindingInvocationHandler appends provided binding invocation handler with its route to the service
+// AddBindingInvocationHandler appends provided binding invocation handler with its route to the service.
 func (s *Server) AddBindingInvocationHandler(route string, fn func(ctx context.Context, in *common.BindingEvent) (out []byte, err error)) error {
 	if route == "" {
 		return fmt.Errorf("binding route required")
@@ -35,18 +35,16 @@ func (s *Server) AddBindingInvocationHandler(route string, fn func(ctx context.C
 				content = body
 			}
 
-			// assuming Dapr doesn't pass multiple values for key
+			// assuming Dapr doesn't pass multiple values for key.
 			meta := map[string]string{}
 			for k, values := range r.Header {
-				// TODO: Need to figure out how to parse out only the headers set in the binding + Traceparent
-				// if k == "raceparent" || strings.HasPrefix(k, "dapr") {
+				// TODO: Need to figure out how to parse out only the headers set in the binding + Traceparent.
 				for _, v := range values {
 					meta[k] = v
 				}
-				// }
 			}
 
-			// execute handler
+			// execute handler.
 			in := &common.BindingEvent{
 				Data:     content,
 				Metadata: meta,

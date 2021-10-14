@@ -26,7 +26,6 @@ package batchqueue
 import (
 	"context"
 	"errors"
-
 	"sync"
 	"time"
 
@@ -80,21 +79,21 @@ type pendingItem struct {
 	err        error
 }
 
-func (item *pendingItem) GetSequenceId() uint64 {
-	return item.sequenceID
+func (pending *pendingItem) GetSequenceId() uint64 {
+	return pending.sequenceID
 }
 
-func (pi *pendingItem) Callback() {
+func (pending *pendingItem) Callback() {
 	// lock the pending item
-	pi.Lock()
-	defer pi.Unlock()
-	for _, fn := range pi.callback {
-		fn(pi.sequenceID, pi.err)
+	pending.Lock()
+	defer pending.Unlock()
+	for _, fn := range pending.callback {
+		fn(pending.sequenceID, pending.err)
 	}
 }
 
-func (pi *pendingItem) Release() {
-	pi.batchData = nil
+func (pending *pendingItem) Release() {
+	pending.batchData = nil
 }
 
 type CallbackFn func(sequenceID uint64, e error)
@@ -108,7 +107,6 @@ type batchSink struct {
 	// Channel where app is posting messages to be published
 	eventsChan chan interface{}
 
-	//pendingQueue
 	pendingQueue BlockingQueue
 
 	processFn ProcessFn
@@ -152,14 +150,15 @@ func (this *BatchQueueConfig) GetMaxBatching() uint {
 	return uint(this.MaxBatching)
 }
 
-//const defaultMaxBatching = 1000
-const defaultMaxPendingMessages = 5
-const defaultBatchingMaxFlushDelay = 10 * time.Millisecond
+const (
+	defaultMaxPendingMessages    = 5
+	defaultBatchingMaxFlushDelay = 10 * time.Millisecond
+)
 
 func NewBatchSink(ctx context.Context, conf *BatchQueueConfig) (*batchSink, error) {
 
 	if nil == conf {
-		return nil, errors.New("creturnonfiguration required.")
+		return nil, errors.New("reconfiguration required")
 	}
 
 	p := &batchSink{
@@ -273,7 +272,7 @@ func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
 	log.Debugf("Response receipt:%d", item.sequenceID)
 	item.status = processIdle
 	item.err = err
-	p.sendCnt = p.sendCnt - int64(len(item.batchData))
+	p.sendCnt -= int64(len(item.batchData))
 
 	for {
 		pi, ok := p.pendingQueue.Peek().(*pendingItem)
@@ -282,7 +281,7 @@ func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
 			break
 		}
 		if pi.status == processInProgress {
-			//p.log.Bg().Debug("Response receipt unexpected",
+			// p.log.Bg().Debug("Response receipt unexpected",
 			//	logf.Any("pendingSequenceId", pi.sequenceID),
 			//	logf.Any("responseSequenceId", item.sequenceID))
 			break

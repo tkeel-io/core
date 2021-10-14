@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/action"
-	tseries_action "github.com/tkeel-io/core/pkg/action/tseries"
-	batchqueue "github.com/tkeel-io/core/pkg/batch_queue"
+	tseriesaction "github.com/tkeel-io/core/pkg/action/tseries"
+	batchq "github.com/tkeel-io/core/pkg/batch_queue"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/source"
 	"go.uber.org/atomic"
 )
@@ -19,7 +21,7 @@ type TSeriesServer struct {
 	name    string
 	service common.Service
 	sources []source.ISource
-	queue   batchqueue.BatchSink
+	queue   batchq.BatchSink
 	action  action.IAction
 
 	ready atomic.Bool
@@ -27,7 +29,6 @@ type TSeriesServer struct {
 }
 
 func NewTSeriesServer(ctx context.Context, name string, service common.Service) *TSeriesServer {
-
 	return &TSeriesServer{
 		ctx:     ctx,
 		name:    name,
@@ -35,66 +36,66 @@ func NewTSeriesServer(ctx context.Context, name string, service common.Service) 
 	}
 }
 
-func (this *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
+func (t *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
 
 	var (
 		err error
 	)
 
-	//open sources
 	if len(serverConfig.Sources) == 0 {
-		return errors.New("server has no source.")
+		return errors.New("server has no source")
 	}
 
 	for _, sourceCfg := range serverConfig.Sources {
-
+		// open sources
 		var sourceInst source.ISource
 		meta := source.Metadata{Type: sourceCfg.Type, Name: sourceCfg.Name, Properties: sourceCfg.Properties}
-		sourceInst, err = source.OpenSource(childContext(this.ctx, this.name), meta, this.service)
+		sourceInst, err = source.OpenSource(childContext(t.ctx, t.name), meta, t.service)
 		if nil != err {
 			return err
 		}
 
-		this.sources = append(this.sources, sourceInst)
+		t.sources = append(t.sources, sourceInst)
 	}
 
-	//create batch queue.
+	// create batch queue.
 	queueCfg := serverConfig.BatchQueue
-	if this.queue, err = batchqueue.NewBatchSink(childContext(this.ctx, this.name), &batchqueue.BatchQueueConfig{
+	t.queue, err = batchq.NewBatchSink(childContext(t.ctx, t.name), &batchq.BatchQueueConfig{
 		Name:                  queueCfg.Name,
 		DoSinkFn:              batchHandler,
 		MaxBatching:           queueCfg.MaxBatching,
 		MaxPendingMessages:    queueCfg.MaxPendingMessages,
 		BatchingMaxFlushDelay: time.Millisecond * queueCfg.BatchingMaxFlushDelay,
-	}); nil != err {
-		return err
+	})
+	if err != nil {
+		return errors.Unwrap(err)
 	}
 
-	//create action
-	this.action = tseries_action.NewAction(childContext(this.ctx, this.name), fmt.Sprintf("%s.action", this.name), this.queue)
+	// create action
+	t.action = tseriesaction.NewAction(childContext(t.ctx, t.name), fmt.Sprintf("%s.action", t.name), t.queue)
 
-	this.ready.Swap(true)
+	t.ready.Swap(true)
 
 	return nil
 }
 
-func (this *TSeriesServer) Run() error {
+func (t *TSeriesServer) Run() error {
 
-	if !this.isReady() {
+	if !t.isReady() {
 		return errors.New("server not ready.")
 	}
 
-	for _, s := range this.sources {
-		if err := s.StartReceiver(this.action.Invoke); nil != err {
-			return err
+	for _, s := range t.sources {
+		if err := s.StartReceiver(t.action.Invoke); nil != err {
+			return errors.Unwrap(err)
 		}
 	}
 
 	return nil
 }
 
-func (this *TSeriesServer) isReady() bool {
-	return this.ready.Load()
+func (t *TSeriesServer) isReady() bool {
+	return t.ready.Load()
 }
 
 func childContext(ctx context.Context, name string) context.Context {
@@ -102,8 +103,8 @@ func childContext(ctx context.Context, name string) context.Context {
 }
 
 func batchHandler(msgs []interface{}) (err error) {
-	fmt.Printf("batch handle messages, len(%d)", len(msgs))
-	return errors.New("not implement.")
+	print.FailureStatusEvent(os.Stderr, "batch handle messages, len(%d)", len(msgs))
+	return errors.New("not implement")
 }
 
 type ContextKey string

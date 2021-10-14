@@ -4,11 +4,13 @@ go 1.16
 
 require (
 	github.com/dapr/go-sdk v1.2.0
+	github.com/fatih/color v1.7.0
 	github.com/fsnotify/fsnotify v1.4.9
-	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.1.2
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.1.1 // indirect
+	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.2.0

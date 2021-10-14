@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -69,7 +71,7 @@ func (s *Server) AddTopicEventHandler(sub *common.Subscription, fn func(ctx cont
 			// deserialize the event
 			var in common.TopicEvent
 			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-				fmt.Println(err.Error())
+				print.FailureStatusEvent(os.Stdout, err.Error())
 				http.Error(w, err.Error(), PubSubHandlerDropStatusCode)
 				return
 			}

@@ -12,12 +12,12 @@ import (
 var (
 	defaultJSONOutput  = false
 	defaultOutputLevel = "info"
-	defaultAppId       = "kcore"
+	defaultAppID       = "kcore"
 	undefinedAppID     = ""
 )
 
-func SetDefaultJsonOutput(flag bool) { defaultJSONOutput = flag }
-func SetDefaultAppId(appId string)   { defaultAppId = appId }
+func SetDefaultJSONOutput(flag bool) { defaultJSONOutput = flag }
+func SetDefaultAppID(appID string)   { defaultAppID = appID }
 func SetDefaultLevel(level string)   { defaultOutputLevel = string(toLogLevel(level)) }
 
 // Options defines the sets of options for Dapr logging.
@@ -34,7 +34,7 @@ type Options struct {
 
 func NewOptions() Options {
 	return Options{
-		appID:             defaultAppId,
+		appID:             defaultAppID,
 		JSONFormatEnabled: false,
 		OutputLevel:       defaultOutputLevel,
 	}
@@ -42,7 +42,7 @@ func NewOptions() Options {
 
 func NewOptionsWithLevel(level string) Options {
 	return Options{
-		appID:             defaultAppId,
+		appID:             defaultAppID,
 		JSONFormatEnabled: false,
 		OutputLevel:       level,
 	}

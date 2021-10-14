@@ -22,7 +22,7 @@ func header2context(header http.Header, keyList []string) context.Context {
 	return ctx
 }
 
-// AddServiceInvocationHandler appends provided service invocation handler with its route to the service
+// AddServiceInvocationHandler appends provided service invocation handler with its route to the service.
 func (s *Server) AddServiceInvocationHandler(route string, fn func(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error)) error {
 	if route == "" {
 		return fmt.Errorf("service route required")

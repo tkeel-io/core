@@ -49,14 +49,14 @@ func NewEventService(conf *EventServiceConfig) (*EventService, error) {
 }
 
 // Name return the name.
-func (this *EventService) Name() string {
+func (s *EventService) Name() string {
 	return "event"
 }
 
 // RegisterService register some method
-func (this *EventService) RegisterService(daprService common.Service) error {
-	//register all handlers.
-	if err := daprService.AddServiceInvocationHandler("event", this.eventHandler); nil != err {
+func (s *EventService) RegisterService(daprService common.Service) error {
+	// register all handlers.
+	if err := daprService.AddServiceInvocationHandler("event", s.eventHandler); nil != err {
 		return err
 	}
 	return nil
@@ -84,19 +84,21 @@ func (s *EventService) eventHandler(ctx context.Context, in *common.InvocationEv
 }
 
 func (s *EventService) getEvent(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	topic := ctx.Value(service.HeaderTopic).(string)
-	if topic == "" {
-		return nil, model.TopicNilErr
+	var (
+		ok                  bool
+		topic, source, user string
+	)
+
+	if topic, ok = ctx.Value(service.HeaderTopic).(string); !ok || topic == "" {
+		return nil, model.ErrTopicNil
 	}
 
-	source := ctx.Value(service.HeaderSource).(string)
-	if source == "" {
-		return nil, model.SourceNilErr
+	if source, ok = ctx.Value(service.HeaderSource).(string); !ok || source == "" {
+		return nil, model.ErrSourceNil
 	}
 
-	user := ctx.Value(service.HeaderUser).(string)
-	if user == "" {
-		return nil, model.UserNilErr
+	if user, ok = ctx.Value(service.HeaderUser).(string); !ok || user == "" {
+		return nil, model.ErrUserNil
 	}
 
 	data, err := s.cli.GetState(context.Background(), s.storeName, source+user+topic)
@@ -148,8 +150,7 @@ func (s *EventService) writeEvent(ctx context.Context, in *common.InvocationEven
 	case model.EventTypeRelationship:
 		pubsubTopic = s.relationShipTopic
 	default:
-		return nil, model.EventTypeErr
-
+		return nil, model.ErrEventType
 	}
 
 	err = s.cli.PublishEvent(context.Background(), s.pubsubName, pubsubTopic, data)

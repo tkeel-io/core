@@ -31,7 +31,7 @@ type BatchBuilder struct {
 	maxMessages uint
 
 	sequenceIDGenerator *uint64
-	//currentSequenceID   uint64
+	// currentSequenceID   uint64
 
 	lock       sync.Mutex
 	sequenceID uint64

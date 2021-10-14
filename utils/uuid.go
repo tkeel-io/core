@@ -12,8 +12,7 @@ import (
 // panic if an error occurred
 func GenerateUUID() string {
 	uuid := make([]byte, 16)
-	_, err := rand.Read(uuid)
-	if err != nil {
+	if _, err := rand.Read(uuid); err != nil {
 		panic("generate an uuid failed, error: " + err.Error())
 	}
 	// see section 4.1.1

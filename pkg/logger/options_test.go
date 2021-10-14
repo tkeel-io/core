@@ -15,13 +15,13 @@ func TestOptions(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		o := DefaultOptions()
 		assert.Equal(t, defaultJSONOutput, o.JSONFormatEnabled)
-		assert.Equal(t, defaultAppId, o.appID)
+		assert.Equal(t, defaultAppID, o.appID)
 		assert.Equal(t, defaultOutputLevel, o.OutputLevel)
 	})
 
 	t.Run("set dapr ID", func(t *testing.T) {
 		o := DefaultOptions()
-		assert.Equal(t, defaultAppId, o.appID)
+		assert.Equal(t, defaultAppID, o.appID)
 
 		o.SetAppID("dapr-app")
 		assert.Equal(t, "dapr-app", o.appID)

@@ -5,8 +5,8 @@ import (
 )
 
 type Server struct {
-	AppId          string           `mapstructure:"app_id"`
-	AppPort        int              `mapstructure:"app_port"`
+	AppID   string `mapstructure:"app_id"`
+	AppPort int    `mapstructure:"app_port"`
 	TSeriesServers []*TSeriesServer `mapstructure:"tseries_servers"`
 }
 
@@ -19,11 +19,11 @@ type TSeriesServer struct {
 
 type BatchQueue struct {
 	Name string `mapstructure:"name"`
-	// BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: 1000)
+	// BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: 1000).
 	MaxBatching int `mapstructure:"max_batching"`
 	// MaxPendingMessages set the max size of the queue.
 	MaxPendingMessages uint `mapstructure:"max_pending_messages"`
-	// BatchingMaxPublishDelay set the time period within which the messages sent will be batched (default: 10ms)
+	// BatchingMaxFlushDelay set the time period within which the messages sent will be batched (default: 10ms).
 	BatchingMaxFlushDelay time.Duration `mapstructure:"batching_max_flush_delay"`
 }
 

@@ -41,29 +41,41 @@ type KEvent struct {
 	Data []byte `json:"data"`
 }
 
+func newKEvent() KEvent {
+	return KEvent{
+		ID:              "",
+		Source:          "",
+		Type:            "",
+		Topic:           "",
+		User:            "",
+		DataContentType: "",
+		Time:            time.Now(),
+		Data:            nil,
+	}
+}
+
 func NewKEventFromContext(ctx context.Context) (*KEvent, error) {
-	kv := KEvent{}
+	kv := newKEvent()
 
-	kv.Source = ctx.Value(service.HeaderSource).(string)
-	if kv.Source == "" {
-		return nil, SourceNilErr
+	var ok bool
+	if kv.Source, ok = ctx.Value(service.HeaderSource).(string); !ok || kv.Source == "" {
+		return nil, ErrSourceNil
 	}
 
-	kv.User = ctx.Value(service.HeaderUser).(string)
-	if kv.User == "" {
-		return nil, UserNilErr
+	if kv.User, ok = ctx.Value(service.HeaderUser).(string); !ok || kv.User == "" {
+		return nil, ErrUserNil
 	}
 
-	kv.Topic = ctx.Value(service.HeaderTopic).(string)
-	if kv.Topic == "" {
-		return nil, TopicNilErr
+	if kv.Topic, ok = ctx.Value(service.HeaderTopic).(string); !ok || kv.Topic == "" {
+		return nil, ErrTopicNil
 	}
 
-	kv.DataContentType = ctx.Value(service.HeaderContentType).(string)
-	if kv.DataContentType == "" {
-		return nil, DataContentTypeNilErr
+	if kv.DataContentType, ok = ctx.Value(service.HeaderContentType).(string); !ok || kv.DataContentType == "" {
+		return nil, ErrDataContentTypeNil
 	}
+
 	kv.ID = uuid.New().String()
 	kv.Time = time.Now()
+
 	return &kv, nil
 }

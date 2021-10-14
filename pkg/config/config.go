@@ -2,8 +2,11 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/pkg/errors"
+	"os"
 	"strings"
+
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -13,7 +16,7 @@ var config = defaultConfig()
 
 type Config struct {
 	Server    Server    `mapstructure:"server"`
-	ApiConfig ApiConfig `mapstructure:"api_config"`
+	ApiConfig APIConfig `mapstructure:"api_config"`
 	Logger    LogConfig `mapstructure:"logger"`
 }
 
@@ -43,7 +46,7 @@ func InitConfig(cfgFile string) {
 		viper.AddConfigPath("./conf")
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("/etc/core")
-		//viper.SetConfigName("kcore")
+		// viper.SetConfigName("kcore")
 	}
 
 	viper.SetEnvPrefix("CORE")
@@ -55,7 +58,7 @@ func InitConfig(cfgFile string) {
 			// config file not found.
 			defer writeDefault(cfgFile)
 		} else {
-			panic(err)
+			panic(errors.Unwrap(err))
 		}
 	}
 
@@ -71,24 +74,23 @@ func InitConfig(cfgFile string) {
 	//set callback.
 	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
-	fmt.Println("watch config file.....")
+	print.PendingStatusEvent(os.Stdout, "watch config file.....")
 }
 
 func onConfigChanged(in fsnotify.Event) {
-	//unmarshal
-	fmt.Printf("watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
+	print.PendingStatusEvent(os.Stdout, "watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
 	_ = viper.Unmarshal(&config)
 	bytes, _ := json.MarshalIndent(config, "	", "	")
-	fmt.Println(string(bytes))
+	print.InfoStatusEvent(os.Stdout, string(bytes))
 }
 
 func writeDefault(cfgFile string) {
-	if "" == cfgFile {
+	if cfgFile == "" {
 		cfgFile = "config.yml"
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
 		//todo...
-		fmt.Println(err)
+		print.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }
