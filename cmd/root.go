@@ -18,8 +18,23 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/spf13/cobra"
+)
+
+// Version The main version number that is being run at the moment.
+const Version = "0.1.1"
+
+var (
+	// GitCommit The git commit that was compiled. This will be filled in by the compiler.
+	GitCommit string
+
+	// GoVersion The go compiler version.
+	GoVersion = runtime.Version()
+
+	// OSArch The system info.
+	OSArch = runtime.GOOS + " " + runtime.GOARCH
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,8 +49,10 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	rootCmd.Version = Version
+	setVersion()
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -49,6 +66,14 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
+}
+
+func setVersion() {
+	template := fmt.Sprintln("Core Version", Version)
+	template += fmt.Sprintln("Git Commit:", GitCommit)
+	template += fmt.Sprintln("Go Version", GoVersion)
+	template += fmt.Sprintln("OS / Arch", OSArch)
+	rootCmd.SetVersionTemplate(template)
 }
