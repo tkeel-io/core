@@ -28,7 +28,7 @@ build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64  $(GOBUILD) -o bin/linux/$(BINNAME)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
-	@bin/$(BINNAME) version
+	@bin/$(BINNAME) --version
 	@echo "-----------Done------------"
 
 ifeq ($(GOOS),windows)
