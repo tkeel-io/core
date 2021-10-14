@@ -30,9 +30,6 @@ var (
 	// GitCommit The git commit that was compiled. This will be filled in by the compiler.
 	GitCommit string
 
-	// BuildDate The build datetime at the moment.
-	BuildDate = ""
-
 	// GoVersion The go compiler version.
 	GoVersion = runtime.Version()
 
@@ -74,7 +71,7 @@ func init() {
 }
 
 func setVersion() {
-	template := fmt.Sprintln("Build Date:", BuildDate)
+	template := fmt.Sprintln("Core Version", Version)
 	template += fmt.Sprintln("Git Commit:", GitCommit)
 	template += fmt.Sprintln("Go Version", GoVersion)
 	template += fmt.Sprintln("OS / Arch", OSArch)
