@@ -41,10 +41,6 @@ type EntityOp interface {
 	GetMapper(mid string) mapper.Mapper
 	// GetMappers
 	GetMappers() []mapper.Mapper
-	// TentacleModify notify tentacle event.
-	TentacleModify(requestId, entityId string)
-	// GetTentacles returns tentacles.
-	GetTentacles(requestId, entityId string)
 }
 
 type EntityContext struct {

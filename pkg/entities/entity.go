@@ -138,42 +138,6 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 	return nil
 }
 
-// // TentacleModify notify tentacle event.
-// func (e *entity) TentacleModify(requestId, entityId string) {
-
-// 	tentacles := e.getEntity(entityId).GetTentacles(requestId, e.Id)
-
-// 	if e.Id != entityId {
-// 		e.indexTentacles[entityId] = tentacles
-// 	}
-
-// 	//generate tentacles again.
-// 	e.tentacles = make(map[string][]mapper.Tentacler)
-// 	for _, tentacles := range e.indexTentacles {
-// 		for _, tentacle := range tentacles {
-// 			for _, item := range tentacle.Items() {
-// 				e.tentacles[item] = append(e.tentacles[item], tentacle)
-// 			}
-// 		}
-// 	}
-// }
-
-// // GetTentacles returns tentacles.
-// func (e *entity) GetTentacles(requestId, entityId string) []mapper.Tentacler {
-
-// 	e.lock.Lock(&requestId)
-// 	defer e.lock.Unlock()
-
-// 	tentacles := e.indexTentacles[entityId]
-// 	result := make([]mapper.Tentacler, len(tentacles))
-
-// 	for index, tentacle := range tentacles {
-// 		result[index] = tentacle.Copy()
-// 	}
-
-// 	return result
-// }
-
 // GetProperty returns entity property.
 func (e *entity) GetProperty(key string) interface{} {
 
@@ -188,13 +152,35 @@ func (e *entity) GetProperty(key string) interface{} {
 }
 
 // SetProperty set entity property.
-func (e *entity) SetProperty(string, interface{}) error {
-	panic("implement me.")
+func (e *entity) SetProperty(key string, value interface{}) error {
+	reqID := utils.GenerateUUID()
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
+		e.Id, reqID, key)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	thisEntityProps := e.KValues[e.Id]
+	thisEntityProps[key] = value
+
+	return nil
 }
 
 //GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() map[string]interface{} {
-	panic("implement me.")
+	reqID := utils.GenerateUUID()
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.",
+		e.Id, reqID)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	props := e.KValues[e.Id]
+	result := make(map[string]interface{})
+	if err := utils.DeepCopy(&result, &props); nil != err {
+		log.Errorf("duplicate properties failed.")
+	}
+	return result
 }
 
 // SetProperties set entity properties
