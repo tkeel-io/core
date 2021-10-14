@@ -184,13 +184,36 @@ func (e *entity) GetAllProperties() map[string]interface{} {
 }
 
 // SetProperties set entity properties
-func (e *entity) SetProperties(map[string]interface{}) error {
-	panic("implement me.")
+func (e *entity) SetProperties(values map[string]interface{}) error {
+
+	reqID := utils.GenerateUUID()
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	thisEntityProps := e.KValues[e.Id]
+
+	for key, value := range values {
+		thisEntityProps[key] = value
+	}
+
+	return nil
 }
 
 // DeleteProperty delete entity property.
-func (e *entity) DeleteProperty(string) error {
-	panic("implement me.")
+func (e *entity) DeleteProperty(key string) error {
+
+	reqID := utils.GenerateUUID()
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	thisEntityProps := e.KValues[e.Id]
+	delete(thisEntityProps, key)
+
+	return nil
 }
 
 // InvokeMsg
@@ -207,6 +230,7 @@ func (e *entity) InvokeMsg(ctx EntityContext) {
 		e.invokeTentacleMsg(msg)
 	default:
 		//invalid msg type.
+		log.Errorf("undefine message type, msg: %s", msg)
 	}
 }
 
