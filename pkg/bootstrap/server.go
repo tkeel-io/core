@@ -38,11 +38,19 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	address := fmt.Sprintf(":%d", conf.Server.AppPort)
 	daprService := daprd.NewServiceWithMux(address, api.NewOpenApiServeMux())
 
+	//create coroutine pool.
+	coroutinePool, err := ants.NewPool(conf.Server.CoroutinePoolSize)
+	if nil != err {
+		log.Fatal(err)
+	}
+
 	ser := Server{
 		ctx:           ctx,
 		cancel:        cancel,
 		conf:          conf,
 		daprService:   daprService,
+		coroutinePool: coroutinePool,
+		entityManager: entities.NewEntityManager(ctx, coroutinePool),
 		serverManager: server.NewServerManager(ctx, daprService, conf),
 	}
 
@@ -66,12 +74,15 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 }
 
 func (this *Server) Run() error {
+
 	var err error
 	if err = this.apiRegistry.Start(); nil != err {
 		return err
 	} else if err = this.serverManager.Start(); nil != err {
 		return err
 	}
+
+	this.entityManager.Start()
 	return this.daprService.Start()
 }
 

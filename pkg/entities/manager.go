@@ -13,16 +13,20 @@ type EntityManager struct {
 	disposeCh     chan EntityContext
 	coroutinePool *ants.Pool
 
-	lock sync.RWMutex
-	ctx  context.Context
+	lock   sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
 
+	ctx, cancel := context.WithCancel(ctx)
+
 	return &EntityManager{
 		ctx:           ctx,
+		cancel:        cancel,
 		entities:      make(map[string]*entity),
-		msgCh:         make(chan EntityContext), //在channel内部传递引用或指针可能造成gc回收困难和延迟。
+		msgCh:         make(chan EntityContext),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
 	}
