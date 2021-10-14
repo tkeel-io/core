@@ -30,6 +30,7 @@ func TestSettingOptions(t *testing.T) {
 }
 
 func testRequest(t *testing.T, s *Server, r *http.Request, expectedStatusCode int) {
+	t.Helper()
 	rr := httptest.NewRecorder()
 	s.mux.ServeHTTP(rr, r)
 	rez := rr.Result()

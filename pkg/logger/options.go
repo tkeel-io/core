@@ -1,8 +1,3 @@
-// ------------------------------------------------------------
-// Copyright (c) Microsoft Corporation and Dapr Contributors.
-// Licensed under the MIT License.
-// ------------------------------------------------------------
-
 package logger
 
 import (
@@ -22,13 +17,13 @@ func SetDefaultLevel(level string)   { defaultOutputLevel = string(toLogLevel(le
 
 // Options defines the sets of options for Dapr logging.
 type Options struct {
-	// appID is the unique id of Dapr Application
+	// appID is the unique id of Dapr Application.
 	appID string
 
-	// JSONFormatEnabled is the flag to enable JSON formatted log
+	// JSONFormatEnabled is the flag to enable JSON formatted log.
 	JSONFormatEnabled bool
 
-	// OutputLevel is the level of logging
+	// OutputLevel is the level of logging.
 	OutputLevel string
 }
 

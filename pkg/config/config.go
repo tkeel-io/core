@@ -2,13 +2,13 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 
 	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -16,7 +16,7 @@ var config = defaultConfig()
 
 type Config struct {
 	Server    Server    `mapstructure:"server"`
-	ApiConfig APIConfig `mapstructure:"api_config"`
+	APIConfig APIConfig `mapstructure:"api_config"`
 	Logger    LogConfig `mapstructure:"logger"`
 }
 
@@ -46,7 +46,6 @@ func InitConfig(cfgFile string) {
 		viper.AddConfigPath("./conf")
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("/etc/core")
-		// viper.SetConfigName("kcore")
 	}
 
 	viper.SetEnvPrefix("CORE")
@@ -54,7 +53,7 @@ func InitConfig(cfgFile string) {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); nil != err {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok { //nolint
 			// config file not found.
 			defer writeDefault(cfgFile)
 		} else {
@@ -62,16 +61,16 @@ func InitConfig(cfgFile string) {
 		}
 	}
 
-	//defaullt.
+	// default.
 	viper.SetDefault("server.app_port", 6789)
 	viper.SetDefault("server.app_id", "core")
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.output_json", false)
 
-	//unmarshal
+	// unmarshal
 	onConfigChanged(fsnotify.Event{Name: "init", Op: fsnotify.Chmod})
 
-	//set callback.
+	// set callback.
 	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
 	print.PendingStatusEvent(os.Stdout, "watch config file.....")
@@ -90,7 +89,7 @@ func writeDefault(cfgFile string) {
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
-		//todo...
+		// todo...
 		print.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }

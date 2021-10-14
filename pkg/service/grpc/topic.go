@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AddTopicEventHandler appends provided event handler with topic name to the service
+// AddTopicEventHandler appends provided event handler with topic name to the service.
 func (s *Server) AddTopicEventHandler(sub *common.Subscription, fn func(ctx context.Context, e *common.TopicEvent) (retry bool, err error)) error {
 	if sub == nil {
 		return errors.New("subscription required")
@@ -56,7 +56,7 @@ func (s *Server) ListTopicSubscriptions(ctx context.Context, in *empty.Empty) (*
 func (s *Server) OnTopicEvent(ctx context.Context, in *pb.TopicEventRequest) (*pb.TopicEventResponse, error) {
 	if in == nil || in.Topic == "" || in.PubsubName == "" {
 		// this is really Dapr issue more than the event request format.
-		// since Dapr will not get updated until long after this event expires, just drop it
+		// since Dapr will not get updated until long after this event expires, just drop it.
 		return &pb.TopicEventResponse{Status: pb.TopicEventResponse_DROP}, errors.New("pub/sub and topic names required")
 	}
 	key := fmt.Sprintf("%s-%s", in.PubsubName, in.Topic)

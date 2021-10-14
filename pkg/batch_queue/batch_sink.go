@@ -79,7 +79,7 @@ type pendingItem struct {
 	err        error
 }
 
-func (pending *pendingItem) GetSequenceId() uint64 {
+func (pending *pendingItem) GetSequenceID() uint64 {
 	return pending.sequenceID
 }
 
@@ -114,14 +114,14 @@ type batchSink struct {
 	sinkName  string
 	//	lock      sync.Mutex
 
-	conf *BatchQueueConfig
+	conf *Config
 
 	sendCnt int64
 
 	ctx context.Context
 }
 
-type BatchQueueConfig struct {
+type Config struct {
 	Name     string
 	DoSinkFn ProcessFn
 	// BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: 1000)
@@ -132,22 +132,22 @@ type BatchQueueConfig struct {
 	BatchingMaxFlushDelay time.Duration
 }
 
-func (this *BatchQueueConfig) GetBatchingMaxFlushDelay() time.Duration {
-	if this.BatchingMaxFlushDelay != 0 {
-		this.BatchingMaxFlushDelay = defaultBatchingMaxFlushDelay
+func (c *Config) GetBatchingMaxFlushDelay() time.Duration {
+	if c.BatchingMaxFlushDelay != 0 {
+		c.BatchingMaxFlushDelay = defaultBatchingMaxFlushDelay
 	}
-	return this.BatchingMaxFlushDelay
+	return c.BatchingMaxFlushDelay
 }
 
-func (this *BatchQueueConfig) GetMaxPendingMessages() int {
-	if this.MaxPendingMessages != 0 {
-		this.MaxPendingMessages = defaultMaxPendingMessages
+func (c *Config) GetMaxPendingMessages() int {
+	if c.MaxPendingMessages != 0 {
+		c.MaxPendingMessages = defaultMaxPendingMessages
 	}
-	return int(this.MaxPendingMessages)
+	return int(c.MaxPendingMessages)
 }
 
-func (this *BatchQueueConfig) GetMaxBatching() uint {
-	return uint(this.MaxBatching)
+func (c *Config) GetMaxBatching() uint {
+	return uint(c.MaxBatching)
 }
 
 const (
@@ -155,8 +155,7 @@ const (
 	defaultBatchingMaxFlushDelay = 10 * time.Millisecond
 )
 
-func NewBatchSink(ctx context.Context, conf *BatchQueueConfig) (*batchSink, error) {
-
+func NewBatchSink(ctx context.Context, conf *Config) (BatchSink, error) {
 	if nil == conf {
 		return nil, errors.New("reconfiguration required")
 	}
@@ -201,12 +200,11 @@ func (p *batchSink) runEventsLoop() {
 }
 
 func (p *batchSink) internalSend(request *sendRequest) {
-
 	msg := request.msg
 
 	isFull := p.batchBuilder.Add(msg)
 	if isFull {
-		// The current batch is full.. flush it
+		// The current batch is full then flush it.
 		p.internalFlushCurrentBatch()
 	}
 	p.sendCnt++

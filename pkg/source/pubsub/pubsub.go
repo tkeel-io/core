@@ -6,8 +6,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/source"
+
+	"github.com/dapr/go-sdk/service/common"
 )
 
 type Meta struct {
@@ -80,16 +81,15 @@ func acquireMeta(metadata source.Metadata) (*Meta, error) {
 	meta.name = metadata.Name
 	meta.topics = strings.Split(meta.Topics, ",")
 
-	// meta.Name = metadata.Name
-
-	// check name
+	// check name.
 	if meta.Pubsub == "" {
 		return &meta, errors.New("field Name required")
-	} else if 0 == len(meta.topics) {
-		return &meta, errors.New("field Topics required")
-	} else {
-		return &meta, nil
 	}
+	if len(meta.topics) == 0 {
+		return &meta, errors.New("field Topics required")
+	}
+
+	return &meta, nil
 }
 
 func init() {

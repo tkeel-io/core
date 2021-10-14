@@ -43,7 +43,7 @@ func TestTopicSubscriptionList(t *testing.T) {
 	assert.Lenf(t, resp.Subscriptions, 1, "expected 1 handlers")
 }
 
-// go test -timeout 30s ./service/grpc -count 1 -run ^TestTopic$
+// go test -timeout 30s ./service/grpc -count 1 -run ^TestTopic$.
 func TestTopic(t *testing.T) {
 	ctx := context.Background()
 

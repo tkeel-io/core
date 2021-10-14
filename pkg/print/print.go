@@ -1,4 +1,4 @@
-package print //nolint:
+package print //nolint
 
 import (
 	"fmt"

@@ -12,15 +12,9 @@ import (
 
 // AddBindingInvocationHandler appends provided binding invocation handler with its route to the service.
 func (s *Server) AddBindingInvocationHandler(route string, fn func(ctx context.Context, in *common.BindingEvent) (out []byte, err error)) error {
-	if route == "" {
-		return fmt.Errorf("binding route required")
-	}
-	if fn == nil {
-		return fmt.Errorf("binding handler required")
-	}
-
-	if !strings.HasPrefix(route, "/") {
-		route = fmt.Sprintf("/%s", route)
+	var err error
+	if route, fn, err = validBindingEvent(route, fn); err != nil {
+		return err
 	}
 
 	s.mux.Handle(route, optionsHandler(http.HandlerFunc(
@@ -67,4 +61,30 @@ func (s *Server) AddBindingInvocationHandler(route string, fn func(ctx context.C
 		})))
 
 	return nil
+}
+
+func validBindingEvent(route string, fn func(ctx context.Context, in *common.BindingEvent) (out []byte, err error)) (string, func(ctx context.Context, in *common.BindingEvent) (out []byte, err error), error) {
+	if route == "" {
+		return "", nil, fmt.Errorf("binding route required")
+	}
+	if !strings.HasPrefix(route, "/") {
+		route = fmt.Sprintf("/%s", route)
+	}
+	if fn == nil {
+		return "", nil, fmt.Errorf("binding handler required")
+	}
+	return route, fn, nil
+}
+
+func validInvocationEvent(route string, fn func(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error)) (string, func(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error), error) {
+	if route == "" {
+		return "", nil, fmt.Errorf("binding route required")
+	}
+	if !strings.HasPrefix(route, "/") {
+		route = fmt.Sprintf("/%s", route)
+	}
+	if fn == nil {
+		return "", nil, fmt.Errorf("binding handler required")
+	}
+	return route, fn, nil
 }

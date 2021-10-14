@@ -39,7 +39,7 @@ func TestBindingForErrors(t *testing.T) {
 	assert.Errorf(t, err, "expected error on nil method handler")
 }
 
-// go test -timeout 30s ./service/grpc -count 1 -run ^TestBinding$
+// go test -timeout 30s ./service/grpc -count 1 -run ^TestBinding$.
 func TestBinding(t *testing.T) {
 	ctx := context.Background()
 	methodName := "test"

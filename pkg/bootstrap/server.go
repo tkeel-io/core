@@ -9,10 +9,10 @@ import (
 	"github.com/tkeel-io/core/pkg/api/service"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/server"
+	daprd "github.com/tkeel-io/core/pkg/service/http"
 
 	"github.com/dapr/go-sdk/service/common"
-	daprd "github.com/tkeel-io/core/pkg/service/http"
-	//daprd "github.com/dapr/go-sdk/service/http"
+	"github.com/pkg/errors"
 )
 
 type Server struct {
@@ -26,7 +26,6 @@ type Server struct {
 }
 
 func NewServer(ctx context.Context, conf *config.Config) *Server {
-
 	ctx, cancel := context.WithCancel(ctx)
 
 	// create a Dapr service server
@@ -42,78 +41,78 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 		serverManager: server.NewManager(ctx, daprService, conf),
 	}
 
-	//create a api registry.
 	apiRegistry, err := api.NewAPIRegistry(ctx, daprService)
-	if nil != err {
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	//init api registry.
-	if err = initApiRegistry(apiRegistry, &conf.ApiConfig); nil != err {
+	// init api registry.
+	if err = initAPIRegistry(apiRegistry, &conf.APIConfig); nil != err {
 		log.Fatalf("init ApiRegistry error, %s", err.Error())
 	}
 
 	ser.apiRegistry = apiRegistry
 
-	//actor manager init.
+	// actor manager init.
 	_ = ser.serverManager.Init()
 
 	return &ser
 }
 
-func (this *Server) Run() error {
-	var err error
-	if err = this.apiRegistry.Start(); nil != err {
-		return err
-	} else if err = this.serverManager.Start(); nil != err {
-		return err
+func (s *Server) Run() error {
+	if err := s.apiRegistry.Start(); nil != err {
+		return errors.Wrap(err, "api registry start err")
 	}
-	return this.daprService.Start()
+	if err := s.serverManager.Start(); nil != err {
+		return errors.Wrap(err, "server manager start err")
+	}
+	if err := s.daprService.Start(); err != nil {
+		return errors.Wrap(err, "dapr service start err")
+	}
+
+	return nil
 }
 
-func (this *Server) Close() {}
+func (s *Server) Close() {}
 
-func initApiRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
-
+func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
 	var (
 		err       error
-		eventApi  *service.EventService
-		entityApi *service.EntityService
+		eventAPI  *service.EventService
+		entityAPI *service.EntityService
 	)
 
 	// register event api.
-	if eventApi, err = service.NewEventService(&service.EventServiceConfig{
+	if eventAPI, err = service.NewEventService(&service.EventServiceConfig{
 		RawTopic:          apiConfig.EventAPIConfig.RawTopic,
 		TimeSeriesTopic:   apiConfig.EventAPIConfig.TimeSeriesTopic,
 		PropertyTopic:     apiConfig.EventAPIConfig.PropertyTopic,
-		RelationShipTopic: apiConfig.EventAPIConfig.RelationShipTopic,
+		RelationShipTopic: apiConfig.EventAPIConfig.RelationshipTopic,
 		StoreName:         apiConfig.EventAPIConfig.StoreName,
 		PubsubName:        apiConfig.EventAPIConfig.PubsubName,
-	}); nil != err {
-		return err
+	}); err != nil {
+		return errors.Wrap(err, "new event service err")
 	}
 
-	if err = apiRegistry.AddService(eventApi); nil != err {
-		return err
+	if err = apiRegistry.AddService(eventAPI); err != nil {
+		return errors.Wrap(err, "api registry add service err")
 	}
 
-	//register time-series api.
-	if err = apiRegistry.AddService(service.NewTimeSeriesService()); nil != err {
-		return err
+	if err = apiRegistry.AddService(service.NewTimeSeriesService()); err != nil {
+		return errors.Wrap(err, "api registry add service err")
 	}
 
-	//init entity api
-	if entityApi, err = service.NewEntityService(&service.EntityServiceConfig{
+	if entityAPI, err = service.NewEntityService(&service.EntityServiceConfig{
 		TableName:   apiConfig.EntityAPIConfig.TableName,
 		StateName:   apiConfig.EntityAPIConfig.StateName,
 		BindingName: apiConfig.EntityAPIConfig.BindingName,
-	}); nil != err {
-		return err
+	}); err != nil {
+		return errors.Wrap(err, "new entity service err")
 	}
 
-	if err = apiRegistry.AddService(entityApi); nil != err {
-		return err
+	if err = apiRegistry.AddService(entityAPI); err != nil {
+		return errors.Wrap(err, "api registry add service err")
 	}
 
-	return err
+	return nil
 }

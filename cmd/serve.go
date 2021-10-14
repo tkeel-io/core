@@ -31,7 +31,7 @@ import (
 var cfgFile string
 var log = logger.NewLogger("kcore.commands")
 
-// serveCmd represents the serve command
+// serveCmd represents the serve command.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "core serve",

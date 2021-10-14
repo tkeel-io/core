@@ -2,9 +2,11 @@ package model
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/tkeel-io/core/pkg/service"
 	"time"
+
+	"github.com/tkeel-io/core/pkg/service"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -16,28 +18,28 @@ const (
 
 type KEvent struct {
 	// ID of the event; must be non-empty and unique within the scope of the producer.
-	// +required
+	// +required.
 	ID string `json:"id"`
 	// Source - A URI describing the event producer.
-	// +required
+	// +required.
 	Source string `json:"source"`
 	// Type - The type of the occurrence which has happened.
-	// +required
+	// +required.
 	Type string `json:"type"`
 	// Topic
-	// +required
+	// +required.
 	Topic string `json:"topic"`
 	// User
-	// +required
+	// +required.
 	User string `json:"user"`
 	// DataContentType - A MIME (RFC2046) string describing the media type of `data`.
-	// +optional
+	// +optional.
 	DataContentType string `json:"data_content_type,omitempty"`
 	// Time - A Timestamp when the event happened.
-	// +optional
+	// +optional.
 	Time time.Time `json:"time,omitempty"`
 	// Data
-	// +required
+	// +required.
 	Data []byte `json:"data"`
 }
 

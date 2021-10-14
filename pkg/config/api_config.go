@@ -10,7 +10,7 @@ type EventAPIConfig struct {
 	RawTopic          string `mapstructure:"raw_topic"`
 	TimeSeriesTopic   string `mapstructure:"time_series_topic"`
 	PropertyTopic     string `mapstructure:"property_topic"`
-	RelationShipTopic string `mapstructure:"relationship_topic"`
+	RelationshipTopic string `mapstructure:"relationship_topic"`
 	StoreName         string `mapstructure:"store_name"`
 	PubsubName        string `mapstructure:"pubsub_name"`
 }

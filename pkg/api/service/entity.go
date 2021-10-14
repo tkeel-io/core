@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,6 +15,7 @@ import (
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -52,7 +52,7 @@ var (
 )
 
 func entityExisted(entityID string) error {
-	return fmt.Errorf("entity(%s)  exised.", entityID)
+	return fmt.Errorf("entity(%s)  exised", entityID)
 }
 
 func entityFieldRequired(fieldName string) error {
@@ -69,7 +69,7 @@ type Entity struct {
 	UserID  string                 `json:"user_id"`
 	Tag     string                 `json:"tag"`
 	Version int64                  `json:"version"`
-	KValues map[string]interface{} `json:"kvalues"`
+	KValues map[string]interface{} `json:"kvalues"` //nolint
 }
 
 type EntityServiceConfig struct {
@@ -89,7 +89,9 @@ type EntityService struct {
 // NewEntityService returns a new EntityService.
 func NewEntityService(entityConfig *EntityServiceConfig) (*EntityService, error) {
 	cli, err := dapr.NewClient()
-
+	if err != nil {
+		err = errors.Wrap(err, "start dapr clint err")
+	}
 	return &EntityService{
 		daprClient:  cli,
 		tableName:   entityConfig.TableName,
@@ -107,9 +109,10 @@ func (e *EntityService) Name() string {
 func (e *EntityService) RegisterService(daprService common.Service) error {
 	// register all handlers.
 	if err := daprService.AddServiceInvocationHandler("entities", e.entityHandler); nil != err {
-		return err
-	} else if err = daprService.AddServiceInvocationHandler("entitylist", e.entityList); nil != err {
-		return err
+		return errors.Wrap(err, "dapr add 'entities' service invocation handler err")
+	}
+	if err := daprService.AddServiceInvocationHandler("entitylist", e.entityList); nil != err {
+		return errors.Wrap(err, "dapr add 'entitylist' service invocation handler err")
 	}
 	return nil
 }
@@ -161,7 +164,7 @@ func getStringFrom(ctx context.Context, key string) (string, error) {
 	return "", entityFieldRequired(key)
 }
 
-func (e *EntityService) getEntityFrom(ctx context.Context, in *common.InvocationEvent, entityIdRequired bool) (entity Entity, err error) {
+func (e *EntityService) getEntityFrom(ctx context.Context, in *common.InvocationEvent, idRequired bool) (entity Entity, err error) {
 	var values url.Values
 
 	if values, err = url.ParseQuery(in.QueryString); nil != err {
@@ -170,7 +173,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, in *common.Invocation
 
 	if entity.Source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
 		// source field.
-		log.Info("parse http request field(source) from header successed.")
+		log.Info("parse http request field(source) from header successes.")
 	} else if entity.Source, err = e.getValFromValues(values, entityFieldSource); nil != err {
 		log.Error("parse http request field(source) from query failed", ctx, err)
 		return
@@ -186,8 +189,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, in *common.Invocation
 
 	if entity.ID, err = e.getValFromValues(values, entityFieldID); nil != err {
 		// entity id field
-		if !entityIdRequired {
-			err = nil
+		if !idRequired {
 			entity.ID = utils.GenerateUUID()
 		}
 	}
@@ -207,13 +209,12 @@ func checkRequest(entity Entity) error {
 	return nil
 }
 
-func (e *EntityService) entityExists(ctx context.Context, source, userID, entityId string) error {
-
+func (e *EntityService) entityExists(ctx context.Context, source, userID, entityID string) error {
 	var (
 		err     error
 		result  *dapr.BindingEvent
 		sqlText = fmt.Sprintf(entityExistsSQL, e.tableName,
-			fmt.Sprintf(whereText, entityId, userID, source))
+			fmt.Sprintf(whereText, entityID, userID, source))
 	)
 
 	if result, err = e.daprClient.InvokeBinding(ctx, &dapr.InvokeBindingRequest{
@@ -222,9 +223,10 @@ func (e *EntityService) entityExists(ctx context.Context, source, userID, entity
 		Metadata: map[string]string{
 			"sql": sqlText,
 		},
-	}); nil != err {
-		return err
-	} else if resultNull == string(result.Data) {
+	}); err != nil {
+		return errors.Wrap(err, "dapr invoke binding err")
+	}
+	if resultNull == string(result.Data) {
 		err = errEntityNotExist
 	}
 
@@ -248,10 +250,12 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 
 	if entity, err = e.getEntityFrom(ctx, in, true); nil != err {
 		return
-	} else if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); nil != err {
+	}
+	if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); nil != err {
 		log.Error("call entity.Exists failed. ", err)
 		return
-	} else if stateItem, err = e.daprClient.GetState(ctx, e.stateName, entity.ID); nil == err {
+	}
+	if stateItem, err = e.daprClient.GetState(ctx, e.stateName, entity.ID); nil == err {
 		out.Data = stateItem.Value
 	}
 
@@ -314,15 +318,14 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 	// save entity state.
 	if err = e.daprClient.SaveState(ctx, e.stateName, entity.ID, out.Data); nil != err {
 		// redo binding...
-		return out, err
+		return out, errors.Wrap(err, "dapr save state err")
 	}
 
-	return out, err
+	return out, nil
 }
 
 // entityUpdate update an entity.
 func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-
 	var (
 		entity    Entity
 		stateItem *dapr.StateItem
@@ -337,27 +340,26 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	if entity, err = e.getEntityFrom(ctx, in, true); nil != err {
-		return
-	} else if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); nil != err {
+	if entity, err = e.queryAndEnsureEntity(ctx, in); err != nil {
 		return
 	}
 
-	if "" != entity.Tag {
-
-		sqlText := fmt.Sprintf(entityUpdateSQL, e.tableName, fmt.Sprintf(kvPair, entityFieldTag, entity.Tag),
+	if entity.Tag != "" {
+		// update entity to binding
+		updateSQL := fmt.Sprintf(entityUpdateSQL, e.tableName, fmt.Sprintf(kvPair, entityFieldTag, entity.Tag),
 			fmt.Sprintf(whereText, entity.ID, entity.UserID, entity.Source))
 
-		// update entity to binding
 		if _, err = e.daprClient.InvokeBinding(ctx, &dapr.InvokeBindingRequest{
 			Name:      e.bindingName,
 			Operation: "exec",
 			Metadata: map[string]string{
-				"sql": sqlText,
+				"sql": updateSQL,
 			},
 		}); nil != err {
 			return
 		}
+
+		kvalues[internalFieldName(entityFieldTag)] = entity.Tag
 	}
 
 	// get entity from state.
@@ -373,25 +375,24 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 		}
 	}
 
-	if "" != entity.Tag {
-		kvalues[internalFieldName(entityFieldTag)] = entity.Tag
-	}
-
 	if out.Data, err = json.Marshal(kvalues); nil != err {
 		return
-	} else if err = e.daprClient.SaveState(ctx, e.stateName, entity.ID, out.Data); nil != err {
+	}
+
+	if err = e.daprClient.SaveState(ctx, e.stateName, entity.ID, out.Data); nil != err {
 		// redo binding...
 		print.WarningStatusEvent(os.Stdout, "TODO")
 	}
 
-	return out, err
+	return out, errors.Wrap(err, "json marshall failed")
 }
 
-// entityUpsert
+// entityUpsert.
+//nolint:cyclop
 func (e *EntityService) entityUpsert(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var (
 		entity    Entity
-		sqlText   string
+		sqltx     string
 		stateItem *dapr.StateItem
 		kvalues   = make(map[string]interface{})
 	)
@@ -406,55 +407,52 @@ func (e *EntityService) entityUpsert(ctx context.Context, in *common.InvocationE
 
 	if entity, err = e.getEntityFrom(ctx, in, false); nil != err {
 		return
-	} else if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); nil != err {
-		// create entity if not exists.
-		if !errors.Is(errEntityNotExist, err) {
-			return
+	}
+	if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); nil != err {
+		if errors.Is(errEntityNotExist, err) {
+			sqltx = fmt.Sprintf(entityCreateSQL, e.tableName,
+				entity.ID, entity.UserID, entity.Source, entity.Tag, entityStatusDeactivate, entity.Version, entity.ID)
+			kvalues[internalFieldName(entityFieldTag)] = entity.Tag
+			kvalues[internalFieldName(entityFieldID)] = entity.ID
+			kvalues[internalFieldName(entityFieldUserID)] = entity.UserID
+			kvalues[internalFieldName(entityFieldSource)] = entity.Source
+			kvalues[internalFieldName(entityFieldVersion)] = entity.Version
+			goto exec
+		} else {
+			return nil, err
 		}
-		sqlText = fmt.Sprintf(entityCreateSQL, e.tableName,
-			entity.ID, entity.UserID, entity.Source, entity.Tag, entityStatusDeactivate, entity.Version, entity.ID)
-
-		kvalues[internalFieldName(entityFieldTag)] = entity.Tag
-		kvalues[internalFieldName(entityFieldID)] = entity.ID
-		kvalues[internalFieldName(entityFieldUserID)] = entity.UserID
-		kvalues[internalFieldName(entityFieldSource)] = entity.Source
-		kvalues[internalFieldName(entityFieldVersion)] = entity.Version
-	} else {
-		// update entity if already exists.
-		if entity.Tag != "" {
-			sqlText = fmt.Sprintf(entityUpdateSQL, e.tableName, fmt.Sprintf(kvPair, entityFieldTag, entity.Tag),
-				fmt.Sprintf(whereText, entity.ID, entity.UserID, entity.Source))
-		}
-
+	}
+	// update entity if already exists.
+	if entity.Tag != "" {
+		sqltx = fmt.Sprintf(entityUpdateSQL, e.tableName, fmt.Sprintf(kvPair, entityFieldTag, entity.Tag),
+			fmt.Sprintf(whereText, entity.ID, entity.UserID, entity.Source))
 		// get entity from state.
 		if stateItem, err = e.daprClient.GetState(ctx, e.stateName, entity.ID); nil == err {
 			if err = json.Unmarshal(stateItem.Value, &kvalues); nil != err {
 				return out, errEntityInternal
 			}
 		}
+		kvalues[internalFieldName(entityFieldTag)] = entity.Tag
 	}
 
-	if len(sqlText) > 0 {
+exec:
+	if len(sqltx) != 0 {
 		// upsert entity to binding
 		if _, err = e.daprClient.InvokeBinding(ctx, &dapr.InvokeBindingRequest{
 			Name:      e.bindingName,
 			Operation: "exec",
 			Metadata: map[string]string{
-				"sql": sqlText,
+				"sql": sqltx,
 			},
 		}); nil != err {
 			return
 		}
 	}
 
-	if len(in.Data) > 0 {
+	if len(in.Data) != 0 {
 		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
 		}
-	}
-
-	if entity.Tag != "" {
-		kvalues[internalFieldName(entityFieldTag)] = entity.Tag
 	}
 
 	if out.Data, err = json.Marshal(kvalues); nil != err {
@@ -464,7 +462,7 @@ func (e *EntityService) entityUpsert(ctx context.Context, in *common.InvocationE
 		print.WarningStatusEvent(os.Stdout, "TODO")
 	}
 
-	return
+	return out, errors.Wrap(err, "json marshal kvalues err")
 }
 
 func generateDeletedID(entityID string) string {
@@ -511,7 +509,7 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 		return
 	}
 
-	print.InfoStatusEvent(os.Stdout, "delete entity", sqlText, err.Error())
+	print.InfoStatusEvent(os.Stdout, "delete entity\n sql:%s\n err:%s", sqlText, err.Error())
 
 	// delete entity state.
 	if err = e.daprClient.DeleteState(ctx, e.stateName, entity.ID); nil != err {
@@ -519,12 +517,11 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 		return
 	}
 
-	return
+	return out, errors.Wrap(err, "dapr client delete state failed")
 }
 
 // Echo test for RegisterService.
 func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-
 	if in == nil {
 		err = errors.New("nil invocation parameter")
 		return out, err
@@ -538,4 +535,16 @@ func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEve
 		DataTypeURL: in.DataTypeURL,
 	}
 	return out, err
+}
+
+func (e *EntityService) queryAndEnsureEntity(ctx context.Context, in *common.InvocationEvent) (entity Entity, err error) {
+	if entity, err = e.getEntityFrom(ctx, in, true); err != nil {
+		return entity, errors.Wrap(err, "get entity err")
+	}
+
+	if err = e.entityExists(ctx, entity.Source, entity.UserID, entity.ID); err != nil {
+		return entity, errors.Wrap(err, "query entity err")
+	}
+
+	return
 }

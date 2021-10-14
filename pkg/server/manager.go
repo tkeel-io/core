@@ -4,9 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/print"
+
+	"github.com/dapr/go-sdk/service/common"
 )
 
 type Manager struct {

@@ -2,18 +2,18 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/dapr/go-sdk/service/common"
-	"github.com/tkeel-io/core/pkg/action"
-	tseriesaction "github.com/tkeel-io/core/pkg/action/tseries"
 	batchq "github.com/tkeel-io/core/pkg/batch_queue"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/source"
+
+	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/action"
+	tseriesaction "github.com/tkeel-io/core/pkg/action/tseries"
 	"go.uber.org/atomic"
 )
 
@@ -37,7 +37,6 @@ func NewTSeriesServer(ctx context.Context, name string, service common.Service) 
 }
 
 func (t *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
-
 	var (
 		err error
 	)
@@ -47,12 +46,12 @@ func (t *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
 	}
 
 	for _, sourceCfg := range serverConfig.Sources {
-		// open sources
+		// open sources.
 		var sourceInst source.ISource
 		meta := source.Metadata{Type: sourceCfg.Type, Name: sourceCfg.Name, Properties: sourceCfg.Properties}
 		sourceInst, err = source.OpenSource(childContext(t.ctx, t.name), meta, t.service)
 		if nil != err {
-			return err
+			return errors.Wrap(err, "open source err")
 		}
 
 		t.sources = append(t.sources, sourceInst)
@@ -60,18 +59,18 @@ func (t *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
 
 	// create batch queue.
 	queueCfg := serverConfig.BatchQueue
-	t.queue, err = batchq.NewBatchSink(childContext(t.ctx, t.name), &batchq.BatchQueueConfig{
+	t.queue, err = batchq.NewBatchSink(childContext(t.ctx, t.name), &batchq.Config{
 		Name:                  queueCfg.Name,
 		DoSinkFn:              batchHandler,
 		MaxBatching:           queueCfg.MaxBatching,
 		MaxPendingMessages:    queueCfg.MaxPendingMessages,
-		BatchingMaxFlushDelay: time.Millisecond * queueCfg.BatchingMaxFlushDelay,
+		BatchingMaxFlushDelay: queueCfg.BatchingMaxFlushDelay,
 	})
 	if err != nil {
 		return errors.Unwrap(err)
 	}
 
-	// create action
+	// create action.
 	t.action = tseriesaction.NewAction(childContext(t.ctx, t.name), fmt.Sprintf("%s.action", t.name), t.queue)
 
 	t.ready.Swap(true)
@@ -80,9 +79,8 @@ func (t *TSeriesServer) Init(serverConfig *config.TSeriesServer) error {
 }
 
 func (t *TSeriesServer) Run() error {
-
 	if !t.isReady() {
-		return errors.New("server not ready.")
+		return errors.New("server not ready")
 	}
 
 	for _, s := range t.sources {

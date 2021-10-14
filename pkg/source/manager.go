@@ -2,9 +2,9 @@ package source
 
 import (
 	"context"
-	"errors"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
 )
 
 type BaseSourceGenerator struct {
@@ -31,5 +31,10 @@ func OpenSource(ctx context.Context, metadata Metadata, service common.Service) 
 		return nil, errors.New("source generator not register")
 	}
 
-	return generator.OpenSource(ctx, metadata, service)
+	s, err := generator.OpenSource(ctx, metadata, service)
+	if err != nil {
+		return nil, errors.Wrap(err, "open source err")
+	}
+
+	return s, nil
 }
