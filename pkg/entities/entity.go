@@ -117,62 +117,74 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	sourceEntities := m.SourceEntities()
 	for _, entityId := range sourceEntities {
-		var et *entity
-		if et = e.getEntity(entityId); nil == et {
-			log.Warnf("entity not exists, entityId: %s.", entityId)
+
+		tentacle := mapper.MergeTentacles(e.indexTentacles[entityId]...)
+
+		if nil != tentacle {
+			// send tentacle msg.
+			e.entityManager.SendMsg(EntityContext{
+				Headers: Header{
+					EntityCtxHeaderSourceId: e.Id,
+					EntityCtxHeaderTargetId: entityId,
+				},
+				Message: &TentacleMsg{
+					TargetId: e.Id,
+					Items:    tentacle.Items(),
+				},
+			})
 		}
-		et.TentacleModify(reqID, e.Id)
 	}
 
 	return nil
 }
 
-// TentacleModify notify tentacle event.
-func (e *entity) TentacleModify(requestId, entityId string) {
+// // TentacleModify notify tentacle event.
+// func (e *entity) TentacleModify(requestId, entityId string) {
 
-	tentacles := e.getEntity(entityId).GetTentacles(requestId, e.Id)
+// 	tentacles := e.getEntity(entityId).GetTentacles(requestId, e.Id)
 
-	e.lock.Lock(&requestId)
-	defer e.lock.Unlock()
+// 	if e.Id != entityId {
+// 		e.indexTentacles[entityId] = tentacles
+// 	}
 
-	if e.Id != entityId {
-		e.indexTentacles[entityId] = tentacles
-	}
+// 	//generate tentacles again.
+// 	e.tentacles = make(map[string][]mapper.Tentacler)
+// 	for _, tentacles := range e.indexTentacles {
+// 		for _, tentacle := range tentacles {
+// 			for _, item := range tentacle.Items() {
+// 				e.tentacles[item] = append(e.tentacles[item], tentacle)
+// 			}
+// 		}
+// 	}
+// }
 
-	//generate tentacles again.
-	e.tentacles = make(map[string][]mapper.Tentacler)
-	for _, tentacles := range e.indexTentacles {
-		for _, tentacle := range tentacles {
-			for _, item := range tentacle.Items() {
-				e.tentacles[item] = append(e.tentacles[item], tentacle)
-			}
-		}
-	}
-}
+// // GetTentacles returns tentacles.
+// func (e *entity) GetTentacles(requestId, entityId string) []mapper.Tentacler {
 
-// GetTentacles returns tentacles.
-func (e *entity) GetTentacles(requestId, entityId string) []mapper.Tentacler {
+// 	e.lock.Lock(&requestId)
+// 	defer e.lock.Unlock()
 
-	e.lock.Lock(&requestId)
-	defer e.lock.Unlock()
+// 	tentacles := e.indexTentacles[entityId]
+// 	result := make([]mapper.Tentacler, len(tentacles))
 
-	tentacles := e.indexTentacles[entityId]
-	result := make([]mapper.Tentacler, len(tentacles))
+// 	for index, tentacle := range tentacles {
+// 		result[index] = tentacle.Copy()
+// 	}
 
-	for index, tentacle := range tentacles {
-		result[index] = tentacle.Copy()
-	}
-
-	return result
-}
+// 	return result
+// }
 
 // GetProperty returns entity property.
 func (e *entity) GetProperty(key string) interface{} {
 
-	e.lock.Lock(&requestId)
+	reqID := utils.GenerateUUID()
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
+		e.Id, reqID, key)
+
+	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	return e.kvalues[e.Id][key]
+	return e.KValues[e.Id][key]
 }
 
 // SetProperty set entity property.
@@ -196,10 +208,118 @@ func (e *entity) DeleteProperty(string) error {
 }
 
 // InvokeMsg
-func (e *entity) InvokeMsg(entityId string, values map[string]interface{}) {
-	panic("implement me.")
+func (e *entity) InvokeMsg(ctx EntityContext) {
+
+	reqID := utils.GenerateUUID()
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	switch msg := ctx.Message.(type) {
+	case *EntityMsg:
+		e.invokeEntityMsg(msg)
+	case *TentacleMsg:
+		e.invokeTentacleMsg(msg)
+	default:
+		//invalid msg type.
+	}
 }
 
-func (e *entity) getEntity(id string) *entity {
-	return e.entityManager.GetEntity(id)
+//--------------考虑当entity自己的属性映射自己的时候
+
+func (e *entity) invokeEntityMsg(msg *EntityMsg) {
+
+	setEntityId := msg.SourceId
+	if "" == setEntityId {
+		setEntityId = e.Id
+	}
+
+	//1. update it's self properties.
+	//2. generate message, then send msg.
+	//3. active mapper.
+	activeTentacles := make([]activePair, 0)
+	entityProps := e.KValues[setEntityId]
+	for key, value := range msg.Values {
+		entityProps[key] = value
+		activeTentacles = append(activeTentacles, activePair{key, mapper.GenTentacleKey(e.Id, key)})
+	}
+
+	//active tentacles.
+	e.activeTentacle(activeTentacles)
+
+}
+
+func (e *entity) activeTentacle(actives []activePair) {
+
+	var (
+		activeMappers = make([]string, 0)
+		messages      = make(map[string]map[string]interface{})
+	)
+
+	thisEntityProps := e.KValues[e.Id]
+	for _, active := range actives {
+		if tentacles, exists := e.tentacles[active.TentacleKey]; exists {
+			for _, tentacle := range tentacles {
+				targetId := tentacle.TargetId()
+				if mapper.TentacleTypeMapper == tentacle.Type() {
+					activeMappers = append(activeMappers, targetId)
+				} else if mapper.TentacleTypeEntity == tentacle.Type() {
+					//make if not exists.
+					if _, exists := messages[targetId]; exists {
+						messages[targetId] = make(map[string]interface{})
+					}
+
+					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
+					messages[targetId][active.PropertyKey] = thisEntityProps[active.PropertyKey]
+				} else {
+					//undefine tentacle type.
+					log.Warnf("undefine tentacle type, %v", tentacle)
+				}
+			}
+		}
+	}
+
+	//send msgs.
+	for entityId, msg := range messages {
+		e.entityManager.SendMsg(EntityContext{
+			Headers: Header{
+				EntityCtxHeaderSourceId: e.Id,
+				EntityCtxHeaderTargetId: entityId,
+			},
+			Message: &EntityMsg{
+				SourceId: e.Id,
+				Values:   msg,
+			},
+		})
+	}
+
+	// active mapper.
+	e.activeMapper(activeMappers)
+}
+
+func (e *entity) activeMapper(actives []string) {
+
+}
+
+func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
+
+	if e.Id != msg.TargetId {
+
+		tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetId, msg.Items)
+		e.indexTentacles[msg.TargetId] = []mapper.Tentacler{tentacle}
+	}
+
+	//generate tentacles again.
+	e.tentacles = make(map[string][]mapper.Tentacler)
+	for _, tentacles := range e.indexTentacles {
+		for _, tentacle := range tentacles {
+			for _, item := range tentacle.Items() {
+				e.tentacles[item] = append(e.tentacles[item], tentacle)
+			}
+		}
+	}
+}
+
+type activePair struct {
+	PropertyKey string
+	TentacleKey string
 }

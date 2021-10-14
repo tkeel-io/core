@@ -42,3 +42,28 @@ func (t *tentacle) Copy() Tentacler {
 		targetId: t.targetId,
 	}
 }
+
+func MergeTentacles(tentacles ...Tentacler) Tentacler {
+
+	if len(tentacles) == 0 {
+		return nil
+	}
+
+	tentacle0 := tentacles[0].(*tentacle)
+
+	itemMap := make(map[string]struct{})
+	for _, tentacle := range tentacles {
+		for _, item := range tentacle.Items() {
+			itemMap[item] = struct{}{}
+		}
+	}
+
+	index := -1
+	items := make([]string, len(itemMap))
+	for item, _ := range itemMap {
+		index += 1
+		items[index] = item
+	}
+
+	return NewTentacle(tentacle0.tp, tentacle0.targetId, items)
+}

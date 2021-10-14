@@ -7,6 +7,12 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 )
 
+const (
+	EntityCtxHeaderSourceId  = "x-source"
+	EntityCtxHeaderTargetId  = "x-target"
+	EntityCtxHeaderRequestId = "x-request-id"
+)
+
 var (
 	log = logger.NewLogger("core.entities")
 
@@ -28,7 +34,7 @@ type EntityOp interface {
 	// DeleteProperty delete entity property.
 	DeleteProperty(string) error
 	// InvokeMsg
-	InvokeMsg(entityId string, values map[string]interface{})
+	InvokeMsg(EntityContext)
 	// SetMapper
 	SetMapper(m mapper.Mapper) error
 	// GetMapper returns a mapper.
@@ -39,4 +45,23 @@ type EntityOp interface {
 	TentacleModify(requestId, entityId string)
 	// GetTentacles returns tentacles.
 	GetTentacles(requestId, entityId string)
+}
+
+type EntityContext struct {
+	Headers Header
+	Message Message
+}
+
+func (ec *EntityContext) TargetId() string {
+	return ec.Headers[EntityCtxHeaderTargetId]
+}
+
+func (ec *EntityContext) SetTarget(targetId string) {
+	ec.Headers[EntityCtxHeaderTargetId] = targetId
+}
+
+type Header map[string]string
+
+type Message interface {
+	Message()
 }
