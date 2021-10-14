@@ -2,12 +2,12 @@
 
 GOCMD = GO111MODULE=on go
 
-VERSION := $(shell grep "const Version " pkg/version/version.go | sed -E 's/.*"(.+)"$$/\1/')
+VERSION := $(shell grep "const Version " cmd/root.go | sed -E 's/.*"(.+)"$$/\1/')
 GIT_COMMIT=$(shell git rev-parse HEAD)
 GIT_DIRTY=$(shell test -n "`git status --porcelain`" && echo "+CHANGES" || true)
 BUILD_DATE=$(shell date '+%Y-%m-%d-%H:%M:%S')
-GORUN = $(GOCMD) run -ldflags "-X github.com/tkeel-io/core/pkg/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/pkg/version.BuildDate=${BUILD_DATE}"
-GOBUILD = $(GOCMD) build -ldflags "-X github.com/tkeel-io/core/pkg/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/pkg/version.BuildDate=${BUILD_DATE}"
+GORUN = $(GOCMD) run -ldflags "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
+GOBUILD = $(GOCMD) build -ldflags "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
 GOTEST = $(GOCMD) test
 BINNAME = core
 
@@ -28,7 +28,7 @@ build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64  $(GOBUILD) -o bin/linux/$(BINNAME)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
-	@bin/$(BINNAME) version
+	@bin/$(BINNAME) --version
 	@echo "-----------Done------------"
 
 ifeq ($(GOOS),windows)
