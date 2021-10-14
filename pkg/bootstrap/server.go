@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 
+	ants "github.com/panjf2000/ants/v2"
 	"github.com/tkeel-io/core/pkg/api"
 	"github.com/tkeel-io/core/pkg/api/service"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/server"
 
 	"github.com/dapr/go-sdk/service/common"
@@ -20,6 +22,8 @@ type Server struct {
 	daprService   common.Service
 	apiRegistry   *api.APIRegistry
 	serverManager *server.ServerManager
+	entityManager *entities.EntityManager
+	coroutinePool *ants.Pool
 
 	ctx    context.Context
 	cancel context.CancelFunc

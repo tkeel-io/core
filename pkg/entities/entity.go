@@ -19,14 +19,14 @@ type entity struct {
 	tentacles      map[string][]mapper.Tentacler //key=entityId#propertyKey
 	indexTentacles map[string][]mapper.Tentacler //key=targetId(mapperId/entityId)
 
-	entityManager *manager
+	entityManager *EntityManager
 	lock          *utils.ReEntryLock
 
 	ctx context.Context
 }
 
 // NewEntity create a entity object.
-func NewEntity(ctx context.Context, mgr *manager, entityId string, source string, userId string, tag string, version int64) (*entity, error) {
+func NewEntity(ctx context.Context, mgr *EntityManager, entityId string, source string, userId string, tag string, version int64) (*entity, error) {
 
 	if entityId == "" {
 		entityId = utils.GenerateUUID()
@@ -60,13 +60,13 @@ func (e *entity) GetId() string {
 func (e *entity) GetMapper(mid string) mapper.Mapper {
 
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.",
-		e.Id, reqID, mid)
+
+	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.Id, reqID, mid)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	if m, _ := e.mappers[mid]; m != nil {
+	if m, has := e.mappers[mid]; has {
 		return m.Copy()
 	}
 
@@ -81,8 +81,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 		reqID  = utils.GenerateUUID()
 	)
 
-	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.",
-		e.Id, reqID)
+	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.", e.Id, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -98,6 +97,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	reqID := utils.GenerateUUID()
+
 	log.Infof("entity.SetMapper called, entityId: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.Id, reqID, m.Id, m.String())
 
@@ -108,11 +108,8 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	// generate indexTentacles again.
 	for _, mp := range e.mappers {
-		tentacles := m.Tentacles()
-		for _, tentacle := range tentacles {
-			e.indexTentacles[mp.TargetEntity()] =
-				append(e.indexTentacles[mp.TargetEntity()], tentacle)
-		}
+		e.indexTentacles[mp.TargetEntity()] =
+			append(e.indexTentacles[mp.TargetEntity()], m.Tentacles()...)
 	}
 
 	sourceEntities := m.SourceEntities()
@@ -142,8 +139,8 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 func (e *entity) GetProperty(key string) interface{} {
 
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
-		e.Id, reqID, key)
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.Id, reqID, key)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -153,7 +150,9 @@ func (e *entity) GetProperty(key string) interface{} {
 
 // SetProperty set entity property.
 func (e *entity) SetProperty(key string, value interface{}) error {
+
 	reqID := utils.GenerateUUID()
+
 	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
 		e.Id, reqID, key)
 
@@ -168,9 +167,10 @@ func (e *entity) SetProperty(key string, value interface{}) error {
 
 //GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() map[string]interface{} {
+
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.",
-		e.Id, reqID)
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()

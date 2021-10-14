@@ -7,9 +7,7 @@ import (
 	ants "github.com/panjf2000/ants/v2"
 )
 
-const defaultConcurrencyMax = 500
-
-type manager struct {
+type EntityManager struct {
 	entities      map[string]*entity
 	msgCh         chan EntityContext
 	disposeCh     chan EntityContext
@@ -19,9 +17,9 @@ type manager struct {
 	ctx  context.Context
 }
 
-func NewManager(ctx context.Context, coroutinePool *ants.Pool) *manager {
+func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
 
-	return &manager{
+	return &EntityManager{
 		ctx:           ctx,
 		entities:      make(map[string]*entity),
 		msgCh:         make(chan EntityContext), //在channel内部传递引用或指针可能造成gc回收困难和延迟。
@@ -30,7 +28,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool) *manager {
 	}
 }
 
-func (m *manager) Load(e *entity) error {
+func (m *EntityManager) Load(e *entity) error {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -44,7 +42,7 @@ func (m *manager) Load(e *entity) error {
 	return nil
 }
 
-func (m *manager) GetEntity(id string) *entity {
+func (m *EntityManager) GetEntity(id string) *entity {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -53,18 +51,32 @@ func (m *manager) GetEntity(id string) *entity {
 	return entity
 }
 
-func (m *manager) SendMsg(ctx EntityContext) {
+func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey string) (resp interface{}, err error) {
+
+	m.lock.Lock()
+	entity, has := m.entities[entityId]
+	m.lock.Unlock()
+
+	if !has {
+		err = errEntityNotFound
+		log.Errorf("EntityManager.GetProperty failed, err: %s", err.Error())
+	}
+
+	return entity.GetProperty(propertyKey), err
+}
+
+func (m *EntityManager) SendMsg(ctx EntityContext) {
 	//解耦actor之间的直接调用
 
 	m.msgCh <- ctx
 }
 
-func (m *manager) Start() error {
+func (m *EntityManager) Start() error {
 	go func() {
 		for {
 			select {
 			case <-m.ctx.Done():
-				log.Info("entity manager exited.")
+				log.Info("entity EntityManager exited.")
 				return
 			case entityCtx := <-m.msgCh:
 				//dispatch message. 将消息分发到不同的节点。

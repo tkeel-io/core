@@ -16,8 +16,9 @@ const (
 var (
 	log = logger.NewLogger("core.entities")
 
-	errMapperExisted = errors.New("mapper aready exists.")
-	errEntityExisted = errors.New("entity aready exists.")
+	errMapperExisted  = errors.New("mapper aready exists.")
+	errEntityExisted  = errors.New("entity aready exists.")
+	errEntityNotFound = errors.New("entity not found.")
 )
 
 type EntityOp interface {
