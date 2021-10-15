@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 type Data struct {
@@ -20,13 +21,22 @@ type Data struct {
 // }
 
 func DeepCopy(dst, src interface{}) error {
+	var (
+		err   error
+		bytes []byte
+	)
 
-	bytes, _ := json.Marshal(src)
-	return json.Unmarshal(bytes, dst)
+	if bytes, err = json.Marshal(src); nil != err {
+		return fmt.Errorf("json marshal error, %w", err)
+	}
+	if err = json.Unmarshal(bytes, dst); nil != err {
+		return fmt.Errorf("json marshal error, %w", err)
+	}
+
+	return nil
 }
 
 func Duplicate(v interface{}) interface{} {
-
 	data := Data{}
 	bytes, _ := json.Marshal(Data{Val: v})
 	json.Unmarshal(bytes, &data)

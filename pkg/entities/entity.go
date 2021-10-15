@@ -54,7 +54,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 		cacheProps:    make(map[string]map[string]interface{}),
 	}
 
-	// set KValues into cacheProps
+	// set KValues into cacheProps.
 	et.cacheProps[id] = et.KValues
 
 	return et, mgr.Load(et)
@@ -227,7 +227,6 @@ func (e *entity) InvokeMsg(ctx EntityContext) {
 	}
 }
 
-// 考虑当entity自己的属性映射自己的时候
 func (e *entity) invokeEntityMsg(msg *EntityMsg) {
 	setEntityID := msg.SourceID
 	if setEntityID == "" {

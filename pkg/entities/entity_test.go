@@ -23,7 +23,6 @@ func TestEntity(t *testing.T) {
 }
 
 func TestGetProperties(t *testing.T) {
-
 	coroutinePool, err := ants.NewPool(500)
 	if nil != err {
 		panic(err)
@@ -51,10 +50,9 @@ func TestGetProperties(t *testing.T) {
 	props := entity.GetAllProperties()
 	t.Log(props)
 
-	//delete some field.
+	// delete some field.
 	delete(props, "light")
 
 	props1 := entity.GetAllProperties()
 	t.Log(props1)
-
 }
