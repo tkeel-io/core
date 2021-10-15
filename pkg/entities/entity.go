@@ -155,7 +155,7 @@ func (e *entity) GetProperty(key string) interface{} {
 func (e *entity) SetProperty(key string, value interface{}) error {
 	reqID := utils.GenerateUUID()
 
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
+	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -169,14 +169,14 @@ func (e *entity) SetProperty(key string, value interface{}) error {
 func (e *entity) GetAllProperties() map[string]interface{} {
 	reqID := utils.GenerateUUID()
 
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
+	log.Infof("entity.GetAllProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
 	result := make(map[string]interface{})
 	if err := utils.DeepCopy(&result, &e.KValues); nil != err {
-		log.Errorf("duplicate properties failed.")
+		log.Errorf("duplicate properties failed, err: %s.", err.Error())
 	}
 	return result
 }
@@ -185,7 +185,7 @@ func (e *entity) GetAllProperties() map[string]interface{} {
 func (e *entity) SetProperties(values map[string]interface{}) error {
 	reqID := utils.GenerateUUID()
 
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
+	log.Infof("entity.SetProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -201,7 +201,7 @@ func (e *entity) SetProperties(values map[string]interface{}) error {
 func (e *entity) DeleteProperty(key string) error {
 	reqID := utils.GenerateUUID()
 
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
+	log.Infof("entity.DeleteProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -227,8 +227,7 @@ func (e *entity) InvokeMsg(ctx EntityContext) {
 	}
 }
 
-//--------------考虑当entity自己的属性映射自己的时候
-
+// 考虑当entity自己的属性映射自己的时候
 func (e *entity) invokeEntityMsg(msg *EntityMsg) {
 	setEntityID := msg.SourceID
 	if setEntityID == "" {

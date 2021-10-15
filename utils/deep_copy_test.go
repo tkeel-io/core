@@ -68,7 +68,7 @@ func TestDeepCopyInterface(t *testing.T) {
 
 func TestDuplicate(t *testing.T) {
 	v := map[string]interface{}{"aaa": 123}
-	destV, err := Duplicate(v)
+	destV := Duplicate(v)
 
-	t.Log(destV, err)
+	t.Log(destV)
 }
