@@ -18,12 +18,11 @@
 > 现有三个实体，将entity1和entity2的部分数据映射到entity3。
 ```sql
 MQL:
-	select
+
 		entity1.property1 as property1,
 		entity2.property2 as property2,
-		entity1.property3 + entity2.property3 as property3,
-	from
-		entity3;
+		entity1.property3 + entity2.property3 as property3
+
 ```
 
 

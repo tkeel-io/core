@@ -49,23 +49,20 @@
 <!-- ![mapper-parse](../images/mapper-parse.png) -->
 
 
-## mapper & Tentacles
+
+
+## tentacle 分发
+
+
+![mapper-tentacles](../images/mapper-data-directory2.png)
+
+
+## mapper & tentacle 数据流向
 
 mapper通过解析`MQL`生成`tentacle`，`mapper`为每一个`SourceActor`生成一个`tentacle`用于同步属性变更。
 ![mapper-tentacles](../images/mapper-tentacles.png)
 
 
-
-
-## mapper数据流向
-
-1. 浅绿色块和虚线范围都表示一个Entity，之所以如此在于解释Entity内部mapper和tentacle的关系。
-2. 绿色粗线表示Entity为mapper映射提供输入。
-3. 色粗线表示mapper对Entity的输出。
-4. 图上可知，mapper为与之相关的所有Entity提供一个tentacle，mapper所在Entity也是如此，mapper的输入从mapper所在的Entity获取， 其他Entity通过Tentacle将数据复制到mapper所在Entity。
-5. 一个Entity可以拥有多个mapper。
-
-![mapper-tentacles](../images/mapper-data-directory.png)
 
 
 
