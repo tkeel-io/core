@@ -7,15 +7,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Log is the implemention for logrus.
+// Log is the implementation for logrus.
 type Log struct {
-	// name is the name of logger that is published to log as a scope
+	// name is the name of logger that is published to log as a scope.
 	name string
-	// loger is the instance of logrus logger
+	// logger is the instance of logrus logger.
 	logger *logrus.Entry
 }
 
-var Version string = "unknown"
+var Version = "unknown"
 
 func newLog(name string) *Log {
 	newLogger := logrus.New()
@@ -75,7 +75,7 @@ func (l *Log) SetAppID(id string) {
 }
 
 func toLogrusLevel(lvl LogLevel) logrus.Level {
-	// ignore error because it will never happens
+	// ignore error because it will never happen.
 	l, _ := logrus.ParseLevel(string(lvl))
 	return l
 }

@@ -2,8 +2,8 @@ package model
 
 import "github.com/pkg/errors"
 
-var TopicNilErr = errors.New("topic is nil")
-var SourceNilErr = errors.New("source is nil")
-var UserNilErr = errors.New("user is nil")
-var DataContentTypeNilErr = errors.New("data_content_type is nil")
-var EventTypeErr = errors.New("event type error")
+var ErrTopicNil = errors.New("topic is nil")
+var ErrSourceNil = errors.New("source is nil")
+var ErrUserNil = errors.New("user is nil")
+var ErrDataContentTypeNil = errors.New("data_content_type is nil")
+var ErrEventType = errors.New("event type error")

@@ -4,27 +4,27 @@ import (
 	"sync"
 )
 
-// BlockingQueue is a interface of block queue
+// BlockingQueue is a interface of block queue.
 type BlockingQueue interface {
-	// Put enqueue one item, block if the queue is full
+	// Put enqueue one item, block if the queue is full.
 	Put(item interface{})
 
-	// Take dequeue one item, block until it's available
+	// Take dequeue one item, block until it's available.
 	Take() interface{}
 
-	// Poll dequeue one item, return nil if queue is empty
+	// Poll dequeue one item, return nil if queue is empty.
 	Poll() interface{}
 
-	// Peek return the first item without dequeing, return nil if queue is empty
+	// Peek return the first item without dequeing, return nil if queue is empty.
 	Peek() interface{}
 
-	// PeekLast return last item in queue without dequeing, return nil if queue is empty
+	// PeekLast return last item in queue without dequeing, return nil if queue is empty.
 	PeekLast() interface{}
 
-	// Size return the current size of the queue
+	// Size return the current size of the queue.
 	Size() int
 
-	// Iterator return an iterator for the queue
+	// Iterator return an iterator for the queue.
 	Iterator() BlockingQueueIterator
 }
 
@@ -52,7 +52,7 @@ type blockingQueueIterator struct {
 	toRead  int
 }
 
-// NewBlockingQueue init block queue and returns a BlockingQueue
+// NewBlockingQueue init block queue and returns a BlockingQueue.
 func NewBlockingQueue(maxSize int) BlockingQueue {
 	bq := &blockingQueue{
 		items:   make([]interface{}, maxSize),
@@ -75,8 +75,6 @@ func (bq *blockingQueue) Put(item interface{}) {
 		bq.isNotFull.Wait()
 	}
 
-	wasEmpty := bq.size == 0
-
 	bq.items[bq.tailIdx] = item
 	bq.size++
 	bq.tailIdx++
@@ -84,7 +82,7 @@ func (bq *blockingQueue) Put(item interface{}) {
 		bq.tailIdx = 0
 	}
 
-	if wasEmpty {
+	if bq.size == 0 {
 		// Wake up eventual reader waiting for next item
 		bq.isNotEmpty.Signal()
 	}

@@ -7,46 +7,56 @@ import (
 	"github.com/tkeel-io/core/utils"
 )
 
+type EntityBase struct {
+	Id      string                 `json:"id,omitempty"`
+	Tag     *string                `json:"tag,omitempty"`
+	Type    string                 `json:"type,omitempty"`
+	Source  string                 `json:"source,omitempty"`
+	UserId  string                 `json:"user_id,omitempty"`
+	Version int64                  `json:"version,omitempty"`
+	KValues map[string]interface{} `json:"kvalues,omitempty"`
+}
+
 type entity struct {
-	Id      string                            `json:"id"`
-	Tag     string                            `json:"tag"`
-	Source  string                            `json:"source"`
-	UserId  string                            `json:"user_id"`
-	Version int64                             `json:"version"`
-	KValues map[string]map[string]interface{} `json:"kvalues"`
+	EntityBase
 
-	mappers        map[string]mapper.Mapper      //key=mapperId
-	tentacles      map[string][]mapper.Tentacler //key=entityId#propertyKey
-	indexTentacles map[string][]mapper.Tentacler //key=targetId(mapperId/entityId)
+	mappers        map[string]mapper.Mapper          //key=mapperId
+	tentacles      map[string][]mapper.Tentacler     //key=entityId#propertyKey
+	cacheProps     map[string]map[string]interface{} //cache other property.
+	indexTentacles map[string][]mapper.Tentacler     //key=targetId(mapperId/entityId)
 
-	entityManager *manager
+	entityManager *EntityManager
 	lock          *utils.ReEntryLock
 
 	ctx context.Context
 }
 
 // NewEntity create a entity object.
-func NewEntity(ctx context.Context, mgr *manager, entityId string, source string, userId string, tag string, version int64) (*entity, error) {
+func NewEntity(ctx context.Context, mgr *EntityManager, entityId string, source string, userId string, tag *string, version int64) (*entity, error) {
 
 	if entityId == "" {
 		entityId = utils.GenerateUUID()
 	}
 
 	et := &entity{
+		EntityBase: EntityBase{
+			Id:      entityId,
+			Tag:     tag,
+			Source:  source,
+			UserId:  userId,
+			Version: version,
+			KValues: make(map[string]interface{}),
+		},
+
 		ctx:           ctx,
-		Tag:           tag,
-		Id:            entityId,
-		Source:        source,
-		UserId:        userId,
-		Version:       version,
 		entityManager: mgr,
 		lock:          utils.NewReEntryLock(0),
 		mappers:       make(map[string]mapper.Mapper),
-		KValues:       make(map[string]map[string]interface{}),
+		cacheProps:    make(map[string]map[string]interface{}),
 	}
 
-	//default this properties.
-	et.KValues[entityId] = make(map[string]interface{})
+	// set KValues into cacheProps
+	et.cacheProps[entityId] = et.KValues
 
 	return et, mgr.Load(et)
 }
@@ -60,13 +70,13 @@ func (e *entity) GetId() string {
 func (e *entity) GetMapper(mid string) mapper.Mapper {
 
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.",
-		e.Id, reqID, mid)
+
+	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.Id, reqID, mid)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	if m, _ := e.mappers[mid]; m != nil {
+	if m, has := e.mappers[mid]; has {
 		return m.Copy()
 	}
 
@@ -81,8 +91,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 		reqID  = utils.GenerateUUID()
 	)
 
-	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.",
-		e.Id, reqID)
+	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.", e.Id, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
@@ -98,6 +107,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	reqID := utils.GenerateUUID()
+
 	log.Infof("entity.SetMapper called, entityId: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.Id, reqID, m.Id, m.String())
 
@@ -108,11 +118,8 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	// generate indexTentacles again.
 	for _, mp := range e.mappers {
-		tentacles := m.Tentacles()
-		for _, tentacle := range tentacles {
-			e.indexTentacles[mp.TargetEntity()] =
-				append(e.indexTentacles[mp.TargetEntity()], tentacle)
-		}
+		e.indexTentacles[mp.TargetEntity()] =
+			append(e.indexTentacles[mp.TargetEntity()], m.Tentacles()...)
 	}
 
 	sourceEntities := m.SourceEntities()
@@ -142,55 +149,77 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 func (e *entity) GetProperty(key string) interface{} {
 
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
-		e.Id, reqID, key)
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.Id, reqID, key)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	return e.KValues[e.Id][key]
+	return e.KValues[key]
 }
 
 // SetProperty set entity property.
 func (e *entity) SetProperty(key string, value interface{}) error {
+
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.",
-		e.Id, reqID, key)
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.Id, reqID, key)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	thisEntityProps := e.KValues[e.Id]
-	thisEntityProps[key] = value
+	e.KValues[key] = value
 
 	return nil
 }
 
 //GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() map[string]interface{} {
+
 	reqID := utils.GenerateUUID()
-	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.",
-		e.Id, reqID)
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
 
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	props := e.KValues[e.Id]
 	result := make(map[string]interface{})
-	if err := utils.DeepCopy(&result, &props); nil != err {
+	if err := utils.DeepCopy(&result, &e.KValues); nil != err {
 		log.Errorf("duplicate properties failed.")
 	}
 	return result
 }
 
 // SetProperties set entity properties
-func (e *entity) SetProperties(map[string]interface{}) error {
-	panic("implement me.")
+func (e *entity) SetProperties(values map[string]interface{}) error {
+
+	reqID := utils.GenerateUUID()
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	for key, value := range values {
+		e.KValues[key] = value
+	}
+
+	return nil
 }
 
 // DeleteProperty delete entity property.
-func (e *entity) DeleteProperty(string) error {
-	panic("implement me.")
+func (e *entity) DeleteProperty(key string) error {
+
+	reqID := utils.GenerateUUID()
+
+	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s.", e.Id, reqID)
+
+	e.lock.Lock(&reqID)
+	defer e.lock.Unlock()
+
+	delete(e.KValues, key)
+
+	return nil
 }
 
 // InvokeMsg
@@ -207,6 +236,7 @@ func (e *entity) InvokeMsg(ctx EntityContext) {
 		e.invokeTentacleMsg(msg)
 	default:
 		//invalid msg type.
+		log.Errorf("undefine message type, msg: %s", msg)
 	}
 }
 
@@ -223,7 +253,7 @@ func (e *entity) invokeEntityMsg(msg *EntityMsg) {
 	//2. generate message, then send msg.
 	//3. active mapper.
 	activeTentacles := make([]activePair, 0)
-	entityProps := e.KValues[setEntityId]
+	entityProps := e.cacheProps[setEntityId]
 	for key, value := range msg.Values {
 		entityProps[key] = value
 		activeTentacles = append(activeTentacles, activePair{key, mapper.GenTentacleKey(e.Id, key)})
@@ -241,7 +271,7 @@ func (e *entity) activeTentacle(actives []activePair) {
 		messages      = make(map[string]map[string]interface{})
 	)
 
-	thisEntityProps := e.KValues[e.Id]
+	thisEntityProps := e.cacheProps[e.Id]
 	for _, active := range actives {
 		if tentacles, exists := e.tentacles[active.TentacleKey]; exists {
 			for _, tentacle := range tentacles {

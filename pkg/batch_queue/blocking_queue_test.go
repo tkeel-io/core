@@ -10,7 +10,6 @@ import (
 )
 
 func TestBlockingQueueUnit(t *testing.T) {
-	//gunit.RunSequential(new(BlockingQueueUnit), t)
 	gunit.Run(new(BlockingQueueUnit), t)
 }
 
@@ -18,29 +17,29 @@ type BlockingQueueUnit struct {
 	*gunit.Fixture
 }
 
-func (this *BlockingQueueUnit) Setup() {
-	this.So(nil, should.BeNil)
+func (u *BlockingQueueUnit) Setup() {
+	u.So(nil, should.BeNil)
 }
 
-func (this *BlockingQueueUnit) TestBlockingQueue() {
+func (u *BlockingQueueUnit) TestBlockingQueue() {
 	q := NewBlockingQueue(10)
 
-	this.AssertEqual(0, q.Size())
-	this.AssertEqual(nil, q.Poll())
-	this.AssertEqual(nil, q.Peek())
-	this.AssertEqual(nil, q.PeekLast())
+	u.AssertEqual(0, q.Size())
+	u.AssertEqual(nil, q.Poll())
+	u.AssertEqual(nil, q.Peek())
+	u.AssertEqual(nil, q.PeekLast())
 
 	q.Put("test")
-	this.AssertEqual(1, q.Size())
+	u.AssertEqual(1, q.Size())
 
-	this.AssertEqual("test", q.Peek())
-	this.AssertEqual("test", q.PeekLast())
-	this.AssertEqual(1, q.Size())
+	u.AssertEqual("test", q.Peek())
+	u.AssertEqual("test", q.PeekLast())
+	u.AssertEqual(1, q.Size())
 
-	this.AssertEqual("test", q.Take())
-	this.AssertEqual(nil, q.Peek())
-	this.AssertEqual(nil, q.PeekLast())
-	this.AssertEqual(0, q.Size())
+	u.AssertEqual("test", q.Take())
+	u.AssertEqual(nil, q.Peek())
+	u.AssertEqual(nil, q.PeekLast())
+	u.AssertEqual(0, q.Size())
 
 	ch := make(chan string)
 
@@ -53,7 +52,7 @@ func (this *BlockingQueueUnit) TestBlockingQueue() {
 
 	select {
 	case <-ch:
-		this.Error("Should not have had a value at this point")
+		u.Error("Should not have had a value at u point")
 	default:
 		// Good, no value yet
 	}
@@ -61,30 +60,30 @@ func (this *BlockingQueueUnit) TestBlockingQueue() {
 	q.Put("test-2")
 
 	x := <-ch
-	this.AssertEqual("test-2", x)
+	u.AssertEqual("test-2", x)
 
 	// Fill the queue
 	for i := 0; i < 10; i++ {
 		q.Put(fmt.Sprintf("i-%d", i))
-		this.AssertEqual(i+1, q.Size())
+		u.AssertEqual(i+1, q.Size())
 	}
 
 	for i := 0; i < 10; i++ {
-		this.AssertEqual(fmt.Sprintf("i-%d", i), q.Take())
+		u.AssertEqual(fmt.Sprintf("i-%d", i), q.Take())
 	}
 
 	close(ch)
 }
 
-func (this *BlockingQueueUnit) TestBlockingQueueWaitWhenFull() {
+func (u *BlockingQueueUnit) TestBlockingQueueWaitWhenFull() {
 	q := NewBlockingQueue(3)
 
 	q.Put("test-1")
 	q.Put("test-2")
 	q.Put("test-3")
-	this.AssertEqual(3, q.Size())
-	this.AssertEqual("test-1", q.Peek())
-	this.AssertEqual("test-3", q.PeekLast())
+	u.AssertEqual(3, q.Size())
+	u.AssertEqual("test-1", q.Peek())
+	u.AssertEqual("test-3", q.PeekLast())
 
 	ch := make(chan bool)
 
@@ -98,35 +97,35 @@ func (this *BlockingQueueUnit) TestBlockingQueueWaitWhenFull() {
 
 	select {
 	case <-ch:
-		this.Error("Should not have had a value at this point")
+		u.Error("Should not have had a value at u point")
 	default:
 		// Good, no value yet
 	}
 
-	this.AssertEqual("test-1", q.Poll())
+	u.AssertEqual("test-1", q.Poll())
 
 	// Now the go-routine should have completed
 	<-ch
-	this.AssertEqual(3, q.Size())
+	u.AssertEqual(3, q.Size())
 
-	this.AssertEqual("test-2", q.Take())
-	this.AssertEqual("test-3", q.Take())
-	this.AssertEqual("test-4", q.Take())
+	u.AssertEqual("test-2", q.Take())
+	u.AssertEqual("test-3", q.Take())
+	u.AssertEqual("test-4", q.Take())
 
 	close(ch)
 }
 
-func (this *BlockingQueueUnit) TestBlockingQueueIterator() {
+func (u *BlockingQueueUnit) TestBlockingQueueIterator() {
 	q := NewBlockingQueue(10)
 
 	q.Put(1)
 	q.Put(2)
 	q.Put(3)
-	this.AssertEqual(3, q.Size())
+	u.AssertEqual(3, q.Size())
 
 	i := 1
 	for it := q.Iterator(); it.HasNext(); {
-		this.AssertEqual(i, it.Next())
+		u.AssertEqual(i, it.Next())
 		i++
 	}
 }

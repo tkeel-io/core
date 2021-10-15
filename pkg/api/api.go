@@ -4,52 +4,49 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/logger"
+
+	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
 )
 
 var log = logger.NewLogger("core.api")
 
-// APIRegistry is api registry
-type APIRegistry struct {
+// Registry is api registry.
+type Registry struct {
 	ctx         context.Context
 	services    map[string]IService
 	daprService common.Service
 }
 
-// NewAPIRegistry returns a new NewAPIRegistry
-func NewAPIRegistry(ctx context.Context, service common.Service) (*APIRegistry, error) {
-
-	return &APIRegistry{
+// NewAPIRegistry returns a new NewAPIRegistry.
+func NewAPIRegistry(ctx context.Context, service common.Service) (*Registry, error) {
+	return &Registry{
 		ctx:         ctx,
 		daprService: service,
 		services:    make(map[string]IService),
 	}, nil
 }
 
-// AddService add service to registry
-func (this *APIRegistry) AddService(s IService) error {
-
-	if _, exists := this.services[s.Name()]; exists {
-		return fmt.Errorf("service %s aready existed.", s.Name())
+// AddService add service to registry.
+func (r *Registry) AddService(s IService) error {
+	if _, exists := r.services[s.Name()]; exists {
+		return fmt.Errorf("service %s already existed", s.Name())
 	}
 
-	this.services[s.Name()] = s
+	r.services[s.Name()] = s
 	return nil
 }
 
-// Start start
-func (this *APIRegistry) Start() error {
-
-	//register services.
-	for _, s := range this.services {
-		if err := s.RegisterService(this.daprService); nil != err {
-			return err
+func (r *Registry) Start() error {
+	// register services.
+	for _, s := range r.services {
+		if err := s.RegisterService(r.daprService); nil != err {
+			return errors.Wrap(err, "register failed")
 		}
 	}
 
 	return nil
 }
 
-// Close
-func (this *APIRegistry) Close() {}
+func (r *Registry) Close() {}

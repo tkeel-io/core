@@ -2,13 +2,15 @@ package server
 
 import (
 	"context"
-	"fmt"
+	"os"
+
+	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/dapr/go-sdk/service/common"
-	"github.com/tkeel-io/core/pkg/config"
 )
 
-type ServerManager struct {
+type Manager struct {
 	name    string
 	service common.Service
 	conf    *config.Config
@@ -18,40 +20,36 @@ type ServerManager struct {
 	ctx context.Context
 }
 
-func NewServerManager(ctx context.Context, service common.Service, conf *config.Config) *ServerManager {
-	return &ServerManager{
+func NewManager(ctx context.Context, service common.Service, conf *config.Config) *Manager {
+	return &Manager{
 		ctx:     ctx,
 		conf:    conf,
 		service: service,
 	}
 }
 
-func (this *ServerManager) Init() error {
+func (m *Manager) Init() error {
+	// TODO: init event Servers.
+	// TODO: init property Servers.
+	// TODO: init relationship Servers.
 
-	//init event Servers.
-
-	//init property Servers.
-
-	//init relationship Servers.
-
-	//init tseries srevers.
-	for _, serverCfg := range this.conf.Server.TSeriesServers {
+	for _, serverCfg := range m.conf.Server.TSeriesServers {
 		if !serverCfg.Enabled {
-			fmt.Printf("%s Not Enabled.", serverCfg.Name)
+			print.WarningStatusEvent(os.Stdout, "%s Not Enabled.", serverCfg.Name)
 		} else {
-			Server := NewTSeriesServer(childContext(this.ctx, this.name), serverCfg.Name, this.service)
+			Server := NewTSeriesServer(childContext(m.ctx, m.name), serverCfg.Name, m.service)
 			if err := Server.Init(serverCfg); nil != err {
 				return err
 			}
-			this.tseriesServers = append(this.tseriesServers, Server)
+			m.tseriesServers = append(m.tseriesServers, Server)
 		}
 	}
 
 	return nil
 }
 
-func (this *ServerManager) Start() error {
-	for _, act := range this.tseriesServers {
+func (m *Manager) Start() error {
+	for _, act := range m.tseriesServers {
 		if err := act.Run(); nil != err {
 			return err
 		}

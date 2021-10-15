@@ -7,30 +7,32 @@ import (
 	ants "github.com/panjf2000/ants/v2"
 )
 
-const defaultConcurrencyMax = 500
-
-type manager struct {
+type EntityManager struct {
 	entities      map[string]*entity
 	msgCh         chan EntityContext
 	disposeCh     chan EntityContext
 	coroutinePool *ants.Pool
 
-	lock sync.RWMutex
-	ctx  context.Context
+	lock   sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewManager(ctx context.Context, coroutinePool *ants.Pool) *manager {
+func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
 
-	return &manager{
+	ctx, cancel := context.WithCancel(ctx)
+
+	return &EntityManager{
 		ctx:           ctx,
+		cancel:        cancel,
 		entities:      make(map[string]*entity),
-		msgCh:         make(chan EntityContext), //在channel内部传递引用或指针可能造成gc回收困难和延迟。
+		msgCh:         make(chan EntityContext),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
 	}
 }
 
-func (m *manager) Load(e *entity) error {
+func (m *EntityManager) Load(e *entity) error {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -44,27 +46,93 @@ func (m *manager) Load(e *entity) error {
 	return nil
 }
 
-func (m *manager) GetEntity(id string) *entity {
+func (m *EntityManager) GetEntity(id string) *entity {
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	entity, _ := m.entities[id]
-	return entity
+	entityInst, _ := m.entities[id]
+	return entityInst
 }
 
-func (m *manager) SendMsg(ctx EntityContext) {
+func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey string) (resp interface{}, err error) {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityId]
+	m.lock.Unlock()
+
+	if !has {
+		err = errEntityNotFound
+		log.Errorf("EntityManager.GetProperty failed, err: %s", err.Error())
+	}
+
+	return entityInst.GetProperty(propertyKey), err
+}
+
+func (m *EntityManager) GetAllProperties(ctx context.Context, entityId string) (resp interface{}, err error) {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityId]
+	m.lock.Unlock()
+
+	if !has {
+		err = errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	return entityInst.GetAllProperties(), err
+}
+
+func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) error {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityObj.Id]
+	//check id, source, userId, ...
+	m.lock.Unlock()
+
+	if !has {
+		err := errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	// 对于Header同步落盘，对于Kvalues 延迟落盘，可以做缓冲，罗盘策略：定时+定量。
+
+	entityInst.SetProperties(entityObj.KValues)
+
+	return nil
+}
+
+func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityObj.Id]
+	//check id, source, userId, ...
+	m.lock.Unlock()
+
+	if !has {
+		err := errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	for key, _ := range entityInst.KValues {
+		entityInst.DeleteProperty(key)
+	}
+
+	return nil
+}
+
+func (m *EntityManager) SendMsg(ctx EntityContext) {
 	//解耦actor之间的直接调用
 
 	m.msgCh <- ctx
 }
 
-func (m *manager) Start() error {
+func (m *EntityManager) Start() error {
 	go func() {
 		for {
 			select {
 			case <-m.ctx.Done():
-				log.Info("entity manager exited.")
+				log.Info("entity EntityManager exited.")
 				return
 			case entityCtx := <-m.msgCh:
 				//dispatch message. 将消息分发到不同的节点。

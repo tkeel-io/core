@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	// MaxMessageSize limit message size for transfer
+	// MaxMessageSize limit message size for transfer.
 	MaxMessageSize = 5 * 1024 * 1024
 	// MaxBatchSize will be the largest size for a batch sent from this particular producer.
 	// This is used as a baseline to allocate a new buffer that can hold the entire batch
@@ -24,14 +24,13 @@ var (
 type BatchBuilder struct {
 	buffer []interface{}
 
-	// Current number of messages in the batch
+	// Current number of messages in the batch.
 	numMessages uint
 
-	// Max number of message allowed in the batch
+	// Max number of message allowed in the batch.
 	maxMessages uint
 
 	sequenceIDGenerator *uint64
-	//currentSequenceID   uint64
 
 	lock       sync.Mutex
 	sequenceID uint64
@@ -52,7 +51,7 @@ func NewBatchBuilder(maxMessages uint) *BatchBuilder {
 	return bb
 }
 
-// IsFull check if the size in the current batch exceeds the maximum size allowed by the batch
+// IsFull check if the size in the current batch exceeds the maximum size allowed by the batch.
 func (bb *BatchBuilder) IsFull() bool {
 	return bb.numMessages >= bb.maxMessages
 }
@@ -73,7 +72,6 @@ func (bb *BatchBuilder) reset() {
 
 // Flush all the messages buffered in the client and wait until all messages have been successfully persisted.
 func (bb *BatchBuilder) Flush() (batchData []interface{}, sequenceID uint64) {
-	//log.Infof("BatchBuilder flush: messages:%d ", bb.numMessages)
 	if bb.numMessages == 0 {
 		// No-Op for empty batch
 		return nil, bb.sequenceID
@@ -87,7 +85,7 @@ func (bb *BatchBuilder) Flush() (batchData []interface{}, sequenceID uint64) {
 	return slice, bb.sequenceID
 }
 
-// GetAndAdd perform atomic read and update
+// GetAndAdd perform atomic read and update.
 func GetAndAdd(n *uint64, diff uint64) uint64 {
 	for {
 		v := *n
