@@ -2,35 +2,35 @@ package mql
 
 import "errors"
 
-type mqlImpl struct {
-	mqlText string
+type MyMQL struct {
+	text string
 }
 
-func NewMQL(mqlString string) *mqlImpl {
-	return &mqlImpl{mqlText: mqlString}
+func NewMQL(mqlString string) *MyMQL {
+	return &MyMQL{text: mqlString}
 }
 
 // Target returns target entity.
-func (m *mqlImpl) Target() string {
+func (m *MyMQL) Target() string {
 	return ""
 }
 
 // Entities returns entities.
-func (m *mqlImpl) Entities() []string {
+func (m *MyMQL) Entities() []string {
 	return []string{}
 }
 
 // Tentacles returns tentacles.
-func (m *mqlImpl) Tentacles() map[string][]string {
+func (m *MyMQL) Tentacles() map[string][]string {
 	return make(map[string][]string)
 }
 
-// Exec execute MQL
-func (m *mqlImpl) Exec(map[string]map[string]interface{}) (map[string]map[string]interface{}, error) {
-	return nil, errors.New("not implement.")
+// Exec execute MQL.
+func (m *MyMQL) Exec(map[string]map[string]interface{}) (map[string]map[string]interface{}, error) {
+	return nil, errors.New("not implement")
 }
 
-// ExecJson execute MQL with json input
-func (m *mqlImpl) ExecJson([]byte) (map[string]map[string]interface{}, error) {
-	return nil, errors.New("not implement.")
+// ExecJSONE execute MQL with json input.
+func (m *MyMQL) ExecJSONE([]byte) (map[string]map[string]interface{}, error) {
+	return nil, errors.New("not implement")
 }

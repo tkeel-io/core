@@ -2,13 +2,12 @@ package entities
 
 import (
 	"context"
-	"fmt"
-	ants "github.com/panjf2000/ants/v2"
 	"testing"
+
+	ants "github.com/panjf2000/ants/v2"
 )
 
 func TestEntity(t *testing.T) {
-
 	coroutinePool, err := ants.NewPool(500)
 	if nil != err {
 		panic(err)
@@ -17,8 +16,8 @@ func TestEntity(t *testing.T) {
 	tag := "test"
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	enty1, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
-	enty2, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	enty1, err1 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	enty2, err2 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
 
-	fmt.Println(enty1, enty2, err)
+	t.Log(enty1, enty2, err1, err2)
 }
