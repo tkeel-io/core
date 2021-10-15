@@ -42,7 +42,7 @@
 
 我们知道`mapper`执行分为`选取输入`，`计算输出`，`更新目标Actor状态`三个阶段。为了满足这三个阶段，我们给`mapper`引入两个核心概念：`MQL`和`tentacle`，`MQL`是`mapper`的核心组件用于描述映射中json的转化规则，执行计算。`tentacle`译为`触手`，用于映射第一阶段中的属性变更的同步。
 
-![mapper-tentacle-mql](../images/mapper-tentacle-mql.png)
+![mapper-tentacle-mql](../images/mapper-tentacle-mql2.png)
 
 
 
@@ -51,6 +51,7 @@
 
 ## mapper & Tentacles
 
+mapper通过解析`MQL`生成`tentacle`，`mapper`为每一个`SourceActor`生成一个`tentacle`用于同步属性变更。
 ![mapper-tentacles](../images/mapper-tentacles.png)
 
 
