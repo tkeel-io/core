@@ -16,5 +16,5 @@ type MQL interface {
 	Entities() []string
 	Tentacles() map[string][]string
 	Exec(map[string]map[string]interface{}) (map[string]map[string]interface{}, error)
-	ExecJson([]byte) (map[string]map[string]interface{}, error)
+	ExecJSONE([]byte) (map[string]map[string]interface{}, error)
 }

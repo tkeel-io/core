@@ -1,12 +1,12 @@
 package entities
 
 type EntityMsg struct {
-	SourceId string                 `json:"source_id"`
+	SourceID string                 `json:"source_id"`
 	Values   map[string]interface{} `json:"values"`
 }
 
 type TentacleMsg struct {
-	TargetId string   `json:"target"`
+	TargetID string   `json:"target"` //nolint
 	Items    []string `json:"items"`
 }
 

@@ -1,16 +1,18 @@
 package mapper
 
+import "log"
+
 type tentacle struct {
 	tp       TentacleType
-	targetId string
-	items    []string //key=entityId#propertyKey
+	targetID string
+	items    []string // key=entityId#propertyKey
 }
 
-func NewTentacle(tp TentacleType, targetId string, items []string) Tentacler {
+func NewTentacle(tp TentacleType, targetID string, items []string) Tentacler {
 	return &tentacle{
 		tp:       tp,
 		items:    items,
-		targetId: targetId,
+		targetID: targetID,
 	}
 }
 
@@ -19,9 +21,9 @@ func (t *tentacle) Type() TentacleType {
 	return t.tp
 }
 
-// TargetId returns target id.
-func (t *tentacle) TargetId() string {
-	return t.targetId
+// TargetID returns target id.
+func (t *tentacle) TargetID() string {
+	return t.targetID
 }
 
 // Items returns watch keys(watchKey=entityId#propertyKey).
@@ -30,7 +32,6 @@ func (t *tentacle) Items() []string {
 }
 
 func (t *tentacle) Copy() Tentacler {
-
 	items := make([]string, len(t.items))
 	for index, item := range t.items {
 		items[index] = item
@@ -39,18 +40,19 @@ func (t *tentacle) Copy() Tentacler {
 	return &tentacle{
 		tp:       t.tp,
 		items:    items,
-		targetId: t.targetId,
+		targetID: t.targetID,
 	}
 }
 
 func MergeTentacles(tentacles ...Tentacler) Tentacler {
-
 	if len(tentacles) == 0 {
 		return nil
 	}
 
-	tentacle0 := tentacles[0].(*tentacle)
-
+	tentacle0, ok := tentacles[0].(*tentacle)
+	if !ok {
+		log.Fatalln("not want struct")
+	}
 	itemMap := make(map[string]struct{})
 	for _, tentacle := range tentacles {
 		for _, item := range tentacle.Items() {
@@ -60,10 +62,10 @@ func MergeTentacles(tentacles ...Tentacler) Tentacler {
 
 	index := -1
 	items := make([]string, len(itemMap))
-	for item, _ := range itemMap {
-		index += 1
+	for item := range itemMap {
+		index++
 		items[index] = item
 	}
 
-	return NewTentacle(tentacle0.tp, tentacle0.targetId, items)
+	return NewTentacle(tentacle0.tp, tentacle0.targetID, items)
 }
