@@ -1,12 +1,12 @@
 ## 简介
 
-`MQL`即Mapper QL， 用于针对海量实体的属性数据的映射。`Mapper`的定义请查[mapper.md](../mapper/mapper.md)，`MQL`所做的事就是将一个`json`输入转换成另一个`json`输出。
+`MQL`即Mapper QL， 用于针对海量`Actor`的属性数据的映射。`Mapper`的定义请查[mapper.md](../mapper/mapper.md)，`MQL`所做的事就是将一个`json`输入转换成另一个`json`输出。
 
 
 处理`MQL`：
 
-1. `mql`的静态解析，得到Target，Sources，Tentacles
-2.  运行时执行`json`的转换
+1. `mql`的静态解析，得到TargetEntity，SourceActors，Tentacles。
+2.  运行时执行`json`的转换。
 
 
 
@@ -18,12 +18,11 @@
 > 现有三个实体，将entity1和entity2的部分数据映射到entity3。
 ```sql
 MQL:
-	select
+
 		entity1.property1 as property1,
 		entity2.property2 as property2,
-		entity1.property3 + entity2.property3 as property3,
-	from
-		entity3;
+		entity1.property3 + entity2.property3 as property3
+
 ```
 
 

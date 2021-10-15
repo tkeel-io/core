@@ -49,7 +49,7 @@ var serveCmd = &cobra.Command{
 		log.Info("start kcore...")
 
 		// configure logger default.
-		logger.SetDefaultAppID(config.GetConfig().Server.AppID)
+		logger.SetDefaultAppID(config.GetConfig().Server.AppId)
 		logger.SetDefaultLevel(config.GetConfig().Logger.Level)
 		logger.SetDefaultJSONOutput(config.GetConfig().Logger.OutputJSON)
 

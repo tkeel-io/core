@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"log"
 
+	ants "github.com/panjf2000/ants/v2"
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/api"
 	"github.com/tkeel-io/core/pkg/api/service"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/server"
 	daprd "github.com/tkeel-io/core/pkg/service/http"
 
 	"github.com/dapr/go-sdk/service/common"
-	"github.com/pkg/errors"
 )
 
 type Server struct {
@@ -20,6 +22,8 @@ type Server struct {
 	daprService   common.Service
 	apiRegistry   *api.Registry
 	serverManager *server.Manager
+	entityManager *entities.EntityManager
+	coroutinePool *ants.Pool
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -29,15 +33,23 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// create a Dapr service server
-	api.SetDefaultPluginID(conf.Server.AppID)
+	api.SetDefaultPluginID(conf.Server.AppId)
 	address := fmt.Sprintf(":%d", conf.Server.AppPort)
 	daprService := daprd.NewServiceWithMux(address, api.NewOpenAPIServeMux())
+
+	//create coroutine pool.
+	coroutinePool, err := ants.NewPool(conf.Server.CoroutinePoolSize)
+	if nil != err {
+		log.Fatal(err)
+	}
 
 	ser := Server{
 		ctx:           ctx,
 		cancel:        cancel,
 		conf:          conf,
 		daprService:   daprService,
+		coroutinePool: coroutinePool,
+		entityManager: entities.NewEntityManager(ctx, coroutinePool),
 		serverManager: server.NewManager(ctx, daprService, conf),
 	}
 
@@ -59,18 +71,17 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	return &ser
 }
 
-func (s *Server) Run() error {
-	if err := s.apiRegistry.Start(); nil != err {
-		return errors.Wrap(err, "api registry start err")
-	}
-	if err := s.serverManager.Start(); nil != err {
-		return errors.Wrap(err, "server manager start err")
-	}
-	if err := s.daprService.Start(); err != nil {
-		return errors.Wrap(err, "dapr service start err")
+func (this *Server) Run() error {
+
+	var err error
+	if err = this.apiRegistry.Start(); nil != err {
+		return err
+	} else if err = this.serverManager.Start(); nil != err {
+		return err
 	}
 
-	return nil
+	this.entityManager.Start()
+	return this.daprService.Start()
 }
 
 func (s *Server) Close() {}

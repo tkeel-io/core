@@ -30,7 +30,7 @@ func (m *mqlImpl) Exec(map[string]map[string]interface{}) (map[string]map[string
 	return nil, errors.New("not implement.")
 }
 
-// ExecJson execute MQL with json input.
+// ExecJson execute MQL with json input
 func (m *mqlImpl) ExecJson([]byte) (map[string]map[string]interface{}, error) {
 	return nil, errors.New("not implement.")
 }
