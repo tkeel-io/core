@@ -64,6 +64,7 @@ func InitConfig(cfgFile string) {
 	// default.
 	viper.SetDefault("server.app_port", 6789)
 	viper.SetDefault("server.app_id", "core")
+	viper.SetDefault("server.coroutine_pool_size", 500)
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.output_json", false)
 
