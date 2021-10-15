@@ -31,7 +31,7 @@ import (
 var cfgFile string
 var log = logger.NewLogger("kcore.commands")
 
-// serveCmd represents the serve command
+// serveCmd represents the serve command.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "core serve",
@@ -43,15 +43,15 @@ var serveCmd = &cobra.Command{
   `,
 	Args: cobra.MinimumNArgs(0),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		//viper.BindPFlag("config", cmd.Flags().Lookup("config"))
+		// viper.BindPFlag("config", cmd.Flags().Lookup("config"))
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info("start kcore...")
 
-		//configurate logger default.
-		logger.SetDefaultAppId(config.GetConfig().Server.AppId)
+		// configure logger default.
+		logger.SetDefaultAppID(config.GetConfig().Server.AppID)
 		logger.SetDefaultLevel(config.GetConfig().Logger.Level)
-		logger.SetDefaultJsonOutput(config.GetConfig().Logger.OutputJSON)
+		logger.SetDefaultJSONOutput(config.GetConfig().Logger.OutputJSON)
 
 		stopCh := make(chan struct{}, 1)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -96,7 +96,6 @@ func init() {
 
 	rootCmd.AddCommand(serveCmd)
 	cobra.OnInitialize(func() {
-		//load configuration.
 		config.InitConfig(cfgFile)
 	})
 }

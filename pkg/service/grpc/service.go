@@ -59,10 +59,10 @@ type topicEventHandler struct {
 func (s *Server) Start() error {
 	gs := grpc.NewServer()
 	pb.RegisterAppCallbackServer(gs, s)
-	return gs.Serve(s.listener)
+	return errors.Unwrap(gs.Serve(s.listener))
 }
 
 // Stop stops the previously started service.
 func (s *Server) Stop() error {
-	return s.listener.Close()
+	return errors.Unwrap(s.listener.Close())
 }

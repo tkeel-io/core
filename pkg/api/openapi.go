@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func NewOpenApiServeMux() *http.ServeMux {
+func NewOpenAPIServeMux() *http.ServeMux {
 	serMux := http.NewServeMux()
 
 	handleFunc(serMux, "/v1/identify", identifyHandler)
@@ -15,35 +15,36 @@ func NewOpenApiServeMux() *http.ServeMux {
 }
 
 func identifyHandler(rw http.ResponseWriter, r *http.Request) {
-
 	preDisposeRequest(rw, r)
 
 	in := IdentifyResponse{
-		RetCode:  OpenApiSuccessCode,
-		Message:  OpenAPISuccessMsg,
-		Version:  OpenApiVersion,
-		PluginId: defaultOpenApiPluginId,
+		Ret:      OpenAPISuccessCode,
+		Msg:      OpenAPISuccessMsg,
+		Version:  OpenAPIVersion,
+		PluginID: defaultOpenAPIPluginID,
 	}
 
 	bytes, _ := json.Marshal(in)
 
-	_, _ = rw.Write([]byte(bytes))
+	if _, err := rw.Write(bytes); err != nil {
+		log.Warn(err.Error())
+	}
 }
 
 func statusHandler(rw http.ResponseWriter, r *http.Request) {
-
 	preDisposeRequest(rw, r)
 
 	in := StatusResponse{
-		RetCode: OpenApiSuccessCode,
-		Message: OpenAPISuccessMsg,
-		Status:  OpenApiStatusActive,
+		Ret:    OpenAPISuccessCode,
+		Msg:    OpenAPISuccessMsg,
+		Status: OpenAPIStatusActive,
 	}
 
 	bytes, _ := json.Marshal(in)
 
-	_, _ = rw.Write([]byte(bytes))
-
+	if _, err := rw.Write(bytes); err != nil {
+		log.Error(err.Error())
+	}
 }
 
 func preDisposeRequest(rw http.ResponseWriter, r *http.Request) {

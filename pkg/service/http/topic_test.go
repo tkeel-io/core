@@ -81,6 +81,7 @@ func TestEventHandler(t *testing.T) {
 }
 
 func makeEventRequest(t *testing.T, s *Server, route, data string, expectedStatusCode int) {
+	t.Helper()
 	req, err := http.NewRequest(http.MethodPost, route, strings.NewReader(data))
 	assert.NoErrorf(t, err, "error creating request: %s", data)
 	req.Header.Set("Content-Type", "application/json")

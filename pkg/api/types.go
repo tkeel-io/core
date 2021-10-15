@@ -7,38 +7,37 @@ import (
 )
 
 const (
-	OpenApiSuccessCode = 0
+	OpenAPISuccessCode = 0
 
-	OpenApiVersion      = "1.0"
+	OpenAPIVersion      = "1.0"
 	OpenAPISuccessMsg   = "ok"
-	OpenApiStatusActive = "ACTIVE"
+	OpenAPIStatusActive = "ACTIVE"
 )
 
-var defaultOpenApiPluginId = "core"
+var defaultOpenAPIPluginID = "core"
 
-func SetDefaultPluginId(pluginId string) {
-	defaultOpenApiPluginId = pluginId
+func SetDefaultPluginID(pluginID string) {
+	defaultOpenAPIPluginID = pluginID
 }
 
-type ServicHandler = func(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error)
+type ServiceHandler = func(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error)
 
 type IService interface {
 	RegisterService(service common.Service) error
 	Name() string
 }
 
-//https://cwiki.yunify.com/pages/viewpage.action?pageId=80092844
-//IdentifyResponse
+// IdentifyResponse
+// this is ref:https://cwiki.yunify.com/pages/viewpage.action?pageId=80092844.
 type IdentifyResponse struct {
-	RetCode  int    `json:"ret"`
-	Message  string `json:"msg"`
-	PluginId string `json:"plugin_id"`
+	Ret      int    `json:"ret"`
+	Msg      string `json:"msg"`
+	PluginID string `json:"plugin_id"`
 	Version  string `json:"version"`
 }
 
-//StatusResponse
 type StatusResponse struct {
-	RetCode int    `json:"ret"`
-	Message string `json:"msg"`
-	Status  string `json:"status"`
+	Ret    int    `json:"ret"`
+	Msg    string `json:"msg"`
+	Status string `json:"status"`
 }

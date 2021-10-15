@@ -5,21 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/pkg/errors"
 )
 
 const (
-	// PubSubHandlerSuccessStatusCode is the successful ack code for pubsub event appcallback response
+	// PubSubHandlerSuccessStatusCode is the successful ack code for pubsub event appcallback response.
 	PubSubHandlerSuccessStatusCode int = http.StatusOK
 
-	// PubSubHandlerRetryStatusCode is the error response code (nack) pubsub event appcallback response
+	// PubSubHandlerRetryStatusCode is the error response code (nack) pubsub event appcallback response.
 	PubSubHandlerRetryStatusCode int = http.StatusInternalServerError
 
-	// PubSubHandlerDropStatusCode is the pubsub event appcallback response code indicating that Dapr should drop that message
+	// PubSubHandlerDropStatusCode is the pubsub event appcallback response code indicating that Dapr should drop that message.
 	PubSubHandlerDropStatusCode int = http.StatusSeeOther
 )
 
@@ -34,30 +36,13 @@ func (s *Server) registerSubscribeHandler() {
 	s.mux.HandleFunc("/dapr/subscribe", f)
 }
 
-// AddTopicEventHandler appends provided event handler with it's name to the service
+// AddTopicEventHandler appends provided event handler with it's name to the service.
 func (s *Server) AddTopicEventHandler(sub *common.Subscription, fn func(ctx context.Context, e *common.TopicEvent) (retry bool, err error)) error {
-	if sub == nil {
-		return errors.New("subscription required")
-	}
-	if sub.Topic == "" {
-		return errors.New("topic name required")
-	}
-	if sub.PubsubName == "" {
-		return errors.New("pub/sub name required")
-	}
-	if sub.Route == "" {
-		return errors.New("handler route name")
-	}
-	if fn == nil {
-		return fmt.Errorf("topic handler required")
-	}
-
-	if !strings.HasPrefix(sub.Route, "/") {
-		sub.Route = fmt.Sprintf("/%s", sub.Route)
+	if err := validSubscription(sub, fn); err != nil {
+		return err
 	}
 
 	s.topicSubscriptions = append(s.topicSubscriptions, sub)
-
 	s.mux.Handle(sub.Route, optionsHandler(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			// check for post with no data
@@ -69,7 +54,7 @@ func (s *Server) AddTopicEventHandler(sub *common.Subscription, fn func(ctx cont
 			// deserialize the event
 			var in common.TopicEvent
 			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-				fmt.Println(err.Error())
+				print.FailureStatusEvent(os.Stdout, err.Error())
 				http.Error(w, err.Error(), PubSubHandlerDropStatusCode)
 				return
 			}
@@ -96,6 +81,28 @@ func (s *Server) AddTopicEventHandler(sub *common.Subscription, fn func(ctx cont
 			writeStatus(w, common.SubscriptionResponseStatusDrop)
 		})))
 
+	return nil
+}
+
+func validSubscription(sub *common.Subscription, fn func(ctx context.Context, e *common.TopicEvent) (retry bool, err error)) error {
+	if sub == nil {
+		return errors.New("subscription required")
+	}
+	if sub.Topic == "" {
+		return errors.New("topic name required")
+	}
+	if sub.PubsubName == "" {
+		return errors.New("pub/sub name required")
+	}
+	if sub.Route == "" {
+		return errors.New("handler route name")
+	}
+	if fn == nil {
+		return fmt.Errorf("topic handler required")
+	}
+	if !strings.HasPrefix(sub.Route, "/") {
+		sub.Route = fmt.Sprintf("/%s", sub.Route)
+	}
 	return nil
 }
 
