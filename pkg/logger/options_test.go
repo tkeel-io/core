@@ -73,13 +73,14 @@ func TestApplyOptionsToLoggers(t *testing.T) {
 	assert.NoError(t, ApplyOptionsToLoggers(&testOptions))
 
 	for _, l := range testLoggers {
+		ll, _ := l.(*Log)
 		assert.Equal(
 			t,
 			"dapr-app",
-			(l.(*Log)).logger.Data[logFieldAppID])
+			ll.logger.Data[logFieldAppID])
 		assert.Equal(
 			t,
 			toLogrusLevel(DebugLevel),
-			(l.(*Log)).logger.Logger.GetLevel())
+			ll.logger.Logger.GetLevel())
 	}
 }

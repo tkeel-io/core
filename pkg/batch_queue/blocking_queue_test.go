@@ -45,7 +45,8 @@ func (u *BlockingQueueUnit) TestBlockingQueue() {
 
 	go func() {
 		// Stays blocked until item is available
-		ch <- q.Take().(string)
+		v, _ := q.Take().(string)
+		ch <- v
 	}()
 
 	time.Sleep(100 * time.Millisecond)
