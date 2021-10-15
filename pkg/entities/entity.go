@@ -8,13 +8,13 @@ import (
 )
 
 type EntityBase struct {
-	Id      string                 `json:"id"`
-	Tag     string                 `json:"tag"`
-	Type    string                 `json:"type"`
-	Source  string                 `json:"source"`
-	UserId  string                 `json:"user_id"`
-	Version int64                  `json:"version"`
-	KValues map[string]interface{} `json:"kvalues"`
+	Id      string                 `json:"id,omitempty"`
+	Tag     *string                `json:"tag,omitempty"`
+	Type    string                 `json:"type,omitempty"`
+	Source  string                 `json:"source,omitempty"`
+	UserId  string                 `json:"user_id,omitempty"`
+	Version int64                  `json:"version,omitempty"`
+	KValues map[string]interface{} `json:"kvalues,omitempty"`
 }
 
 type entity struct {
@@ -32,7 +32,7 @@ type entity struct {
 }
 
 // NewEntity create a entity object.
-func NewEntity(ctx context.Context, mgr *EntityManager, entityId string, source string, userId string, tag string, version int64) (*entity, error) {
+func NewEntity(ctx context.Context, mgr *EntityManager, entityId string, source string, userId string, tag *string, version int64) (*entity, error) {
 
 	if entityId == "" {
 		entityId = utils.GenerateUUID()

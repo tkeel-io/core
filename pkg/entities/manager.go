@@ -51,14 +51,14 @@ func (m *EntityManager) GetEntity(id string) *entity {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	entity, _ := m.entities[id]
-	return entity
+	entityInst, _ := m.entities[id]
+	return entityInst
 }
 
 func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey string) (resp interface{}, err error) {
 
 	m.lock.Lock()
-	entity, has := m.entities[entityId]
+	entityInst, has := m.entities[entityId]
 	m.lock.Unlock()
 
 	if !has {
@@ -66,7 +66,59 @@ func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey s
 		log.Errorf("EntityManager.GetProperty failed, err: %s", err.Error())
 	}
 
-	return entity.GetProperty(propertyKey), err
+	return entityInst.GetProperty(propertyKey), err
+}
+
+func (m *EntityManager) GetAllProperties(ctx context.Context, entityId string) (resp interface{}, err error) {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityId]
+	m.lock.Unlock()
+
+	if !has {
+		err = errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	return entityInst.GetAllProperties(), err
+}
+
+func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) error {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityObj.Id]
+	//check id, source, userId, ...
+	m.lock.Unlock()
+
+	if !has {
+		err := errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	// 对于Header同步落盘，对于Kvalues 延迟落盘，可以做缓冲，罗盘策略：定时+定量。
+
+	entityInst.SetProperties(entityObj.KValues)
+
+	return nil
+}
+
+func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
+
+	m.lock.Lock()
+	entityInst, has := m.entities[entityObj.Id]
+	//check id, source, userId, ...
+	m.lock.Unlock()
+
+	if !has {
+		err := errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	for key, _ := range entityInst.KValues {
+		entityInst.DeleteProperty(key)
+	}
+
+	return nil
 }
 
 func (m *EntityManager) SendMsg(ctx EntityContext) {
