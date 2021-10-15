@@ -60,6 +60,7 @@
 ## mapper & tentacle 数据流向
 
 mapper通过解析`MQL`生成`tentacle`，`mapper`为每一个`SourceActor`生成一个`tentacle`用于同步属性变更。
+
 ![mapper-tentacles](../images/mapper-tentacles.png)
 
 
