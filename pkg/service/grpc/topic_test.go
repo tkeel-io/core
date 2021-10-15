@@ -43,7 +43,7 @@ func TestTopicSubscriptionList(t *testing.T) {
 	assert.Lenf(t, resp.Subscriptions, 1, "expected 1 handlers")
 }
 
-// go test -timeout 30s ./service/grpc -count 1 -run ^TestTopic$
+// go test -timeout 30s ./service/grpc -count 1 -run ^TestTopic$.
 func TestTopic(t *testing.T) {
 	ctx := context.Background()
 
@@ -65,7 +65,7 @@ func TestTopic(t *testing.T) {
 
 	t.Run("topic event for wrong topic", func(t *testing.T) {
 		in := &runtime.TopicEventRequest{
-			Topic: "invlid",
+			Topic: "invalid",
 		}
 		_, err := server.OnTopicEvent(ctx, in)
 		assert.Error(t, err)

@@ -37,7 +37,7 @@ var (
 	OSArch = runtime.GOOS + " " + runtime.GOARCH
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "core",
 	Short: "core is the database for digital twins.",
@@ -62,11 +62,9 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.core.yaml)")
-
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle").
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file path")
 }
 

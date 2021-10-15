@@ -6,18 +6,19 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/source"
+
+	"github.com/dapr/go-sdk/service/common"
 )
 
-type PubSubMeta struct {
+type Meta struct {
 	name   string
 	topics []string
 	Pubsub string `json:"pubsub"`
 	Topics string `json:"topics"`
 }
 
-type PubSubSource struct {
+type Source struct {
 	name    string
 	pubsub  string
 	topics  []string
@@ -26,17 +27,16 @@ type PubSubSource struct {
 }
 
 func OpenSource(ctx context.Context, metadata source.Metadata, service common.Service) (source.ISource, error) {
-
 	var (
 		err  error
-		meta *PubSubMeta
+		meta *Meta
 	)
 
-	if meta, err = getMeta(metadata); err != nil {
+	if meta, err = acquireMeta(metadata); err != nil {
 		return nil, err
 	}
 
-	return &PubSubSource{
+	return &Source{
 		ctx:     ctx,
 		name:    meta.name,
 		pubsub:  meta.Pubsub,
@@ -45,54 +45,53 @@ func OpenSource(ctx context.Context, metadata source.Metadata, service common.Se
 	}, nil
 }
 
-func (this *PubSubSource) String() string {
-	return this.name
+func (s *Source) String() string {
+	return s.name
 }
 
-func (this *PubSubSource) StartReceiver(handler source.SourceHandler) error {
-	for _, topic := range this.topics {
-		if err := this.service.AddTopicEventHandler(
+func (s *Source) StartReceiver(handler source.Handler) error {
+	for _, topic := range s.topics {
+		if err := s.service.AddTopicEventHandler(
 			&common.Subscription{
-				PubsubName: this.pubsub,
+				PubsubName: s.pubsub,
 				Topic:      topic,
 			}, handler); err != nil {
-			return err
+			return errors.Unwrap(err)
 		}
 	}
 	return nil
 }
 
-func (this *PubSubSource) Close() error {
-	return errors.New("not implement.")
+func (s *Source) Close() error {
+	return errors.New("not implement")
 }
 
-func getMeta(metadata source.Metadata) (*PubSubMeta, error) {
+func acquireMeta(metadata source.Metadata) (*Meta, error) {
 	b, err := json.Marshal(metadata.Properties)
 	if err != nil {
-		return nil, err
+		return nil, errors.Unwrap(err)
 	}
 
-	meta := PubSubMeta{}
+	meta := Meta{}
 	err = json.Unmarshal(b, &meta)
 	if err != nil {
-		return nil, err
+		return nil, errors.Unwrap(err)
 	}
 
 	meta.name = metadata.Name
 	meta.topics = strings.Split(meta.Topics, ",")
 
-	//meta.Name = metadata.Name
-
-	//check name
-	if "" == meta.Pubsub {
-		return &meta, errors.New("field Name required.")
-	} else if 0 == len(meta.topics) {
-		return &meta, errors.New("field Topics required.")
-	} else {
-		return &meta, nil
+	// check name.
+	if meta.Pubsub == "" {
+		return &meta, errors.New("field Name required")
 	}
+	if len(meta.topics) == 0 {
+		return &meta, errors.New("field Topics required")
+	}
+
+	return &meta, nil
 }
 
 func init() {
-	source.Register(&source.BaseSourceGenerator{SourceType: source.SourceTypePubSub, Generator: OpenSource})
+	source.Register(&source.BaseSourceGenerator{SourceType: source.PubSub, Generator: OpenSource})
 }

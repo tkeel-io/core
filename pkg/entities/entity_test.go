@@ -14,10 +14,11 @@ func TestEntity(t *testing.T) {
 		panic(err)
 	}
 
-	mgr := NewManager(context.Background(), coroutinePool)
+	tag := "test"
+	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	enty1, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", "test", 001)
-	enty2, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", "test", 001)
+	enty1, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	enty2, err := NewEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
 
 	fmt.Println(enty1, enty2, err)
 }

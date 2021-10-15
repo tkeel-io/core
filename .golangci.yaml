@@ -97,7 +97,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.com/dapr/
+    local-prefixes: github.com/tkeel/
   gocyclo:
     # minimal code complexity to report, 30 by default (but we recommend 10-20)
     min-complexity: 10
@@ -195,7 +195,7 @@ linters-settings:
     exclude:
       - 'nosec'
     capital: false
-    scope: all
+    scope: declarations
   dogsled:
     # checks assignments with too many blank identifiers; default is 2
     max-blank-identifiers: 2
@@ -226,11 +226,11 @@ linters-settings:
         # any struct tag type can be used.
         # support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
         json: snake
-        yaml: camel
+        yaml: snake
         xml: kebab
         bson: camel
         avro: snake
-        mapstructure: kebab
+        mapstructure: snake
 
 linters:
   fast: false

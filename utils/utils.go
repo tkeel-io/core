@@ -13,12 +13,12 @@ limitations under the License.
 
 package utils
 
-// Add func addition
+// Add func addition.
 func Add(a int, b int) int {
 	return a + b
 }
 
-// Greet ... Greet GitHub Actions
+// Greet ... Greet GitHub Actions.
 func Greet() string {
 	return "Hello GitHub Actions. tomxu.top is awesome"
 }

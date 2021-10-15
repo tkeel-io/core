@@ -34,7 +34,7 @@ func TestInvokeErrors(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// go test -timeout 30s ./service/grpc -count 1 -run ^TestInvoke$
+// go test -timeout 30s ./service/grpc -count 1 -run ^TestInvoke$.
 func TestInvoke(t *testing.T) {
 	methodName := "test"
 	methodNameWithError := "error"

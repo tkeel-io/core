@@ -1,8 +1,3 @@
-// ------------------------------------------------------------
-// Copyright (c) Microsoft Corporation and Dapr Contributors.
-// Licensed under the MIT License.
-// ------------------------------------------------------------
-
 package logger
 
 import (
@@ -12,29 +7,29 @@ import (
 var (
 	defaultJSONOutput  = false
 	defaultOutputLevel = "info"
-	defaultAppId       = "kcore"
+	defaultAppID       = "kcore"
 	undefinedAppID     = ""
 )
 
-func SetDefaultJsonOutput(flag bool) { defaultJSONOutput = flag }
-func SetDefaultAppId(appId string)   { defaultAppId = appId }
+func SetDefaultJSONOutput(flag bool) { defaultJSONOutput = flag }
+func SetDefaultAppID(appID string)   { defaultAppID = appID }
 func SetDefaultLevel(level string)   { defaultOutputLevel = string(toLogLevel(level)) }
 
 // Options defines the sets of options for Dapr logging.
 type Options struct {
-	// appID is the unique id of Dapr Application
+	// appID is the unique id of Dapr Application.
 	appID string
 
-	// JSONFormatEnabled is the flag to enable JSON formatted log
+	// JSONFormatEnabled is the flag to enable JSON formatted log.
 	JSONFormatEnabled bool
 
-	// OutputLevel is the level of logging
+	// OutputLevel is the level of logging.
 	OutputLevel string
 }
 
 func NewOptions() Options {
 	return Options{
-		appID:             defaultAppId,
+		appID:             defaultAppID,
 		JSONFormatEnabled: false,
 		OutputLevel:       defaultOutputLevel,
 	}
@@ -42,7 +37,7 @@ func NewOptions() Options {
 
 func NewOptionsWithLevel(level string) Options {
 	return Options{
-		appID:             defaultAppId,
+		appID:             defaultAppID,
 		JSONFormatEnabled: false,
 		OutputLevel:       level,
 	}
