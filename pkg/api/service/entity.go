@@ -67,9 +67,10 @@ func internalFieldName(fieldName string) string {
 
 type Entity struct {
 	Id      string                 `json:"id"`
+	Tag     string                 `json:"tag"`
+	Type    string                 `json:"type"`
 	Source  string                 `json:"source"`
 	UserId  string                 `json:"user_id"`
-	Tag     string                 `json:"tag"`
 	Version int64                  `json:"version"`
 	KValues map[string]interface{} `json:"kvalues"`
 }

@@ -14,7 +14,6 @@ import (
 
 	"github.com/dapr/go-sdk/service/common"
 	daprd "github.com/tkeel-io/core/pkg/service/http"
-	//daprd "github.com/dapr/go-sdk/service/http"
 )
 
 type Server struct {
