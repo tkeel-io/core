@@ -12,7 +12,6 @@ type Student struct {
 }
 
 func TestDeepCopy(t *testing.T) {
-
 	p := &Persion{
 		Name: "123",
 		Age:  18,
@@ -20,8 +19,7 @@ func TestDeepCopy(t *testing.T) {
 
 	var p1 = &Persion{}
 
-	err := DeepCopy(p1, p)
-	if err != nil {
+	if err := DeepCopy(p1, p); err != nil {
 		t.Logf("Test DeepCopy Fail: %s", err)
 		t.Fail()
 	}
@@ -36,18 +34,16 @@ func TestDeepCopy(t *testing.T) {
 }
 
 func TestDeepCopyList(t *testing.T) {
-
 	p := &Student{
 		Name: []string{"1", "2"},
 	}
 
 	var p1 = &Student{}
 
-	err := DeepCopy(p1, p)
 	p.Name[0] = "01"
 	p.Name[1] = "02"
 
-	if err != nil {
+	if err := DeepCopy(p1, p); err != nil {
 		t.Logf("Test DeepCopyList Fail: %s", err)
 		t.Fatal()
 	}
@@ -62,7 +58,6 @@ func TestDeepCopyList(t *testing.T) {
 }
 
 func TestDeepCopyInterface(t *testing.T) {
-
 	var destV = new(interface{})
 
 	var v1 = 123
@@ -72,7 +67,6 @@ func TestDeepCopyInterface(t *testing.T) {
 }
 
 func TestDuplicate(t *testing.T) {
-
 	v := map[string]interface{}{"aaa": 123}
 	destV, err := Duplicate(v)
 

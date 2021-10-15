@@ -10,7 +10,7 @@ import (
 
 const defaultStackDepth = 12
 
-var ErrMaxStackDepthExceeded error = errors.New("Maximum stack depth exceeded")
+var ErrMaxStackDepthExceeded = errors.New("maximum stack depth exceeded")
 
 // ReEntryLock re-entry lock.
 type ReEntryLock struct {

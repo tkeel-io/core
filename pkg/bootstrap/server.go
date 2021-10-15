@@ -33,11 +33,11 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// create a Dapr service server
-	api.SetDefaultPluginID(conf.Server.AppId)
+	api.SetDefaultPluginID(conf.Server.AppID)
 	address := fmt.Sprintf(":%d", conf.Server.AppPort)
 	daprService := daprd.NewServiceWithMux(address, api.NewOpenAPIServeMux())
 
-	//create coroutine pool.
+	// create coroutine pool.
 	coroutinePool, err := ants.NewPool(conf.Server.CoroutinePoolSize)
 	if nil != err {
 		log.Fatal(err)
@@ -71,17 +71,23 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	return &ser
 }
 
-func (this *Server) Run() error {
-
-	var err error
-	if err = this.apiRegistry.Start(); nil != err {
-		return err
-	} else if err = this.serverManager.Start(); nil != err {
-		return err
+func (s *Server) Run() error {
+	if err := s.apiRegistry.Start(); nil != err {
+		return errors.Unwrap(err)
+	}
+	if err := s.serverManager.Start(); nil != err {
+		return errors.Unwrap(err)
 	}
 
-	this.entityManager.Start()
-	return this.daprService.Start()
+	if err := s.entityManager.Start(); err != nil {
+		return errors.Unwrap(err)
+	}
+
+	if err := s.daprService.Start(); err != nil {
+		return errors.Unwrap(err)
+	}
+
+	return nil
 }
 
 func (s *Server) Close() {}

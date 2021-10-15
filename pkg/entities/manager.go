@@ -19,7 +19,6 @@ type EntityManager struct {
 }
 
 func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
-
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityManager{
@@ -33,32 +32,31 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityMana
 }
 
 func (m *EntityManager) Load(e *entity) error {
-
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if _, ok := m.entities[e.Id]; ok {
+	if _, ok := m.entities[e.ID]; ok {
 		return errEntityExisted
 	}
 
-	m.entities[e.Id] = e
+	m.entities[e.ID] = e
 
 	return nil
 }
 
-func (m *EntityManager) GetEntity(id string) *entity {
-
+func (m *EntityManager) getEntity(id string) *entity {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	entityInst, _ := m.entities[id]
-	return entityInst
+	if entityInst, ok := m.entities[id]; ok {
+		return entityInst
+	}
+	return nil
 }
 
-func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey string) (resp interface{}, err error) {
-
+func (m *EntityManager) GetProperty(ctx context.Context, entityID, propertyKey string) (resp interface{}, err error) {
 	m.lock.Lock()
-	entityInst, has := m.entities[entityId]
+	entityInst, has := m.entities[entityID]
 	m.lock.Unlock()
 
 	if !has {
@@ -69,10 +67,9 @@ func (m *EntityManager) GetProperty(ctx context.Context, entityId, propertyKey s
 	return entityInst.GetProperty(propertyKey), err
 }
 
-func (m *EntityManager) GetAllProperties(ctx context.Context, entityId string) (resp interface{}, err error) {
-
+func (m *EntityManager) GetAllProperties(ctx context.Context, entityID string) (resp interface{}, err error) {
 	m.lock.Lock()
-	entityInst, has := m.entities[entityId]
+	entityInst, has := m.entities[entityID]
 	m.lock.Unlock()
 
 	if !has {
@@ -84,10 +81,9 @@ func (m *EntityManager) GetAllProperties(ctx context.Context, entityId string) (
 }
 
 func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) error {
-
 	m.lock.Lock()
-	entityInst, has := m.entities[entityObj.Id]
-	//check id, source, userId, ...
+	entityInst, has := m.entities[entityObj.ID]
+	// check id, source, userId, ...
 	m.lock.Unlock()
 
 	if !has {
@@ -103,10 +99,9 @@ func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase
 }
 
 func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
-
 	m.lock.Lock()
-	entityInst, has := m.entities[entityObj.Id]
-	//check id, source, userId, ...
+	entityInst, has := m.entities[entityObj.ID]
+	// check id, source, userId, ...
 	m.lock.Unlock()
 
 	if !has {
@@ -114,7 +109,7 @@ func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBas
 		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
 	}
 
-	for key, _ := range entityInst.KValues {
+	for key := range entityInst.KValues {
 		entityInst.DeleteProperty(key)
 	}
 
@@ -122,8 +117,7 @@ func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBas
 }
 
 func (m *EntityManager) SendMsg(ctx EntityContext) {
-	//解耦actor之间的直接调用
-
+	// 解耦actor之间的直接调用
 	m.msgCh <- ctx
 }
 
@@ -135,16 +129,16 @@ func (m *EntityManager) Start() error {
 				log.Info("entity EntityManager exited.")
 				return
 			case entityCtx := <-m.msgCh:
-				//dispatch message. 将消息分发到不同的节点。
+				// dispatch message. 将消息分发到不同的节点。
 				m.disposeCh <- entityCtx
 
 			case entityCtx := <-m.disposeCh:
-				//invoke msg.
+				// invoke msg.
 				m.coroutinePool.Submit(func() {
-					if entity, has := m.entities[entityCtx.TargetId()]; has {
+					if entity, has := m.entities[entityCtx.TargetID()]; has {
 						entity.InvokeMsg(entityCtx)
 					} else {
-						log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetId())
+						log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
 					}
 				})
 			}

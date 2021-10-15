@@ -5,10 +5,10 @@ import (
 )
 
 type Server struct {
-	AppId             string           `mapstructure:"app_id"`
+	AppID             string           `mapstructure:"app_id"`
 	AppPort           int              `mapstructure:"app_port"`
 	CoroutinePoolSize int              `mapstructure:"coroutine_pool_size"`
-	TSeriesServers    []*TSeriesServer `mapstructure:"tseries_servers"`
+	TSeriesServers    []*TSeriesServer `mapstructure:"tseries_servers"` //nolint
 }
 
 type TSeriesServer struct {
