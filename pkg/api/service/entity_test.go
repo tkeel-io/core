@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	dapr "github.com/dapr/go-sdk/client"
@@ -18,6 +19,8 @@ func TestMain(m *testing.M) {
 	}
 
 	m.Run()
+
+	os.Exit(0)
 }
 
 func TestEntityCreate(t *testing.T) {
