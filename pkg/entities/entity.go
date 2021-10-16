@@ -8,13 +8,13 @@ import (
 )
 
 type EntityBase struct {
-	ID      string                 `json:"id,omitempty"`
-	Tag     *string                `json:"tag,omitempty"`
-	Type    string                 `json:"type,omitempty"`
-	Source  string                 `json:"source,omitempty"`
-	UserID  string                 `json:"user_id,omitempty"`
-	Version int64                  `json:"version,omitempty"`
-	KValues map[string]interface{} `json:"kvalues,omitempty"` //nolint
+	ID      string                 `json:"id"`
+	Tag     *string                `json:"tag"`
+	Type    string                 `json:"type"`
+	Source  string                 `json:"source"`
+	UserID  string                 `json:"user_id"`
+	Version int64                  `json:"version"`
+	KValues map[string]interface{} `json:"properties"` //nolint
 }
 
 type entity struct {
@@ -57,7 +57,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 	// set KValues into cacheProps.
 	et.cacheProps[id] = et.KValues
 
-	return et, mgr.Load(et)
+	return et, nil
 }
 
 // GetID returns entity's id.
@@ -151,22 +151,8 @@ func (e *entity) GetProperty(key string) interface{} {
 	return e.KValues[key]
 }
 
-// SetProperty set entity property.
-func (e *entity) SetProperty(key string, value interface{}) error {
-	reqID := utils.GenerateUUID()
-
-	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
-
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
-
-	e.KValues[key] = value
-
-	return nil
-}
-
 // GetAllProperties returns entity properties.
-func (e *entity) GetAllProperties() map[string]interface{} {
+func (e *entity) GetAllProperties() *EntityBase {
 	reqID := utils.GenerateUUID()
 
 	log.Infof("entity.GetAllProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
@@ -174,15 +160,11 @@ func (e *entity) GetAllProperties() map[string]interface{} {
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	result := make(map[string]interface{})
-	if err := utils.DeepCopy(&result, &e.KValues); nil != err {
-		log.Errorf("duplicate properties failed, err: %s.", err.Error())
-	}
-	return result
+	return e.getEntityBase()
 }
 
 // SetProperties set entity properties.
-func (e *entity) SetProperties(values map[string]interface{}) error {
+func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 	reqID := utils.GenerateUUID()
 
 	log.Infof("entity.SetProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
@@ -190,11 +172,14 @@ func (e *entity) SetProperties(values map[string]interface{}) error {
 	e.lock.Lock(&reqID)
 	defer e.lock.Unlock()
 
-	for key, value := range values {
+	e.setTag(entityObj.Tag)
+
+	// so dengerous, think Kvalues Store.
+	for key, value := range entityObj.KValues {
 		e.KValues[key] = value
 	}
 
-	return nil
+	return e.getEntityBase(), nil
 }
 
 // DeleteProperty delete entity property.
@@ -317,4 +302,27 @@ func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
 type activePair struct {
 	PropertyKey string
 	TentacleKey string
+}
+
+func (e *entity) getEntityBase() *EntityBase {
+	props := make(map[string]interface{})
+	if err := utils.DeepCopy(&props, &e.KValues); nil != err {
+		log.Errorf("duplicate properties failed, err: %s.", err.Error())
+	}
+
+	return &EntityBase{
+		ID:      e.ID,
+		Tag:     e.Tag,
+		Source:  e.Source,
+		UserID:  e.UserID,
+		Version: e.Version,
+		KValues: props,
+	}
+}
+
+func (e *entity) setTag(tag *string) {
+	if nil != tag {
+		tagVal := *tag
+		e.Tag = &tagVal
+	}
 }

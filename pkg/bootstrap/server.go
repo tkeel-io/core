@@ -43,13 +43,16 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 		log.Fatal(err)
 	}
 
+	// create entity manager.
+	entityManager := entities.NewEntityManager(ctx, coroutinePool)
+
 	ser := Server{
 		ctx:           ctx,
 		cancel:        cancel,
 		conf:          conf,
 		daprService:   daprService,
 		coroutinePool: coroutinePool,
-		entityManager: entities.NewEntityManager(ctx, coroutinePool),
+		entityManager: entityManager,
 		serverManager: server.NewManager(ctx, daprService, conf),
 	}
 
@@ -59,7 +62,7 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	}
 
 	// init api registry.
-	if err = initAPIRegistry(apiRegistry, &conf.APIConfig); nil != err {
+	if err = initAPIRegistry(ctx, apiRegistry, &conf.APIConfig, entityManager); nil != err {
 		log.Fatalf("init ApiRegistry error, %s", err.Error())
 	}
 
@@ -92,7 +95,7 @@ func (s *Server) Run() error {
 
 func (s *Server) Close() {}
 
-func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
+func initAPIRegistry(ctx context.Context, apiRegistry *api.Registry, apiConfig *config.APIConfig, entityManager *entities.EntityManager) error {
 	var (
 		err       error
 		eventAPI  *service.EventService
@@ -119,11 +122,7 @@ func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) err
 		return errors.Wrap(err, "api registry add service err")
 	}
 
-	if entityAPI, err = service.NewEntityService(&service.EntityServiceConfig{
-		TableName:   apiConfig.EntityAPIConfig.TableName,
-		StateName:   apiConfig.EntityAPIConfig.StateName,
-		BindingName: apiConfig.EntityAPIConfig.BindingName,
-	}); err != nil {
+	if entityAPI, err = service.NewEntityService(ctx, entityManager); err != nil {
 		return errors.Wrap(err, "new entity service err")
 	}
 
