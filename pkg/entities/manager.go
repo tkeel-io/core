@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 )
 
@@ -19,17 +20,23 @@ type EntityManager struct {
 	cancel context.CancelFunc
 }
 
-func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
+func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) (*EntityManager, error) {
+	daprClient, err := dapr.NewClient()
+	if nil != err {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityManager{
 		ctx:           ctx,
 		cancel:        cancel,
+		daprClient:    daprClient,
 		entities:      make(map[string]*entity),
 		msgCh:         make(chan EntityContext),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
-	}
+	}, nil
 }
 
 func (m *EntityManager) DeleteEntity(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
@@ -161,6 +168,11 @@ func (m *EntityManager) Start() error {
 	}()
 
 	return nil
+}
+
+func (m *EntityManager) HandleMsg() {
+	// dispose message from pubsub.
+
 }
 
 func init() {}
