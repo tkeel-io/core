@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	queryString := "id=test123&source=abcd&user_id=admin"
+	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
 	methodName := "entities"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),

@@ -7,7 +7,7 @@
 ### Self-hosted
 本地运行一个redis，监听6379端口，无密码  
 ```bash
-dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --log-level debug  --components-path ./config go run . serve
+dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./config go run . serve
 ```
 执行测试
 
