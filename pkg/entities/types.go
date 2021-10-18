@@ -9,9 +9,10 @@ import (
 )
 
 const (
+	EntityCtxHeaderUserID    = "x-user_id"
 	EntityCtxHeaderSourceID  = "x-source"
 	EntityCtxHeaderTargetID  = "x-target"
-	EntityCtxHeaderRequestID = "x-request-id"
+	EntityCtxHeaderRequestID = "x-request_id"
 )
 
 var (
