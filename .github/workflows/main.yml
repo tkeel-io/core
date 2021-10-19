@@ -101,7 +101,6 @@ jobs:
       - name: Run make go.mod check-diff
         if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
         run: git diff --exit-code ./go.mod
-      - name: Run make go.mod check-diff
       - name: Codecov
         if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
         uses: codecov/codecov-action@v1
