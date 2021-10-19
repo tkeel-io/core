@@ -10,7 +10,7 @@ import (
 
 const defaultStackDepth = 12
 
-var ErrMaxStackDepthExceeded error = errors.New("Maximum stack depth exceeded")
+var ErrMaxStackDepthExceeded = errors.New("maximum stack depth exceeded")
 
 // ReEntryLock re-entry lock.
 type ReEntryLock struct {
@@ -41,9 +41,9 @@ func (a *ReEntryLock) Lock(requestID *string) error {
 		return ErrMaxStackDepthExceeded
 	}
 
-	//sync.Mutex不是递归锁，所以这一可重入针对的是同一个requestID的请求
+	// sync.Mutex不是递归锁，所以这一可重入针对的是同一个requestID的请求
 	if currentRequest == nil || *currentRequest != *requestID {
-		//如果不是同一个requestID，进来了也会阻塞
+		// 如果不是同一个requestID，进来了也会阻塞
 		a.methodLock.Lock()
 		a.setCurrentID(requestID)
 		a.stackDepth.Inc()

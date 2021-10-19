@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/mql"
 )
 
@@ -9,12 +10,12 @@ type mapper struct {
 	mqlText string
 }
 
-func NewMapper(id, mqlText string) *mapper {
+func newMapper(id, mqlText string) *mapper {
 	return &mapper{id: id, mqlText: mqlText}
 }
 
-// Id returns mapper id.
-func (m *mapper) Id() string {
+// ID returns mapper id.
+func (m *mapper) ID() string {
 	return m.id
 }
 
@@ -37,22 +38,23 @@ func (m *mapper) SourceEntities() []string {
 
 // Tentacles returns tentacles.
 func (m *mapper) Tentacles() []Tentacler {
-
-	tentacles := make([]Tentacler, 0)
 	mqlInst := mql.NewMQL(m.mqlText)
 	tts := mqlInst.Tentacles()
-
+	tentacles := make([]Tentacler, 0, len(tts))
 	mItems := make([]string, 0)
-	for entityId, items := range tts {
-
-		eItems := make([]string, 0)
-		for _, item := range items {
-			tentacleKey := GenTentacleKey(entityId, item)
-			mItems = append(mItems, tentacleKey)
-			eItems = append(mItems, tentacleKey)
+	for entityID, items := range tts {
+		if len(mItems) == 0 {
+			mItems = make([]string, 0, len(tts)*len(items))
 		}
 
-		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, entityId, eItems))
+		eItems := make([]string, len(items))
+		for i, item := range items {
+			tentacleKey := GenTentacleKey(entityID, item)
+			eItems[i] = tentacleKey
+			mItems = append(mItems, tentacleKey)
+		}
+
+		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, entityID, eItems))
 	}
 
 	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.id, mItems))
@@ -62,10 +64,14 @@ func (m *mapper) Tentacles() []Tentacler {
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	return NewMapper(m.id, m.mqlText)
+	return newMapper(m.id, m.mqlText)
 }
 
-// Exec excute input returns output.
+// Exec input returns output.
 func (m *mapper) Exec(values map[string]map[string]interface{}) (res map[string]map[string]interface{}, err error) {
-	return mql.NewMQL(m.mqlText).Exec(values)
+	res, err = mql.NewMQL(m.mqlText).Exec(values)
+	if err != nil {
+		return nil, errors.Unwrap(err)
+	}
+	return res, nil
 }

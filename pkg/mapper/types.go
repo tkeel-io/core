@@ -3,14 +3,14 @@ package mapper
 import "fmt"
 
 const (
-	TentacleTypeUndefine = "undefine"
-	TentacleTypeEntity   = "entity"
-	TentacleTypeMapper   = "mapper"
+	TentacleTypeUndefined = "undefined"
+	TentacleTypeEntity    = "entity"
+	TentacleTypeMapper    = "mapper"
 )
 
 type Mapper interface {
-	// Id returns mapper id.
-	Id() string
+	// ID returns mapper id.
+	ID() string
 	// String returns MQL text.
 	String() string
 	// TargetEntity returns target entity.
@@ -30,14 +30,14 @@ type TentacleType = string
 type Tentacler interface {
 	// Type returns tentacle type.
 	Type() TentacleType
-	// TargetId returns target id.
-	TargetId() string
+	// TargetID returns target id.
+	TargetID() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).
 	Items() []string
 	// Copy duplicate a mapper.
 	Copy() Tentacler
 }
 
-func GenTentacleKey(entityId, propertyKey string) string {
-	return fmt.Sprintf("%s#%s", entityId, propertyKey)
+func GenTentacleKey(entityID, propertyKey string) string {
+	return fmt.Sprintf("%s#%s", entityID, propertyKey)
 }

@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"log"
 
+	ants "github.com/panjf2000/ants/v2"
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/api"
 	"github.com/tkeel-io/core/pkg/api/service"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/server"
 	daprd "github.com/tkeel-io/core/pkg/service/http"
 
 	"github.com/dapr/go-sdk/service/common"
-	"github.com/pkg/errors"
 )
 
 type Server struct {
@@ -20,6 +22,8 @@ type Server struct {
 	daprService   common.Service
 	apiRegistry   *api.Registry
 	serverManager *server.Manager
+	entityManager *entities.EntityManager
+	coroutinePool *ants.Pool
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -33,11 +37,22 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	address := fmt.Sprintf(":%d", conf.Server.AppPort)
 	daprService := daprd.NewServiceWithMux(address, api.NewOpenAPIServeMux())
 
+	// create coroutine pool.
+	coroutinePool, err := ants.NewPool(conf.Server.CoroutinePoolSize)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	// create entity manager.
+	entityManager := entities.NewEntityManager(ctx, coroutinePool)
+
 	ser := Server{
 		ctx:           ctx,
 		cancel:        cancel,
 		conf:          conf,
 		daprService:   daprService,
+		coroutinePool: coroutinePool,
+		entityManager: entityManager,
 		serverManager: server.NewManager(ctx, daprService, conf),
 	}
 
@@ -47,7 +62,7 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	}
 
 	// init api registry.
-	if err = initAPIRegistry(apiRegistry, &conf.APIConfig); nil != err {
+	if err = initAPIRegistry(ctx, apiRegistry, &conf.APIConfig, entityManager); nil != err {
 		log.Fatalf("init ApiRegistry error, %s", err.Error())
 	}
 
@@ -61,13 +76,18 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 
 func (s *Server) Run() error {
 	if err := s.apiRegistry.Start(); nil != err {
-		return errors.Wrap(err, "api registry start err")
+		return errors.Unwrap(err)
 	}
 	if err := s.serverManager.Start(); nil != err {
-		return errors.Wrap(err, "server manager start err")
+		return errors.Unwrap(err)
 	}
+
+	if err := s.entityManager.Start(); err != nil {
+		return errors.Unwrap(err)
+	}
+
 	if err := s.daprService.Start(); err != nil {
-		return errors.Wrap(err, "dapr service start err")
+		return errors.Unwrap(err)
 	}
 
 	return nil
@@ -75,7 +95,7 @@ func (s *Server) Run() error {
 
 func (s *Server) Close() {}
 
-func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
+func initAPIRegistry(ctx context.Context, apiRegistry *api.Registry, apiConfig *config.APIConfig, entityManager *entities.EntityManager) error {
 	var (
 		err       error
 		eventAPI  *service.EventService
@@ -102,11 +122,7 @@ func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) err
 		return errors.Wrap(err, "api registry add service err")
 	}
 
-	if entityAPI, err = service.NewEntityService(&service.EntityServiceConfig{
-		TableName:   apiConfig.EntityAPIConfig.TableName,
-		StateName:   apiConfig.EntityAPIConfig.StateName,
-		BindingName: apiConfig.EntityAPIConfig.BindingName,
-	}); err != nil {
+	if entityAPI, err = service.NewEntityService(ctx, entityManager); err != nil {
 		return errors.Wrap(err, "new entity service err")
 	}
 
