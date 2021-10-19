@@ -35,23 +35,25 @@ func TestGetProperties(t *testing.T) {
 		panic(err)
 	}
 
-	entity.SetProperties(map[string]interface{}{
-		"temp1":   15,
-		"temp2":   23,
-		"light":   555,
-		"say":     "hello",
-		"friends": []string{"tom", "tony"},
-		"user": map[string]interface{}{
-			"name": "john",
-			"age":  20,
+	entity.SetProperties(&EntityBase{
+		KValues: map[string]interface{}{
+			"temp1":   15,
+			"temp2":   23,
+			"light":   555,
+			"say":     "hello",
+			"friends": []string{"tom", "tony"},
+			"user": map[string]interface{}{
+				"name": "john",
+				"age":  20,
+			},
 		},
 	})
 
-	props := entity.GetAllProperties()
-	t.Log(props)
+	eb := entity.GetAllProperties()
+	t.Log(eb.KValues)
 
 	// delete some field.
-	delete(props, "light")
+	delete(eb.KValues, "light")
 
 	props1 := entity.GetAllProperties()
 	t.Log(props1)

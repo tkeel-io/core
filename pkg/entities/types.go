@@ -2,21 +2,22 @@ package entities
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
 
 const (
+	EntityCtxHeaderUserID    = "x-user_id"
 	EntityCtxHeaderSourceID  = "x-source"
 	EntityCtxHeaderTargetID  = "x-target"
-	EntityCtxHeaderRequestID = "x-request-id"
+	EntityCtxHeaderRequestID = "x-request_id"
 )
 
 var (
 	log = logger.NewLogger("core.entities")
 
-	errEntityExisted  = errors.New("entity already exists")
 	errEntityNotFound = errors.New("entity not found")
 )
 
@@ -58,4 +59,8 @@ type Header map[string]string
 
 type Message interface {
 	Message()
+}
+
+func entityFieldRequired(fieldName string) error {
+	return fmt.Errorf("entity field(%s) required", fieldName)
 }

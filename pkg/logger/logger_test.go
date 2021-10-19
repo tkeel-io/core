@@ -57,7 +57,7 @@ func TestToLogLevel(t *testing.T) {
 		assert.Equal(t, FatalLevel, toLogLevel("fatal"))
 	})
 
-	t.Run("undefined loglevel", func(t *testing.T) {
-		assert.Equal(t, UndefinedLevel, toLogLevel("undefined"))
+	t.Run("default loglevel", func(t *testing.T) {
+		assert.Equal(t, InfoLevel, toLogLevel("undefined"))
 	})
 }
