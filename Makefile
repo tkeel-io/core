@@ -90,17 +90,14 @@ BINS_OUT_DIR := $(OUT_DIR)/$(GOOS)_$(GOARCH)/$(BUILDTYPE_DIR)
 LDFLAGS := "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
 
 build:
-	@rm -rf bin/
-	@mkdir bin/
 	@echo "---------------------------"
 	@echo "-        build...         -"
-	@$(GOBUILD)    -o bin/$(BINNAME)
-	@echo "-     build(linux)...     -"
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(GCFLAGS) -ldflags $(LDFLAGS) \
      	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
+	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
 	@echo "-----------Done------------"
 
 ifeq ($(GOOS),windows)
