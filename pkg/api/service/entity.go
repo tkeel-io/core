@@ -20,6 +20,7 @@ import (
 const (
 	entityFieldTag    = "tag"
 	entityFieldType   = "type"
+	entityFieldID     = "id"
 	entityFieldUserID = "user_id"
 	entityFieldSource = "source"
 )
@@ -223,10 +224,14 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return err
 	}
 
-	if entity.ID, err = getStringFrom(ctx, service.Entity); nil != err {
-		// entity id field
+	if entity.ID, err = getStringFrom(ctx, service.Entity); nil == err {
+		log.Info("parse http request field(id) from header successed.")
+	} else if entity.ID, err = e.getValFromValues(values, entityFieldID); nil != err {
+		log.Error("parse http request field(id) from query failed", ctx, err)
 		if !idRequired {
 			entity.ID = utils.GenerateUUID()
+		} else {
+			return err
 		}
 	}
 
