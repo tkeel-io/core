@@ -2,9 +2,15 @@ package entities
 
 import (
 	"context"
+	"sync"
 
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/utils"
+)
+
+const (
+	EntityStatusActive  = "active"
+	EntityStatusDeleted = "deleted"
 )
 
 type EntityBase struct {
@@ -20,13 +26,18 @@ type EntityBase struct {
 type entity struct {
 	EntityBase
 
+	status  string
+	mailBox *mailbox
+
+	// non-state.
 	mappers        map[string]mapper.Mapper          // key=mapperId
 	tentacles      map[string][]mapper.Tentacler     // key=entityId#propertyKey
 	cacheProps     map[string]map[string]interface{} // cache other property.
 	indexTentacles map[string][]mapper.Tentacler     // key=targetId(mapperId/entityId)
 
+	attached      bool
 	entityManager *EntityManager
-	lock          *utils.ReEntryLock
+	lock          *sync.RWMutex
 
 	ctx context.Context
 }
@@ -49,7 +60,9 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 
 		ctx:           ctx,
 		entityManager: mgr,
-		lock:          utils.NewReEntryLock(0),
+		status:        EntityStatusActive,
+		mailBox:       NewMailbox(10),
+		lock:          &sync.RWMutex{},
 		mappers:       make(map[string]mapper.Mapper),
 		cacheProps:    make(map[string]map[string]interface{}),
 	}
@@ -60,19 +73,14 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 	return et, nil
 }
 
-// GetID returns entity's id.
-func (e *entity) GetID() string {
-	return e.ID
-}
-
 // GetMapper returns a mapper.
 func (e *entity) GetMapper(mid string) mapper.Mapper {
 	reqID := utils.GenerateUUID()
 
 	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.ID, reqID, mid)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	if m, has := e.mappers[mid]; has {
 		return m.Copy()
@@ -89,8 +97,8 @@ func (e *entity) GetMappers() []mapper.Mapper {
 
 	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 	i := 0
 	for _, m := range e.mappers {
 		result[i] = m.Copy()
@@ -106,7 +114,7 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 	log.Infof("entity.SetMapper called, entityID: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.ID, reqID, m.ID, m.String())
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	e.mappers[m.ID()] = m
@@ -145,8 +153,8 @@ func (e *entity) GetProperty(key string) interface{} {
 
 	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	return e.KValues[key]
 }
@@ -157,7 +165,7 @@ func (e *entity) SetProperty(key string, value interface{}) error {
 
 	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	e.KValues[key] = value
@@ -171,8 +179,8 @@ func (e *entity) GetAllProperties() *EntityBase {
 
 	log.Infof("entity.GetAllProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	return e.getEntityBase()
 }
@@ -183,7 +191,7 @@ func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 
 	log.Infof("entity.SetProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	e.setTag(entityObj.Tag)
@@ -202,7 +210,7 @@ func (e *entity) DeleteProperty(key string) error {
 
 	log.Infof("entity.DeleteProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	delete(e.KValues, key)
@@ -210,23 +218,52 @@ func (e *entity) DeleteProperty(key string) error {
 	return nil
 }
 
-func (e *entity) InvokeMsg(ctx EntityContext) {
+func (e *entity) OnMessage(ctx EntityContext) func() {
+	attached := true
 	reqID := utils.GenerateUUID()
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
 
-	switch msg := ctx.Message.(type) {
-	case *EntityMsg:
-		e.invokeEntityMsg(msg)
-	case *TentacleMsg:
-		e.invokeTentacleMsg(msg)
-	default:
-		// invalid msg type.
-		log.Errorf("undefine message type, msg: %s", msg)
+	log.Infof("entity.OnMessage called, entityId: %s, requestId: %s.", e.ID, reqID)
+
+	//1. put msg inti mailbox.
+	e.lock.Lock()
+	e.mailBox.Put(ctx.Message)
+	if !e.attached {
+		attached = false
+		e.attached = true
+	}
+	e.lock.Unlock()
+
+	if !attached {
+		return e.InvokeMsg
+	}
+
+	return nil
+}
+
+func (e *entity) InvokeMsg() {
+	for {
+		e.lock.Lock()
+		// 为了满足同步调用，暂时lock invoke.
+		defer e.lock.Unlock()
+		msgCtx := e.mailBox.Get()
+
+		if nil == msgCtx {
+			break
+		}
+
+		switch msg := msgCtx.(type) {
+		case *EntityMessage:
+			e.invokeEntityMsg(msg)
+		case *TentacleMsg:
+			e.invokeTentacleMsg(msg)
+		default:
+			// invalid msg type.
+			log.Errorf("undefine message type, msg: %s", msg)
+		}
 	}
 }
 
-func (e *entity) invokeEntityMsg(msg *EntityMsg) {
+func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	setEntityID := msg.SourceID
 	if setEntityID == "" {
 		setEntityID = e.ID
@@ -281,7 +318,7 @@ func (e *entity) activeTentacle(actives []activePair) {
 				EntityCtxHeaderSourceID: e.ID,
 				EntityCtxHeaderTargetID: entityID,
 			},
-			Message: &EntityMsg{
+			Message: &EntityMessage{
 				SourceID: e.ID,
 				Values:   msg,
 			},

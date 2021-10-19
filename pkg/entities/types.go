@@ -56,9 +56,20 @@ func (ec *EntityContext) SetTarget(targetID string) {
 }
 
 type Header map[string]string
+type PromiseFunc = func(interface{})
 
 type Message interface {
 	Message()
+	Promise() PromiseFunc
+}
+
+type messageBase struct{}
+
+func (ms *messageBase) Message() {}
+func (ms *messageBase) Promise() PromiseFunc {
+	return func(interface{}) {
+		// do nothing...
+	}
 }
 
 func entityFieldRequired(fieldName string) error {
