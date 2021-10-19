@@ -377,6 +377,19 @@ func (e *EntityService) entitiesHandler(ctx context.Context, in *common.Invocati
 		return out, err
 	}
 
+	switch in.Verb {
+	case http.MethodPost:
+		return e.entityCreate(ctx, in)
+	case http.MethodPut:
+		return e.entityUpdate(ctx, in)
+	case http.MethodDelete:
+		return e.entityDelete(ctx, in)
+		// temporary.
+	case http.MethodPatch:
+		return e.entityCreate(ctx, in)
+	default:
+	}
+
 	// parse request query...
 
 	out = &common.Content{
