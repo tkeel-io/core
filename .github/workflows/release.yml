@@ -4,6 +4,54 @@ on:
     tags:
       - v*
 jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.42
+  test_ADM64:
+    name: Test in ${{ matrix.target_os }}_${{ matrix.target_arch }} with Go_${{ matrix.go }}
+    runs-on: ${{ matrix.os }}
+    needs: [ lint ]
+    env:
+      GOVER: ${{ matrix.go }}
+      GOOS: ${{ matrix.target_os }}
+      GOARCH: ${{ matrix.target_arch }}
+      GOPROXY: https://proxy.golang.org
+      ARCHIVE_OUTDIR: dist/archives
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        go: [ 1.17.2, 1.16 ]
+        target_arch: [ amd64 ]
+        include:
+          - os: ubuntu-latest
+            target_os: linux
+          - os: windows-latest
+            target_os: windows
+          - os: macOS-latest
+            target_os: darwin
+      fail-fast: false
+    steps:
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Run make go.mod check-diff
+        if: matrix.target_os == 'linux'
+        run: git diff --exit-code ./go.mod
+      - name: run test in widnows
+        if: matrix.target_os == 'windows'
+        run: go test -v -cover -gcflags=all=-l .\...
+      - name: run tests
+        if: matrix.target_os != 'windows'
+        run: go test -v -cover -gcflags=all=-l -coverprofile=coverage.out ./...
   build:
     name: Build ${{ matrix.target_os }}_${{ matrix.target_arch }} binaries
     runs-on: ${{ matrix.os }}
