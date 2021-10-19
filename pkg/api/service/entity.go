@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
-	"github.com/tkeel-io/core/utils"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/service/common"
@@ -226,7 +226,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 	if entity.ID, err = getStringFrom(ctx, service.Entity); nil != err {
 		// entity id field
 		if !idRequired {
-			entity.ID = utils.GenerateUUID()
+			entity.ID = uuid()
 		}
 	}
 
@@ -398,4 +398,16 @@ func (e *EntityService) entitiesHandler(ctx context.Context, in *common.Invocati
 		DataTypeURL: in.DataTypeURL,
 	}
 	return out, err
+}
+
+func uuid() string {
+	uuid := make([]byte, 16)
+	if _, err := rand.Read(uuid); err != nil {
+		return ""
+	}
+	// see section 4.1.1.
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	// see section 4.1.3.
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }

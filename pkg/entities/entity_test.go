@@ -2,6 +2,8 @@ package entities
 
 import (
 	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	ants "github.com/panjf2000/ants/v2"
@@ -57,4 +59,19 @@ func TestGetProperties(t *testing.T) {
 
 	props1 := entity.GetAllProperties()
 	t.Log(props1)
+}
+
+func TestEntity_Copy(t *testing.T) {
+	coroutinePool, err := ants.NewPool(500)
+	assert.Nil(t, err)
+	tag := "test"
+	mgr := NewEntityManager(context.Background(), coroutinePool)
+
+	en, err := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	assert.Nil(t, err)
+	ce := en.Copy()
+	log.Infof("source en addr:%p | %+v", en, *en)
+	log.Infof("copy en addr:%p | %+v,", &ce, ce)
+	assert.Equal(t, ce, *en)
+	assert.NotEqual(t, fmt.Sprintf("%p", en), fmt.Sprintf("%p", &ce))
 }
