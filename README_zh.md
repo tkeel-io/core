@@ -5,6 +5,67 @@
 
 Core通过api对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务
     
+## 快速入门
+当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
+1. 创建实体  
+
+```bash
+curl -X POST .../plugins/{plugin}/entities?id=test1&user_id=user&type=device  -d '{"property1":"abc"}'
+```
+参数名称            |类型        |出现要求    |描述  
+:----            |:---        |:------    |:---    
+plugin    |string        |R            |插件名称
+id                |string        |            |实体id，不传可以自动创建
+user_id                |string        |R            |租户id
+type|string|R|实体类型
+body|object||创建实体时写入的属性
+
+```json
+{
+    "id": "test1",
+    "tag": null,
+    "type": "",
+    "source": "pluginA",
+    "user_id": "abcd",
+    "version": 0,
+    "properties": {}
+}
+```
+
+
+go-sdk 示例代码
+```go
+    client, err := dapr.NewClient()
+    if nil != err {
+        panic(err)
+    }
+
+    // create entity.
+    createUrl := "plugins/pluginA/entities?id=test1&user_id=abc&type=Device"
+
+    result, err := client.InvokeMethodWithContent(context.Background(),
+        "core",
+        createUrl,
+        "POST",
+        &dapr.DataContent{
+            ContentType: "application/json",
+        })
+    if nil != err {
+        panic(err)
+    }
+    fmt.Println(string(result))
+```
+2. 查看实体快照
+
+```bash
+curl -X POST .../plugins/{plugin}/entities/{entity}?&user_id=user
+```
+参数名称            |类型        |出现要求    |描述  
+:----            |:---        |:------    |:---    
+plugin    |string        |R            |插件名称
+entity                |string        |R            |实体id
+user_id                |string        |R            |租户id
+
 ## 实体
 物联网世界里的操作对象，以及这些对象组合抽象出来的对象，包括网关，设备，设备的聚合抽象等等。  
 
@@ -33,11 +94,11 @@ Core通过api对外提供属性搜索，时序查询，数据写入，数据查�
     ```
 3. 多对一映射+计算
     ```sql
-   	select sum(2*light1.a, light2.a) as house.e
+       select sum(2*light1.a, light2.a) as house.e
     ```
 4. 自身映射+计算
     ```sql
-	select sum(light1.c, light1.d) as light1.e
+    select sum(light1.c, light1.d) as light1.e
     ```
 ### 映射（写复制）
 自身属性的变更可能触发写复制到其他实体
