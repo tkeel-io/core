@@ -7,7 +7,7 @@
 ### Self-hosted
 本地运行一个redis，监听6379端口，无密码  
 ```bash
-dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --log-level debug  --components-path ./config go run . serve
+dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./config go run . serve
 ```
 执行测试
 
@@ -65,9 +65,9 @@ CREATE DATABASE IF NOT EXISTS test_db_char
 
 ## Test
 
-> api调用中，必须设置Header: Source, User字段:
-1. 可以在http request的Header中设置`"Source":"abcd"`和`"User":"admin"`。
-2. 可以在http request的Query中设置`source=abcd&user_id=admin`
+> api调用中，必须设置Header: Source, User, Type字段:
+1. 可以在http request的Header中设置`"Source":"abcd"`和`"User":"admin"`和`"Type":"DEVICE"`。
+2. 可以在http request的Query中设置`source=abcd&user_id=admin&type=DEVICE`
 3. 或者混合使用，Header中的设置覆盖Query中的设置。
 
 
@@ -76,14 +76,14 @@ CREATE DATABASE IF NOT EXISTS test_db_char
 创建entity, POST支持`upsert`操作
 ```bash
 # 指定entityId创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "completed"
      }'
 
 # upsert
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -94,6 +94,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&
 curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?tag=test" \
   -H "Source: abcd" \
   -H "User: admin" \
+  -H "Type: DEVICE" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "completed"
@@ -105,7 +106,8 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?tag=test" \
 ```bash
 curl -X GET "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123" \
   -H "Source: abcd" \
-  -H "User: admin" 
+  -H "User: admin"  \
+  -H "Type: DEVICE"
 ```
 
 
@@ -114,6 +116,7 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123" 
 curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=tomas" \
   -H "Source: abcd" \
   -H "User: admin" \
+  -H "Type: DEVICE" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "testing",
@@ -127,7 +130,8 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&t
 ```bash
 curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=tomas" \
   -H "Source: abcd" \
-  -H "User: admin" 
+  -H "User: admin"  \
+  -H "Type: DEVICE" 
 ```
 
 
