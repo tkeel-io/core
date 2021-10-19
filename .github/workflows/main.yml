@@ -122,7 +122,7 @@ jobs:
       - name: upload artifacts
         uses: actions/upload-artifact@master
         with:
-          name: Binary
+          name: my-artifact
           path: ${{ env.ARCHIVE_OUTDIR }}
 
   release:
