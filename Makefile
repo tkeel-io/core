@@ -96,9 +96,11 @@ build:
      	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
-	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
 	@echo "-----------Done------------"
+
+show:
+	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 
 ifeq ($(GOOS),windows)
 BINARY_EXT_LOCAL:=.exe
