@@ -100,7 +100,7 @@ build:
      	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
-	@bin/$(BINNAME) --version
+	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 	@echo "-----------Done------------"
 
 ifeq ($(GOOS),windows)

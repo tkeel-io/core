@@ -157,11 +157,11 @@ jobs:
       fail-fast: true
       matrix:
         project:
-          - tkeel_darwin_amd64.tar.gz
-          - tkeel_linux_amd64.tar.gz
-          - tkeel_linux_arm.tar.gz
-          - tkeel_linux_arm64.tar.gz
-          - tkeel_windows_amd64.zip
+          - core_darwin_amd64.tar.gz
+          - core_linux_amd64.tar.gz
+          - core_linux_arm.tar.gz
+          - core_linux_arm64.tar.gz
+          - core_windows_amd64.zip
     steps:
       - name: Download Artifact
         id: download
