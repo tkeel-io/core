@@ -13,12 +13,27 @@ func main() {
 		panic(err)
 	}
 
-	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
-	methodName := "entities"
+	// create entity.
+	createUrl := "plugins/pluginA/entities?id=test1&user_id=abc&type=Device"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
-		fmt.Sprintf("%s?%s", methodName, queryString),
+		createUrl,
+		"POST",
+		&dapr.DataContent{
+			ContentType: "application/json",
+		})
+	if nil != err {
+		panic(err)
+	}
+	fmt.Println(string(result))
+
+	// get entity.
+	getUrl := "plugins/pluginA/entities/test1?type=Device&user_id=abc"
+
+	result, err = client.InvokeMethodWithContent(context.Background(),
+		"core",
+		getUrl,
 		"GET",
 		&dapr.DataContent{
 			ContentType: "application/json",
