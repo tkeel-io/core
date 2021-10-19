@@ -59,7 +59,7 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	}
 
 	// init api registry.
-	if err = initAPIRegistry(apiRegistry, &conf.APIConfig); nil != err {
+	if err = initAPIRegistry(apiRegistry, &conf.APIConfig, ser.entityManager); nil != err {
 		log.Fatalf("init ApiRegistry error, %s", err.Error())
 	}
 
@@ -92,7 +92,7 @@ func (s *Server) Run() error {
 
 func (s *Server) Close() {}
 
-func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) error {
+func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig, manager *entities.EntityManager) error {
 	var (
 		err       error
 		eventAPI  *service.EventService
@@ -123,7 +123,7 @@ func initAPIRegistry(apiRegistry *api.Registry, apiConfig *config.APIConfig) err
 		TableName:   apiConfig.EntityAPIConfig.TableName,
 		StateName:   apiConfig.EntityAPIConfig.StateName,
 		BindingName: apiConfig.EntityAPIConfig.BindingName,
-	}); err != nil {
+	}, manager); err != nil {
 		return errors.Wrap(err, "new entity service err")
 	}
 

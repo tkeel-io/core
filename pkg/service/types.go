@@ -7,6 +7,10 @@ const (
 	HeaderMetadata    = "Metadata"
 	HeaderContentType = "Content-Type"
 	QueryType         = "type"
+
+	Plugin = "plugin"
+	Entity = "entity"
+	User   = "user_id"
 )
 
 type ContextKey string
