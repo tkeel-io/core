@@ -3,10 +3,10 @@ package entities
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	ants "github.com/panjf2000/ants/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEntity(t *testing.T) {

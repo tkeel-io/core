@@ -351,7 +351,6 @@ func (e entity) Copy() entity {
 		lock:           e.lock,
 		ctx:            e.ctx,
 	}
-
 }
 
 func uuid() string {
