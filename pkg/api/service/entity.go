@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	entityFieldID     = "id"
 	entityFieldTag    = "tag"
 	entityFieldType   = "type"
 	entityFieldUserID = "user_id"
@@ -64,15 +63,81 @@ func (e *EntityService) Name() string {
 }
 
 // RegisterService register some methods.
-func (e *EntityService) RegisterService(daprService common.Service) error {
+func (e *EntityService) RegisterService(daprService common.Service) (err error) {
 	// register all handlers.
-	if err := daprService.AddServiceInvocationHandler("entities", e.entityHandler); nil != err {
-		return errors.Wrap(err, "dapr add 'entities' service invocation handler err")
+	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities/{entity}", e.entityHandler); nil != err {
+		return
 	}
-	if err := daprService.AddServiceInvocationHandler("entitylist", e.entityList); nil != err {
-		return errors.Wrap(err, "dapr add 'entitylist' service invocation handler err")
+	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
+		return
 	}
-	return nil
+	if err = e.AddSubTopic(daprService, "core", "core-pubsub"); nil != err {
+		return
+	}
+	return
+}
+
+func (e *EntityService) AddSubTopic(daprService common.Service, topic, pubsubName string) (err error) {
+	sub := &common.Subscription{
+		PubsubName: pubsubName,
+		Topic:      topic,
+		Route:      "/",
+		Metadata:   map[string]string{},
+	}
+	if err = daprService.AddTopicEventHandler(sub, e.topicHandler); err != nil {
+		return
+	}
+	return
+}
+
+func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
+	ec := entities.EntityContext{}
+	var entityID, userID string
+	ec.Headers = make(map[string]string)
+	if in.DataContentType == "application/json" {
+		inData, ok := in.Data.(map[string]interface{})
+		if !ok {
+			return nil, errTypeError
+		}
+		switch entityIds := inData["entity_id"].(type) {
+		case string:
+			entityID = entityIds
+		default:
+			return nil, errTypeError
+		}
+		switch tempUserID := inData["tenant_id"].(type) {
+		case string:
+			userID = tempUserID
+		default:
+			err = errTypeError
+			return
+		}
+		switch tempData := inData["data"].(type) {
+		case string, []byte:
+			values := make(map[string]interface{})
+			values["__data__"] = tempData
+			ec.Message = &entities.EntityMsg{SourceID: "", Values: values}
+		case map[string]interface{}:
+			ec.Message = &entities.EntityMsg{SourceID: "", Values: tempData}
+		default:
+			err = errTypeError
+			return
+		}
+
+		ec.Headers["user_id"] = userID
+		ec.SetTarget(entityID)
+	}
+	return &ec, nil
+}
+
+func (e *EntityService) topicHandler(ctx context.Context, in *common.TopicEvent) (retry bool, err error) {
+	if ec, err := TopicEvent2EntityContext(in); err != nil {
+		return false, err
+	} else if in.DataContentType == "application/json" {
+		e.entityManager.SendMsg(*ec)
+	}
+
+	return false, nil
 }
 
 // Echo test for RegisterService.
@@ -142,7 +207,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return err
 	}
 
-	if entity.Source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil == err {
 		// source field required.
 		log.Info("parse http request field(source) from header successes.")
 	} else if entity.Source, err = e.getValFromValues(values, entityFieldSource); nil != err {
@@ -158,7 +223,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return err
 	}
 
-	if entity.ID, err = e.getValFromValues(values, entityFieldID); nil != err {
+	if entity.ID, err = getStringFrom(ctx, service.Entity); nil != err {
 		// entity id field
 		if !idRequired {
 			entity.ID = utils.GenerateUUID()
@@ -306,7 +371,7 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 }
 
 // Echo test for RegisterService.
-func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+func (e *EntityService) entitiesHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	if in == nil {
 		err = errors.New("nil invocation parameter")
 		return out, err

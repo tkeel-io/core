@@ -3,10 +3,12 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-func NewOpenAPIServeMux() *http.ServeMux {
-	serMux := http.NewServeMux()
+func NewOpenAPIServeMux() *mux.Router {
+	serMux := mux.NewRouter()
 
 	handleFunc(serMux, "/v1/identify", identifyHandler)
 	handleFunc(serMux, "/v1/status", statusHandler)
@@ -60,6 +62,6 @@ func preDisposeRequest(rw http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleFunc(serMux *http.ServeMux, path string, handler func(rw http.ResponseWriter, r *http.Request)) {
+func handleFunc(serMux *mux.Router, path string, handler func(rw http.ResponseWriter, r *http.Request)) {
 	serMux.HandleFunc(path, handler)
 }

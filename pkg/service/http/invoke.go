@@ -8,6 +8,7 @@ import (
 	"github.com/tkeel-io/core/pkg/service"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/gorilla/mux"
 )
 
 func header2context(header http.Header, keyList []string) context.Context {
@@ -48,6 +49,13 @@ func (s *Server) AddServiceInvocationHandler(route string, fn func(ctx context.C
 
 			// execute handler.
 			ctx := header2context(r.Header, service.HeaderList)
+			varsMap := mux.Vars(r)
+			plugin := varsMap[service.Plugin]
+			entityID := varsMap[service.Entity]
+
+			ctx = context.WithValue(ctx, service.ContextKey(service.Entity), entityID)
+			ctx = context.WithValue(ctx, service.ContextKey(service.Plugin), plugin)
+
 			o, err := fn(ctx, e)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
