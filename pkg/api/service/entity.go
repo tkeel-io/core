@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/utils"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/service/common"
@@ -16,46 +18,42 @@ import (
 )
 
 const (
-	entityFieldID          = "id"
-	entityFieldUserID      = "user_id"
-	entityFieldSource      = "source"
-	entityFieldTag         = "tag"
-	entityFieldVersion     = "version"
-	entityStateFieldPrefix = "__internal_"
+	entityFieldTag    = "tag"
+	entityFieldType   = "type"
+	entityFieldUserID = "user_id"
+	entityFieldSource = "source"
 )
 
-func internalFieldName(fieldName string) string {
-	return fmt.Sprintf("%s%s", entityStateFieldPrefix, fieldName)
+var errBodyMustBeJSON = errors.New("request body must be json")
+
+func entityFieldRequired(fieldName string) error {
+	return fmt.Errorf("entity field(%s) required", fieldName)
 }
 
-type EntityServiceConfig struct {
-	TableName   string
-	StateName   string
-	BindingName string
-}
+type Entity = entities.EntityBase
 
 // EntityService is a time-series service.
 type EntityService struct {
-	daprClient   dapr.Client
-	tableName    string
-	stateName    string
-	bindingName  string
-	entityManger *entities.EntityManager
+	ctx           context.Context
+	cancel        context.CancelFunc
+	daprClient    dapr.Client
+	entityManager *entities.EntityManager
 }
 
 // NewEntityService returns a new EntityService.
-func NewEntityService(entityConfig *EntityServiceConfig, manager *entities.EntityManager) (*EntityService, error) {
+func NewEntityService(ctx context.Context, mgr *entities.EntityManager) (*EntityService, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	cli, err := dapr.NewClient()
 	if err != nil {
 		err = errors.Wrap(err, "start dapr clint err")
 	}
 
 	return &EntityService{
-		daprClient:   cli,
-		tableName:    entityConfig.TableName,
-		stateName:    entityConfig.StateName,
-		bindingName:  entityConfig.BindingName,
-		entityManger: manager,
+		ctx:           ctx,
+		cancel:        cancel,
+		daprClient:    cli,
+		entityManager: mgr,
 	}, err
 }
 
@@ -136,7 +134,7 @@ func (e *EntityService) topicHandler(ctx context.Context, in *common.TopicEvent)
 	if ec, err := TopicEvent2EntityContext(in); err != nil {
 		return false, err
 	} else if in.DataContentType == "application/json" {
-		e.entityManger.SendMsg(*ec)
+		e.entityManager.SendMsg(*ec)
 	}
 
 	return false, nil
@@ -174,32 +172,76 @@ func (e *EntityService) entityHandler(ctx context.Context, in *common.Invocation
 	return
 }
 
-func invocationEvent2Entity(ctx context.Context, in *common.InvocationEvent) (entity *entities.EntityBase, err error) {
-	items, _ := url.ParseQuery(in.QueryString)
-	entity = &entities.EntityBase{}
-	var ok bool
-	if ctxValue := ctx.Value(service.ContextKey(service.Entity)); ctx != nil {
-		if entity.ID, ok = ctxValue.(string); !ok {
-			err = errors.New("type error")
+func (e *EntityService) getValFromValues(values url.Values, key string) (string, error) {
+	if vals, exists := values[key]; exists && len(vals) > 0 {
+		return vals[0], nil
+	}
+
+	return "", entityFieldRequired(key)
+}
+
+func getStringFrom(ctx context.Context, key string) (string, error) {
+	if val := ctx.Value(service.ContextKey(key)); nil != val {
+		if v, ok := val.(string); ok {
+			return v, nil
+		}
+	}
+	return "", entityFieldRequired(key)
+}
+
+func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) error { // nolint
+	var (
+		err    error
+		values url.Values
+	)
+
+	if values, err = url.ParseQuery(in.QueryString); nil != err {
+		return errors.Wrap(err, "parse URL failed")
+	}
+
+	if entity.Type, err = getStringFrom(ctx, service.HeaderType); nil == err {
+		// type field required.
+		log.Info("parse http request field(type) from header successes.")
+	} else if entity.Type, err = e.getValFromValues(values, entityFieldType); nil != err {
+		log.Error("parse http request field(type) from query failed", ctx, err)
+		return err
+	}
+
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil == err {
+		// source field required.
+		log.Info("parse http request field(source) from header successes.")
+	} else if entity.Source, err = e.getValFromValues(values, entityFieldSource); nil != err {
+		log.Error("parse http request field(source) from query failed", ctx, err)
+		return err
+	}
+
+	if entity.UserID, err = getStringFrom(ctx, service.HeaderUser); nil == err {
+		// userId field required.
+		log.Info("parse http request field(user) from header successed.")
+	} else if entity.UserID, err = e.getValFromValues(values, entityFieldUserID); nil != err {
+		log.Error("parse http request field(user) from query failed", ctx, err)
+		return err
+	}
+
+	if entity.ID, err = getStringFrom(ctx, service.Entity); nil != err {
+		// entity id field
+		if !idRequired {
+			entity.ID = utils.GenerateUUID()
 		}
 	}
 
-	if ctxValue := ctx.Value(service.ContextKey(service.Plugin)); ctx != nil {
-		if entity.Source, ok = ctxValue.(string); !ok {
-			err = errors.New("type error")
-		}
+	// tags
+	if vals, exists := values[entityFieldTag]; exists && len(vals) > 0 {
+		tag := strings.Join(vals, ";")
+		entity.Tag = &tag
 	}
-	if len(items[service.User]) > 0 {
-		entity.UserID = items[service.User][0]
-	}
-	return
+
+	return err
 }
 
 // EntityGet returns an entity information.
 func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var (
-		entity *entities.EntityBase
-	)
+	var entity = new(Entity)
 
 	out = &common.Content{
 		Data:        in.Data,
@@ -209,24 +251,27 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 
 	defer errResult(out, err)
 
-	if entity, err = invocationEvent2Entity(ctx, in); nil != err {
+	err = e.getEntityFrom(ctx, entity, in, true)
+	if nil != err {
 		return
 	}
-	e2, err := e.entityManger.GetAllProperties(ctx, entity.ID)
-	if err != nil {
-	} else {
-		out.Data, _ = json.Marshal(e2)
+
+	// get entity from entity manager.
+	entity, err = e.entityManager.GetAllProperties(ctx, entity)
+	if nil != err {
+		log.Errorf("get entity failed, %s", err.Error())
+		return
 	}
+
+	// encode entity.
+	out.Data, err = json.Marshal(entity)
 
 	return
 }
 
 // EntityGet create  an entity.
 func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var (
-		entity  entities.EntityBase
-		kvalues = make(map[string]interface{})
-	)
+	var entity = new(Entity)
 
 	out = &common.Content{
 		Data:        in.Data,
@@ -236,24 +281,34 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	// TODO 创建entity
-
-	kvalues[internalFieldName(entityFieldTag)] = entity.Tag
-	kvalues[internalFieldName(entityFieldID)] = entity.ID
-	kvalues[internalFieldName(entityFieldUserID)] = entity.UserID
-	kvalues[internalFieldName(entityFieldSource)] = entity.Source
-	kvalues[internalFieldName(entityFieldVersion)] = entity.Version
-
-	// encode kvs.
-	if out.Data, err = json.Marshal(kvalues); nil != err {
+	err = e.getEntityFrom(ctx, entity, in, false)
+	if nil != err {
 		return
 	}
 
-	return
+	if len(in.Data) > 0 {
+		entity.KValues = make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+			return out, errBodyMustBeJSON
+		}
+	}
+
+	// set properties.
+	entity, err = e.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
+
+	return out, errors.Wrap(err, "entity create failed")
 }
 
 // entityUpdate update an entity.
 func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	var entity = new(Entity)
+
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -262,11 +317,34 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	return out, errors.Wrap(err, "json marshall failed")
+	err = e.getEntityFrom(ctx, entity, in, false)
+	if nil != err {
+		return
+	}
+
+	if len(in.Data) > 0 {
+		entity.KValues = make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+			return out, errBodyMustBeJSON
+		}
+	}
+
+	// set properties.
+	entity, err = e.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
+
+	return out, errors.Wrap(err, "entity update failed")
 }
 
 // EntityGet delete an entity.
 func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	var entity = new(Entity)
+
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -274,7 +352,22 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 	}
 
 	defer errResult(out, err)
-	return out, errors.Wrap(err, "dapr client delete state failed")
+
+	err = e.getEntityFrom(ctx, entity, in, false)
+	if nil != err {
+		return
+	}
+
+	// delete entity.
+	entity, err = e.entityManager.DeleteEntity(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
+
+	return
 }
 
 // Echo test for RegisterService.

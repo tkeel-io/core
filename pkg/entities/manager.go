@@ -2,6 +2,7 @@ package entities
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	ants "github.com/panjf2000/ants/v2"
@@ -31,27 +32,20 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityMana
 	}
 }
 
-func (m *EntityManager) Load(e *entity) error {
+func (m *EntityManager) DeleteEntity(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
 	m.lock.Lock()
-	defer m.lock.Unlock()
+	entityInst, has := m.entities[entityObj.ID]
+	delete(m.entities, entityObj.ID)
+	m.lock.Unlock()
 
-	if _, ok := m.entities[e.ID]; ok {
-		return errEntityExisted
+	if !has {
+		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
+		return nil, errEntityNotFound
 	}
 
-	m.entities[e.ID] = e
+	entityObj = entityInst.GetAllProperties()
 
-	return nil
-}
-
-func (m *EntityManager) getEntity(id string) *entity {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if entityInst, ok := m.entities[id]; ok {
-		return entityInst
-	}
-	return nil
+	return entityObj, nil
 }
 
 func (m *EntityManager) GetProperty(ctx context.Context, entityID, propertyKey string) (resp interface{}, err error) {
@@ -60,42 +54,63 @@ func (m *EntityManager) GetProperty(ctx context.Context, entityID, propertyKey s
 	m.lock.Unlock()
 
 	if !has {
-		err = errEntityNotFound
-		log.Errorf("EntityManager.GetProperty failed, err: %s", err.Error())
+		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
+		return nil, errEntityNotFound
 	}
 
 	return entityInst.GetProperty(propertyKey), err
 }
 
-func (m *EntityManager) GetAllProperties(ctx context.Context, entityID string) (resp interface{}, err error) {
-	m.lock.Lock()
-	entityInst, has := m.entities[entityID]
-	m.lock.Unlock()
-
-	if !has {
-		err = errEntityNotFound
-		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
-	}
-
-	return entityInst.GetAllProperties(), err
-}
-
-func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) error {
+func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
 	m.lock.Lock()
 	entityInst, has := m.entities[entityObj.ID]
-	// check id, source, userId, ...
 	m.lock.Unlock()
 
 	if !has {
-		err := errEntityNotFound
-		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
+		return nil, errEntityNotFound
 	}
 
-	// 对于Header同步落盘，对于Kvalues 延迟落盘，可以做缓冲，罗盘策略：定时+定量。
+	return entityInst.GetAllProperties(), nil
+}
 
-	entityInst.SetProperties(entityObj.KValues)
+func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst *entity, err error) {
+	var (
+		has         bool
+		emptyString = ""
+	)
 
-	return nil
+	if entityInst, has = m.entities[entityObj.ID]; has {
+		return
+	}
+
+	// require Type, UserId, Source.
+	if emptyString == entityObj.Type {
+		err = entityFieldRequired("Type")
+	} else if emptyString == entityObj.UserID {
+		err = entityFieldRequired("UserId")
+	} else if emptyString == entityObj.Source {
+		err = entityFieldRequired("Source")
+	} else {
+		entityInst, err = newEntity(context.Background(), m, entityObj.ID, entityObj.Source, entityObj.UserID, entityObj.Tag, 0)
+		if nil == err {
+			m.entities[entityInst.ID] = entityInst
+		}
+	}
+	return
+}
+
+func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
+	m.lock.Lock()
+	// check id, type, source, userId.
+	entityInst, err := m.checkEntity(ctx, entityObj)
+	m.lock.Unlock()
+
+	if nil != err {
+		return nil, fmt.Errorf("entityManager.SetProperties failed, %w", err)
+	}
+
+	return entityInst.SetProperties(entityObj)
 }
 
 func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
@@ -146,6 +161,11 @@ func (m *EntityManager) Start() error {
 	}()
 
 	return nil
+}
+
+func (m *EntityManager) HandleMsg() {
+	// dispose message from pubsub.
+
 }
 
 func init() {}
