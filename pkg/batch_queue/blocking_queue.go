@@ -71,7 +71,7 @@ func (bq *blockingQueue) Put(item interface{}) {
 	bq.mutex.Lock()
 	defer bq.mutex.Unlock()
 
-	size := bq.size
+	var wasEmpty = bq.size == 0
 
 	for bq.size == bq.maxSize {
 		bq.isNotFull.Wait()
@@ -84,7 +84,7 @@ func (bq *blockingQueue) Put(item interface{}) {
 		bq.tailIdx = 0
 	}
 
-	if size == 0 {
+	if wasEmpty {
 		// Wake up eventual reader waiting for next item
 		bq.isNotEmpty.Signal()
 	}
