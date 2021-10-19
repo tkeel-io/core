@@ -102,8 +102,6 @@ jobs:
         if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
         run: git diff --exit-code ./go.mod
       - name: Run make go.mod check-diff
-        if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
-        run: make go.mod check-diff
       - name: Codecov
         if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
         uses: codecov/codecov-action@v1
@@ -127,12 +125,6 @@ jobs:
         with:
           name: Binary
           path: ${{ env.ARCHIVE_OUTDIR }}
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@master
-        with:
-          name: ${{ matrix.target_os }}_${{ matrix.target_arch }}_test_unit.json
-          path: ${{ env.TEST_OUTPUT_FILE }}
 
   release:
     name: Create latest release

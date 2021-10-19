@@ -97,7 +97,7 @@ build:
 	@$(GOBUILD)    -o bin/$(BINNAME)
 	@echo "-     build(linux)...     -"
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(GCFLAGS) -ldflags $(LDFLAGS) \
-     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT);
+     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@bin/$(BINNAME) --version
