@@ -25,7 +25,6 @@ const (
 
 type EntityBase struct {
 	ID       string                 `json:"id"`
-	Tag      *string                `json:"tag"`
 	Type     string                 `json:"type"`
 	Owner    string                 `json:"owner"`
 	Status   string                 `json:"status"`
@@ -63,7 +62,6 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity
 	et := &entity{
 		EntityBase: EntityBase{
 			ID:       in.ID,
-			Tag:      in.Tag,
 			Type:     in.Type,
 			Owner:    in.Owner,
 			PluginID: in.PluginID,
@@ -207,7 +205,7 @@ func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
-	e.setTag(entityObj.Tag)
+	e.Version++
 	e.LastTime = time.Now().UnixNano() / 1e6
 
 	// so dengerous, think Kvalues Store.
@@ -373,7 +371,6 @@ type activePair struct {
 func (e *entity) getEntityBase() *EntityBase {
 	return &EntityBase{
 		ID:       e.ID,
-		Tag:      e.Tag,
 		Type:     e.Type,
 		Status:   e.Status,
 		Owner:    e.Owner,
@@ -381,13 +378,6 @@ func (e *entity) getEntityBase() *EntityBase {
 		KValues:  e.KValues,
 		PluginID: e.PluginID,
 		LastTime: e.LastTime,
-	}
-}
-
-func (e *entity) setTag(tag *string) {
-	if nil != tag {
-		tagVal := *tag
-		e.Tag = &tagVal
 	}
 }
 

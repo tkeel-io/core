@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
@@ -17,7 +16,6 @@ import (
 )
 
 const (
-	entityFieldTag    = "tag"
 	entityFieldType   = "type"
 	entityFieldID     = "id"
 	entityFieldOwner  = "owner"
@@ -234,12 +232,6 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		} else {
 			log.Error("parse http request field(id) from query failed", ctx, err)
 		}
-	}
-
-	// tags
-	if vals, exists := values[entityFieldTag]; exists && len(vals) > 0 {
-		tag := strings.Join(vals, ";")
-		entity.Tag = &tag
 	}
 
 	return source, err

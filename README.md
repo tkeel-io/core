@@ -84,13 +84,12 @@ CREATE DATABASE IF NOT EXISTS kcore
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Tag | string | false | query | 实体标签。|
 
 
 创建entity, POST支持`upsert`操作
 ```bash
 # 指定entityId创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=test&owner=admin&type=DEVICE" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?owner=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" \
   -d '{
@@ -98,7 +97,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
      }'
 
 # upsert
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=test&source=abcd&owner=admin&type=device" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?source=abcd&owner=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -106,7 +105,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
      }'
 
 # 不指定entity id
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?tag=test" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities" \
   -H "Source: abcd" \
   -H "Owner: admin" \
   -H "Type: DEVICE" \
@@ -127,7 +126,6 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Tag | string | false | query | 实体标签。|
 
 ```bash
 curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
@@ -147,10 +145,9 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Tag | string | false | query | 实体标签。|
 
 ```bash
-curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=tomas" \
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "Owner: admin" \
   -H "Type: DEVICE" \
@@ -174,10 +171,9 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Tag | string | false | query | 实体标签。|
 
 ```bash
-curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=tomas" \
+curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "Owner: admin"  \
   -H "Type: DEVICE" 
