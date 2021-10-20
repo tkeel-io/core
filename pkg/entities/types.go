@@ -2,7 +2,6 @@ package entities
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -70,10 +69,6 @@ func (ms *messageBase) Promise() PromiseFunc {
 	return func(interface{}) {
 		// do nothing...
 	}
-}
-
-func entityFieldRequired(fieldName string) error {
-	return fmt.Errorf("entity field(%s) required", fieldName)
 }
 
 type AttacheHandler = func()
