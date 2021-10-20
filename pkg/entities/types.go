@@ -2,7 +2,6 @@ package entities
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -56,11 +55,20 @@ func (ec *EntityContext) SetTarget(targetID string) {
 }
 
 type Header map[string]string
+type PromiseFunc = func(interface{})
 
 type Message interface {
 	Message()
+	Promise() PromiseFunc
 }
 
-func entityFieldRequired(fieldName string) error {
-	return fmt.Errorf("entity field(%s) required", fieldName)
+type messageBase struct{}
+
+func (ms *messageBase) Message() {}
+func (ms *messageBase) Promise() PromiseFunc {
+	return func(interface{}) {
+		// do nothing...
+	}
 }
+
+type AttacheHandler = func()

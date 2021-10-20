@@ -3,7 +3,7 @@ package service
 const (
 	HeaderSource      = "Source"
 	HeaderTopic       = "Topic"
-	HeaderUser        = "User"
+	HeaderUser        = "Owner"
 	HeaderType        = "Type"
 	HeaderMetadata    = "Metadata"
 	HeaderContentType = "Content-Type"

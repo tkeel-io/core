@@ -2,77 +2,96 @@ package entities
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/utils"
+)
+
+const (
+	EntityDisposingIdle  int32 = 0
+	EntityDisposingSync  int32 = 1
+	EntityDisposingAsync int32 = 2
+
+	EntityAttachNon int32 = 0
+	EntityAttached  int32 = 1
+
+	EntityStatusActive  = "active"
+	EntityStatusDeleted = "deleted"
 )
 
 type EntityBase struct {
-	ID      string                 `json:"id"`
-	Tag     *string                `json:"tag"`
-	Type    string                 `json:"type"`
-	Source  string                 `json:"source"`
-	UserID  string                 `json:"user_id"`
-	Version int64                  `json:"version"`
-	KValues map[string]interface{} `json:"properties"` //nolint
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"`
+	Owner    string                 `json:"owner"`
+	Status   string                 `json:"status"`
+	Version  int64                  `json:"version"`
+	PluginID string                 `json:"plugin_id"`
+	LastTime int64                  `json:"last_time"`
+	KValues  map[string]interface{} `json:"properties"` //nolint
 }
 
 type entity struct {
 	EntityBase
 
+	mailBox   *mailbox
+	disposing int32
+
+	// non-state.
 	mappers        map[string]mapper.Mapper          // key=mapperId
 	tentacles      map[string][]mapper.Tentacler     // key=entityId#propertyKey
 	cacheProps     map[string]map[string]interface{} // cache other property.
 	indexTentacles map[string][]mapper.Tentacler     // key=targetId(mapperId/entityId)
 
+	attached      int32
 	entityManager *EntityManager
-	lock          *utils.ReEntryLock
+	lock          *sync.RWMutex
 
 	ctx context.Context
 }
 
 // newEntity create an entity object.
-func newEntity(ctx context.Context, mgr *EntityManager, id string, source string, userID string, tag *string, version int64) (*entity, error) {
-	if id == "" {
-		id = utils.GenerateUUID()
+func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity, error) {
+	if in.ID == "" {
+		in.ID = uuid()
 	}
 
 	et := &entity{
 		EntityBase: EntityBase{
-			ID:      id,
-			Tag:     tag,
-			Source:  source,
-			UserID:  userID,
-			Version: version,
-			KValues: make(map[string]interface{}),
+			ID:       in.ID,
+			Type:     in.Type,
+			Owner:    in.Owner,
+			PluginID: in.PluginID,
+			Status:   EntityStatusActive,
+			KValues:  make(map[string]interface{}),
 		},
 
 		ctx:           ctx,
 		entityManager: mgr,
-		lock:          utils.NewReEntryLock(0),
+		mailBox:       newMailbox(10),
+		lock:          &sync.RWMutex{},
+		disposing:     EntityDisposingIdle,
 		mappers:       make(map[string]mapper.Mapper),
 		cacheProps:    make(map[string]map[string]interface{}),
 	}
 
 	// set KValues into cacheProps.
-	et.cacheProps[id] = et.KValues
+	et.cacheProps[in.ID] = et.KValues
 
 	return et, nil
 }
 
-// GetID returns entity's id.
-func (e *entity) GetID() string {
-	return e.ID
-}
-
 // GetMapper returns a mapper.
 func (e *entity) GetMapper(mid string) mapper.Mapper {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.ID, reqID, mid)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	if m, has := e.mappers[mid]; has {
 		return m.Copy()
@@ -84,13 +103,13 @@ func (e *entity) GetMapper(mid string) mapper.Mapper {
 func (e *entity) GetMappers() []mapper.Mapper {
 	var (
 		result = make([]mapper.Mapper, len(e.mappers))
-		reqID  = utils.GenerateUUID()
+		reqID  = uuid()
 	)
 
 	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 	i := 0
 	for _, m := range e.mappers {
 		result[i] = m.Copy()
@@ -101,12 +120,12 @@ func (e *entity) GetMappers() []mapper.Mapper {
 }
 
 func (e *entity) SetMapper(m mapper.Mapper) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetMapper called, entityID: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.ID, reqID, m.ID, m.String())
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	e.mappers[m.ID()] = m
@@ -141,23 +160,23 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 // GetProperty returns entity property.
 func (e *entity) GetProperty(key string) interface{} {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	return e.KValues[key]
 }
 
 // SetProperty set entity property.
 func (e *entity) SetProperty(key string, value interface{}) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	e.KValues[key] = value
@@ -167,26 +186,27 @@ func (e *entity) SetProperty(key string, value interface{}) error {
 
 // GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() *EntityBase {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetAllProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 
 	return e.getEntityBase()
 }
 
 // SetProperties set entity properties.
 func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
-	e.setTag(entityObj.Tag)
+	e.Version++
+	e.LastTime = time.Now().UnixNano() / 1e6
 
 	// so dengerous, think Kvalues Store.
 	for key, value := range entityObj.KValues {
@@ -198,11 +218,11 @@ func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 
 // DeleteProperty delete entity property.
 func (e *entity) DeleteProperty(key string) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.DeleteProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	e.lock.Lock(&reqID)
+	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	delete(e.KValues, key)
@@ -210,23 +230,52 @@ func (e *entity) DeleteProperty(key string) error {
 	return nil
 }
 
-func (e *entity) InvokeMsg(ctx EntityContext) {
-	reqID := utils.GenerateUUID()
-	e.lock.Lock(&reqID)
-	defer e.lock.Unlock()
+func (e *entity) OnMessage(ctx EntityContext) bool {
+	reqID := uuid()
 
-	switch msg := ctx.Message.(type) {
-	case *EntityMsg:
-		e.invokeEntityMsg(msg)
-	case *TentacleMsg:
-		e.invokeTentacleMsg(msg)
-	default:
-		// invalid msg type.
-		log.Errorf("undefine message type, msg: %s", msg)
+	log.Infof("entity.OnMessage called, entityId: %s, requestId: %s.", e.ID, reqID)
+
+	// 1. put msg inti mailbox.promise_handler
+	// 2. start consume mailbox.
+	attaching := false
+	e.mailBox.Put(ctx.Message)
+	if atomic.LoadInt32(&e.attached) == EntityAttachNon {
+		e.lock.Lock()
+		if atomic.CompareAndSwapInt32(&e.attached, EntityAttachNon, EntityAttached) {
+			attaching = true
+			log.Infof("attatching entity, id: %s.", e.ID)
+		}
+		e.lock.Unlock()
+	}
+
+	return attaching
+}
+
+func (e *entity) InvokeMsg() {
+	for {
+		var msgCtx Message
+		if msgCtx = e.mailBox.Get(); nil == msgCtx {
+			break
+		}
+
+		// lock messages.
+		e.lock.Lock()
+
+		switch msg := msgCtx.(type) {
+		case *EntityMessage:
+			e.invokeEntityMsg(msg)
+		case *TentacleMsg:
+			e.invokeTentacleMsg(msg)
+		default:
+			// invalid msg type.
+			log.Errorf("undefine message type, msg: %s", msg)
+		}
+
+		e.lock.Unlock()
 	}
 }
 
-func (e *entity) invokeEntityMsg(msg *EntityMsg) {
+func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	setEntityID := msg.SourceID
 	if setEntityID == "" {
 		setEntityID = e.ID
@@ -242,6 +291,7 @@ func (e *entity) invokeEntityMsg(msg *EntityMsg) {
 		activeTentacles = append(activeTentacles, activePair{key, mapper.GenTentacleKey(e.ID, key)})
 	}
 
+	e.LastTime = time.Now().UnixNano() / 1e6
 	// active tentacles.
 	e.activeTentacle(activeTentacles)
 }
@@ -281,7 +331,7 @@ func (e *entity) activeTentacle(actives []activePair) {
 				EntityCtxHeaderSourceID: e.ID,
 				EntityCtxHeaderTargetID: entityID,
 			},
-			Message: &EntityMsg{
+			Message: &EntityMessage{
 				SourceID: e.ID,
 				Values:   msg,
 			},
@@ -319,24 +369,26 @@ type activePair struct {
 }
 
 func (e *entity) getEntityBase() *EntityBase {
-	props := make(map[string]interface{})
-	if err := utils.DeepCopy(&props, &e.KValues); nil != err {
-		log.Errorf("duplicate properties failed, err: %s.", err.Error())
-	}
-
 	return &EntityBase{
-		ID:      e.ID,
-		Tag:     e.Tag,
-		Source:  e.Source,
-		UserID:  e.UserID,
-		Version: e.Version,
-		KValues: props,
+		ID:       e.ID,
+		Type:     e.Type,
+		Status:   e.Status,
+		Owner:    e.Owner,
+		Version:  e.Version,
+		KValues:  e.KValues,
+		PluginID: e.PluginID,
+		LastTime: e.LastTime,
 	}
 }
 
-func (e *entity) setTag(tag *string) {
-	if nil != tag {
-		tagVal := *tag
-		e.Tag = &tagVal
+func uuid() string {
+	uuid := make([]byte, 16)
+	if _, err := rand.Read(uuid); err != nil {
+		return ""
 	}
+	// see section 4.1.1.
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	// see section 4.1.3.
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }
