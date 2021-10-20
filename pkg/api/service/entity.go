@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	entityFieldType   = "type"
 	entityFieldID     = "id"
+	entityFieldType   = "type"
 	entityFieldOwner  = "owner"
 	entityFieldSource = "source"
 )

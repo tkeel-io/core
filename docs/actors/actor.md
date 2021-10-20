@@ -65,13 +65,13 @@
 3. reactor使用`coroutine pool`+`State Machine`的模式来实现，`pool`的存在可以使得`coroutine`的调度是`有效`的且`均衡`的，提高`coroutine`的`CPU`时间片的使用效率，提升`CPU`资源的使用效率。
 4. reactor消费从Queue消费消息，并使用`coroutine pool`来并行计算，可能存在多个coroutine阻塞在同一个`State Machine`上，从而降低`coroutine`的使用效率。
 5. reactor使用`coroutine pool`来顺序消费Queue，相对而言其并行处理效率较之actor更低。
-5. reactor模式下消息出Queue之后，事件被回调函数执行是无序的。
+5. reactor模式下消息出Queue之后，事件被回调函数执行是乱序的。
 
 
 
 ## 流数据处理分析
 
-
+`Message Queue`的消费是顺序的，我们想要并发处理这些消息，就需要虚拟一个`Window`来标记`处理中`的消息。这个窗口的大小和并发性挂钩。在上面的讨论中`actor`模式的`Window-Size`是所有mailbox的大小的数量和。在`reactor`模式中`Window-Size`是`coroutine`的数量。
 
 
 
@@ -107,6 +107,15 @@
 ### Entity Attach
 
 ![entity-runtime-attached](../images/entity-runtime-attached.png)
+
+
+
+## Issues
+
+1. 一个dispatcher对应于一个Topic吗？
+    - 不应该是这样，试想一下，数据映射中写同步的Topic应该是哪一个，毫无疑问应该是`core-pubsub`。
+
+
 
 
 
