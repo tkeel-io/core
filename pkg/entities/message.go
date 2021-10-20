@@ -6,7 +6,7 @@ type EntityMessage struct {
 
 	SourceID       string                 `json:"source_id"`
 	Values         map[string]interface{} `json:"values"`
-	PromiseHandler PromiseFunc            `json:"promise"`
+	PromiseHandler PromiseFunc            `json:"-"`
 }
 
 func (esm EntityMessage) Promise() PromiseFunc { return esm.PromiseHandler }

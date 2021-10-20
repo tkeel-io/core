@@ -68,7 +68,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 
 		ctx:           ctx,
 		entityManager: mgr,
-		mailBox:       NewMailbox(10),
+		mailBox:       newMailbox(10),
 		lock:          &sync.RWMutex{},
 		disposing:     EntityDisposingIdle,
 		mappers:       make(map[string]mapper.Mapper),
@@ -231,8 +231,8 @@ func (e *entity) OnMessage(ctx EntityContext) bool {
 
 	log.Infof("entity.OnMessage called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	//1. put msg inti mailbox.
-	//2. start consume mailbox.
+	// 1. put msg inti mailbox.
+	// 2. start consume mailbox.
 	attaching := false
 	e.mailBox.Put(ctx.Message)
 	if atomic.LoadInt32(&e.attached) == 0 {

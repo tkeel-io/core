@@ -19,7 +19,7 @@ var (
 	errMailboxInvalidResize = errors.New("resize invalid size")
 )
 
-func NewMailbox(capcity int) *mailbox {
+func newMailbox(capcity int) *mailbox {
 	return &mailbox{
 		size:     0,
 		headInx:  0,
