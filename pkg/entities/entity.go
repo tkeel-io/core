@@ -3,31 +3,38 @@ package entities
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/utils"
 )
 
 const (
+	EntityDisposingIdle  int32 = 0
+	EntityDisposingSync  int32 = 1
+	EntityDisposingAsync int32 = 2
+
 	EntityStatusActive  = "active"
 	EntityStatusDeleted = "deleted"
 )
 
 type EntityBase struct {
-	ID      string                 `json:"id"`
-	Tag     *string                `json:"tag"`
-	Type    string                 `json:"type"`
-	Source  string                 `json:"source"`
-	UserID  string                 `json:"user_id"`
-	Version int64                  `json:"version"`
-	KValues map[string]interface{} `json:"properties"` //nolint
+	ID       string                 `json:"id"`
+	Tag      *string                `json:"tag"`
+	Type     string                 `json:"type"`
+	Status   string                 `json:"status"`
+	Source   string                 `json:"source"`
+	UserID   string                 `json:"user_id"`
+	Version  int64                  `json:"version"`
+	LastTime int64                  `json:"last_time"`
+	KValues  map[string]interface{} `json:"properties"` //nolint
 }
 
 type entity struct {
 	EntityBase
 
-	status  string
-	mailBox *mailbox
+	mailBox   *mailbox
+	disposing int32
 
 	// non-state.
 	mappers        map[string]mapper.Mapper          // key=mapperId
@@ -35,7 +42,7 @@ type entity struct {
 	cacheProps     map[string]map[string]interface{} // cache other property.
 	indexTentacles map[string][]mapper.Tentacler     // key=targetId(mapperId/entityId)
 
-	attached      bool
+	attached      int32
 	entityManager *EntityManager
 	lock          *sync.RWMutex
 
@@ -55,14 +62,15 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 			Source:  source,
 			UserID:  userID,
 			Version: version,
+			Status:  EntityStatusActive,
 			KValues: make(map[string]interface{}),
 		},
 
 		ctx:           ctx,
 		entityManager: mgr,
-		status:        EntityStatusActive,
 		mailBox:       NewMailbox(10),
 		lock:          &sync.RWMutex{},
+		disposing:     EntityDisposingIdle,
 		mappers:       make(map[string]mapper.Mapper),
 		cacheProps:    make(map[string]map[string]interface{}),
 	}
@@ -218,38 +226,36 @@ func (e *entity) DeleteProperty(key string) error {
 	return nil
 }
 
-func (e *entity) OnMessage(ctx EntityContext) func() {
-	attached := true
+func (e *entity) OnMessage(ctx EntityContext) bool {
 	reqID := utils.GenerateUUID()
 
 	log.Infof("entity.OnMessage called, entityId: %s, requestId: %s.", e.ID, reqID)
 
 	//1. put msg inti mailbox.
-	e.lock.Lock()
+	//2. start consume mailbox.
+	attaching := false
 	e.mailBox.Put(ctx.Message)
-	if !e.attached {
-		attached = false
-		e.attached = true
+	if atomic.LoadInt32(&e.attached) == 0 {
+		e.lock.Lock()
+		if atomic.CompareAndSwapInt32(&e.attached, 0, 1) {
+			attaching = true
+			log.Infof("attatching entity, id: %s.", e.ID)
+		}
+		e.lock.Unlock()
 	}
-	e.lock.Unlock()
 
-	if !attached {
-		return e.InvokeMsg
-	}
-
-	return nil
+	return attaching
 }
 
 func (e *entity) InvokeMsg() {
 	for {
-		e.lock.Lock()
-		// 为了满足同步调用，暂时lock invoke.
-		defer e.lock.Unlock()
-		msgCtx := e.mailBox.Get()
-
-		if nil == msgCtx {
+		var msgCtx Message
+		if msgCtx = e.mailBox.Get(); nil == msgCtx {
 			break
 		}
+
+		// lock messages.
+		e.lock.Lock()
 
 		switch msg := msgCtx.(type) {
 		case *EntityMessage:
@@ -260,6 +266,8 @@ func (e *entity) InvokeMsg() {
 			// invalid msg type.
 			log.Errorf("undefine message type, msg: %s", msg)
 		}
+
+		e.lock.Unlock()
 	}
 }
 

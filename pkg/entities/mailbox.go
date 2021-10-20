@@ -31,6 +31,9 @@ func NewMailbox(capcity int) *mailbox {
 func (mb *mailbox) Get() Message {
 	var msg Message
 
+	mb.lock.RLock()
+	defer mb.lock.Unlock()
+
 	if mb.size > 0 {
 		mb.size--
 		msg = mb.msgQueue[mb.headInx]
@@ -40,6 +43,9 @@ func (mb *mailbox) Get() Message {
 }
 
 func (mb *mailbox) Put(msg Message) error {
+	mb.lock.Lock()
+	defer mb.lock.Unlock()
+
 	if mb.capcity == mb.size {
 		return errMailboxOverflow
 	}
@@ -56,6 +62,9 @@ func (mb *mailbox) Size() int {
 }
 
 func (mb *mailbox) Resize(capcity int) error {
+	mb.lock.Lock()
+	defer mb.lock.Unlock()
+
 	if capcity < mb.capcity {
 		return errMailboxInvalidResize
 	} else if capcity == mb.capcity {

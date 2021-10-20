@@ -149,25 +149,24 @@ func (m *EntityManager) Start() error {
 
 			case entityCtx := <-m.disposeCh:
 				// invoke msg.
-				m.coroutinePool.Submit(func() {
-					// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
-
+				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
+				var err error
+				entityInst, has := m.entities[entityCtx.TargetID()]
+				if !has {
 					m.lock.RLock()
-					entityInst, has := m.entities[entityCtx.TargetID()]
-					if !has {
-						m.checkEntity(context.TODO(), &EntityBase{})
-					}
+					entityInst, err = m.checkEntity(context.TODO(), &EntityBase{})
 					m.lock.RUnlock()
+				}
 
-					if has {
-						handler := entityInst.OnMessage(entityCtx)
-						if nil != handler {
-							m.coroutinePool.Submit(handler)
-						}
-					} else {
-						log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
-					}
-				})
+				if nil != err {
+					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
+					continue
+				}
+
+				if entityInst.OnMessage(entityCtx) {
+					// attatch goroutine to entity.
+					m.coroutinePool.Submit(entityInst.InvokeMsg)
+				}
 			}
 		}
 	}()

@@ -75,3 +75,5 @@ func (ms *messageBase) Promise() PromiseFunc {
 func entityFieldRequired(fieldName string) error {
 	return fmt.Errorf("entity field(%s) required", fieldName)
 }
+
+type AttacheHandler = func()
