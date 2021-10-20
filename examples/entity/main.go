@@ -14,7 +14,7 @@ func main() {
 	}
 
 	// create entity.
-	createUrl := "plugins/pluginA/entities?id=test1&user_id=abc&type=Device"
+	createUrl := "plugins/pluginA/entities?id=test1&owner=abc&source=abc"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
@@ -29,8 +29,34 @@ func main() {
 	fmt.Println(string(result))
 
 	// get entity.
-	getUrl := "plugins/pluginA/entities/test1?type=Device&user_id=abc"
+	getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc"
 
+	result, err = client.InvokeMethodWithContent(context.Background(),
+		"core",
+		getUrl,
+		"GET",
+		&dapr.DataContent{
+			ContentType: "application/json",
+		})
+	if nil != err {
+		panic(err)
+	}
+	fmt.Println(string(result))
+
+	// pub entity.
+
+	data := []byte(`{"entity_id":"test1", "owner":"abc", "data": {"core":{"time":1634730969, "value1":"ofdddfldiddne"}}}`)
+	err = client.PublishEvent(context.Background(),
+		"client-pubsub",
+		"core-pub",
+		data,
+	)
+
+	if nil != err {
+		panic(err)
+	}
+
+	// get entity.
 	result, err = client.InvokeMethodWithContent(context.Background(),
 		"core",
 		getUrl,
