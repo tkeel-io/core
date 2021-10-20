@@ -15,11 +15,10 @@ func TestEntity(t *testing.T) {
 		panic(err)
 	}
 
-	tag := "test"
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	enty1, err1 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
-	enty2, err2 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	enty1, err1 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
+	enty2, err2 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 
 	t.Log(enty1, enty2, err1, err2)
 }
@@ -32,7 +31,7 @@ func TestGetProperties(t *testing.T) {
 
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	entity, err := newEntity(context.Background(), mgr, "", "abcd", "tomas", nil, 001)
+	entity, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	if nil != err {
 		panic(err)
 	}
@@ -61,15 +60,15 @@ func TestGetProperties(t *testing.T) {
 	t.Log(props1)
 }
 
-func TestEntity_Copy(t *testing.T) {
+func TestEntity_getEntity(t *testing.T) {
 	coroutinePool, err := ants.NewPool(500)
 	assert.Nil(t, err)
-	tag := "test"
+
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	en, err := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	assert.Nil(t, err)
-	ce := en.Copy()
+	ce := en.getEntityBase()
 	log.Infof("source en addr:%p | %+v", en, *en)
 	log.Infof("copy en addr:%p | %+v,", &ce, ce)
 	assert.Equal(t, ce, *en)

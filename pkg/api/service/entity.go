@@ -2,12 +2,10 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
@@ -18,10 +16,9 @@ import (
 )
 
 const (
-	entityFieldTag    = "tag"
 	entityFieldType   = "type"
 	entityFieldID     = "id"
-	entityFieldUserID = "user_id"
+	entityFieldOwner  = "owner"
 	entityFieldSource = "source"
 )
 
@@ -117,9 +114,9 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = &entities.EntityMsg{SourceID: "", Values: values}
+			ec.Message = &entities.EntityMessage{SourceID: "", Values: values}
 		case map[string]interface{}:
-			ec.Message = &entities.EntityMsg{SourceID: "", Values: tempData}
+			ec.Message = &entities.EntityMessage{SourceID: "", Values: tempData}
 		default:
 			err = errTypeError
 			return
@@ -190,56 +187,54 @@ func getStringFrom(ctx context.Context, key string) (string, error) {
 	return "", entityFieldRequired(key)
 }
 
-func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) error { // nolint
-	var (
-		err    error
-		values url.Values
-	)
+func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) (source string, err error) { // nolint
+	var values url.Values
 
 	if values, err = url.ParseQuery(in.QueryString); nil != err {
-		return errors.Wrap(err, "parse URL failed")
+		return source, errors.Wrap(err, "parse URL failed")
 	}
 
 	if entity.Type, err = getStringFrom(ctx, service.HeaderType); nil == err {
 		// type field required.
 		log.Info("parse http request field(type) from header successes.")
 	} else if entity.Type, err = e.getValFromValues(values, entityFieldType); nil != err {
-		log.Error("parse http request field(type) from query failed", ctx, err)
-		return err
+		log.Error("parse http request field(type) from query failed", values, ctx, err)
+		return source, err
 	}
 
-	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil == err {
-		// source field required.
-		log.Info("parse http request field(source) from header successes.")
-	} else if entity.Source, err = e.getValFromValues(values, entityFieldSource); nil != err {
-		log.Error("parse http request field(source) from query failed", ctx, err)
-		return err
+	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+		// plugin field required.
+		log.Error("parse http request field(source) from path failed", ctx, err)
+		return source, err
 	}
 
-	if entity.UserID, err = getStringFrom(ctx, service.HeaderUser); nil == err {
+	if entity.Owner, err = getStringFrom(ctx, service.HeaderUser); nil == err {
 		// userId field required.
-		log.Info("parse http request field(user) from header successed.")
-	} else if entity.UserID, err = e.getValFromValues(values, entityFieldUserID); nil != err {
-		log.Error("parse http request field(user) from query failed", ctx, err)
-		return err
+		log.Info("parse http request field(owner) from header successed.")
+	} else if entity.Owner, err = e.getValFromValues(values, entityFieldOwner); nil != err {
+		log.Error("parse http request field(owner) from query failed", ctx, err)
+		return source, err
+	}
+
+	if source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
+		// userId field required.
+		log.Info("parse http request field(source) from header successed.")
+	} else if source, err = e.getValFromValues(values, entityFieldSource); nil != err {
+		log.Error("parse http request field(source) from query failed", ctx, err)
+		return source, err
 	}
 
 	if entity.ID, err = getStringFrom(ctx, service.Entity); nil == err {
-		log.Info("parse http request field(id) from header successed.")
+		log.Info("parse http request field(id) from path successed.")
 	} else if entity.ID, err = e.getValFromValues(values, entityFieldID); nil != err {
-		log.Error("parse http request field(id) from query failed", ctx, err)
 		if !idRequired {
-			entity.ID = uuid()
+			err = nil
+		} else {
+			log.Error("parse http request field(id) from query failed", ctx, err)
 		}
 	}
 
-	// tags
-	if vals, exists := values[entityFieldTag]; exists && len(vals) > 0 {
-		tag := strings.Join(vals, ";")
-		entity.Tag = &tag
-	}
-
-	return err
+	return source, err
 }
 
 // EntityGet returns an entity information.
@@ -254,7 +249,7 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, true)
+	_, err = e.getEntityFrom(ctx, entity, in, true)
 	if nil != err {
 		return
 	}
@@ -284,7 +279,7 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, false)
 	if nil != err {
 		return
 	}
@@ -320,7 +315,7 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, false)
 	if nil != err {
 		return
 	}
@@ -356,7 +351,7 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, false)
 	if nil != err {
 		return
 	}
@@ -401,16 +396,4 @@ func (e *EntityService) entitiesHandler(ctx context.Context, in *common.Invocati
 		DataTypeURL: in.DataTypeURL,
 	}
 	return out, err
-}
-
-func uuid() string {
-	uuid := make([]byte, 16)
-	if _, err := rand.Read(uuid); err != nil {
-		return ""
-	}
-	// see section 4.1.1.
-	uuid[8] = uuid[8]&^0xc0 | 0x80
-	// see section 4.1.3.
-	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }
