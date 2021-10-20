@@ -2,11 +2,12 @@ package entities
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/utils"
 )
 
 const (
@@ -52,7 +53,7 @@ type entity struct {
 // newEntity create an entity object.
 func newEntity(ctx context.Context, mgr *EntityManager, id string, source string, userID string, tag *string, version int64) (*entity, error) {
 	if id == "" {
-		id = utils.GenerateUUID()
+		id = uuid()
 	}
 
 	et := &entity{
@@ -83,7 +84,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 
 // GetMapper returns a mapper.
 func (e *entity) GetMapper(mid string) mapper.Mapper {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.ID, reqID, mid)
 
@@ -100,7 +101,7 @@ func (e *entity) GetMapper(mid string) mapper.Mapper {
 func (e *entity) GetMappers() []mapper.Mapper {
 	var (
 		result = make([]mapper.Mapper, len(e.mappers))
-		reqID  = utils.GenerateUUID()
+		reqID  = uuid()
 	)
 
 	log.Infof("entity.GetMappers called, entityId: %s, requestId: %s.", e.ID, reqID)
@@ -117,7 +118,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 }
 
 func (e *entity) SetMapper(m mapper.Mapper) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetMapper called, entityID: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.ID, reqID, m.ID, m.String())
@@ -157,7 +158,7 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 // GetProperty returns entity property.
 func (e *entity) GetProperty(key string) interface{} {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
@@ -169,7 +170,7 @@ func (e *entity) GetProperty(key string) interface{} {
 
 // SetProperty set entity property.
 func (e *entity) SetProperty(key string, value interface{}) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
 
@@ -183,7 +184,7 @@ func (e *entity) SetProperty(key string, value interface{}) error {
 
 // GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() *EntityBase {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.GetAllProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
@@ -195,7 +196,7 @@ func (e *entity) GetAllProperties() *EntityBase {
 
 // SetProperties set entity properties.
 func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.SetProperties called, entityId: %s, requestId: %s.", e.ID, reqID)
 
@@ -214,7 +215,7 @@ func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 
 // DeleteProperty delete entity property.
 func (e *entity) DeleteProperty(key string) error {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.DeleteProperty called, entityId: %s, requestId: %s.", e.ID, reqID)
 
@@ -227,11 +228,11 @@ func (e *entity) DeleteProperty(key string) error {
 }
 
 func (e *entity) OnMessage(ctx EntityContext) bool {
-	reqID := utils.GenerateUUID()
+	reqID := uuid()
 
 	log.Infof("entity.OnMessage called, entityId: %s, requestId: %s.", e.ID, reqID)
 
-	// 1. put msg inti mailbox.
+	// 1. put msg inti mailbox.promise_handler
 	// 2. start consume mailbox.
 	attaching := false
 	e.mailBox.Put(ctx.Message)
@@ -364,19 +365,8 @@ type activePair struct {
 }
 
 func (e *entity) getEntityBase() *EntityBase {
-	props := make(map[string]interface{})
-	if err := utils.DeepCopy(&props, &e.KValues); nil != err {
-		log.Errorf("duplicate properties failed, err: %s.", err.Error())
-	}
-
-	return &EntityBase{
-		ID:      e.ID,
-		Tag:     e.Tag,
-		Source:  e.Source,
-		UserID:  e.UserID,
-		Version: e.Version,
-		KValues: props,
-	}
+	ce := e.Copy()
+	return &ce.EntityBase
 }
 
 func (e *entity) setTag(tag *string) {
@@ -384,4 +374,37 @@ func (e *entity) setTag(tag *string) {
 		tagVal := *tag
 		e.Tag = &tagVal
 	}
+}
+
+func (e entity) Copy() entity {
+	return entity{
+		EntityBase: EntityBase{
+			ID:      e.ID,
+			Tag:     e.Tag,
+			Type:    e.Type,
+			Source:  e.Source,
+			UserID:  e.UserID,
+			Version: e.Version,
+			KValues: e.KValues,
+		},
+		mappers:        e.mappers,
+		tentacles:      e.tentacles,
+		cacheProps:     e.cacheProps,
+		indexTentacles: e.indexTentacles,
+		entityManager:  e.entityManager,
+		lock:           e.lock,
+		ctx:            e.ctx,
+	}
+}
+
+func uuid() string {
+	uuid := make([]byte, 16)
+	if _, err := rand.Read(uuid); err != nil {
+		return ""
+	}
+	// see section 4.1.1.
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	// see section 4.1.3.
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }

@@ -26,7 +26,8 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityMana
 		ctx:           ctx,
 		cancel:        cancel,
 		entities:      make(map[string]*entity),
-		msgCh:         make(chan EntityContext),
+		msgCh:         make(chan EntityContext, 10),
+		disposeCh:     make(chan EntityContext, 10),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
 	}

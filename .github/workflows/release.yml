@@ -1,14 +1,8 @@
-name: core
+name: release
 on:
   push:
-    branches:
-      - master
-      - main
-      - dev
-  pull_request:
-    branches:
-      - master
-      - main
+    tags:
+      - v*
 jobs:
   lint:
     name: lint
@@ -122,3 +116,57 @@ jobs:
         with:
           name: my-artifact
           path: ${{ env.ARCHIVE_OUTDIR }}
+
+  release:
+    name: Create latest release
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: Auto build from ${{ github.sha }} (master)
+          draft: false
+          prerelease: true
+
+  upload:
+    name: Upload release files
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        project:
+          - core_darwin_amd64.tar.gz
+          - core_linux_amd64.tar.gz
+          - core_linux_arm.tar.gz
+          - core_linux_arm64.tar.gz
+          - core_windows_amd64.zip
+    steps:
+      - name: Download Artifact
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          name: my-artifact
+          path: ${{ env.ARCHIVE_OUTDIR }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ${{ steps.download.outputs.download-path }}/${{ matrix.project }}
+          asset_name: ${{ matrix.project }}
+          asset_content_type: application/octet-stream
