@@ -33,20 +33,50 @@ body|object||创建实体时写入的属性
 ```
 
 
-go-sdk 示例代码
+创建一个实体，并查询改实体
+> 下面的代码会创建一个属于pluginA的id为test1的实体，user_id为user1，type为device
+
+
 ```go
+package main
+
+import (
+    "context"
+    "fmt"
+
+    dapr "github.com/dapr/go-sdk/client"
+)
+
+func main() {
     client, err := dapr.NewClient()
     if nil != err {
         panic(err)
     }
 
     // create entity.
-    createUrl := "plugins/pluginA/entities?id=test1&user_id=abc&type=Device"
+    createUrl := "plugins/pluginA/entities?id=test1&user_id=user1&type=device"
 
+    dataContent := `{"d":"d"}`
     result, err := client.InvokeMethodWithContent(context.Background(),
         "core",
         createUrl,
         "POST",
+        &dapr.DataContent{
+            ContentType: "application/json",
+            Data:[]byte(dataContent),
+        })
+    if nil != err {
+        panic(err)
+    }
+    fmt.Println(string(result))
+
+    // get entity.
+    getUrl := "plugins/pluginA/entities/test1?type=device&user_id=user1"
+
+    result, err = client.InvokeMethodWithContent(context.Background(),
+        "core",
+        getUrl,
+        "GET",
         &dapr.DataContent{
             ContentType: "application/json",
         })
@@ -54,7 +84,39 @@ go-sdk 示例代码
         panic(err)
     }
     fmt.Println(string(result))
+}
 ```
+运行
+```bash
+dapr run --app-id client  --log-level debug  --components-path ../configs/entity-configs go run .
+
+ℹ️  Checking if Dapr sidecar is listening on GRPC port 35477
+ℹ️  Dapr sidecar is up and running.
+ℹ️  Updating metadata for app command: go run .
+✅  You're up and running! Both Dapr and your app logs will appear here.
+
+== APP == dapr client initializing for: 127.0.0.1:35477
+DEBU[0002] no mDNS address found in cache, browsing network for app id core  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] Browsing for first mDNS address for app id core  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] mDNS response for app id core received.       app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] Adding IPv4 address 192.168.181.2:36878 for app id core cache entry.  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] mDNS browse for app id core canceled.         app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] Browsing for first mDNS address for app id core canceled.  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] Refreshing mDNS addresses for app id core.    app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] mDNS response for app id core received.       app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+DEBU[0002] Adding IPv4 address 192.168.181.2:36878 for app id core cache entry.  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+== APP == {"id":"test1","tag":null,"type":"","source":"pluginA","user_id":"abc","version":0,"properties":{"d":"d"}}
+DEBU[0002] found mDNS IPv4 address in cache: 192.168.181.2:36878  app_id=client instance=i-i2j8ujhr scope=dapr.contrib type=log ver=1.4.2
+== APP == {"id":"test1","tag":null,"type":"","source":"pluginA","user_id":"abc","version":0,"properties":{"d":"d"}}
+✅  Exited App successfully
+ℹ️
+terminated signal received: shutting down
+✅  Exited Dapr successfully
+
+
+
+```
+
 2. 查看实体快照
 
 ```bash
