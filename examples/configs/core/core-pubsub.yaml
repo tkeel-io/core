@@ -12,3 +12,5 @@ spec:
     value: ""
   - name: redisDB
     value: 4
+scopes:
+  - core

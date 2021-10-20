@@ -90,12 +90,12 @@ func (e *EntityService) AddSubTopic(daprService common.Service, topic, pubsubNam
 }
 
 func getSourceFrom(pubsubName string) (source string) {
-	return strings.Split(pubsubName, "_")[0]
+	return strings.Split(pubsubName, "-")[0]
 }
 
 func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
 	ec := entities.EntityContext{}
-	source := 	getSourceFrom(in.PubsubName)
+	_ = getSourceFrom(in.PubsubName)
 	var entityID, owner string
 	ec.Headers = make(map[string]string)
 	if in.DataContentType == "application/json" {
@@ -120,9 +120,9 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = &entities.EntityMessage{SourceID: source, Values: values}
+			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: values}
 		case map[string]interface{}:
-			ec.Message = &entities.EntityMessage{SourceID: source, Values: tempData}
+			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: tempData}
 		default:
 			err = errTypeError
 			return
