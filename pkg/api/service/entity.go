@@ -20,7 +20,7 @@ const (
 	entityFieldTag    = "tag"
 	entityFieldType   = "type"
 	entityFieldID     = "id"
-	entityFieldUserID = "user_id"
+	entityFieldOwner  = "owner"
 	entityFieldSource = "source"
 )
 
@@ -205,23 +205,23 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 	}
 
 	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
-		// source field required.
+		// plugin field required.
 		log.Error("parse http request field(source) from path failed", ctx, err)
 		return source, err
 	}
 
-	if entity.UserID, err = getStringFrom(ctx, service.HeaderUser); nil == err {
+	if entity.Owner, err = getStringFrom(ctx, service.HeaderUser); nil == err {
 		// userId field required.
-		log.Info("parse http request field(user) from header successed.")
-	} else if entity.UserID, err = e.getValFromValues(values, entityFieldUserID); nil != err {
-		log.Error("parse http request field(user) from query failed", ctx, err)
+		log.Info("parse http request field(owner) from header successed.")
+	} else if entity.Owner, err = e.getValFromValues(values, entityFieldOwner); nil != err {
+		log.Error("parse http request field(owner) from query failed", ctx, err)
 		return source, err
 	}
 
 	if source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
 		// userId field required.
 		log.Info("parse http request field(source) from header successed.")
-	} else if entity.UserID, err = e.getValFromValues(values, entityFieldSource); nil != err {
+	} else if source, err = e.getValFromValues(values, entityFieldSource); nil != err {
 		log.Error("parse http request field(source) from query failed", ctx, err)
 		return source, err
 	}

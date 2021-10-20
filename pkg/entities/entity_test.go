@@ -17,8 +17,8 @@ func TestEntity(t *testing.T) {
 
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	enty1, err1 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", UserID: "tomas", Version: 001})
-	enty2, err2 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", UserID: "tomas", Version: 001})
+	enty1, err1 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
+	enty2, err2 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 
 	t.Log(enty1, enty2, err1, err2)
 }
@@ -31,7 +31,7 @@ func TestGetProperties(t *testing.T) {
 
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	entity, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", UserID: "tomas", Version: 001})
+	entity, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	if nil != err {
 		panic(err)
 	}
@@ -66,7 +66,7 @@ func TestEntity_getEntity(t *testing.T) {
 	tag := "test"
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", UserID: "tomas", Version: 001, Tag: &tag})
+	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001, Tag: &tag})
 	assert.Nil(t, err)
 	ce := en.getEntityBase()
 	log.Infof("source en addr:%p | %+v", en, *en)

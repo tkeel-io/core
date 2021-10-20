@@ -27,8 +27,8 @@ type EntityBase struct {
 	ID       string                 `json:"id"`
 	Tag      *string                `json:"tag"`
 	Type     string                 `json:"type"`
+	Owner    string                 `json:"owner"`
 	Status   string                 `json:"status"`
-	UserID   string                 `json:"user_id"`
 	Version  int64                  `json:"version"`
 	PluginID string                 `json:"plugin_id"`
 	LastTime int64                  `json:"last_time"`
@@ -65,7 +65,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity
 			ID:       in.ID,
 			Tag:      in.Tag,
 			Type:     in.Type,
-			UserID:   in.UserID,
+			Owner:    in.Owner,
 			PluginID: in.PluginID,
 			Status:   EntityStatusActive,
 			KValues:  make(map[string]interface{}),
@@ -376,7 +376,7 @@ func (e *entity) getEntityBase() *EntityBase {
 		Tag:      e.Tag,
 		Type:     e.Type,
 		Status:   e.Status,
-		UserID:   e.UserID,
+		Owner:    e.Owner,
 		Version:  e.Version,
 		KValues:  e.KValues,
 		PluginID: e.PluginID,
