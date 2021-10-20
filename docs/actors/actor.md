@@ -2,6 +2,8 @@
 
 > actor是 [Entity](../entity/entity.md)的运行时模式, 用于维护`Entity`的实时状态和提供`Entity`的具体行为。
 
+> 下文中的`消息`和`事件`在此文中作同义。
+
 
 
 
@@ -63,13 +65,48 @@
 3. reactor使用`coroutine pool`+`State Machine`的模式来实现，`pool`的存在可以使得`coroutine`的调度是`有效`的且`均衡`的，提高`coroutine`的`CPU`时间片的使用效率，提升`CPU`资源的使用效率。
 4. reactor消费从Queue消费消息，并使用`coroutine pool`来并行计算，可能存在多个coroutine阻塞在同一个`State Machine`上，从而降低`coroutine`的使用效率。
 5. reactor使用`coroutine pool`来顺序消费Queue，相对而言其并行处理效率较之actor更低。
+5. reactor模式下消息出Queue之后，事件被回调函数执行是无序的。
+
+
+
+## 流数据处理分析
 
 
 
 
 
 
+## Entity Runtime
 
+目标：
+- 高并发
+- 消息可靠，对于消息丢失有尽量小的容忍度。
+- coroutine负载均衡。
+
+为了获得更好的并发性和协程负载均衡，我们结合actor和reactor对Entity运行时定义如下：
+
+![entity-runtime](../images/entity-runtime.png)
+
+在此定义中存在mailbox以获得更好的并发性，去掉固定的coroutine, 以`coroutine pool`实现coroutine的动态分配，规避负载不均衡。
+
+消息处理模块概览：
+
+![entity-runtime-arch](../images/entity-runtime-arch.png)
+
+上图中组成部分有：`Entity Manager`，`Dispatcher`,`Coroutine Pool`, `Entity`。
+
+- Entity：`Entity`存在两种状态， `attatched`, `detatched`，当coroutine与Entity结合的时候Entity为attached状态，当coroutine与Entity分离的时候Entity为detached状态，简单看来Entity可以在`actor`和`state marchine`之间切换。
+- Entity Manager：`Entity Manager`是管理一个服务实例内的所有的Entity。
+- Dispatcher： `Dispatcher`是从`Message Queue`的`mailbox`之间的一个消息分发器。
+
+    ![dispatch-msg-to-mailbox](../images/dispatch-msg-to-mailbox.png)
+
+- Coroutine Pool: `Coroutine Pool`是`Coroutine`的管理器，主要提供`Coroutine`上任务的负载均衡。
+
+
+### Entity Attach
+
+![entity-runtime-attached](../images/entity-runtime-attached.png)
 
 
 
