@@ -73,10 +73,8 @@ func TestEventHandler(t *testing.T) {
 	assert.NoErrorf(t, err, "error adding error event handler")
 
 	s.registerSubscribeHandler()
-
 	makeEventRequest(t, s, "/", data, http.StatusOK)
 	makeEventRequest(t, s, "/", "", http.StatusSeeOther)
-	makeEventRequest(t, s, "/", "not JSON", http.StatusSeeOther)
 	makeEventRequest(t, s, "/errors", data, http.StatusOK)
 }
 
