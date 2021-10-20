@@ -21,24 +21,28 @@ var (
 )
 
 type EntityOp interface {
-	// GetID returns entity id.
-	GetID() string
 	// GetProperty returns entity property.
 	GetProperty(string) interface{}
-	// SetProperty set entity property.
-	SetProperty(string, interface{}) error
 	// GetAllProperties returns entity properties.
-	GetAllProperties() map[string]interface{}
+	GetAllProperties() *EntityBase
 	// SetProperties set entity properties
-	SetProperties(map[string]interface{}) error
+	SetProperties(*EntityBase) (*EntityBase, error)
 	// DeleteProperty delete entity property.
 	DeleteProperty(string) error
-	InvokeMsg(EntityContext)
+	// OnMessage recv message from pubsub.
+	OnMessage(ctx EntityContext) bool
+	// InvokeMsg dispose entity message.
+	InvokeMsg()
+	// SetMapper set mapper into entity.
 	SetMapper(m mapper.Mapper) error
 	// GetMapper returns a mapper.
 	GetMapper(mid string) mapper.Mapper
 	// GetMappers
 	GetMappers() []mapper.Mapper
+}
+
+type EntitySubscriptionOp interface {
+	EntityOp
 }
 
 type EntityContext struct {

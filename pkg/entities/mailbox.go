@@ -11,7 +11,7 @@ type mailbox struct {
 	capcity  int
 	msgQueue []Message
 
-	lock *sync.RWMutex
+	lock *sync.Mutex
 }
 
 var (
@@ -24,19 +24,21 @@ func newMailbox(capcity int) *mailbox {
 		size:     0,
 		headInx:  0,
 		capcity:  capcity,
-		msgQueue: make([]Message, 0, capcity),
+		lock:     &sync.Mutex{},
+		msgQueue: make([]Message, capcity),
 	}
 }
 
 func (mb *mailbox) Get() Message {
 	var msg Message
 
-	mb.lock.RLock()
+	mb.lock.Lock()
 	defer mb.lock.Unlock()
 
 	if mb.size > 0 {
 		mb.size--
 		msg = mb.msgQueue[mb.headInx]
+		mb.headInx = (mb.headInx + 1) % mb.capcity
 	}
 
 	return msg
@@ -50,9 +52,10 @@ func (mb *mailbox) Put(msg Message) error {
 		return errMailboxOverflow
 	}
 
+	index := (mb.headInx + mb.size) % mb.capcity
+	mb.msgQueue[index] = msg
+
 	mb.size++
-	mb.headInx = (mb.headInx + 1) % mb.capcity
-	mb.msgQueue[mb.headInx] = msg
 
 	return nil
 }

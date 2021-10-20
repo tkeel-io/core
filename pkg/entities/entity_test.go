@@ -69,8 +69,6 @@ func TestEntity_getEntity(t *testing.T) {
 	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	assert.Nil(t, err)
 	ce := en.getEntityBase()
-	log.Infof("source en addr:%p | %+v", en, *en)
-	log.Infof("copy en addr:%p | %+v,", &ce, ce)
-	assert.Equal(t, ce, *en)
+
 	assert.NotEqual(t, fmt.Sprintf("%p", en), fmt.Sprintf("%p", &ce))
 }
