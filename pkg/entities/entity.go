@@ -170,20 +170,6 @@ func (e *entity) GetProperty(key string) interface{} {
 	return e.KValues[key]
 }
 
-// SetProperty set entity property.
-func (e *entity) SetProperty(key string, value interface{}) error {
-	reqID := uuid()
-
-	log.Infof("entity.SetProperty called, entityId: %s, requestId: %s, key: %s.", e.ID, reqID, key)
-
-	e.lock.Lock()
-	defer e.lock.Unlock()
-
-	e.KValues[key] = value
-
-	return nil
-}
-
 // GetAllProperties returns entity properties.
 func (e *entity) GetAllProperties() *EntityBase {
 	reqID := uuid()
