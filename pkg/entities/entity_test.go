@@ -63,10 +63,10 @@ func TestGetProperties(t *testing.T) {
 func TestEntity_getEntity(t *testing.T) {
 	coroutinePool, err := ants.NewPool(500)
 	assert.Nil(t, err)
-	tag := "test"
+
 	mgr := NewEntityManager(context.Background(), coroutinePool)
 
-	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001, Tag: &tag})
+	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	assert.Nil(t, err)
 	ce := en.getEntityBase()
 	log.Infof("source en addr:%p | %+v", en, *en)
