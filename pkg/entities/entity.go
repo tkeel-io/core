@@ -16,6 +16,9 @@ const (
 	EntityDisposingSync  int32 = 1
 	EntityDisposingAsync int32 = 2
 
+	EntityAttachNon int32 = 0
+	EntityAttached  int32 = 1
+
 	EntityStatusActive  = "active"
 	EntityStatusDeleted = "deleted"
 )
@@ -238,9 +241,9 @@ func (e *entity) OnMessage(ctx EntityContext) bool {
 	// 2. start consume mailbox.
 	attaching := false
 	e.mailBox.Put(ctx.Message)
-	if atomic.LoadInt32(&e.attached) == 0 {
+	if atomic.LoadInt32(&e.attached) == EntityAttachNon {
 		e.lock.Lock()
-		if atomic.CompareAndSwapInt32(&e.attached, 0, 1) {
+		if atomic.CompareAndSwapInt32(&e.attached, EntityAttachNon, EntityAttached) {
 			attaching = true
 			log.Infof("attatching entity, id: %s.", e.ID)
 		}
