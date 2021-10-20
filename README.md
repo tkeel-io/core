@@ -44,7 +44,7 @@ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500
 
 1. 需要创建数据库`kcore`
 ```sql
-CREATE DATABASE IF NOT EXISTS test_db_char 
+CREATE DATABASE IF NOT EXISTS kcore 
 	DEFAULT CHARACTER SET utf8;
 ```
 1. 需要创建表`kcore.entity`
@@ -65,25 +65,40 @@ CREATE DATABASE IF NOT EXISTS test_db_char
 
 ## Test
 
-> api调用中，必须设置Header: Source, User, Type字段:
-1. 可以在http request的Header中设置`"Source":"abcd"`和`"User":"admin"`和`"Type":"DEVICE"`。
-2. 可以在http request的Query中设置`source=abcd&user_id=admin&type=DEVICE`
-3. 或者混合使用，Header中的设置覆盖Query中的设置。
+> api调用中，必须设置Header: Source, UserId, 可选字段： Type字段:
+1. `Source`标识请求的发起者，如设备管理`device-management`，`UserId`标识是由哪一个用户发起的请求，`Type`标识实体类型。
+2. 可以在http request的Header中设置`"Source":"abcd"`和`"User":"admin"`和`"Type":"DEVICE"`。
+3. 可以在http request的Query中设置`source=abcd&user_id=admin&type=DEVICE`。
+4. 或者混合使用，Header中的设置覆盖Query中的设置。
+5. `Type`字段在实体创建时是必选的。
 
 
-### Entity
+
+### 创建 Entity
+
+**Params：**
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
+| EntityId | string | false | path/query | 用于标识创建的实体的Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起Plugin。|
+| UserId | string | true | header/query | 用于标识请求的发起用户。|
+| Tag | string | false | query | 实体标签。|
+
 
 创建entity, POST支持`upsert`操作
 ```bash
 # 指定entityId创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin&type=device" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=test&user_id=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
+  -H "Source: abcd" \
   -d '{
        "status": "completed"
      }'
 
 # upsert
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=test&source=abcd&user_id=admin&type=device" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=test&source=abcd&user_id=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -91,7 +106,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&
      }'
 
 # 不指定entity id
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?tag=test" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?tag=test" \
   -H "Source: abcd" \
   -H "User: admin" \
   -H "Type: DEVICE" \
@@ -102,18 +117,40 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/entities?tag=test" \
 ```
 
 
-### 查询entity
+### 查询 Entity
+
+**Params：**
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
+| EntityId | string | true | path/query | 实体的Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起Plugin。|
+| UserId | string | true | header/query | 用于标识请求的发起用户。|
+| Tag | string | false | query | 实体标签。|
+
 ```bash
-curl -X GET "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123" \
+curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "User: admin"  \
   -H "Type: DEVICE"
 ```
 
 
-### 更新entity
+### 更新 Entity
+
+**Params：**
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
+| EntityId | string | true | path/query | 实体的Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起Plugin。|
+| UserId | string | true | header/query | 用于标识请求的发起用户。|
+| Tag | string | false | query | 实体标签。|
+
 ```bash
-curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=tomas" \
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=tomas" \
   -H "Source: abcd" \
   -H "User: admin" \
   -H "Type: DEVICE" \
@@ -126,9 +163,21 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&t
 
 
 
-### 删除entity
+### 删除 Entity
+
+
+**Params：**
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
+| EntityId | string | true | path/query | 实体的Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起Plugin。|
+| UserId | string | true | header/query | 用于标识请求的发起用户。|
+| Tag | string | false | query | 实体标签。|
+
 ```bash
-curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/entities?id=test123&tag=tomas" \
+curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?tag=tomas" \
   -H "Source: abcd" \
   -H "User: admin"  \
   -H "Type: DEVICE" 

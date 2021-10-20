@@ -76,28 +76,17 @@ func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityB
 }
 
 func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst *entity, err error) {
-	var (
-		has         bool
-		emptyString = ""
-	)
+	var has bool
 
 	if entityInst, has = m.entities[entityObj.ID]; has {
 		return
 	}
 
-	// require Type, UserId, Source.
-	if emptyString == entityObj.Type {
-		err = entityFieldRequired("Type")
-	} else if emptyString == entityObj.UserID {
-		err = entityFieldRequired("UserId")
-	} else if emptyString == entityObj.Source {
-		err = entityFieldRequired("Source")
-	} else {
-		entityInst, err = newEntity(context.Background(), m, entityObj.ID, entityObj.Source, entityObj.UserID, entityObj.Tag, 0)
-		if nil == err {
-			m.entities[entityInst.ID] = entityInst
-		}
+	entityInst, err = newEntity(context.Background(), m, entityObj)
+	if nil == err {
+		m.entities[entityInst.ID] = entityInst
 	}
+
 	return
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/tkeel-io/core/pkg/mapper"
 )
@@ -24,9 +25,9 @@ type EntityBase struct {
 	Tag      *string                `json:"tag"`
 	Type     string                 `json:"type"`
 	Status   string                 `json:"status"`
-	Source   string                 `json:"source"`
 	UserID   string                 `json:"user_id"`
 	Version  int64                  `json:"version"`
+	PluginID string                 `json:"plugin_id"`
 	LastTime int64                  `json:"last_time"`
 	KValues  map[string]interface{} `json:"properties"` //nolint
 }
@@ -51,20 +52,20 @@ type entity struct {
 }
 
 // newEntity create an entity object.
-func newEntity(ctx context.Context, mgr *EntityManager, id string, source string, userID string, tag *string, version int64) (*entity, error) {
-	if id == "" {
-		id = uuid()
+func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity, error) {
+	if in.ID == "" {
+		in.ID = uuid()
 	}
 
 	et := &entity{
 		EntityBase: EntityBase{
-			ID:      id,
-			Tag:     tag,
-			Source:  source,
-			UserID:  userID,
-			Version: version,
-			Status:  EntityStatusActive,
-			KValues: make(map[string]interface{}),
+			ID:       in.ID,
+			Tag:      in.Tag,
+			Type:     in.Type,
+			UserID:   in.UserID,
+			PluginID: in.PluginID,
+			Status:   EntityStatusActive,
+			KValues:  make(map[string]interface{}),
 		},
 
 		ctx:           ctx,
@@ -77,7 +78,7 @@ func newEntity(ctx context.Context, mgr *EntityManager, id string, source string
 	}
 
 	// set KValues into cacheProps.
-	et.cacheProps[id] = et.KValues
+	et.cacheProps[in.ID] = et.KValues
 
 	return et, nil
 }
@@ -204,6 +205,7 @@ func (e *entity) SetProperties(entityObj *EntityBase) (*EntityBase, error) {
 	defer e.lock.Unlock()
 
 	e.setTag(entityObj.Tag)
+	e.LastTime = time.Now().UnixNano() / 1e6
 
 	// so dengerous, think Kvalues Store.
 	for key, value := range entityObj.KValues {
@@ -288,6 +290,7 @@ func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 		activeTentacles = append(activeTentacles, activePair{key, mapper.GenTentacleKey(e.ID, key)})
 	}
 
+	e.LastTime = time.Now().UnixNano() / 1e6
 	// active tentacles.
 	e.activeTentacle(activeTentacles)
 }
@@ -365,35 +368,23 @@ type activePair struct {
 }
 
 func (e *entity) getEntityBase() *EntityBase {
-	ce := e.Copy()
-	return &ce.EntityBase
+	return &EntityBase{
+		ID:       e.ID,
+		Tag:      e.Tag,
+		Type:     e.Type,
+		Status:   e.Status,
+		UserID:   e.UserID,
+		Version:  e.Version,
+		KValues:  e.KValues,
+		PluginID: e.PluginID,
+		LastTime: e.LastTime,
+	}
 }
 
 func (e *entity) setTag(tag *string) {
 	if nil != tag {
 		tagVal := *tag
 		e.Tag = &tagVal
-	}
-}
-
-func (e entity) Copy() entity {
-	return entity{
-		EntityBase: EntityBase{
-			ID:      e.ID,
-			Tag:     e.Tag,
-			Type:    e.Type,
-			Source:  e.Source,
-			UserID:  e.UserID,
-			Version: e.Version,
-			KValues: e.KValues,
-		},
-		mappers:        e.mappers,
-		tentacles:      e.tentacles,
-		cacheProps:     e.cacheProps,
-		indexTentacles: e.indexTentacles,
-		entityManager:  e.entityManager,
-		lock:           e.lock,
-		ctx:            e.ctx,
 	}
 }
 
