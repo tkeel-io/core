@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// create entity.
-	createUrl := "plugins/pluginA/entities?id=test1&owner=abc&source=abc"
+	createUrl := "plugins/pluginA/entities?id=test1&owner=abc&source=abc&type=device"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
@@ -35,7 +35,7 @@ func main() {
 	fmt.Println(string(result))
 
 	// get entity.
-	getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc"
+	getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
 
 	result, err = client.InvokeMethodWithContent(context.Background(),
 		"core",
