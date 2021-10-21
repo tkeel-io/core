@@ -3,9 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 )
+
+type ValueType struct {
+	Value interface{} `json:"value"`
+	Time  int64       `json:"time"`
+}
 
 func main() {
 	client, err := dapr.NewClient()
@@ -45,7 +51,13 @@ func main() {
 
 	// pub entity.
 
-	data := []byte(`{"entity_id":"test1", "owner":"abc", "data": {"core":{"time":1634730969, "value1":"ofdddfldiddne"}}}`)
+	data := make(map[string]interface{})
+	data["entity_id"] = "test1"
+	data["owner"] = "abc"
+	dataItem := make(map[string]interface{})
+	dataItem["core"] = ValueType{Value: 189, Time: time.Now().UnixNano() / 1e6}
+	data["data"] = dataItem
+
 	err = client.PublishEvent(context.Background(),
 		"client-pubsub",
 		"core-pub",
