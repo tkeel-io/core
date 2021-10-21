@@ -8,18 +8,18 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 )
 
-// SubService is a dapr pubsub subscription service.
-type SubService struct {
+// TopicEventService is a dapr pubsub subscription service.
+type TopicEventService struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	entityManager *entities.EntityManager
 }
 
-// NewPubService returns a new PubService.
-func NewSubService(ctx context.Context, mgr *entities.EntityManager) (*SubService, error) {
+// NewTopicEventService returns a new TopicEventService.
+func NewTopicEventService(ctx context.Context, mgr *entities.EntityManager) (*TopicEventService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &SubService{
+	return &TopicEventService{
 		ctx:           ctx,
 		cancel:        cancel,
 		entityManager: mgr,
@@ -27,12 +27,12 @@ func NewSubService(ctx context.Context, mgr *entities.EntityManager) (*SubServic
 }
 
 // Name return the name.
-func (e *SubService) Name() string {
-	return "sub"
+func (e *TopicEventService) Name() string {
+	return "topic-event"
 }
 
 // RegisterService register some methods.
-func (e *SubService) RegisterService(daprService common.Service) (err error) {
+func (e *TopicEventService) RegisterService(daprService common.Service) (err error) {
 	// register all handlers.
 	if err = e.AddSubTopic(daprService, "core-pub", "core-pubsub"); nil != err {
 		return
@@ -40,7 +40,7 @@ func (e *SubService) RegisterService(daprService common.Service) (err error) {
 	return
 }
 
-func (e *SubService) AddSubTopic(daprService common.Service, topic, pubsubName string) (err error) {
+func (e *TopicEventService) AddSubTopic(daprService common.Service, topic, pubsubName string) (err error) {
 	sub := &common.Subscription{
 		PubsubName: pubsubName,
 		Topic:      topic,
@@ -98,7 +98,7 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 	return &ec, nil
 }
 
-func (e *SubService) topicHandler(ctx context.Context, in *common.TopicEvent) (retry bool, err error) {
+func (e *TopicEventService) topicHandler(ctx context.Context, in *common.TopicEvent) (retry bool, err error) {
 	if ec, err := TopicEvent2EntityContext(in); err != nil {
 		return false, err
 	} else if in.DataContentType == "application/json" {

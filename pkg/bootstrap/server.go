@@ -100,7 +100,7 @@ func initAPIRegistry(ctx context.Context, apiRegistry *api.Registry, apiConfig *
 		err       error
 		eventAPI  *service.EventService
 		entityAPI *service.EntityService
-		subAPI    *service.SubService
+		subAPI    *service.TopicEventService
 	)
 
 	// register event api.
@@ -131,7 +131,7 @@ func initAPIRegistry(ctx context.Context, apiRegistry *api.Registry, apiConfig *
 		return errors.Wrap(err, "api registry add service err")
 	}
 
-	if subAPI, err = service.NewSubService(ctx, entityManager); err != nil {
+	if subAPI, err = service.NewTopicEventService(ctx, entityManager); err != nil {
 		return errors.Wrap(err, "new sub service err")
 	}
 
