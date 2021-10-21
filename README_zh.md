@@ -5,6 +5,12 @@
 
 Core通过api对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务
     
+## 快速入门
+当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
+示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体  
+参见[examples](examples/entity/README.md)
+
+
 ## 实体
 物联网世界里的操作对象，以及这些对象组合抽象出来的对象，包括网关，设备，设备的聚合抽象等等。  
 
@@ -33,11 +39,11 @@ Core通过api对外提供属性搜索，时序查询，数据写入，数据查�
     ```
 3. 多对一映射+计算
     ```sql
-   	select sum(2*light1.a, light2.a) as house.e
+       select sum(2*light1.a, light2.a) as house.e
     ```
 4. 自身映射+计算
     ```sql
-	select sum(light1.c, light1.d) as light1.e
+    select sum(light1.c, light1.d) as light1.e
     ```
 ### 映射（写复制）
 自身属性的变更可能触发写复制到其他实体

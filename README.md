@@ -1,6 +1,7 @@
 # core
 
-> core is the database for digital twins.
+[中文](README_zh.md)
+
 
 ## Run
 

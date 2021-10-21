@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
@@ -69,7 +70,7 @@ func (e *EntityService) RegisterService(daprService common.Service) (err error) 
 	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
 		return
 	}
-	if err = e.AddSubTopic(daprService, "core", "core-pubsub"); nil != err {
+	if err = e.AddSubTopic(daprService, "core-pub", "core-pubsub"); nil != err {
 		return
 	}
 	return
@@ -88,9 +89,14 @@ func (e *EntityService) AddSubTopic(daprService common.Service, topic, pubsubNam
 	return
 }
 
+func getSourceFrom(pubsubName string) (source string) {
+	return strings.Split(pubsubName, "-")[0]
+}
+
 func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
 	ec := entities.EntityContext{}
-	var entityID, userID string
+	_ = getSourceFrom(in.PubsubName)
+	var entityID, owner string
 	ec.Headers = make(map[string]string)
 	if in.DataContentType == "application/json" {
 		inData, ok := in.Data.(map[string]interface{})
@@ -103,9 +109,9 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		default:
 			return nil, errTypeError
 		}
-		switch tempUserID := inData["tenant_id"].(type) {
+		switch tempOwner := inData["owner"].(type) {
 		case string:
-			userID = tempUserID
+			owner = tempOwner
 		default:
 			err = errTypeError
 			return
@@ -114,15 +120,15 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = &entities.EntityMessage{SourceID: "", Values: values}
+			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: values}
 		case map[string]interface{}:
-			ec.Message = &entities.EntityMessage{SourceID: "", Values: tempData}
+			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: tempData}
 		default:
 			err = errTypeError
 			return
 		}
 
-		ec.Headers["user_id"] = userID
+		ec.Headers["user_id"] = owner
 		ec.SetTarget(entityID)
 	}
 	return &ec, nil
