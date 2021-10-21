@@ -47,7 +47,7 @@ actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Ent
 映射的操作包含两个部分: 写复制和计算更新
 ![img.png](docs/images/mapping.png)
 
-[映射](docs/mapper/mapper.md)
+参见[映射](docs/mapper/mapper.md)
 ### 模型
 模型用来约束实体的属性
 有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索
@@ -63,5 +63,8 @@ pluginA: pluginA-pubsub
 2. 变更订阅（属性有变更时触发）
 3. 周期订阅（周期性上报所有属性）
 
-[订阅](docs/subscription/subscription.md)
+参见[订阅](docs/subscription/subscription.md)
 
+## API
+
+参见[API](docs/api/index.md)
