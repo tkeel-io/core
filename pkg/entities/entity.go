@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,8 +17,8 @@ const (
 	EntityDisposingSync  int32 = 1
 	EntityDisposingAsync int32 = 2
 
-	EntityAttachNon int32 = 0
-	EntityAttached  int32 = 1
+	EntityDetached int32 = 0
+	EntityAttached int32 = 1
 
 	EntityStatusActive  = "active"
 	EntityStatusDeleted = "deleted"
@@ -224,14 +225,18 @@ func (e *entity) OnMessage(ctx EntityContext) bool {
 	// 1. put msg inti mailbox.promise_handler
 	// 2. start consume mailbox.
 	attaching := false
-	e.mailBox.Put(ctx.Message)
-	if atomic.LoadInt32(&e.attached) == EntityAttachNon {
-		e.lock.Lock()
-		if atomic.CompareAndSwapInt32(&e.attached, EntityAttachNon, EntityAttached) {
-			attaching = true
-			log.Infof("attatching entity, id: %s.", e.ID)
+
+	for {
+		// 如果只有一条投递线程，那么会导致Dispatcher上的所有Entity都依赖于Message Queue中的消息的均匀性.
+		if nil == e.mailBox.Put(ctx.Message) {
+			break
 		}
-		e.lock.Unlock()
+		runtime.Gosched()
+	}
+
+	if atomic.CompareAndSwapInt32(&e.attached, EntityDetached, EntityAttached) {
+		attaching = true
+		log.Infof("attatched entity, id: %s.", e.ID)
 	}
 
 	return attaching
@@ -241,6 +246,10 @@ func (e *entity) InvokeMsg() {
 	for {
 		var msgCtx Message
 		if msgCtx = e.mailBox.Get(); nil == msgCtx {
+			// detach this entity.
+			if atomic.CompareAndSwapInt32(&e.attached, EntityAttached, EntityDetached) {
+				log.Infof("detached entity, id: %s.", e.ID)
+			}
 			break
 		}
 
