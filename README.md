@@ -1,5 +1,7 @@
 # core
 
+> join us, you are not alone.
+
 [中文](README_zh.md)
 
 
