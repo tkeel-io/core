@@ -77,7 +77,7 @@ func (l *TQLListener) ExitSourceEntity(c *parser.SourceEntityContext) {
 		arr := strings.Split(text, ".")
 		l.AddTentacle(arr[0], arr[1])
 	}else{
-		l.pushT(text)
+		l.pushS(text)
 	}
 }
 
@@ -135,10 +135,9 @@ func Parse(input string) {
 
 func main() {
 	tql := `select src_entityA.property1 AS tar_entityB.property2`
-	//tql := `select
-	//		entity AS entityD`
-	//tql := `select entityA.property1 AS property2
-    //               //entityB.property2 AS property3`
+	//tql := `select src_entity AS tar_entity`
+	//tql := `select entityA.propertyA AS property2,
+    //             entityB.propertyB AS property3`
 	fmt.Println("parse tql: ", tql)
 	Parse(tql)
 }

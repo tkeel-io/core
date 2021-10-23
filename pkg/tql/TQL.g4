@@ -64,7 +64,7 @@ DOT:                '.';
 TRUE:               T R U E;
 FALSE:              F A L S E;
 ENTITYNAME:         [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
-PROPERTYNAME:       [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
+PROPERTYNAME:       '.' [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
 NUMBER:             '0' | [1-9][0-9]* ;
 INTEGER:            ('+' | '-')? NUMBER;
 FLOAT:              ('+' | '-')? (NUMBER+ DOT NUMBER+ |  NUMBER+ DOT | DOT NUMBER+);
@@ -86,8 +86,7 @@ fields
 
 
 expr
-    : ENTITYNAME AS ENTITYNAME                      # Expression
-    | sourceEntity AS targetEntity                  # Expression
+    : sourceEntity+ AS targetEntity+                # Expression
     | expr op=('*'|'/'|'%') expr                    # MulDiv
     | expr op=('+'|'-') expr                        # AddSub
     | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # CompareValue
@@ -97,11 +96,11 @@ expr
 
 // 2.1 entity
 sourceEntity
-    : ENTITYNAME (DOT ENTITYNAME)?
+    : ENTITYNAME (PROPERTYNAME)?
     ;
 
 targetEntity
-    : ENTITYNAME (DOT ENTITYNAME)?
+    : ENTITYNAME (PROPERTYNAME)?
     ;
 
 
