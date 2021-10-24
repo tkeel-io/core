@@ -96,8 +96,8 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 		return source, err
 	}
 
-	if entity.Owner, err = getStringFrom(ctx, service.HeaderUser); nil == err {
-		// userId field required.
+	if entity.Owner, err = getStringFrom(ctx, service.HeaderOwner); nil == err {
+		// owner field required.
 		log.Info("parse http request field(owner) from header successed.")
 	} else if entity.Owner, err = s.getValFromValues(values, entityFieldOwner); nil != err {
 		log.Error("parse http request field(owner) from query failed", ctx, err)
@@ -105,7 +105,7 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 	}
 
 	if source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
-		// userId field required.
+		// source field required.
 		log.Info("parse http request field(source) from header successed.")
 	} else if source, err = s.getValFromValues(values, entityFieldSource); nil != err {
 		log.Error("parse http request field(source) from query failed", ctx, err)
