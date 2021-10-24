@@ -13,6 +13,11 @@ import (
 )
 
 const (
+	EntityTypeState        = "STATE"
+	EntityTypeDevice       = "DEVICE"
+	EntityTypeSpace        = "SPACE"
+	EntityTypeSubscription = "SUBSCRIPTION"
+
 	EntityDisposingIdle  int32 = 0
 	EntityDisposingSync  int32 = 1
 	EntityDisposingAsync int32 = 2

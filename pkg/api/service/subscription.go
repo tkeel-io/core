@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -89,17 +90,9 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 		return source, errors.Wrap(err, "parse URL failed")
 	}
 
-	if entity.Type, err = getStringFrom(ctx, service.HeaderType); nil == err {
-		// type field required.
-		log.Info("parse http request field(type) from header successes.")
-	} else if entity.Type, err = s.getValFromValues(values, entityFieldType); nil != err {
-		log.Error("parse http request field(type) from query failed", values, ctx, err)
-		return source, err
-	}
-
 	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
 		// plugin field required.
-		log.Error("parse http request field(source) from path failed", ctx, err)
+		log.Error("parse http request field(pluginId) from path failed", ctx, err)
 		return source, err
 	}
 
@@ -135,27 +128,6 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 // EntityGet returns an entity information.
 func (s *SubscriptionService) subscriptionGet(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var entity = new(Entity)
-
-	out = &common.Content{
-		Data:        in.Data,
-		ContentType: in.ContentType,
-		DataTypeURL: in.DataTypeURL,
-	}
-
-	defer errResult(out, err)
-
-	_, err = s.getEntityFrom(ctx, entity, in, true)
-	if nil != err {
-		return
-	}
-
-	return
-}
-
-// EntityGet create  an entity.
-func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var entity = new(Entity)
-
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -169,13 +141,26 @@ func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common
 		return
 	}
 
-	return out, errors.Wrap(err, "entity create failed")
+	// get entity from entity manager.
+	entity, err = s.entityManager.GetAllProperties(ctx, entity)
+	if nil != err {
+		log.Errorf("get entity failed, %s", err.Error())
+		return
+	}
+
+	// encode entity.
+	if out.Data, err = json.Marshal(entity); nil != err {
+		log.Errorf("create subscription failed, %s.", err.Error())
+		return out, errors.Wrap(err, "create subscription failed")
+	}
+
+	return
 }
 
-// subscriptionUpdate update an entity.
-func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+// EntityGet create  an entity.
+func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var entity = new(Entity)
-
+	var subscription *Subscription
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -189,7 +174,79 @@ func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common
 		return
 	}
 
-	return out, errors.Wrap(err, "entity update failed")
+	subscription, err = DecodeSubscription(in.Data)
+	if nil != err {
+		log.Errorf("invalid request, %s.", err.Error())
+		return out, errors.Wrap(err, "invalid request")
+	}
+
+	entity.Type = entities.EntityTypeSubscription
+	entity.KValues = map[string]interface{}{
+		"source": subscription.Source,
+		"filter": subscription.Filter,
+		"target": subscription.Target,
+		"mode":   subscription.Mode,
+	}
+
+	// set properties.
+	entity, err = s.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	if out.Data, err = json.Marshal(entity); nil != err {
+		log.Errorf("create subscription failed, %s.", err.Error())
+		return out, errors.Wrap(err, "create subscription failed")
+	}
+
+	return
+}
+
+// subscriptionUpdate update an entity.
+func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	var entity = new(Entity)
+	var subscription *Subscription
+	out = &common.Content{
+		Data:        in.Data,
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+
+	defer errResult(out, err)
+
+	_, err = s.getEntityFrom(ctx, entity, in, true)
+	if nil != err {
+		return
+	}
+
+	subscription, err = DecodeSubscription(in.Data)
+	if nil != err {
+		log.Errorf("invalid request, %s.", err.Error())
+		return out, errors.Wrap(err, "invalid request")
+	}
+
+	entity.Type = entities.EntityTypeSubscription
+	entity.KValues = map[string]interface{}{
+		"source": subscription.Source,
+		"filter": subscription.Filter,
+		"target": subscription.Target,
+		"mode":   subscription.Mode,
+	}
+
+	// set properties.
+	entity, err = s.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	if out.Data, err = json.Marshal(entity); nil != err {
+		log.Errorf("update subscription failed, %s.", err.Error())
+		return out, errors.Wrap(err, "update subscription failed")
+	}
+
+	return
 }
 
 // EntityGet delete an entity.
@@ -208,6 +265,15 @@ func (s *SubscriptionService) subscriptionDelete(ctx context.Context, in *common
 	if nil != err {
 		return
 	}
+
+	// delete entity.
+	entity, err = s.entityManager.DeleteEntity(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
 
 	return
 }
@@ -248,4 +314,16 @@ func (s *SubscriptionService) subscriptionsHandler(ctx context.Context, in *comm
 		DataTypeURL: in.DataTypeURL,
 	}
 	return out, err
+}
+
+type Subscription struct {
+	Source string `json:"source"`
+	Filter string `json:"filter"`
+	Target string `json:"target"`
+	Mode   string `json:"mode"`
+}
+
+func DecodeSubscription(data []byte) (*Subscription, error) {
+	subscription := Subscription{}
+	return &subscription, json.Unmarshal(data, &subscription)
 }
