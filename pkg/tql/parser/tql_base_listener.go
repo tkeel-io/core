@@ -33,6 +33,12 @@ func (s *BaseTQLListener) EnterFields(ctx *FieldsContext) {}
 // ExitFields is called when production fields is exited.
 func (s *BaseTQLListener) ExitFields(ctx *FieldsContext) {}
 
+// EnterTargetEntity is called when production targetEntity is entered.
+func (s *BaseTQLListener) EnterTargetEntity(ctx *TargetEntityContext) {}
+
+// ExitTargetEntity is called when production targetEntity is exited.
+func (s *BaseTQLListener) ExitTargetEntity(ctx *TargetEntityContext) {}
+
 // EnterCompareValue is called when production CompareValue is entered.
 func (s *BaseTQLListener) EnterCompareValue(ctx *CompareValueContext) {}
 
@@ -63,8 +69,8 @@ func (s *BaseTQLListener) EnterSourceEntity(ctx *SourceEntityContext) {}
 // ExitSourceEntity is called when production sourceEntity is exited.
 func (s *BaseTQLListener) ExitSourceEntity(ctx *SourceEntityContext) {}
 
-// EnterTargetEntity is called when production targetEntity is entered.
-func (s *BaseTQLListener) EnterTargetEntity(ctx *TargetEntityContext) {}
+// EnterTargetProperty is called when production targetProperty is entered.
+func (s *BaseTQLListener) EnterTargetProperty(ctx *TargetPropertyContext) {}
 
-// ExitTargetEntity is called when production targetEntity is exited.
-func (s *BaseTQLListener) ExitTargetEntity(ctx *TargetEntityContext) {}
+// ExitTargetProperty is called when production targetProperty is exited.
+func (s *BaseTQLListener) ExitTargetProperty(ctx *TargetPropertyContext) {}

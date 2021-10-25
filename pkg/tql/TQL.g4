@@ -22,6 +22,8 @@ grammar TQL;
 
 // 1. Tokens & KeyWord
 // 1.1 KeyWord
+INSERT:                 I N S E R T;
+INTO:                   I N T O;
 AS:                     A S;
 AND:                    A N D;
 CASE:                   C A S E;
@@ -63,8 +65,9 @@ SUB:                '-';
 DOT:                '.';
 TRUE:               T R U E;
 FALSE:              F A L S E;
-ENTITYNAME:         [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
-PROPERTYNAME:       '.' [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
+ENTITYNAME:         [a-zA-Z_#*][a-zA-Z_\-#$@0-9]*;
+PROPERTYNAME:       '.' [a-zA-Z_#][a-zA-Z_\-#$@0-9.]*;
+TARGETENTITY:       [a-zA-Z_#*][a-zA-Z_\-#$@0-9]*;
 NUMBER:             '0' | [1-9][0-9]* ;
 INTEGER:            ('+' | '-')? NUMBER;
 FLOAT:              ('+' | '-')? (NUMBER+ DOT NUMBER+ |  NUMBER+ DOT | DOT NUMBER+);
@@ -76,17 +79,22 @@ WHITESPACE:         [ \r\n\t]+ -> skip;
 
 // 2. Rules
 root
-    : SELECT fields EOF;
+    : INSERT INTO targetEntity SELECT fields EOF;
+//    : SELECT fields EOF;
+
 
 // 2.1 Select
 fields
     : expr (',' expr)*
     ;
 
-
+targetEntity
+    : TARGETENTITY
+    ;
 
 expr
-    : sourceEntity+ AS targetEntity+                # Expression
+    : sourceEntity                                  # Expression
+    | sourceEntity+ AS targetProperty+              # Expression
     | expr op=('*'|'/'|'%') expr                    # MulDiv
     | expr op=('+'|'-') expr                        # AddSub
     | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # CompareValue
@@ -96,11 +104,12 @@ expr
 
 // 2.1 entity
 sourceEntity
-    : ENTITYNAME (PROPERTYNAME)?
+    : '*'
+    | ENTITYNAME (PROPERTYNAME)?
     ;
 
-targetEntity
-    : ENTITYNAME (PROPERTYNAME)?
+targetProperty
+    : ENTITYNAME
     ;
 
 
