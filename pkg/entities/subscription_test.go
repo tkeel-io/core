@@ -22,7 +22,7 @@ func TestSubscriptionCreate(t *testing.T) {
 		PluginID: "PluginB",
 		KValues: map[string]interface{}{
 			SubscriptionFieldMode:   SubscriptionModeRealtime,
-			SubScriptionFieldSource: "PluginA",
+			SubscriptionFieldSource: "PluginA",
 			SubscriptionFieldTarget: "PluginA",
 			SubscriptionFieldFilter: "select *",
 		},

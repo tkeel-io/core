@@ -16,27 +16,28 @@ const (
 	SubscriptionModeChanged  = "changed"
 
 	// subscription required fileds.
-	SubscriptionFieldMode   = "mode"
-	SubScriptionFieldSource = "source"
-	SubscriptionFieldTarget = "target"
-	SubscriptionFieldFilter = "filter"
+	SubscriptionFieldMode       = "mode"
+	SubscriptionFieldSource     = "source"
+	SubscriptionFieldTarget     = "target"
+	SubscriptionFieldFilter     = "filter"
+	SubscriptionFieldTopic      = "topic"
+	SubscriptionFieldPubsubName = "pubsub_name"
 )
 
 // SubscriptionBase subscription basic information.
 type SubscriptionBase struct {
-	Source string `json:"source" mapstructure:"source"`
-	Filter string `json:"filter" mapstructure:"filter"`
-	Target string `json:"target" mapstructure:"target"`
-	Mode   string `json:"mode" mapstructure:"mode"`
+	Mode       string `json:"mode" mapstructure:"mode"`
+	Source     string `json:"source" mapstructure:"source"`
+	Filter     string `json:"filter" mapstructure:"filter"`
+	Target     string `json:"target" mapstructure:"target"`
+	Topic      string `json:"topic" mapstructure:"topic"`
+	PubsubName string `json:"pubsub_name" mapstructure:"pubsub_name"`
 }
 
 // subscription subscription actor based entity.
 type subscription struct {
 	*entity
 	SubscriptionBase `mapstructure:",squash"`
-
-	pubsubName string
-	topicName  string
 }
 
 // newSubscription returns a subscription.
@@ -110,24 +111,25 @@ func (s *subscription) invokeMsg(msg *EntityMessage) {
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg *EntityMessage) {
 	// 对于 Realtime 直接转发就OK了.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.pubsubName, s.topicName, nil)
+	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
 }
 
 // invokePeriod.
 func (s *subscription) invokePeriod(msg *EntityMessage) {
 	// 对于 Period 直接查询快照.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.pubsubName, s.topicName, nil)
+	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
 }
 
 // invokeChanged.
 func (s *subscription) invokeChanged(msg *EntityMessage) {
 	// 对于 Changed 直接转发就OK了.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.pubsubName, s.topicName, nil)
+	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
 }
 
 // checkSubscription returns subscription status.
 func (s *subscription) checkSubscription() string {
-	if s.Mode == SubscriptionModeUndefine || s.Source == "" || s.Target == "" || s.Filter == "" {
+	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
+		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
 		return EntityStatusInactive
 	}
 	return EntityStatusActive

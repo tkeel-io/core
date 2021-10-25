@@ -159,8 +159,11 @@ func (s *SubscriptionService) subscriptionGet(ctx context.Context, in *common.In
 
 // EntityGet create  an entity.
 func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var entity = new(Entity)
-	var subscription *Subscription
+	var (
+		entity       = new(Entity)
+		subscription *entities.SubscriptionBase
+	)
+
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -182,10 +185,12 @@ func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common
 
 	entity.Type = entities.EntityTypeSubscription
 	entity.KValues = map[string]interface{}{
-		"source": subscription.Source,
-		"filter": subscription.Filter,
-		"target": subscription.Target,
-		"mode":   subscription.Mode,
+		entities.SubscriptionFieldSource:     subscription.Source,
+		entities.SubscriptionFieldFilter:     subscription.Filter,
+		entities.SubscriptionFieldTarget:     subscription.Target,
+		entities.SubscriptionFieldTopic:      subscription.Topic,
+		entities.SubscriptionFieldMode:       subscription.Mode,
+		entities.SubscriptionFieldPubsubName: subscription.PubsubName,
 	}
 
 	// set properties.
@@ -205,8 +210,11 @@ func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common
 
 // subscriptionUpdate update an entity.
 func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var entity = new(Entity)
-	var subscription *Subscription
+	var (
+		entity       = new(Entity)
+		subscription *entities.SubscriptionBase
+	)
+
 	out = &common.Content{
 		Data:        in.Data,
 		ContentType: in.ContentType,
@@ -316,15 +324,8 @@ func (s *SubscriptionService) subscriptionsHandler(ctx context.Context, in *comm
 	return out, err
 }
 
-type Subscription struct {
-	Source string `json:"source"`
-	Filter string `json:"filter"`
-	Target string `json:"target"`
-	Mode   string `json:"mode"`
-}
-
-func DecodeSubscription(data []byte) (*Subscription, error) {
-	subscription := Subscription{}
+func DecodeSubscription(data []byte) (*entities.SubscriptionBase, error) {
+	subscription := entities.SubscriptionBase{}
 	err := json.Unmarshal(data, &subscription)
 	return &subscription, errors.Wrap(err, "decode subscription base information failed, request body must be json")
 }
