@@ -26,11 +26,11 @@ func (m *MyMQL) Tentacles() map[string][]string {
 }
 
 // Exec execute MQL.
-func (m *MyMQL) Exec(map[string]map[string]interface{}) (map[string]map[string]interface{}, error) {
+func (m *MyMQL) Exec(map[string]interface{}) (map[string]interface{}, error) {
 	return nil, errors.New("not implement")
 }
 
 // ExecJSONE execute MQL with json input.
-func (m *MyMQL) ExecJSONE([]byte) (map[string]map[string]interface{}, error) {
+func (m *MyMQL) ExecJSONE([]byte) (map[string]interface{}, error) {
 	return nil, errors.New("not implement")
 }

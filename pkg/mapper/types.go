@@ -1,11 +1,11 @@
 package mapper
 
-import "fmt"
-
 const (
 	TentacleTypeUndefined = "undefined"
 	TentacleTypeEntity    = "entity"
 	TentacleTypeMapper    = "mapper"
+
+	WatchKeyDelimiter = "#"
 )
 
 type Mapper interface {
@@ -22,7 +22,7 @@ type Mapper interface {
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
-	Exec(map[string]map[string]interface{}) (map[string]map[string]interface{}, error)
+	Exec(map[string]interface{}) (map[string]interface{}, error)
 }
 
 type TentacleType = string
@@ -33,11 +33,16 @@ type Tentacler interface {
 	// TargetID returns target id.
 	TargetID() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).
-	Items() []string
+	Items() []WatchKey
 	// Copy duplicate a mapper.
 	Copy() Tentacler
 }
 
-func GenTentacleKey(entityID, propertyKey string) string {
-	return fmt.Sprintf("%s#%s", entityID, propertyKey)
+type WatchKey struct {
+	EntityId    string //nolint
+	PropertyKey string
+}
+
+func (wk *WatchKey) String() string {
+	return wk.EntityId + WatchKeyDelimiter + wk.PropertyKey
 }
