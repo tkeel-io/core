@@ -13,17 +13,27 @@ import (
 )
 
 const (
+	// entity type enumerates.
+	EntityTypeState        = "STATE"
+	EntityTypeDevice       = "DEVICE"
+	EntityTypeSpace        = "SPACE"
+	EntityTypeSubscription = "SUBSCRIPTION"
+
 	EntityDisposingIdle  int32 = 0
 	EntityDisposingSync  int32 = 1
 	EntityDisposingAsync int32 = 2
 
+	// entity runtime-status enumerates.
 	EntityDetached int32 = 0
 	EntityAttached int32 = 1
 
-	EntityStatusActive  = "active"
-	EntityStatusDeleted = "deleted"
+	// entity status enumerates.
+	EntityStatusActive   = "active"
+	EntityStatusInactive = "inactive"
+	EntityStatusDeleted  = "deleted"
 )
 
+// EntityBase entity basic informatinon.
 type EntityBase struct {
 	ID       string                 `json:"id"`
 	Type     string                 `json:"type"`
@@ -35,6 +45,7 @@ type EntityBase struct {
 	KValues  map[string]interface{} `json:"properties"` //nolint
 }
 
+// entity entity runtime structure.
 type entity struct {
 	EntityBase
 
@@ -101,6 +112,7 @@ func (e *entity) GetMapper(mid string) mapper.Mapper {
 	return nil
 }
 
+// GetMappers returns mappers.
 func (e *entity) GetMappers() []mapper.Mapper {
 	var (
 		result = make([]mapper.Mapper, len(e.mappers))
@@ -120,6 +132,7 @@ func (e *entity) GetMappers() []mapper.Mapper {
 	return result
 }
 
+// SetMapper set mapper into entity.
 func (e *entity) SetMapper(m mapper.Mapper) error {
 	reqID := uuid()
 
@@ -150,7 +163,7 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 				},
 				Message: &TentacleMsg{
 					TargetID: e.ID,
-					Items:    tentacle.Items(),
+					Items:    tentacle.Copy().Items(),
 				},
 			})
 		}
@@ -217,6 +230,7 @@ func (e *entity) DeleteProperty(key string) error {
 	return nil
 }
 
+// OnMessage recive entity input messages.
 func (e *entity) OnMessage(ctx EntityContext) bool {
 	reqID := uuid()
 
@@ -242,6 +256,7 @@ func (e *entity) OnMessage(ctx EntityContext) bool {
 	return attaching
 }
 
+// InvokeMsg dispose entity input messages.
 func (e *entity) InvokeMsg() {
 	for {
 		var msgCtx Message
@@ -270,6 +285,7 @@ func (e *entity) InvokeMsg() {
 	}
 }
 
+// invokeEntityMsg dispose Property message.
 func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	setEntityID := msg.SourceID
 	if setEntityID == "" {
@@ -279,11 +295,11 @@ func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	// 1. update itself properties.
 	// 2. generate message, then send msg.
 	// 3. active mapper.
-	activeTentacles := make([]activePair, 0)
+	activeTentacles := make([]mapper.WatchKey, 0)
 	entityProps := e.cacheProps[setEntityID]
 	for key, value := range msg.Values {
 		entityProps[key] = value
-		activeTentacles = append(activeTentacles, activePair{key, mapper.GenTentacleKey(e.ID, key)})
+		activeTentacles = append(activeTentacles, mapper.WatchKey{EntityId: setEntityID, PropertyKey: key})
 	}
 
 	e.LastTime = time.Now().UnixNano() / 1e6
@@ -291,19 +307,20 @@ func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	e.activeTentacle(activeTentacles)
 }
 
-func (e *entity) activeTentacle(actives []activePair) {
+// activeTentacle active tentacles.
+func (e *entity) activeTentacle(actives []mapper.WatchKey) {
 	var (
-		activeMappers = make([]string, 0)
-		messages      = make(map[string]map[string]interface{})
+		messages        = make(map[string]map[string]interface{})
+		activeTentacles = make(map[string][]mapper.Tentacler)
 	)
 
 	thisEntityProps := e.cacheProps[e.ID]
 	for _, active := range actives {
-		if tentacles, exists := e.tentacles[active.TentacleKey]; exists {
+		if tentacles, exists := e.tentacles[active.String()]; exists {
 			for _, tentacle := range tentacles {
 				targetID := tentacle.TargetID()
 				if mapper.TentacleTypeMapper == tentacle.Type() {
-					activeMappers = append(activeMappers, targetID)
+					activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
 					if _, exists := messages[targetID]; exists {
@@ -311,6 +328,7 @@ func (e *entity) activeTentacle(actives []activePair) {
 					}
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
+					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
 					messages[targetID][active.PropertyKey] = thisEntityProps[active.PropertyKey]
 				} else {
 					// undefined tentacle type.
@@ -334,13 +352,46 @@ func (e *entity) activeTentacle(actives []activePair) {
 	}
 
 	// active mapper.
-	e.activeMapper(activeMappers)
+	e.activeMapper(activeTentacles)
 }
 
-func (e *entity) activeMapper(actives []string) {
+// activeMapper active mappers.
+func (e *entity) activeMapper(actives map[string][]mapper.Tentacler) {
+	for mapperID, tentacles := range actives {
+		msg := make(map[string]interface{})
+		for _, tentacle := range tentacles {
+			for _, item := range tentacle.Items() {
+				msg[item.String()] = e.getProperty(e.cacheProps[item.EntityId], item.PropertyKey)
+			}
+		}
 
+		// excute mapper.
+		properties, err := e.mappers[mapperID].Exec(msg)
+		if nil != err {
+			log.Errorf("exec entity mapper failed ", err)
+		}
+
+		for propertyKey, value := range properties {
+			e.setProperty(propertyKey, value)
+		}
+	}
 }
 
+func (e *entity) getProperty(properties map[string]interface{}, propertyKey string) interface{} {
+	if len(properties) == 0 {
+		return nil
+	}
+
+	// 我们或许应该在这里解析propertyKey中的嵌套层次.
+	return properties[propertyKey]
+}
+
+func (e *entity) setProperty(propertyKey string, value interface{}) {
+	// 我们或许应该在这里解析propertyKey中的嵌套层次.
+	e.KValues[propertyKey] = value
+}
+
+// invokeTentacleMsg dispose Tentacle messages.
 func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
 	if e.ID != msg.TargetID {
 		tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetID, msg.Items)
@@ -352,17 +403,13 @@ func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
 	for _, tentacles := range e.indexTentacles {
 		for _, tentacle := range tentacles {
 			for _, item := range tentacle.Items() {
-				e.tentacles[item] = append(e.tentacles[item], tentacle)
+				e.tentacles[item.String()] = append(e.tentacles[item.String()], tentacle)
 			}
 		}
 	}
 }
 
-type activePair struct {
-	PropertyKey string
-	TentacleKey string
-}
-
+// getEntityBase deep-copy EntityBase.
 func (e *entity) getEntityBase() *EntityBase {
 	return &EntityBase{
 		ID:       e.ID,
@@ -376,6 +423,7 @@ func (e *entity) getEntityBase() *EntityBase {
 	}
 }
 
+// uuid generate an uuid.
 func uuid() string {
 	uuid := make([]byte, 16)
 	if _, err := rand.Read(uuid); err != nil {

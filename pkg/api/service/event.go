@@ -96,7 +96,7 @@ func (s *EventService) getEvent(ctx context.Context, in *common.InvocationEvent)
 		return nil, model.ErrSourceNil
 	}
 
-	if user, ok = ctx.Value(service.HeaderUser).(string); !ok || user == "" {
+	if user, ok = ctx.Value(service.HeaderOwner).(string); !ok || user == "" {
 		return nil, model.ErrUserNil
 	}
 
@@ -138,8 +138,8 @@ func (s *EventService) writeEvent(ctx context.Context, in *common.InvocationEven
 		log.Errorf("ctx: '%' parse to string err", service.HeaderTopic)
 	}
 
-	if user, ok = ctx.Value(service.HeaderUser).(string); !ok {
-		log.Errorf("ctx: '%' parse to string err", service.HeaderUser)
+	if user, ok = ctx.Value(service.HeaderOwner).(string); !ok {
+		log.Errorf("ctx: '%' parse to string err", service.HeaderOwner)
 	}
 
 	err = s.cli.SaveState(context.Background(), s.storeName, source+user+topic, in.Data)

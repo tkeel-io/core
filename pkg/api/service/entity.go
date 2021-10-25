@@ -113,7 +113,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return source, err
 	}
 
-	if entity.Owner, err = getStringFrom(ctx, service.HeaderUser); nil == err {
+	if entity.Owner, err = getStringFrom(ctx, service.HeaderOwner); nil == err {
 		// userId field required.
 		log.Info("parse http request field(owner) from header successed.")
 	} else if entity.Owner, err = e.getValFromValues(values, entityFieldOwner); nil != err {
