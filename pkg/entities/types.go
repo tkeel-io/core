@@ -43,6 +43,8 @@ type EntityOp interface {
 
 type EntitySubscriptionOp interface {
 	EntityOp
+
+	GetMode() string
 }
 
 type EntityContext struct {

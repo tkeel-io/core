@@ -83,7 +83,7 @@ func (s *SubscriptionService) getValFromValues(values url.Values, key string) (s
 	return "", entityFieldRequired(key)
 }
 
-func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) (source string, err error) { // nolint
+func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) (source string, err error) {
 	var values url.Values
 
 	if values, err = url.ParseQuery(in.QueryString); nil != err {
@@ -200,7 +200,7 @@ func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common
 		return out, errors.Wrap(err, "create subscription failed")
 	}
 
-	return
+	return out, nil
 }
 
 // subscriptionUpdate update an entity.
@@ -246,7 +246,7 @@ func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common
 		return out, errors.Wrap(err, "update subscription failed")
 	}
 
-	return
+	return out, nil
 }
 
 // EntityGet delete an entity.
@@ -325,5 +325,6 @@ type Subscription struct {
 
 func DecodeSubscription(data []byte) (*Subscription, error) {
 	subscription := Subscription{}
-	return &subscription, json.Unmarshal(data, &subscription)
+	err := json.Unmarshal(data, &subscription)
+	return &subscription, errors.Wrap(err, "decode subscription base information failed, request body must be json")
 }

@@ -25,8 +25,9 @@ const (
 	EntityDetached int32 = 0
 	EntityAttached int32 = 1
 
-	EntityStatusActive  = "active"
-	EntityStatusDeleted = "deleted"
+	EntityStatusActive   = "active"
+	EntityStatusInactive = "inactive"
+	EntityStatusDeleted  = "deleted"
 )
 
 type EntityBase struct {
