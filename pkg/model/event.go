@@ -64,7 +64,7 @@ func NewKEventFromContext(ctx context.Context) (*KEvent, error) {
 		return nil, ErrSourceNil
 	}
 
-	if kv.User, ok = ctx.Value(service.HeaderUser).(string); !ok || kv.User == "" {
+	if kv.User, ok = ctx.Value(service.HeaderOwner).(string); !ok || kv.User == "" {
 		return nil, ErrUserNil
 	}
 

@@ -44,7 +44,10 @@ func NewServer(ctx context.Context, conf *config.Config) *Server {
 	}
 
 	// create entity manager.
-	entityManager := entities.NewEntityManager(ctx, coroutinePool)
+	entityManager, err := entities.NewEntityManager(ctx, coroutinePool)
+	if nil != err {
+		log.Fatal(err)
+	}
 
 	ser := Server{
 		ctx:           ctx,

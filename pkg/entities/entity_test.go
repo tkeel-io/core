@@ -15,7 +15,7 @@ func TestEntity(t *testing.T) {
 		panic(err)
 	}
 
-	mgr := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
 	enty1, err1 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	enty2, err2 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
@@ -29,7 +29,7 @@ func TestGetProperties(t *testing.T) {
 		panic(err)
 	}
 
-	mgr := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
 	entity, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	if nil != err {
@@ -64,7 +64,7 @@ func TestEntity_getEntity(t *testing.T) {
 	coroutinePool, err := ants.NewPool(500)
 	assert.Nil(t, err)
 
-	mgr := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
 	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	assert.Nil(t, err)

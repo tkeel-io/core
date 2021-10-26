@@ -22,7 +22,7 @@ pluginA: pluginA。pubcore用于向core发布数据，subcore用于从core订阅
   "source": "pluginA",
   "filter": "/abcd/+",
   "target": "pluginB",
-  "type": "realtime"
+  "mode": "realtime"
 }
 ```
 ```json
@@ -30,7 +30,7 @@ pluginA: pluginA。pubcore用于向core发布数据，subcore用于从core订阅
   "source": "pluginA",
   "filter": "* where thing_id=abcd",
   "target": "pluginA",
-  "type": "realtime"
+  "mode": "realtime"
 }
 ```
 其中filter可采用不同的表达形式

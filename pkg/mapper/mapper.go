@@ -41,17 +41,17 @@ func (m *mapper) Tentacles() []Tentacler {
 	mqlInst := mql.NewMQL(m.mqlText)
 	tts := mqlInst.Tentacles()
 	tentacles := make([]Tentacler, 0, len(tts))
-	mItems := make([]string, 0)
-	for entityID, items := range tts {
-		if len(mItems) == 0 {
-			mItems = make([]string, 0, len(tts)*len(items))
-		}
+	mItems := make([]WatchKey, 0)
 
-		eItems := make([]string, len(items))
-		for i, item := range items {
-			tentacleKey := GenTentacleKey(entityID, item)
-			eItems[i] = tentacleKey
-			mItems = append(mItems, tentacleKey)
+	for entityID, items := range tts {
+		eItems := make([]WatchKey, len(items))
+		for index, item := range items {
+			watchKey := WatchKey{
+				EntityId:    entityID,
+				PropertyKey: item,
+			}
+			eItems[index] = watchKey
+			mItems = append(mItems, watchKey)
 		}
 
 		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, entityID, eItems))
@@ -68,7 +68,7 @@ func (m *mapper) Copy() Mapper {
 }
 
 // Exec input returns output.
-func (m *mapper) Exec(values map[string]map[string]interface{}) (res map[string]map[string]interface{}, err error) {
+func (m *mapper) Exec(values map[string]interface{}) (res map[string]interface{}, err error) {
 	res, err = mql.NewMQL(m.mqlText).Exec(values)
 	if err != nil {
 		return nil, errors.Unwrap(err)
