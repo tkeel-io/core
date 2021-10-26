@@ -9,7 +9,7 @@ import (
 const (
 	OpenAPISuccessCode = 0
 
-	OpenAPIVersion      = "1.0"
+	OpenAPIVersion      = "v0.0.1"
 	OpenAPISuccessMsg   = "ok"
 	OpenAPIStatusActive = "ACTIVE"
 )
@@ -30,10 +30,11 @@ type IService interface {
 // IdentifyResponse
 // this is ref:https://cwiki.yunify.com/pages/viewpage.action?pageId=80092844.
 type IdentifyResponse struct {
-	Ret      int    `json:"ret"`
-	Msg      string `json:"msg"`
-	PluginID string `json:"plugin_id"`
-	Version  string `json:"version"`
+	Ret          int    `json:"ret"`
+	Msg          string `json:"msg"`
+	PluginID     string `json:"plugin_id"`
+	Version      string `json:"version"`
+	TkeelVersion string `json:"tkeel_version"`
 }
 
 type StatusResponse struct {

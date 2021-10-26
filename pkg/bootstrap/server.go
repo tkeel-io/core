@@ -101,31 +101,10 @@ func (s *Server) Close() {}
 func initAPIRegistry(ctx context.Context, apiRegistry *api.Registry, apiConfig *config.APIConfig, entityManager *entities.EntityManager) error {
 	var (
 		err                  error
-		eventAPI             *service.EventService
 		entityAPI            *service.EntityService
 		topicEventAPI        *service.TopicEventService
 		subscriptionEventAPI *service.SubscriptionService
 	)
-
-	// register event api.
-	if eventAPI, err = service.NewEventService(&service.EventServiceConfig{
-		RawTopic:          apiConfig.EventAPIConfig.RawTopic,
-		TimeSeriesTopic:   apiConfig.EventAPIConfig.TimeSeriesTopic,
-		PropertyTopic:     apiConfig.EventAPIConfig.PropertyTopic,
-		RelationShipTopic: apiConfig.EventAPIConfig.RelationshipTopic,
-		StoreName:         apiConfig.EventAPIConfig.StoreName,
-		PubsubName:        apiConfig.EventAPIConfig.PubsubName,
-	}); err != nil {
-		return errors.Wrap(err, "new event service err")
-	}
-
-	if err = apiRegistry.AddService(eventAPI); err != nil {
-		return errors.Wrap(err, "api registry add service err")
-	}
-
-	if err = apiRegistry.AddService(service.NewTimeSeriesService()); err != nil {
-		return errors.Wrap(err, "api registry add service err")
-	}
 
 	if entityAPI, err = service.NewEntityService(ctx, entityManager); err != nil {
 		return errors.Wrap(err, "new entity service err")
