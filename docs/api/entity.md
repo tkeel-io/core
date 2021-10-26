@@ -1,72 +1,9 @@
-# core
-
-> join us, you are not alone.
-
-[中文](README_zh.md)
-
-
-## Run
-
-### Self-hosted
-本地运行一个redis，监听6379端口，无密码  
-```bash
-dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./config go run . serve
-```
-执行测试
-
-### Kubernetes
-1. 部署reids服务
-
-    ```bash
-    helm install redis bitnami/redis
-    ```
-2. 部署pubsub和state组件 
-    ```bash
-    kubectl apply -f redis-state-core.yaml
-    kubectl apply -f redis-pubsub-core.yaml
-    kubectl apply -f binding-core.yaml
-    ```
-3. 运行core程序
-    ```bash
-    kubectl apply -f core.yaml
-    ```
-4. 测试  
-    ```bash
-    kubectl apply -f client.yaml
-
-    kubectl get pod |grep client  // 找到对应的pod
-
-    kubectl exec -it client-***-* -- /bin/sh // 对应的pod名称
-
-    ```
-    执行测试
+## Entity APIs
 
 
 
-### Required
-
-1. 需要创建数据库`kcore`
-```sql
-CREATE DATABASE IF NOT EXISTS kcore 
-	DEFAULT CHARACTER SET utf8;
-```
-1. 需要创建表`kcore.entity`
-```sql
-  CREATE TABLE IF NOT EXISTS entity(
-    id varchar(127) UNIQUE NOT NULL,
-    owner VARCHAR(63) NOT NULL,
-    source VARCHAR(63) NOT NULL,
-    tag VARCHAR(63),
-    status VARCHAR(63),
-    version INTEGER,
-    entity_key VARCHAR(127),
-    deleted_id VARCHAR(255),
-    PRIMARY KEY ( id )
-  )ENGINE=InnoDB DEFAULT CHARSET=utf8;
-```
-
-
-## Test
+----
+## Tips
 
 > api调用中，必须设置Header: Source, Owner, 可选字段： Type字段:
 1. `Source`标识请求的发起者，如设备管理`device-management`，`Owner`标识是由哪一个用户发起的请求，`Type`标识实体类型。
@@ -79,7 +16,11 @@ CREATE DATABASE IF NOT EXISTS kcore
 
 ### 创建 Entity
 
+- Method: **POST**
+- URL: ```http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities?id={entity_id}&owner={owner}&type={type}```
+
 **Params：**
+
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
@@ -87,20 +28,21 @@ CREATE DATABASE IF NOT EXISTS kcore
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
+| Body |json|false|body|用于创建实体时的初始属性。|
 
 
 创建entity, POST支持`upsert`操作
 ```bash
-# 指定entityId创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?owner=admin&type=DEVICE" \
+# 创建entity
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?owner=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" \
   -d '{
        "status": "completed"
      }'
 
-# upsert
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?source=abcd&owner=admin&type=device" \
+# 指定entityId创建entity
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?id=test123&source=abcd&owner=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -121,6 +63,8 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
 
 ### 查询 Entity
 
+- Method: **GET**
+- URL: ```http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}```
 **Params：**
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
@@ -139,8 +83,11 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 
 
 ### 更新 Entity
+- Method: **PUT**
+- URL: ```http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}```
 
 **Params：**
+
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
@@ -148,6 +95,7 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
+| Body |json|false|body|用于更新的实体的属性|
 
 ```bash
 curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
@@ -164,9 +112,11 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 
 
 ### 删除 Entity
-
+- Method: **DELETE**
+- URL: ```http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}```
 
 **Params：**
+
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属Plugin。 | 
@@ -178,17 +128,12 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 ```bash
 curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
-  -H "Owner: admin"  \
+  -H "Owner: admin" \
   -H "Type: DEVICE" 
 ```
 
 
-## openapi 
 
-```bash
-# call /v1/identify
-curl -X GET http://localhost:3500/v1.0/invoke/core/method/v1/identify
-
-# call /v1/state
-curl -X GET http://localhost:3500/v1.0/invoke/core/method/v1/status
-```
+### 筛选 Entities
+- Method: **GET**
+- URL: ```http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities?owner={owner}&type={type}```
