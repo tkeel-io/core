@@ -20,10 +20,11 @@ func identifyHandler(rw http.ResponseWriter, r *http.Request) {
 	preDisposeRequest(rw, r)
 
 	in := IdentifyResponse{
-		Ret:      OpenAPISuccessCode,
-		Msg:      OpenAPISuccessMsg,
-		Version:  OpenAPIVersion,
-		PluginID: defaultOpenAPIPluginID,
+		Ret:          OpenAPISuccessCode,
+		Msg:          OpenAPISuccessMsg,
+		Version:      OpenAPIVersion,
+		TkeelVersion: OpenAPIVersion,
+		PluginID:     defaultOpenAPIPluginID,
 	}
 
 	bytes, _ := json.Marshal(in)
