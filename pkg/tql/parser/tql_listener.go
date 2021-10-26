@@ -17,23 +17,38 @@ type TQLListener interface {
 	// EnterTargetEntity is called when entering the targetEntity production.
 	EnterTargetEntity(c *TargetEntityContext)
 
-	// EnterCompareValue is called when entering the CompareValue production.
-	EnterCompareValue(c *CompareValueContext)
-
 	// EnterExpression is called when entering the Expression production.
 	EnterExpression(c *ExpressionContext)
 
-	// EnterMulDiv is called when entering the MulDiv production.
-	EnterMulDiv(c *MulDivContext)
+	// EnterDummyAddSub is called when entering the DummyAddSub production.
+	EnterDummyAddSub(c *DummyAddSubContext)
 
-	// EnterAddSub is called when entering the AddSub production.
-	EnterAddSub(c *AddSubContext)
+	// EnterDummyMulDiv is called when entering the DummyMulDiv production.
+	EnterDummyMulDiv(c *DummyMulDivContext)
+
+	// EnterDummyCompareValue is called when entering the DummyCompareValue production.
+	EnterDummyCompareValue(c *DummyCompareValueContext)
 
 	// EnterSourceEntity is called when entering the sourceEntity production.
 	EnterSourceEntity(c *SourceEntityContext)
 
 	// EnterTargetProperty is called when entering the targetProperty production.
 	EnterTargetProperty(c *TargetPropertyContext)
+
+	// EnterComputing is called when entering the computing production.
+	EnterComputing(c *ComputingContext)
+
+	// EnterNumber is called when entering the Number production.
+	EnterNumber(c *NumberContext)
+
+	// EnterCompareValue is called when entering the CompareValue production.
+	EnterCompareValue(c *CompareValueContext)
+
+	// EnterMulDiv is called when entering the MulDiv production.
+	EnterMulDiv(c *MulDivContext)
+
+	// EnterAddSub is called when entering the AddSub production.
+	EnterAddSub(c *AddSubContext)
 
 	// ExitRoot is called when exiting the root production.
 	ExitRoot(c *RootContext)
@@ -44,21 +59,36 @@ type TQLListener interface {
 	// ExitTargetEntity is called when exiting the targetEntity production.
 	ExitTargetEntity(c *TargetEntityContext)
 
-	// ExitCompareValue is called when exiting the CompareValue production.
-	ExitCompareValue(c *CompareValueContext)
-
 	// ExitExpression is called when exiting the Expression production.
 	ExitExpression(c *ExpressionContext)
 
-	// ExitMulDiv is called when exiting the MulDiv production.
-	ExitMulDiv(c *MulDivContext)
+	// ExitDummyAddSub is called when exiting the DummyAddSub production.
+	ExitDummyAddSub(c *DummyAddSubContext)
 
-	// ExitAddSub is called when exiting the AddSub production.
-	ExitAddSub(c *AddSubContext)
+	// ExitDummyMulDiv is called when exiting the DummyMulDiv production.
+	ExitDummyMulDiv(c *DummyMulDivContext)
+
+	// ExitDummyCompareValue is called when exiting the DummyCompareValue production.
+	ExitDummyCompareValue(c *DummyCompareValueContext)
 
 	// ExitSourceEntity is called when exiting the sourceEntity production.
 	ExitSourceEntity(c *SourceEntityContext)
 
 	// ExitTargetProperty is called when exiting the targetProperty production.
 	ExitTargetProperty(c *TargetPropertyContext)
+
+	// ExitComputing is called when exiting the computing production.
+	ExitComputing(c *ComputingContext)
+
+	// ExitNumber is called when exiting the Number production.
+	ExitNumber(c *NumberContext)
+
+	// ExitCompareValue is called when exiting the CompareValue production.
+	ExitCompareValue(c *CompareValueContext)
+
+	// ExitMulDiv is called when exiting the MulDiv production.
+	ExitMulDiv(c *MulDivContext)
+
+	// ExitAddSub is called when exiting the AddSub production.
+	ExitAddSub(c *AddSubContext)
 }

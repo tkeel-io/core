@@ -80,7 +80,6 @@ WHITESPACE:         [ \r\n\t]+ -> skip;
 // 2. Rules
 root
     : INSERT INTO targetEntity SELECT fields EOF;
-//    : SELECT fields EOF;
 
 
 // 2.1 Select
@@ -89,15 +88,15 @@ fields
     ;
 
 targetEntity
-    : TARGETENTITY
+    : ENTITYNAME
     ;
 
 expr
     : sourceEntity                                  # Expression
     | sourceEntity+ AS targetProperty+              # Expression
-    | expr op=('*'|'/'|'%') expr                    # MulDiv
-    | expr op=('+'|'-') expr                        # AddSub
-    | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # CompareValue
+    | expr op=('*'|'/'|'%') expr                    # DummyMulDiv
+    | expr op=('+'|'-') expr                        # DummyAddSub
+    | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # DummyCompareValue
     ;
 
 
@@ -113,6 +112,15 @@ targetProperty
     ;
 
 
+computing
+    : numExp EOF;
+
+numExp
+   : numExp op=('*'|'/') numExp # MulDiv
+   | numExp op=('+'|'-') numExp # AddSub
+   | numExp op=(EQ | GT | LT | GTE | LTE | NE) numExp  # CompareValue
+   | NUMBER                             # Number
+   ;
 
 fragment A: [aA];
 fragment B: [bB];
