@@ -6,18 +6,28 @@ import (
 	"time"
 )
 
-type IbElem struct {
-	Index   int
+type Header struct {
+	Key   string
+	Value string
+}
+
+func NewHeader(key, value string) Header {
+	return Header{key, value}
+}
+
+type MessageCtx struct {
+	Headers []Header
 	Offset  Offseter
 	Message interface{}
 }
 
 type inbox struct {
-	Elems     []IbElem
-	msgCh     chan IbElem
-	ticker    *time.Ticker
-	msgHandle MessageHandler
-	shutdowCh chan struct{}
+	Buffer       []MessageCtx
+	msgCh        chan MessageCtx
+	ticker       *time.Ticker
+	recivers     map[string]MsgReciver
+	shutdowCh    chan struct{}
+	inboxManager InboxManager
 
 	size        int
 	capcity     int
@@ -43,16 +53,15 @@ func NewInbox(ctx context.Context, capcity, nonBlockNum int, msgHandle MessageHa
 		cancel:      cancel,
 		size:        0,
 		capcity:     capcity,
-		msgHandle:   msgHandle,
 		shutdowCh:   make(chan struct{}),
 		ticker:      time.NewTicker(10),
 		expiredTime: defaultExpiredTime,
-		msgCh:       make(chan IbElem, nonBlockNum),
-		Elems:       make([]IbElem, capcity),
+		msgCh:       make(chan MessageCtx, nonBlockNum),
+		Buffer:      make([]MessageCtx, capcity),
 	}
 }
 
-func (ib *inbox) OnMessage(msg IbElem) {
+func (ib *inbox) OnMessage(msg MessageCtx) {
 	ib.msgCh <- msg
 }
 
@@ -84,12 +93,23 @@ func (ib *inbox) Start() { // nolint
 			blockNum := ib.blockNum
 			blockIdx := (ib.headIdx + ib.size - ib.blockNum) % ib.capcity
 			for n := 0; n < blockNum; n++ {
-				_, err := ib.msgHandle(ib.Elems[(blockIdx+n)%ib.capcity])
-				if nil != err {
-					// Entity 负载达到上限，跟不上，那么我们现在实现的策略为 阻塞等待.
-					runtime.Gosched()
-					break
+				msg := ib.Buffer[(blockIdx+n)%ib.capcity]
+				reciverId := msg.Headers[MsgReciverId]
+				if reciver, exists := ib.recivers[reciverId]; exists {
+					if MsgReciverStatusInactive == reciver.Status() {
+						log.Infof("inactive reciver, evicted reciver (%s).", reciverId)
+						delete(ib.recivers, reciverId)
+					} else {
+						_, err := reciver.OnMessage(msg)
+						if nil != err {
+							// Entity 负载达到上限，跟不上，那么我们现在实现的策略为 阻塞等待.
+							runtime.Gosched()
+							break
+						}
+					}
 				}
+
+				log.Infof("handle msg: %v.", msg)
 
 				ib.blockNum--
 			}
@@ -111,9 +131,57 @@ func (ib *inbox) Start() { // nolint
 func (ib *inbox) Stop() {}
 
 func (ib *inbox) commit() bool {
+	var (
+		headIdx = ib.headIdx
+		offset  = NewOffseter()
+	)
+
+	if ib.size != 0 {
+		num := ib.size - ib.blockNum
+		for index := 0; index < num; index++ {
+			msg := ib.Buffer[headIdx]
+			if !msg.Offset.Status() {
+				break
+			} else if !msg.Offset.AutoCommit() {
+				offset = msg.Offset
+				headIdx++
+				continue
+			}
+		}
+
+		if headIdx == ib.headIdx {
+			return false
+		}
+
+		if err := offset.Commit(); nil != err {
+			log.Errorf("commit failed, %s.", err.Error())
+			return false
+		}
+
+		ib.headIdx = headIdx
+	}
+
 	return true
 }
 
 func (ib *inbox) evictedHead() {
+	// 先直接跳过队头阻塞的消息.
+	if ib.size == 0 {
+		return
+	}
 
+	headIdx := ib.headIdx
+	msg0 := ib.Buffer[headIdx]
+	reciverId = msg0.Headers[MsgReciverId]
+
+	for i := 0; i < ib.size; i++ {
+		msg := ib.Buffer[(headIdx)%ib.capcity]
+		if msg.Headers[MsgReciverId] != reciverId {
+			break
+		}
+		headIdx++
+	}
+
+	ib.size
+	ib.headIdx
 }

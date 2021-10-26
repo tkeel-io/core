@@ -5,20 +5,32 @@ import "github.com/tkeel-io/core/pkg/logger"
 const (
 	defaultNonBlockNum = 10
 	defaultExpiredTime = 300 // ms.
+
+	MsgReciverId             = "m-reciverid"
+	MsgReciverStatusActive   = "m-active"
+	MsgReciverStatusInactive = "m-inactive"
 )
 
 var log = logger.NewLogger("core.inbox")
 
-type MessageHandler = func(msg IbElem) (int, error)
+type MessageHandler = func(msg MessageCtx) (int, error)
 
 type Inbox interface {
 	Start()
 	Stop()
-	OnMessage(msg IbElem)
+	OnMessage(msg MessageCtx)
 }
 
 type Offseter interface {
-	commit() error
 	Status() bool
+	Commit() error
 	Confirm()
+	AutoCommit() bool
 }
+
+type MsgReciver interface {
+	Status() string
+	OnMessage(msg MessageCtx) (int, error)
+}
+
+type InboxManager interface{}

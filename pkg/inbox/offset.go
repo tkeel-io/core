@@ -15,6 +15,10 @@ func (off *offset) Status() bool {
 // Confirm confirm message.
 func (off *offset) Confirm() {}
 
-func (off *offset) commit() error {
+func (off *offset) Commit() error {
 	return nil
+}
+
+func (off *offset) AutoCommit() {
+	return true
 }
