@@ -1,5 +1,4 @@
-// example.go
-package main
+package tql
 
 import (
 	"fmt"
@@ -281,29 +280,4 @@ func Parse(input string) TQLListener {
 	//fmt.Println("get targetEntity", listener.targetEntity)
 	//fmt.Println("get tentacles", listener.tentacles)
 	return listener
-}
-
-func main() {
-	tql := `insert into entity3 select
-		entity1.property1 as property1,
-		entity2.property2.name as property2,
-		entity1.property1 + entity2.property3 as property3`
-
-	//tql := `insert into target_entity select *`
-
-	//tql := `insert into target_entity select src_entity`
-
-	fmt.Println("parse tql: ", tql)
-	l := Parse(tql)
-	cfg := l.GetParseConfigs()
-	fmt.Println("========\n ", cfg)
-
-	// 如果是entity, 则为 entity 的 properties map; 如果是property 则为单独的 property map
-	in := make(map[string]interface{})
-	in["entity1.property1"] = 1
-	in["entity2.property2.name"] = 2
-	in["entity2.property3"] = 3
-	fmt.Println("========\n in: ", in)
-	out := l.GetComputeResults(in)
-	fmt.Println(" out: ", out)
 }
