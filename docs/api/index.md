@@ -1,45 +1,10 @@
 # API 文档
 
-----
-## entity
-1. create
-```bash
-post .../plugins/{plugin}/entities
-```
-2. delete
-```bash
-delete .../plugins/{plugin}/entities/{entity}
-```
-3. patch
-```bash
-patch .../plugins/{plugin}/entities/{entity}
-```
-4. read
-```bash
-get .../plugins/{plugin}/entities/{entity}
-```
-5. list
-```bash
-get .../plugins/{plugin}/entities
-```
-## subscription
-1. create
-```bash
-post .../plugins/{plugin}/subscriptions
-```
-2. delete
-```bash
-delete .../plugins/{plugin}/subscriptions/{subscription}
-```
-3. patch
-```bash
-patch .../plugins/{plugin}/subscriptions/{subscription}
-```
-4. read
-```bash
-get .../plugins/{plugin}/subscriptions/{subscription}
-```
-5. list
-```bash
-get .../plugins/{plugin}/subscriptions
-```
+> core 的 APIs 文档，文档提供向外暴露的 APIs 文档支持，包括 Entity 的操作，Subscription的操作，等等。
+
+
+## 目录
+
+- [Entity APIs](entity.md)
+- [Susbcription APIs](subscription.md)
+

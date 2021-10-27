@@ -24,8 +24,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestEntityCreate(t *testing.T) {
-	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
-	methodName := "entities"
+	queryString := "id=test123&source=abcd&type=DEVICE&owner=admin"
+	methodName := "/plugins/devicem/entities"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
@@ -47,8 +47,8 @@ func TestEntityCreate(t *testing.T) {
 }
 
 func TestEntityUpdate(t *testing.T) {
-	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
-	methodName := "entities"
+	queryString := "id=test123&source=abcd&type=DEVICE&owner=admin"
+	methodName := "/plugins/devicem/entities"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
@@ -70,8 +70,8 @@ func TestEntityUpdate(t *testing.T) {
 }
 
 func TestEntityGET(t *testing.T) {
-	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
-	methodName := "entities"
+	queryString := "id=test123&source=abcd&type=DEVICE&owner=admin"
+	methodName := "/plugins/devicem/entities"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
@@ -89,8 +89,8 @@ func TestEntityGET(t *testing.T) {
 }
 
 func TestEntityDelete(t *testing.T) {
-	queryString := "id=test123&source=abcd&type=DEVICE&user_id=admin"
-	methodName := "entities"
+	queryString := "id=test123&source=abcd&type=DEVICE&owner=admin"
+	methodName := "/plugins/devicem/entities"
 
 	result, err := client.InvokeMethodWithContent(context.Background(),
 		"core",
