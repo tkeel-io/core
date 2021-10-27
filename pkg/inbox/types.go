@@ -6,7 +6,7 @@ const (
 	defaultNonBlockNum = 10
 	defaultExpiredTime = 300 // ms.
 
-	MsgReciverId             = "m-reciverid"
+	MsgReciverID             = "m-reciverid"
 	MsgReciverStatusActive   = "m-active"
 	MsgReciverStatusInactive = "m-inactive"
 )
@@ -32,5 +32,3 @@ type MsgReciver interface {
 	Status() string
 	OnMessage(msg MessageCtx) (int, error)
 }
-
-type InboxManager interface{}

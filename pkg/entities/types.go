@@ -12,6 +12,9 @@ const (
 	EntityCtxHeaderSourceID  = "x-source"
 	EntityCtxHeaderTargetID  = "x-target"
 	EntityCtxHeaderRequestID = "x-request_id"
+
+	TentacleOperatorAppend = "append"
+	TentacleOperatorRemove = "remove"
 )
 
 var (

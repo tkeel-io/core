@@ -6,28 +6,20 @@ import (
 	"time"
 )
 
-type Header struct {
-	Key   string
-	Value string
-}
-
-func NewHeader(key, value string) Header {
-	return Header{key, value}
-}
+type MessageHeader = map[string]string
 
 type MessageCtx struct {
-	Headers []Header
+	Headers MessageHeader
 	Offset  Offseter
 	Message interface{}
 }
 
 type inbox struct {
-	Buffer       []MessageCtx
-	msgCh        chan MessageCtx
-	ticker       *time.Ticker
-	recivers     map[string]MsgReciver
-	shutdowCh    chan struct{}
-	inboxManager InboxManager
+	Buffer    []MessageCtx
+	msgCh     chan MessageCtx
+	ticker    *time.Ticker
+	recivers  map[string]MsgReciver
+	shutdowCh chan struct{}
 
 	size        int
 	capcity     int
@@ -82,7 +74,7 @@ func (ib *inbox) Start() { // nolint
 			for n := 0; n < idelNum; n++ {
 				select {
 				case msg := <-ib.msgCh:
-					ib.Elems[(ib.headIdx+ib.size)%ib.capcity] = msg
+					ib.Buffer[(ib.headIdx+ib.size)%ib.capcity] = msg
 					ib.size++
 				default:
 					break
@@ -94,11 +86,11 @@ func (ib *inbox) Start() { // nolint
 			blockIdx := (ib.headIdx + ib.size - ib.blockNum) % ib.capcity
 			for n := 0; n < blockNum; n++ {
 				msg := ib.Buffer[(blockIdx+n)%ib.capcity]
-				reciverId := msg.Headers[MsgReciverId]
-				if reciver, exists := ib.recivers[reciverId]; exists {
+				reciverID := msg.Headers[MsgReciverID]
+				if reciver, exists := ib.recivers[reciverID]; exists {
 					if MsgReciverStatusInactive == reciver.Status() {
-						log.Infof("inactive reciver, evicted reciver (%s).", reciverId)
-						delete(ib.recivers, reciverId)
+						log.Infof("inactive reciver, evicted reciver (%s).", reciverID)
+						delete(ib.recivers, reciverID)
 					} else {
 						_, err := reciver.OnMessage(msg)
 						if nil != err {
@@ -172,16 +164,16 @@ func (ib *inbox) evictedHead() {
 
 	headIdx := ib.headIdx
 	msg0 := ib.Buffer[headIdx]
-	reciverId = msg0.Headers[MsgReciverId]
+	reciverID := msg0.Headers[MsgReciverID]
 
 	for i := 0; i < ib.size; i++ {
-		msg := ib.Buffer[(headIdx)%ib.capcity]
-		if msg.Headers[MsgReciverId] != reciverId {
+		msg := ib.Buffer[headIdx%ib.capcity]
+		if msg.Headers[MsgReciverID] != reciverID {
 			break
 		}
 		headIdx++
 	}
 
-	ib.size
-	ib.headIdx
+	ib.size = ib.size - ib.headIdx + headIdx
+	ib.headIdx = headIdx % ib.capcity
 }

@@ -163,12 +163,44 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 				},
 				Message: &TentacleMsg{
 					TargetID: e.ID,
+					Operator: TentacleOperatorAppend,
 					Items:    tentacle.Copy().Items(),
 				},
 			})
 		}
 	}
 
+	return nil
+}
+
+func (e *entity) DeleteMapper(mid string) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	m, exists := e.mappers[mid]
+	if !exists {
+		return nil
+	}
+
+	sourceEntities := m.SourceEntities()
+	for _, entityID := range sourceEntities {
+		tentacle := mapper.MergeTentacles(e.indexTentacles[entityID]...)
+
+		if nil != tentacle {
+			// send tentacle msg.
+			e.entityManager.SendMsg(EntityContext{
+				Headers: Header{
+					EntityCtxHeaderSourceID: e.ID,
+					EntityCtxHeaderTargetID: entityID,
+				},
+				Message: &TentacleMsg{
+					TargetID: e.ID,
+					Operator: TentacleOperatorRemove,
+					Items:    tentacle.Copy().Items(),
+				},
+			})
+		}
+	}
 	return nil
 }
 
@@ -394,8 +426,16 @@ func (e *entity) setProperty(propertyKey string, value interface{}) {
 // invokeTentacleMsg dispose Tentacle messages.
 func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
 	if e.ID != msg.TargetID {
-		tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetID, msg.Items)
-		e.indexTentacles[msg.TargetID] = []mapper.Tentacler{tentacle}
+		switch msg.Operator {
+		case TentacleOperatorAppend:
+			tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetID, msg.Items)
+			e.indexTentacles[msg.TargetID] = []mapper.Tentacler{tentacle}
+		case TentacleOperatorRemove:
+			delete(e.indexTentacles, msg.TargetID)
+		default:
+			log.Error("invalid tentacle operator: %s, %v", msg.Operator, msg)
+		}
+		log.Info("catch tentacle event, op: %s, target: %s, msg: %v.", msg.Operator, msg.TargetID, msg)
 	}
 
 	// generate tentacles again.

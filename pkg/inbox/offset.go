@@ -19,6 +19,6 @@ func (off *offset) Commit() error {
 	return nil
 }
 
-func (off *offset) AutoCommit() {
+func (off *offset) AutoCommit() bool {
 	return true
 }

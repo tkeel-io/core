@@ -179,4 +179,34 @@ func (m *EntityManager) HandleMsg(ctx context.Context, msg EntityContext) {
 	m.msgCh <- msg
 }
 
+func (m *EntityManager) EscapedEntities() []string {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	entities := []string{}
+	for entityID := range m.entities {
+		entities = append(entities, entityID)
+	}
+	return entities
+}
+
+func (m *EntityManager) EscapedProperties(entityID string) []string {
+	m.lock.Lock()
+	entityInst, has := m.entities[entityID]
+	// check id, source, userId, ...
+	m.lock.Unlock()
+
+	if !has {
+		err := errEntityNotFound
+		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
+	}
+
+	properties := []string{}
+	en := entityInst.GetAllProperties()
+	for key := range en.KValues {
+		properties = append(properties, key)
+	}
+	return properties
+}
+
 func init() {}
