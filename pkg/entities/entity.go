@@ -146,11 +146,18 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 
 	// generate indexTentacles again.
 	for _, mp := range e.mappers {
-		e.indexTentacles[mp.TargetEntity()] =
-			append(e.indexTentacles[mp.TargetEntity()], m.Tentacles()...)
+		for _, tentacle := range mp.Tentacles() {
+			e.indexTentacles[tentacle.TargetID()] =
+				append(e.indexTentacles[tentacle.TargetID()], tentacle)
+		}
 	}
 
-	sourceEntities := m.SourceEntities()
+	sourceEntities := []string{m.TargetEntity()}
+	for _, expr := range m.SourceEntities() {
+		sourceEntities = append(sourceEntities,
+			e.entityManager.EscapedEntities(expr)...)
+	}
+
 	for _, entityID := range sourceEntities {
 		tentacle := mapper.MergeTentacles(e.indexTentacles[entityID]...)
 
@@ -182,7 +189,15 @@ func (e *entity) DeleteMapper(mid string) error {
 		return nil
 	}
 
-	sourceEntities := m.SourceEntities()
+	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
+	// 如果是动态生成的，那么前后两次生成可能不一致.
+	// 且这里使用了两个锁，存在死锁风险.
+	sourceEntities := []string{m.TargetEntity()}
+	for _, expr := range m.SourceEntities() {
+		sourceEntities = append(sourceEntities,
+			e.entityManager.EscapedEntities(expr)...)
+	}
+
 	for _, entityID := range sourceEntities {
 		tentacle := mapper.MergeTentacles(e.indexTentacles[entityID]...)
 
