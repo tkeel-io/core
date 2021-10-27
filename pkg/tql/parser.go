@@ -2,67 +2,69 @@ package tql
 
 import (
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 
-	"github.com/tkeel-io/core/pkg/tql/parser"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/tql/parser"
 )
 
+var log = logger.NewLogger("core.entities")
 
-type TQLListener struct {
+type Listener struct {
 	*parser.BaseTQLListener
 
 	targetEntity []string
 	sourceEntity []string
 	tentacles    map[string][]string
-	input        map[string]interface{}
-	output       map[string]interface{}
-	
-	execs        []*Exec
+	// input        map[string]interface{}
+	// output       map[string]interface{}
+
+	execs []*Exec
 	// computing results
-	stack        []int
+	stack []int
 }
 
 type Exec struct {
-	SourceEntities      []string
-	TargetProperty 		string
+	SourceEntities []string
+	TargetProperty string
 	// each split of ExitFields
-	Field               string
+	Field string
 	// real math expression from Field which replace key with value
-	Expression          string
+	Expression string
 }
 
-func (l *TQLListener) pushT(entity string) {
-	for _, e := range l.targetEntity{
-		if e == entity{
+func (l *Listener) pushT(entity string) {
+	for _, e := range l.targetEntity {
+		if e == entity {
 			return
 		}
 	}
 	l.targetEntity = append(l.targetEntity, entity)
 }
 
-func (l *TQLListener) pushS(entity string) {
-	for _, e := range l.sourceEntity{
-		if e == entity{
+func (l *Listener) pushS(entity string) {
+	for _, e := range l.sourceEntity {
+		if e == entity {
 			return
 		}
 	}
 	l.sourceEntity = append(l.sourceEntity, entity)
 }
 
-func (l *TQLListener) AddTentacle(k string, v string) {
-	fmt.Println("AddTentacle ", k, v)
-	if _, err := l.tentacles[k]; !err{
+func (l *Listener) AddTentacle(k string, v string) {
+	log.Infof("AddTentacle %v, %v", k, v)
+	if _, err := l.tentacles[k]; !err {
 		var vv []string
 		vv = append(vv, v)
-		if l.tentacles == nil{
+		if l.tentacles == nil {
 			l.tentacles = make(map[string][]string)
 		}
 		l.tentacles[k] = vv
-	}else{
-		for _, e := range l.tentacles[k]{
-			if e == v{
+	} else {
+		for _, e := range l.tentacles[k] {
+			if e == v {
 				return
 			}
 		}
@@ -72,8 +74,8 @@ func (l *TQLListener) AddTentacle(k string, v string) {
 }
 
 // ExitSourceEntity is called when production entity is exited.
-func (l *TQLListener) ExitSourceEntity(c *parser.SourceEntityContext) {
-	fmt.Println("ExitSourceEntity", c.GetText())
+func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
+	log.Infof("ExitSourceEntity %v", c.GetText())
 	text := c.GetText()
 	if strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
@@ -82,7 +84,7 @@ func (l *TQLListener) ExitSourceEntity(c *parser.SourceEntityContext) {
 		l.pushS(text)
 	}
 
-	//record SourceEntities
+	// record SourceEntities
 	if len(l.execs) > 0 {
 		e := l.execs[len(l.execs)-1]
 		if len(e.SourceEntities)-len(e.TargetProperty) == 1 {
@@ -92,78 +94,76 @@ func (l *TQLListener) ExitSourceEntity(c *parser.SourceEntityContext) {
 	}
 	var ne Exec
 	ne.SourceEntities = append(ne.SourceEntities, text)
-	fmt.Println("add SourceEntities:", ne)
+	log.Infof("add SourceEntities: %v", ne)
 	l.execs = append(l.execs, &ne)
 }
 
 // ExitTargetEntity is called when production entity is exited.
-func (l *TQLListener) ExitTargetEntity(c *parser.TargetEntityContext) {
-	fmt.Println("ExitTargetEntity",c.GetText())
-	text := c.GetText()
-	if strings.Contains(text, "."){
+func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
+	log.Info("ExitTargetEntity", c.GetText())
+	if text := c.GetText(); strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
 		l.pushT(arr[0])
-	}else{
+	} else {
 		l.pushT(text)
 	}
 }
 
 // ExitTargeProperty is called when production entity is exited.
-func (l *TQLListener) ExitTargetProperty(c *parser.TargetPropertyContext) {
-	fmt.Println("TargetPropertyContext",c.GetText())
+func (l *Listener) ExitTargetProperty(c *parser.TargetPropertyContext) {
+	log.Info("TargetPropertyContext", c.GetText())
 	tp := c.GetText()
 	// record TargetProperty
 	e := l.execs[len(l.execs)-1]
 	e.TargetProperty = tp
-	fmt.Println("add TargetProperty:", e)
-
+	log.Info("add TargetProperty:", e)
 }
 
 // ExitExpression is called when production Expression is exited.
-func (l *TQLListener) ExitExpression(c *parser.ExpressionContext) {
-	//fmt.Println("ExitExpression",c.GetText())
+func (l *Listener) ExitExpression(c *parser.ExpressionContext) {
+	// log.Info("ExitExpression",c.GetText())
 }
 
 // ExitRoot is called when production root is exited.
-func (l *TQLListener) ExitRoot(c *parser.RootContext) {
-	//fmt.Println("ExitRoot",c.GetText())
+func (l *Listener) ExitRoot(c *parser.RootContext) {
+	// log.Info("ExitRoot",c.GetText())
 }
 
 // ExitFields is called when production fields is exited.
-func (l *TQLListener) ExitFields(c *parser.FieldsContext) {
-	fmt.Println("ExitFields",c.GetText())
-	//record Field
+func (l *Listener) ExitFields(c *parser.FieldsContext) {
+	log.Info("ExitFields", c.GetText())
+	// record Field
 	fields := c.GetText()
 	fieldArr := strings.Split(fields, ",")
 	for ind, f := range fieldArr {
 		field := strings.Split(f, "as")[0]
 		e := l.execs[ind]
 		e.Field = field
-		fmt.Println("====add field:", field)
+		log.Info("====add field:", field)
 	}
 }
 
 // ExitCompareValue is called when production CompareValue is exited.
-func (l *TQLListener) ExitCompareValue(c *parser.CompareValueContext) {
-	fmt.Println("ExitCompareValue",c.GetText())
+func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
+	log.Info("ExitCompareValue", c.GetText())
 }
 
-func (l *TQLListener) GetExpression(index int, in map[string]interface{}) string{
+func (l *Listener) GetExpression(index int, in map[string]interface{}) string {
 	e := l.execs[index]
-	for k, v := range in{
+	for k, v := range in {
 		// convert to string, need to add space otherwise "expecting <EOF>" error
-		nk := " "+ fmt.Sprintf("%v", v) + " "
+		nk := " " + fmt.Sprintf("%v", v) + " "
 		e.Field = strings.ReplaceAll(e.Field, k, nk)
 	}
 	e.Expression = e.Field
 	return e.Expression
 }
 
-func (l *TQLListener) push(i int) {
+func (l *Listener) push(i int) {
 	l.stack = append(l.stack, i)
 }
 
-func (l *TQLListener) pop() int {
+func (l *Listener) pop() int {
 	if len(l.stack) < 1 {
 		panic("stack is empty unable to pop")
 	}
@@ -178,7 +178,7 @@ func (l *TQLListener) pop() int {
 }
 
 // ExitNumber is called when exiting the Number production.
-func (l *TQLListener) ExitNumber(c *parser.NumberContext) {
+func (l *Listener) ExitNumber(c *parser.NumberContext) {
 	i, err := strconv.Atoi(c.GetText())
 	if err != nil {
 		panic(err.Error())
@@ -188,8 +188,8 @@ func (l *TQLListener) ExitNumber(c *parser.NumberContext) {
 }
 
 // ExitMulDiv is called when exiting the MulDiv production.
-func (l *TQLListener) ExitMulDiv(c *parser.MulDivContext) {
-	fmt.Println("ExitMulDiv",c.GetText())
+func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
+	log.Info("ExitMulDiv", c.GetText())
 	right, left := l.pop(), l.pop()
 
 	switch c.GetOp().GetTokenType() {
@@ -203,8 +203,8 @@ func (l *TQLListener) ExitMulDiv(c *parser.MulDivContext) {
 }
 
 // ExitAddSub is called when exiting the AddSub production.
-func (l *TQLListener) ExitAddSub(c *parser.AddSubContext) {
-	fmt.Println("ExitAddSub",c.GetText())
+func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
+	log.Info("ExitAddSub", c.GetText())
 	right, left := l.pop(), l.pop()
 
 	switch c.GetOp().GetTokenType() {
@@ -218,7 +218,7 @@ func (l *TQLListener) ExitAddSub(c *parser.AddSubContext) {
 }
 
 // Computing takes a number expression and returns results.
-func computing(input string) int{
+func computing(input string) int {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -230,18 +230,18 @@ func computing(input string) int{
 	p := parser.NewTQLParser(stream)
 
 	// Finally parse the expression (by walking the tree)
-	var listener TQLListener
+	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
-	//fmt.Println("========results: \n", listener.pop())
+	// log.Info("========results: \n", listener.pop())
 	return listener.pop()
 }
 
-func (l *TQLListener)GetParseConfigs() map[string]interface{}{
+func (l *Listener) GetParseConfigs() map[string]interface{} {
 	configMap := make(map[string]interface{})
 	configMap["SourceEntity"] = l.sourceEntity
 	configMap["TargetEntity"] = l.targetEntity
 	// if tentacles is null map, it should be map["*"]["*", ]
-	if l.tentacles == nil{
+	if l.tentacles == nil {
 		l.tentacles = make(map[string][]string)
 		l.tentacles["*"] = append(l.tentacles["*"], "*")
 	}
@@ -249,20 +249,20 @@ func (l *TQLListener)GetParseConfigs() map[string]interface{}{
 	return configMap
 }
 
-func (l *TQLListener)GetComputeResults(in map[string]interface{}) map[string]interface{}{
+func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]interface{} {
 	//
-	//fmt.Println("get Expression:", l.GetExpression(0, in))
+	// log.Info("get Expression:", l.GetExpression(0, in))
 
 	out := make(map[string]interface{})
-	for ind, e := range l.execs{
+	for ind, e := range l.execs {
 		numExpr := l.GetExpression(ind, in)
-		 out[e.TargetProperty] = computing(numExpr)
+		out[e.TargetProperty] = computing(numExpr)
 	}
 	return out
 }
 
 // Parse takes a tql string expression and returns a parsed dict.
-func Parse(input string) TQLListener {
+func Parse(input string) Listener {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -274,10 +274,7 @@ func Parse(input string) TQLListener {
 	p := parser.NewTQLParser(stream)
 
 	// Finally parse the expression (by walking the tree)
-	var listener TQLListener
+	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Root())
-	//fmt.Println("\n\nget sourceEntity", listener.sourceEntity)
-	//fmt.Println("get targetEntity", listener.targetEntity)
-	//fmt.Println("get tentacles", listener.tentacles)
 	return listener
 }
