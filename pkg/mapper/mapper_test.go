@@ -3,7 +3,6 @@ package mapper
 import "testing"
 
 func TestMapper(t *testing.T) {
-
 	input := map[string]interface{}{
 		"entity1.property1":      123,
 		"entity2.property2.name": 1,

@@ -57,7 +57,7 @@ curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
        "owner": "admin",
        "plugin": "abcd",
        "data": {
-           "temp": 567
+           "temp": 12
        }
      }'
 
