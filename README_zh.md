@@ -12,7 +12,77 @@ core可以作为tkeel的一个基础组件运行，也可以单独部署提供�
 
 ### 作为tkeel的组件运行
 
-core作为tkeel的基础组件，相关API的调用需要通过tkeel代理
+core作为tkeel的基础组件，相关API的调用需要通过tkeel代理  
+在tkeel相关组件完成之后，我们可以生成用于mqtt使用的token，创建实体，上报属性，获取快照，订阅等功能
+为了方便说明，我们使用外部流量方式访问keel，使用python作为示例代码语言
+#### 获取服务端口
+1. keel服务端口
+```bash
+KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
+```
+2. mqtt server服务端口
+```bash
+MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
+```
+
+keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
+```python
+keel_url = "http://{host}:{port}/v0.1.0"
+```
+
+#### 创建token
+
+```python
+def create_entity_token(entity_id, entity_type, user_id):
+    data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
+    token_create = "/auth/token/create"
+    res = requests.post(keel_url + token_create, json=data)
+    return res.json()["data"]["entity_token"]
+```
+
+#### 创建实体
+```python
+def create_entity(entity_id, entity_type, user_id, plugin_id, token):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
+    entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
+        **query)
+    data = dict(token=token)
+    res = requests.post(keel_url + entity_create, json=data)
+    print(res.json())
+```
+
+#### 上报实体属性
+```python
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt_client.Client(entity_id)
+    client.username_pw_set(username=user_id, password=token)
+    client.on_connect = on_connect
+    client.connect(host=broker, port=port)
+    client.loop_start()
+    time.sleep(1)
+    payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
+    client.publish("system/test", payload=payload)
+```
+
+#### 获取实体快照
+```python
+def get_entity(entity_id, entity_type, user_id, plugin_id):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
+    entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
+        **query)
+    res = requests.get(keel_url + entity_create)
+    print(res.json()["properties"])
+
+```
+
+#### 订阅实体
+#### 消费topic数据
+
 
 ### 独立部署
 当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
