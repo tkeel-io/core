@@ -2,16 +2,21 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/mql"
+	"github.com/tkeel-io/core/pkg/tql"
 )
 
 type mapper struct {
 	id      string
-	mqlText string
+	tqlText string
+	tqlInst tql.TQL
 }
 
-func newMapper(id, mqlText string) *mapper {
-	return &mapper{id: id, mqlText: mqlText}
+func NewMapper(id, tqlText string) Mapper {
+	return &mapper{
+		id:      id,
+		tqlText: tqlText,
+		tqlInst: tql.NewTQL(tqlText),
+	}
 }
 
 // ID returns mapper id.
@@ -21,40 +26,38 @@ func (m *mapper) ID() string {
 
 // String returns MQL text.
 func (m *mapper) String() string {
-	return m.mqlText
+	return m.tqlText
 }
 
 // TargetEntity returns target entity.
 func (m *mapper) TargetEntity() string {
-	return mql.NewMQL(m.mqlText).Target()
+	return m.tqlInst.Target()
 }
 
 // SourceEntities returns source entities(include target entity).
 func (m *mapper) SourceEntities() []string {
-	mqlInst := mql.NewMQL(m.mqlText)
-	sourceEntities := mqlInst.Entities()
-	return append(sourceEntities, mqlInst.Target())
+	sourceEntities := m.tqlInst.Entities()
+	return append(sourceEntities, m.tqlInst.Target())
 }
 
 // Tentacles returns tentacles.
 func (m *mapper) Tentacles() []Tentacler {
-	mqlInst := mql.NewMQL(m.mqlText)
-	tts := mqlInst.Tentacles()
-	tentacles := make([]Tentacler, 0, len(tts))
+	tentacleConfigs := m.tqlInst.Tentacles()
+	tentacles := make([]Tentacler, 0, len(tentacleConfigs))
 	mItems := make([]WatchKey, 0)
 
-	for entityID, items := range tts {
-		eItems := make([]WatchKey, len(items))
-		for index, item := range items {
+	for _, tentacleConf := range tentacleConfigs {
+		eItems := make([]WatchKey, len(tentacleConf.PropertyKeys))
+		for index, item := range tentacleConf.PropertyKeys {
 			watchKey := WatchKey{
-				EntityId:    entityID,
+				EntityId:    tentacleConf.SourceEntity,
 				PropertyKey: item,
 			}
 			eItems[index] = watchKey
 			mItems = append(mItems, watchKey)
 		}
 
-		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, entityID, eItems))
+		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, tentacleConf.SourceEntity, eItems))
 	}
 
 	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.id, mItems))
@@ -64,14 +67,11 @@ func (m *mapper) Tentacles() []Tentacler {
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	return newMapper(m.id, m.mqlText)
+	return NewMapper(m.id, m.tqlText)
 }
 
 // Exec input returns output.
 func (m *mapper) Exec(values map[string]interface{}) (res map[string]interface{}, err error) {
-	res, err = mql.NewMQL(m.mqlText).Exec(values)
-	if err != nil {
-		return nil, errors.Unwrap(err)
-	}
-	return res, nil
+	res, err = m.tqlInst.Exec(values)
+	return res, errors.Wrap(err, "execute tql failed")
 }

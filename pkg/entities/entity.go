@@ -3,6 +3,7 @@ package entities
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -31,7 +32,19 @@ const (
 	EntityStatusActive   = "active"
 	EntityStatusInactive = "inactive"
 	EntityStatusDeleted  = "deleted"
+
+	EntityConstFieldMappers = "mappers"
 )
+
+// constFields enumerate const property field.
+var constFields = []string{
+	EntityConstFieldMappers,
+}
+
+type MapperDesc struct {
+	Name      string `json:"name"`
+	TQLString string `json:"tql_string"`
+}
 
 // EntityBase entity basic informatinon.
 type EntityBase struct {
@@ -42,6 +55,7 @@ type EntityBase struct {
 	Version  int64                  `json:"version"`
 	PluginID string                 `json:"plugin_id"`
 	LastTime int64                  `json:"last_time"`
+	Mappers  map[string]MapperDesc  `json:"mappers"`
 	KValues  map[string]interface{} `json:"properties"` //nolint
 }
 
@@ -97,25 +111,26 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity
 }
 
 // GetMapper returns a mapper.
-func (e *entity) GetMapper(mid string) mapper.Mapper {
+func (e *entity) GetMapper(name string) (MapperDesc, error) {
 	reqID := uuid()
 
-	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, mapperId: %s.", e.ID, reqID, mid)
+	log.Infof("entity.GetMapper called, entityId: %s, requestId: %s, name: %s.", e.ID, reqID, name)
 
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 
-	if m, has := e.mappers[mid]; has {
-		return m.Copy()
+	desc, has := e.Mappers[name]
+	if has {
+		return desc, nil
 	}
 
-	return nil
+	return desc, errors.New("mapper not found")
 }
 
 // GetMappers returns mappers.
-func (e *entity) GetMappers() []mapper.Mapper {
+func (e *entity) GetMappers() []MapperDesc {
 	var (
-		result = make([]mapper.Mapper, len(e.mappers))
+		result = make([]MapperDesc, 0)
 		reqID  = uuid()
 	)
 
@@ -123,18 +138,19 @@ func (e *entity) GetMappers() []mapper.Mapper {
 
 	e.lock.RLock()
 	defer e.lock.RUnlock()
-	i := 0
-	for _, m := range e.mappers {
-		result[i] = m.Copy()
-		i++
+
+	for _, desc := range e.Mappers {
+		result = append(result, desc)
 	}
 
 	return result
 }
 
 // SetMapper set mapper into entity.
-func (e *entity) SetMapper(m mapper.Mapper) error {
+func (e *entity) SetMapper(desc MapperDesc) error {
 	reqID := uuid()
+
+	m := mapper.NewMapper(e.ID+"#"+desc.Name, desc.TQLString)
 
 	log.Infof("entity.SetMapper called, entityID: %s, requestId: %s, mapperId: %s, mapper: %s.",
 		e.ID, reqID, m.ID, m.String())
@@ -142,6 +158,7 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
+	e.Mappers[desc.Name] = desc
 	e.mappers[m.ID()] = m
 
 	// generate indexTentacles again.
@@ -180,14 +197,16 @@ func (e *entity) SetMapper(m mapper.Mapper) error {
 	return nil
 }
 
-func (e *entity) DeleteMapper(mid string) error {
+func (e *entity) DeleteMapper(name string) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
-	m, exists := e.mappers[mid]
-	if !exists {
+	desc, has := e.Mappers[name]
+	if !has {
 		return nil
 	}
+
+	m := e.mappers[e.ID+"#"+desc.Name]
 
 	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
 	// 如果是动态生成的，那么前后两次生成可能不一致.
