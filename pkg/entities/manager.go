@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"sync"
 
+	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
+	"github.com/pkg/errors"
 )
 
 type EntityManager struct {
@@ -14,23 +16,31 @@ type EntityManager struct {
 	disposeCh     chan EntityContext
 	coroutinePool *ants.Pool
 
+	daprClient dapr.Client
+
 	lock   sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) *EntityManager {
+func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) (*EntityManager, error) {
+	daprClient, err := dapr.NewClient()
+	if nil != err {
+		return nil, errors.Wrap(err, "create entity manager failed")
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityManager{
 		ctx:           ctx,
 		cancel:        cancel,
+		daprClient:    daprClient,
 		entities:      make(map[string]*entity),
 		msgCh:         make(chan EntityContext, 10),
 		disposeCh:     make(chan EntityContext, 10),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
-	}
+	}, nil
 }
 
 func (m *EntityManager) DeleteEntity(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
@@ -76,28 +86,17 @@ func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityB
 }
 
 func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst *entity, err error) {
-	var (
-		has         bool
-		emptyString = ""
-	)
+	var has bool
 
 	if entityInst, has = m.entities[entityObj.ID]; has {
 		return
 	}
 
-	// require Type, UserId, Source.
-	if emptyString == entityObj.Type {
-		err = entityFieldRequired("Type")
-	} else if emptyString == entityObj.UserID {
-		err = entityFieldRequired("UserId")
-	} else if emptyString == entityObj.Source {
-		err = entityFieldRequired("Source")
-	} else {
-		entityInst, err = newEntity(context.Background(), m, entityObj.ID, entityObj.Source, entityObj.UserID, entityObj.Tag, 0)
-		if nil == err {
-			m.entities[entityInst.ID] = entityInst
-		}
+	entityInst, err = newEntity(context.Background(), m, entityObj)
+	if nil == err {
+		m.entities[entityInst.ID] = entityInst
 	}
+
 	return
 }
 
@@ -150,13 +149,24 @@ func (m *EntityManager) Start() error {
 
 			case entityCtx := <-m.disposeCh:
 				// invoke msg.
-				m.coroutinePool.Submit(func() {
-					if entity, has := m.entities[entityCtx.TargetID()]; has {
-						entity.InvokeMsg(entityCtx)
-					} else {
-						log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
-					}
-				})
+				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
+				var err error
+				entityInst, has := m.entities[entityCtx.TargetID()]
+				if !has {
+					m.lock.RLock()
+					entityInst, err = m.checkEntity(context.TODO(), &EntityBase{})
+					m.lock.RUnlock()
+				}
+
+				if nil != err {
+					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
+					continue
+				}
+
+				if entityInst.OnMessage(entityCtx) {
+					// attatch goroutine to entity.
+					m.coroutinePool.Submit(entityInst.InvokeMsg)
+				}
 			}
 		}
 	}()
@@ -164,9 +174,9 @@ func (m *EntityManager) Start() error {
 	return nil
 }
 
-func (m *EntityManager) HandleMsg() {
+func (m *EntityManager) HandleMsg(ctx context.Context, msg EntityContext) {
 	// dispose message from pubsub.
-
+	m.msgCh <- msg
 }
 
 func init() {}

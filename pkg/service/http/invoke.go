@@ -11,12 +11,21 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func header2context(header http.Header, keyList []string) context.Context {
+func request2context(r *http.Request, keyList []string) context.Context {
 	ctx := context.Background()
 	for _, key := range keyList {
-		if values := header.Values(key); len(values) > 0 {
+		if values := r.Header.Values(key); len(values) > 0 {
 			ctx = context.WithValue(ctx, service.ContextKey(key), values[0])
 		}
+	}
+	varsMap := mux.Vars(r)
+	plugin := varsMap[service.Plugin]
+	entityID := varsMap[service.Entity]
+	if entityID != "" {
+		ctx = context.WithValue(ctx, service.ContextKey(service.Entity), entityID)
+	}
+	if plugin != "" {
+		ctx = context.WithValue(ctx, service.ContextKey(service.Plugin), plugin)
 	}
 	return ctx
 }
@@ -48,13 +57,7 @@ func (s *Server) AddServiceInvocationHandler(route string, fn func(ctx context.C
 			}
 
 			// execute handler.
-			ctx := header2context(r.Header, service.HeaderList)
-			varsMap := mux.Vars(r)
-			plugin := varsMap[service.Plugin]
-			entityID := varsMap[service.Entity]
-
-			ctx = context.WithValue(ctx, service.ContextKey(service.Entity), entityID)
-			ctx = context.WithValue(ctx, service.ContextKey(service.Plugin), plugin)
+			ctx := request2context(r, service.HeaderList)
 
 			o, err := fn(ctx, e)
 			if err != nil {

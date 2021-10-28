@@ -3,7 +3,7 @@ package service
 const (
 	HeaderSource      = "Source"
 	HeaderTopic       = "Topic"
-	HeaderUser        = "User"
+	HeaderOwner       = "Owner"
 	HeaderType        = "Type"
 	HeaderMetadata    = "Metadata"
 	HeaderContentType = "Content-Type"
@@ -16,4 +16,4 @@ const (
 
 type ContextKey string
 
-var HeaderList = []string{HeaderSource, HeaderTopic, HeaderUser, HeaderType, HeaderMetadata, HeaderContentType}
+var HeaderList = []string{HeaderSource, HeaderTopic, HeaderOwner, HeaderType, HeaderMetadata, HeaderContentType}

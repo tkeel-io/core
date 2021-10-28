@@ -1,14 +1,21 @@
 package entities
 
-type EntityMsg struct {
-	SourceID string                 `json:"source_id"`
-	Values   map[string]interface{} `json:"values"`
+import "github.com/tkeel-io/core/pkg/mapper"
+
+// EntityAsyncMessage entity message.
+type EntityMessage struct {
+	messageBase
+
+	SourceID       string                 `json:"source_id"`
+	Values         map[string]interface{} `json:"values"`
+	PromiseHandler PromiseFunc            `json:"-"`
 }
+
+func (esm EntityMessage) Promise() PromiseFunc { return esm.PromiseHandler }
 
 type TentacleMsg struct {
-	TargetID string   `json:"target"` //nolint
-	Items    []string `json:"items"`
-}
+	messageBase
 
-func (em *EntityMsg) Message()   {}
-func (em *TentacleMsg) Message() {}
+	TargetID string            `json:"target"` //nolint
+	Items    []mapper.WatchKey `json:"items"`
+}

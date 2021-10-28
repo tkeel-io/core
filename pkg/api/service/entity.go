@@ -3,40 +3,20 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
-	"github.com/tkeel-io/core/utils"
 
-	dapr "github.com/dapr/go-sdk/client"
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/pkg/errors"
 )
-
-const (
-	entityFieldTag    = "tag"
-	entityFieldType   = "type"
-	entityFieldUserID = "user_id"
-	entityFieldSource = "source"
-)
-
-var errBodyMustBeJSON = errors.New("request body must be json")
-
-func entityFieldRequired(fieldName string) error {
-	return fmt.Errorf("entity field(%s) required", fieldName)
-}
-
-type Entity = entities.EntityBase
 
 // EntityService is a time-series service.
 type EntityService struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
-	daprClient    dapr.Client
 	entityManager *entities.EntityManager
 }
 
@@ -44,17 +24,11 @@ type EntityService struct {
 func NewEntityService(ctx context.Context, mgr *entities.EntityManager) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	cli, err := dapr.NewClient()
-	if err != nil {
-		err = errors.Wrap(err, "start dapr clint err")
-	}
-
 	return &EntityService{
 		ctx:           ctx,
 		cancel:        cancel,
-		daprClient:    cli,
 		entityManager: mgr,
-	}, err
+	}, nil
 }
 
 // Name return the name.
@@ -71,73 +45,7 @@ func (e *EntityService) RegisterService(daprService common.Service) (err error) 
 	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
 		return
 	}
-	if err = e.AddSubTopic(daprService, "core", "core-pubsub"); nil != err {
-		return
-	}
 	return
-}
-
-func (e *EntityService) AddSubTopic(daprService common.Service, topic, pubsubName string) (err error) {
-	sub := &common.Subscription{
-		PubsubName: pubsubName,
-		Topic:      topic,
-		Route:      "/",
-		Metadata:   map[string]string{},
-	}
-	if err = daprService.AddTopicEventHandler(sub, e.topicHandler); err != nil {
-		return
-	}
-	return
-}
-
-func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
-	ec := entities.EntityContext{}
-	var entityID, userID string
-	ec.Headers = make(map[string]string)
-	if in.DataContentType == "application/json" {
-		inData, ok := in.Data.(map[string]interface{})
-		if !ok {
-			return nil, errTypeError
-		}
-		switch entityIds := inData["entity_id"].(type) {
-		case string:
-			entityID = entityIds
-		default:
-			return nil, errTypeError
-		}
-		switch tempUserID := inData["tenant_id"].(type) {
-		case string:
-			userID = tempUserID
-		default:
-			err = errTypeError
-			return
-		}
-		switch tempData := inData["data"].(type) {
-		case string, []byte:
-			values := make(map[string]interface{})
-			values["__data__"] = tempData
-			ec.Message = &entities.EntityMsg{SourceID: "", Values: values}
-		case map[string]interface{}:
-			ec.Message = &entities.EntityMsg{SourceID: "", Values: tempData}
-		default:
-			err = errTypeError
-			return
-		}
-
-		ec.Headers["user_id"] = userID
-		ec.SetTarget(entityID)
-	}
-	return &ec, nil
-}
-
-func (e *EntityService) topicHandler(ctx context.Context, in *common.TopicEvent) (retry bool, err error) {
-	if ec, err := TopicEvent2EntityContext(in); err != nil {
-		return false, err
-	} else if in.DataContentType == "application/json" {
-		e.entityManager.SendMsg(*ec)
-	}
-
-	return false, nil
 }
 
 // Echo test for RegisterService.
@@ -152,15 +60,10 @@ func (e *EntityService) entityHandler(ctx context.Context, in *common.Invocation
 	switch in.Verb {
 	case http.MethodGet:
 		return e.entityGet(ctx, in)
-	case http.MethodPost:
-		return e.entityCreate(ctx, in)
 	case http.MethodPut:
 		return e.entityUpdate(ctx, in)
 	case http.MethodDelete:
 		return e.entityDelete(ctx, in)
-		// temporary.
-	case http.MethodPatch:
-		return e.entityCreate(ctx, in)
 	default:
 	}
 
@@ -189,54 +92,54 @@ func getStringFrom(ctx context.Context, key string) (string, error) {
 	return "", entityFieldRequired(key)
 }
 
-func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) error { // nolint
-	var (
-		err    error
-		values url.Values
-	)
+func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *common.InvocationEvent, idRequired bool) (source string, err error) { // nolint
+	var values url.Values
 
 	if values, err = url.ParseQuery(in.QueryString); nil != err {
-		return errors.Wrap(err, "parse URL failed")
+		return source, errors.Wrap(err, "parse URL failed")
 	}
 
 	if entity.Type, err = getStringFrom(ctx, service.HeaderType); nil == err {
 		// type field required.
 		log.Info("parse http request field(type) from header successes.")
 	} else if entity.Type, err = e.getValFromValues(values, entityFieldType); nil != err {
-		log.Error("parse http request field(type) from query failed", ctx, err)
-		return err
+		log.Error("parse http request field(type) from query failed", values, ctx, err)
+		return source, err
 	}
 
-	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil == err {
-		// source field required.
-		log.Info("parse http request field(source) from header successes.")
-	} else if entity.Source, err = e.getValFromValues(values, entityFieldSource); nil != err {
-		log.Error("parse http request field(source) from query failed", ctx, err)
-		return err
+	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+		// plugin field required.
+		log.Error("parse http request field(source) from path failed", ctx, err)
+		return source, err
 	}
 
-	if entity.UserID, err = getStringFrom(ctx, service.HeaderUser); nil == err {
+	if entity.Owner, err = getStringFrom(ctx, service.HeaderOwner); nil == err {
 		// userId field required.
-		log.Info("parse http request field(user) from header successed.")
-	} else if entity.UserID, err = e.getValFromValues(values, entityFieldUserID); nil != err {
-		log.Error("parse http request field(user) from query failed", ctx, err)
-		return err
+		log.Info("parse http request field(owner) from header successed.")
+	} else if entity.Owner, err = e.getValFromValues(values, entityFieldOwner); nil != err {
+		log.Error("parse http request field(owner) from query failed", ctx, err)
+		return source, err
 	}
 
-	if entity.ID, err = getStringFrom(ctx, service.Entity); nil != err {
-		// entity id field
+	if source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
+		// userId field required.
+		log.Info("parse http request field(source) from header successed.")
+	} else if source, err = e.getValFromValues(values, entityFieldSource); nil != err {
+		log.Error("parse http request field(source) from query failed", ctx, err)
+		return source, err
+	}
+
+	if entity.ID, err = getStringFrom(ctx, service.Entity); nil == err {
+		log.Info("parse http request field(id) from path successed.")
+	} else if entity.ID, err = e.getValFromValues(values, entityFieldID); nil != err {
 		if !idRequired {
-			entity.ID = utils.GenerateUUID()
+			err = nil
+		} else {
+			log.Error("parse http request field(id) from query failed", ctx, err)
 		}
 	}
 
-	// tags
-	if vals, exists := values[entityFieldTag]; exists && len(vals) > 0 {
-		tag := strings.Join(vals, ";")
-		entity.Tag = &tag
-	}
-
-	return err
+	return source, err
 }
 
 // EntityGet returns an entity information.
@@ -251,7 +154,7 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, true)
+	_, err = e.getEntityFrom(ctx, entity, in, true)
 	if nil != err {
 		return
 	}
@@ -281,7 +184,7 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, false)
 	if nil != err {
 		return
 	}
@@ -317,7 +220,7 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, true)
 	if nil != err {
 		return
 	}
@@ -353,7 +256,7 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 
 	defer errResult(out, err)
 
-	err = e.getEntityFrom(ctx, entity, in, false)
+	_, err = e.getEntityFrom(ctx, entity, in, true)
 	if nil != err {
 		return
 	}
@@ -370,6 +273,19 @@ func (e *EntityService) entityDelete(ctx context.Context, in *common.InvocationE
 	return
 }
 
+// EntityList List entities.
+func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	out = &common.Content{
+		Data:        in.Data,
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+	// TODO
+
+	defer errResult(out, err)
+	return
+}
+
 // Echo test for RegisterService.
 func (e *EntityService) entitiesHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	if in == nil {
@@ -380,13 +296,8 @@ func (e *EntityService) entitiesHandler(ctx context.Context, in *common.Invocati
 	switch in.Verb {
 	case http.MethodPost:
 		return e.entityCreate(ctx, in)
-	case http.MethodPut:
-		return e.entityUpdate(ctx, in)
-	case http.MethodDelete:
-		return e.entityDelete(ctx, in)
-		// temporary.
-	case http.MethodPatch:
-		return e.entityCreate(ctx, in)
+	case http.MethodGet:
+		return e.entityList(ctx, in)
 	default:
 	}
 

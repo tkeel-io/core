@@ -2,7 +2,6 @@ package entities
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -22,24 +21,30 @@ var (
 )
 
 type EntityOp interface {
-	// GetID returns entity id.
-	GetID() string
 	// GetProperty returns entity property.
 	GetProperty(string) interface{}
-	// SetProperty set entity property.
-	SetProperty(string, interface{}) error
 	// GetAllProperties returns entity properties.
-	GetAllProperties() map[string]interface{}
+	GetAllProperties() *EntityBase
 	// SetProperties set entity properties
-	SetProperties(map[string]interface{}) error
+	SetProperties(*EntityBase) (*EntityBase, error)
 	// DeleteProperty delete entity property.
 	DeleteProperty(string) error
-	InvokeMsg(EntityContext)
+	// OnMessage recv message from pubsub.
+	OnMessage(ctx EntityContext) bool
+	// InvokeMsg dispose entity message.
+	InvokeMsg()
+	// SetMapper set mapper into entity.
 	SetMapper(m mapper.Mapper) error
 	// GetMapper returns a mapper.
 	GetMapper(mid string) mapper.Mapper
 	// GetMappers
 	GetMappers() []mapper.Mapper
+}
+
+type EntitySubscriptionOp interface {
+	EntityOp
+
+	GetMode() string
 }
 
 type EntityContext struct {
@@ -56,11 +61,20 @@ func (ec *EntityContext) SetTarget(targetID string) {
 }
 
 type Header map[string]string
+type PromiseFunc = func(interface{})
 
 type Message interface {
 	Message()
+	Promise() PromiseFunc
 }
 
-func entityFieldRequired(fieldName string) error {
-	return fmt.Errorf("entity field(%s) required", fieldName)
+type messageBase struct{}
+
+func (ms *messageBase) Message() {}
+func (ms *messageBase) Promise() PromiseFunc {
+	return func(interface{}) {
+		// do nothing...
+	}
 }
+
+type AttacheHandler = func()

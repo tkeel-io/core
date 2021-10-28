@@ -2,9 +2,11 @@ package entities
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	ants "github.com/panjf2000/ants/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEntity(t *testing.T) {
@@ -13,11 +15,10 @@ func TestEntity(t *testing.T) {
 		panic(err)
 	}
 
-	tag := "test"
-	mgr := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
-	enty1, err1 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
-	enty2, err2 := newEntity(context.Background(), mgr, "", "abcd", "tomas", &tag, 001)
+	enty1, err1 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
+	enty2, err2 := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 
 	t.Log(enty1, enty2, err1, err2)
 }
@@ -28,9 +29,9 @@ func TestGetProperties(t *testing.T) {
 		panic(err)
 	}
 
-	mgr := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
-	entity, err := newEntity(context.Background(), mgr, "", "abcd", "tomas", nil, 001)
+	entity, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
 	if nil != err {
 		panic(err)
 	}
@@ -57,4 +58,17 @@ func TestGetProperties(t *testing.T) {
 
 	props1 := entity.GetAllProperties()
 	t.Log(props1)
+}
+
+func TestEntity_getEntity(t *testing.T) {
+	coroutinePool, err := ants.NewPool(500)
+	assert.Nil(t, err)
+
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
+
+	en, err := newEntity(context.Background(), mgr, &EntityBase{ID: "", PluginID: "abcd", Owner: "tomas", Version: 001})
+	assert.Nil(t, err)
+	ce := en.getEntityBase()
+
+	assert.NotEqual(t, fmt.Sprintf("%p", en), fmt.Sprintf("%p", &ce))
 }

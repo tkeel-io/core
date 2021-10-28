@@ -5,10 +5,10 @@ import "log"
 type tentacle struct {
 	tp       TentacleType
 	targetID string
-	items    []string // key=entityId#propertyKey
+	items    []WatchKey // key=entityId#propertyKey
 }
 
-func NewTentacle(tp TentacleType, targetID string, items []string) Tentacler {
+func NewTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
 	return &tentacle{
 		tp:       tp,
 		items:    items,
@@ -27,12 +27,12 @@ func (t *tentacle) TargetID() string {
 }
 
 // Items returns watch keys(watchKey=entityId#propertyKey).
-func (t *tentacle) Items() []string {
+func (t *tentacle) Items() []WatchKey {
 	return t.items
 }
 
 func (t *tentacle) Copy() Tentacler {
-	items := make([]string, len(t.items))
+	items := make([]WatchKey, len(t.items))
 	for index, item := range t.items {
 		items[index] = item
 	}
@@ -53,16 +53,16 @@ func MergeTentacles(tentacles ...Tentacler) Tentacler {
 	if !ok {
 		log.Fatalln("not want struct")
 	}
-	itemMap := make(map[string]struct{})
+	itemMap := make(map[string]WatchKey)
 	for _, tentacle := range tentacles {
 		for _, item := range tentacle.Items() {
-			itemMap[item] = struct{}{}
+			itemMap[item.String()] = item
 		}
 	}
 
 	index := -1
-	items := make([]string, len(itemMap))
-	for item := range itemMap {
+	items := make([]WatchKey, len(itemMap))
+	for _, item := range itemMap {
 		index++
 		items[index] = item
 	}
