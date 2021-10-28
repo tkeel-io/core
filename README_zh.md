@@ -54,8 +54,8 @@ $ git clone  git@github.com:tkeel-io/core.git
 
 更多设计细节请阅读[实体文档](docs/entity/entity.md)
 
-### actor
-[actor](docs/actors/actor.md) 是 实体（Entity）的运行时的一种模式抽象, 用于维护实体的实时状态以及提供实体的一些具体行为。
+### Actor
+[Actor](docs/actors/actor.md) 是 实体（Entity）的运行时的一种模式抽象, 用于维护实体的实时状态以及提供实体的一些具体行为。
 
 ### 关系
 关系是实体与实体之间的联系。
