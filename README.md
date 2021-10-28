@@ -1,8 +1,7 @@
-# core
+<h1 align="left"> tKeel-Core </h1>
+🌰 tKeel 物联网平台的数据中心。对世界万物的抽象数据库。
 
-> join us, you are not alone.
-
-[中文](README_zh.md)
+[中文文档](README_zh.md)
 
 
 ## Run

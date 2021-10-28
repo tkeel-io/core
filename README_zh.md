@@ -1,39 +1,121 @@
-# Core
+<h1 align="left"> tKeel-Core </h1>
+🌰 tKeel 物联网平台的数据中心。将世界万物数字化的数据库。
+
+[comment]: <> (🌰 tKeel 物联网平台的数据中心。将世界万物抽象成类似于元宇宙的一个数值化高拓展性的数据库。)
+
+Core 以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
+
 [English](README.md)
 
-Core通过api以实体为对象对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务，按操作分为控制平面和数据平面。  
-控制平面通过http进行实体的创建查询等操作，数据平面通过dapr的pubsub完成数据的高效写入和订阅。
+## 架构设计
+架构按操作分为 **控制平面** 和 **数据平面**。
 
+- 控制平面：
+  <br> 通过 http 进行实体的创建查询等操作，
+- 数据平面：
+  <br> 通过 dapr 的 pubsub 完成数据的高效读写与订阅。
+
+架构图：
 ![img.png](docs/images/architecture.png)
 
     
 ## 快速入门
-core可以作为tkeel的一个基础组件运行，也可以部署为一个单独的服务。
+Core 是 tKeel 的一个重要基础组件，拥有单独部署能力，使用相关特性做满足广大用户需求的功能也是我们竭力想要的。
 
-### 作为tkeel的组件运行
+### 安装需要
+1. [Kubernetes](https://kubernetes.io/)
+2. [Dapr](https://docs.dapr.io/getting-started/)
 
-core作为tkeel的基础组件，相关API的调用需要通过tkeel代理。参见tkeel文档。    
-在tkeel相关组件完成之后，我们可以生成用于mqtt使用的token，创建实体，上报属性，获取快照，订阅实体的属性等。  
-为了方便说明，我们使用外部流量方式访问keel，使用python作为示例代码语言。
-[code](examples/iot-paas.py)
-#### 获取服务端口
-1. keel服务端口
+
+### 通过 tKeel 安装
+Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理实现。（详细请见[tKeel CLI 安装文档](https://github.com/tkeel-io/cli )）
+
+### 独立部署
+通过 Dapr 启动该项目。
+
+1. 拉去仓库
+```bash 
+$ git clone  git@github.com:tkeel-io/core.git
+```
+2. 启动程序
+```bash
+ 
+```
+
+## 基本概念
+### 实体（Entity）
+实体是我们在物联网世界中对 Things 的一种抽象，是所有操作的基础对象。包括网关、设备、关于设备的聚合等概念，都进行了抽象，
+抽象出来了这样一个实体的概念。
+
+*属性* 是对实体某种信息的描述，一个实体包含三类属性
+1. **基础属性** 每个实体都必备的属性，如 `owner`，`plugin`
+2. **自身属性** 实体自身的属性，比如一个 **温度计** 的 `温度`
+3. **映射属性** 由其他实体属性映射而来的一个缓存聚合属性。
+
+更多设计细节请阅读[实体文档](docs/entity/entity.md)
+
+### Actor
+[Actor](docs/actors/actor.md) 是 实体（Entity）的运行时的一种模式抽象, 用于维护实体的实时状态以及提供实体的一些具体行为。
+
+### 关系
+关系是实体与实体之间的联系。
+
+
+### 映射
+映射是实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
+![img.png](docs/images/message_passing.png)
+
+蓝色线条代表上行，黑色代表下行
+
+映射的操作包含两个部分: 写复制和计算更新  
+![img.png](docs/images/mapping.png)
+
+参见[映射](docs/mapper/mapper.md)
+### 模型
+模型是用来约束实体属性的定义。
+有模型的实体属性需要按照模型的要求对值进行处理，比如需要进时序数据库时或者需要用于搜索等。
+
+### 订阅
+Core 提供了简捷方便的订阅功能，供开发者实时获取自己关心的数据。
+
+在 tKeel 平台中用于多个 plugin 之间和一个 plugin 内所有以实体为操作对象的数据交换。
+
+底层实现逻辑是这样的：每个 plugin 在注册的时候在 Core 内部自动创建一个交互的 `pubsub`，名称统一为 pluginID-pubsub,
+订阅的 `topic` 统一为 pub-core，sub-core，只有 core 与该 plugin 有相关权限
+比如
+iothub: iothub-pubsub
+
+**订阅** 分为三种：
+- **实时订阅**： 收到消息时触发 
+- **变更订阅**： 实体属性有变动时触发 
+- **周期订阅**： 周期性触发
+
+详细请参见[订阅文档](docs/subscription/subscription.md)
+
+### 作为 tKeel 组件运行
+#### 示例
+在 tKeel 相关组件安装完成之后，[Python 示例](examples/iot-paas.py) 展示了生成 MQTT 使用的 `token`，然后创建实体，上报属性，获取快照，订阅实体的属性等功能。  
+为了方便说明，下面是我们使用外部流量方式访问 Keel，和 Python 作为示例语言的代码。
+
+##### 获取服务端口
+1. Keel 服务端口
 ```bash
 KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
 ```
-2. mqtt server服务端口
+2. MQTT Server 服务端口
 ```bash
 MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
 ```
 
 keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
 ```python
+// examples/iot-paas.py
 keel_url = "http://{host}:{port}/v0.1.0"
 ```
 
-#### 创建token
-
+##### 创建 token
 ```python
+// examples/iot-paas.py
 def create_entity_token(entity_id, entity_type, user_id):
     data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
     token_create = "/auth/token/create"
@@ -41,8 +123,9 @@ def create_entity_token(entity_id, entity_type, user_id):
     return res.json()["data"]["entity_token"]
 ```
 
-#### 创建实体
+##### 创建实体
 ```python
+// examples/iot-paas.py
 def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
@@ -52,26 +135,28 @@ def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     print(res.json())
 ```
 
-#### 上报实体属性
+##### 上报实体属性
 ```python
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("Connected to MQTT Broker!")
-        else:
-            print("Failed to connect, return code %d\n", rc)
+// examples/iot-paas.py
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to MQTT Broker!")
+    else:
+        print("Failed to connect, return code %d\n", rc)
 
-    client = mqtt_client.Client(entity_id)
-    client.username_pw_set(username=user_id, password=token)
-    client.on_connect = on_connect
-    client.connect(host=broker, port=port)
-    client.loop_start()
-    time.sleep(1)
-    payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
-    client.publish("system/test", payload=payload)
+client = mqtt_client.Client(entity_id)
+client.username_pw_set(username=user_id, password=token)
+client.on_connect = on_connect
+client.connect(host=broker, port=port)
+client.loop_start()
+time.sleep(1)
+payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
+client.publish("system/test", payload=payload)
 ```
 
-#### 获取实体快照
+##### 获取实体快照
 ```python
+// examples/iot-paas.py
 def get_entity(entity_id, entity_type, user_id, plugin_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
@@ -81,16 +166,17 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 
 ```
 
-#### 订阅实体
-#### 消费topic数据
+##### 订阅实体
+##### 消费topic数据
 
+### Entity 示例
+因为当前 Dapr SDK 不能处理 HTTP 请求中的 Header，参数通过 path 和 query 的方式传递。
 
-### 独立部署
-当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
-示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体。 
-运行参见[examples](examples/entity/README.md)
+[examples](examples/entity) 该示例中的功能，创建实体，通过 pubsub 更新实体属性，查询实体。
+
 #### 创建实体
 ```go
+    // examples/entity/main.go
 	client, err := dapr.NewClient()
 	if nil != err {
 		panic(err)
@@ -113,6 +199,7 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 ```
 #### 更新实体属性
 ```go
+    // examples/entity/main.go
     data := make(map[string]interface{})
 	data["entity_id"] = "test1"
 	data["owner"] = "abc"
@@ -133,6 +220,7 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 
 #### 获取实体属性
 ```go
+    // examples/entity/main.go
     getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
 
 	result, err = client.InvokeMethodWithContent(context.Background(),
@@ -147,53 +235,7 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 	}
 	fmt.Println(string(result))
 ```
- 
 
-## 基本概念
-### 实体
-实体作为物联网世界里的操作对象，包括网关，设备，设备的聚合抽象以及抽象出来的概念比如订阅等等。  
-属性对一个实体某种信息的描述，一个实体包含三类属性  
-1. 基础属性，每个实体都必备的属性，如owner，plugin
-2. 自身属性，实体自己的属性，如一个温度计的温度
-3. 映射属性，因为映射，订阅等关联操作，由其他实体写复制映射过来的属性
-
-参见[实体](docs/entity/entity.md)
-
-### actor
-actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Entity的具体行为。
-
-参见[actor](docs/actors/actor.md)
-
-### 关系
-关系是实体与实体之间的关系
-
-### 映射
-映射用来实现实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
-![img.png](docs/images/message_passing.png)
- 
- 蓝色线条代表上行，黑色代表下行
- 
-映射的操作包含两个部分: 写复制和计算更新  
-![img.png](docs/images/mapping.png)
-
-参见[映射](docs/mapper/mapper.md)
-### 模型
-模型用来约束实体的属性
-有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索。
-
-### 订阅
-core提供的订阅用于plugin之间以及plugin内部以实体为对象的数据交换。  
-每个plugin在注册的时候自动创建一个与core交互的pubsub，名称统一为pluginID-pubsub, topic统一为pub-core，sub-core，只有core与该plugin有相关权限
-比如
-iothub: iothub-pubsub
-
-订阅分为三种：
-1. 实时订阅（收到消息就触发）
-2. 变更订阅（属性有变更时触发）
-3. 周期订阅（周期性上报所有属性）
-
-参见[订阅](docs/subscription/subscription.md)
 
 ## API
-
-参见[API](docs/api/index.md)
+Core 的更多功能 API 详细请参见[ API 文档](docs/api/index.md)
