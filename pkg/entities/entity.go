@@ -36,7 +36,7 @@ const (
 
 type MapperDesc struct {
 	Name      string `json:"name"`
-	TQLString string `json:"tql_string"`
+	TQLString string `json:"tql"`
 }
 
 // EntityBase entity basic informatinon.
@@ -88,13 +88,14 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity
 			KValues:  make(map[string]interface{}),
 		},
 
-		ctx:           ctx,
-		entityManager: mgr,
-		mailBox:       newMailbox(10),
-		lock:          &sync.RWMutex{},
-		disposing:     EntityDisposingIdle,
-		mappers:       make(map[string]mapper.Mapper),
-		cacheProps:    make(map[string]map[string]interface{}),
+		ctx:            ctx,
+		entityManager:  mgr,
+		mailBox:        newMailbox(10),
+		lock:           &sync.RWMutex{},
+		disposing:      EntityDisposingIdle,
+		mappers:        make(map[string]mapper.Mapper),
+		cacheProps:     make(map[string]map[string]interface{}),
+		indexTentacles: make(map[string][]mapper.Tentacler),
 	}
 
 	// set KValues into cacheProps.
@@ -172,7 +173,10 @@ func (e *entity) SetMapper(desc MapperDesc) error {
 		}
 	}
 
-	sourceEntities := []string{m.TargetEntity()}
+	// generate tentacles again.
+	e.generateTentacles()
+
+	sourceEntities := []string{}
 	for _, expr := range m.SourceEntities() {
 		sourceEntities = append(sourceEntities,
 			e.entityManager.EscapedEntities(expr)...)
@@ -371,6 +375,9 @@ func (e *entity) invokeEntityMsg(msg *EntityMessage) {
 	// 2. generate message, then send msg.
 	// 3. active mapper.
 	activeTentacles := make([]mapper.WatchKey, 0)
+	if _, has := e.cacheProps[setEntityID]; !has {
+		e.cacheProps[setEntityID] = make(map[string]interface{})
+	}
 	entityProps := e.cacheProps[setEntityID]
 	for key, value := range msg.Values {
 		entityProps[key] = value
@@ -389,16 +396,21 @@ func (e *entity) activeTentacle(actives []mapper.WatchKey) {
 		activeTentacles = make(map[string][]mapper.Tentacler)
 	)
 
+	log.Infof("active tentacle, tentacles %v.", e.tentacles)
+
 	thisEntityProps := e.cacheProps[e.ID]
 	for _, active := range actives {
+		log.Infof("active tentacle, watch %v.", active)
 		if tentacles, exists := e.tentacles[active.String()]; exists {
+			log.Infof("active tentacle, watch %v.", tentacles)
 			for _, tentacle := range tentacles {
+				log.Infof("active tentacle, target: %s, type: %s, items: %v.", tentacle.TargetID(), tentacle.Type(), tentacle.Items())
 				targetID := tentacle.TargetID()
 				if mapper.TentacleTypeMapper == tentacle.Type() {
 					activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
-					if _, exists := messages[targetID]; exists {
+					if _, exists := messages[targetID]; !exists {
 						messages[targetID] = make(map[string]interface{})
 					}
 
@@ -432,14 +444,35 @@ func (e *entity) activeTentacle(actives []mapper.WatchKey) {
 
 // activeMapper active mappers.
 func (e *entity) activeMapper(actives map[string][]mapper.Tentacler) {
-	for mapperID, tentacles := range actives {
+	// for mapperID, tentacles := range actives {
+	// 	msg := make(map[string]interface{})
+	// 	for _, tentacle := range tentacles {
+	// 		for _, item := range tentacle.Items() {
+	// 			msg[item.String()] = e.getProperty(e.cacheProps[item.EntityId], item.PropertyKey)
+	// 		}
+	// 	}
+
+	// 	// excute mapper.
+	// 	properties, err := e.mappers[mapperID].Exec(msg)
+	// 	if nil != err {
+	// 		log.Errorf("exec entity mapper failed ", err)
+	// 	}
+
+	// 	for propertyKey, value := range properties {
+	// 		e.setProperty(propertyKey, value)
+	// 	}
+	// }
+	log.Infof("mapping data, active: %v", actives)
+	for mapperID := range actives {
+		log.Infof("mapping data, mapper: %s.", mapperID)
 		msg := make(map[string]interface{})
-		for _, tentacle := range tentacles {
+		for _, tentacle := range e.indexTentacles[mapperID] {
+			log.Infof("tentacle..., target: %s, len: %d", tentacle.TargetID(), len(tentacle.Items()))
 			for _, item := range tentacle.Items() {
+				log.Infof("tentacle..., target: %s, watch: %v", tentacle.TargetID(), item)
 				msg[item.String()] = e.getProperty(e.cacheProps[item.EntityId], item.PropertyKey)
 			}
 		}
-
 		// excute mapper.
 		properties, err := e.mappers[mapperID].Exec(msg)
 		if nil != err {
@@ -468,25 +501,36 @@ func (e *entity) setProperty(propertyKey string, value interface{}) {
 
 // invokeTentacleMsg dispose Tentacle messages.
 func (e *entity) invokeTentacleMsg(msg *TentacleMsg) {
-	if e.ID != msg.TargetID {
-		switch msg.Operator {
-		case TentacleOperatorAppend:
-			tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetID, msg.Items)
-			e.indexTentacles[msg.TargetID] = []mapper.Tentacler{tentacle}
-		case TentacleOperatorRemove:
-			delete(e.indexTentacles, msg.TargetID)
-		default:
-			log.Error("invalid tentacle operator: %s, %v", msg.Operator, msg)
-		}
-		log.Info("catch tentacle event, op: %s, target: %s, msg: %v.", msg.Operator, msg.TargetID, msg)
+	if e.ID == msg.TargetID {
+		//ignore this message.
+		return
 	}
 
+	switch msg.Operator {
+	case TentacleOperatorAppend:
+		tentacle := mapper.NewTentacle(mapper.TentacleTypeEntity, msg.TargetID, msg.Items)
+		e.indexTentacles[msg.TargetID] = []mapper.Tentacler{tentacle}
+	case TentacleOperatorRemove:
+		delete(e.indexTentacles, msg.TargetID)
+	default:
+		log.Errorf("invalid tentacle operator: %s, %v", msg.Operator, msg)
+	}
+	log.Infof("catch tentacle event, op: %s, target: %s, msg: %v.", msg.Operator, msg.TargetID, msg)
+
 	// generate tentacles again.
+	e.generateTentacles()
+}
+
+func (e *entity) generateTentacles() {
 	e.tentacles = make(map[string][]mapper.Tentacler)
-	for _, tentacles := range e.indexTentacles {
+	for targetID, tentacles := range e.indexTentacles {
 		for _, tentacle := range tentacles {
-			for _, item := range tentacle.Items() {
-				e.tentacles[item.String()] = append(e.tentacles[item.String()], tentacle)
+			if mapper.TentacleTypeMapper == tentacle.Type() ||
+				(mapper.TentacleTypeEntity == tentacle.Type() && targetID != e.ID) {
+				log.Infof("%s set up tentacle, type: %s, target: %s.", e.ID, tentacle.Type(), tentacle.TargetID())
+				for _, item := range tentacle.Items() {
+					e.tentacles[item.String()] = append(e.tentacles[item.String()], tentacle)
+				}
 			}
 		}
 	}
@@ -499,6 +543,7 @@ func (e *entity) getEntityBase() *EntityBase {
 		Type:     e.Type,
 		Status:   e.Status,
 		Owner:    e.Owner,
+		Mappers:  e.Mappers,
 		Version:  e.Version,
 		KValues:  e.KValues,
 		PluginID: e.PluginID,

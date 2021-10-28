@@ -48,3 +48,23 @@ DEBU[0002] found mDNS IPv4 address in cache: 192.168.181.2:33773  app_id=client 
 ℹ️
 terminated signal received: shutting down
 ```
+
+
+
+
+
+### publish Event
+
+```bash
+curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
+  -H "Content-Type: application/json" \
+  -d '{
+       "entity_id": "test234",
+       "owner": "admin",
+       "plugin": "abcd",
+       "data": {
+           "temp": 234
+       }
+     }'
+
+```

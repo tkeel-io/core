@@ -157,15 +157,21 @@ func (m *EntityManager) Start() error {
 				// invoke msg.
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				var err error
-				entityInst, has := m.entities[entityCtx.TargetID()]
+				entityInst, has := m.entities[entityCtx.Headers.GetTargetID()]
 				if !has {
-					m.lock.RLock()
-					entityInst, err = m.checkEntity(context.TODO(), &EntityBase{})
-					m.lock.RUnlock()
+					m.lock.Lock()
+					entityObj := &EntityBase{
+						ID:       entityCtx.Headers.GetTargetID(),
+						Type:     entityCtx.Headers.GetEntityType(),
+						Owner:    entityCtx.Headers.GetOwner(),
+						PluginID: entityCtx.Headers.GetPluginID(),
+					}
+					entityInst, err = m.checkEntity(context.TODO(), entityObj)
+					m.lock.Unlock()
 				}
 
 				if nil != err {
-					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
+					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.Headers.GetTargetID())
 					continue
 				}
 

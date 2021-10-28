@@ -8,10 +8,12 @@ import (
 )
 
 const (
-	EntityCtxHeaderUserID    = "x-user_id"
+	EntityCtxHeaderOwner     = "x-owner"
+	EntityCtxHeaderType      = "x-type"
 	EntityCtxHeaderSourceID  = "x-source"
 	EntityCtxHeaderTargetID  = "x-target"
-	EntityCtxHeaderRequestID = "x-request_id"
+	EntityCtxHeaderRequestID = "x-reqsuest_id"
+	EntityCtxHeaderPluginID  = "x-plugin"
 
 	TentacleOperatorAppend = "append"
 	TentacleOperatorRemove = "remove"
@@ -55,15 +57,51 @@ type EntityContext struct {
 	Message Message
 }
 
-func (ec *EntityContext) TargetID() string {
-	return ec.Headers[EntityCtxHeaderTargetID]
-}
-
-func (ec *EntityContext) SetTarget(targetID string) {
-	ec.Headers[EntityCtxHeaderTargetID] = targetID
+func NewEntityContext(msg Message) EntityContext {
+	return EntityContext{
+		Headers: Header{},
+		Message: msg,
+	}
 }
 
 type Header map[string]string
+
+func (h Header) GetTargetID() string {
+	return h[EntityCtxHeaderTargetID]
+}
+
+func (h Header) SetTargetID(targetID string) {
+	h[EntityCtxHeaderTargetID] = targetID
+}
+
+func (h Header) GetOwner() string {
+	return h[EntityCtxHeaderOwner]
+}
+
+func (h Header) SetOwner(owner string) {
+	h[EntityCtxHeaderOwner] = owner
+}
+
+func (h Header) GetPluginID() string {
+	return h[EntityCtxHeaderPluginID]
+}
+
+func (h Header) SetPluginID(plugin string) {
+	h[EntityCtxHeaderPluginID] = plugin
+}
+
+func (h Header) GetEntityType() string {
+	t, has := h[EntityCtxHeaderType]
+	if !has {
+		t = EntityTypeDevice
+	}
+	return t
+}
+
+func (h Header) SetEntityType(plugin string) {
+	h[EntityCtxHeaderType] = plugin
+}
+
 type PromiseFunc = func(interface{})
 
 type Message interface {

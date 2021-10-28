@@ -36,8 +36,7 @@ func (m *mapper) TargetEntity() string {
 
 // SourceEntities returns source entities(include target entity).
 func (m *mapper) SourceEntities() []string {
-	sourceEntities := m.tqlInst.Entities()
-	return append(sourceEntities, m.tqlInst.Target())
+	return m.tqlInst.Entities()
 }
 
 // Tentacles returns tentacles.
