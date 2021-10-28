@@ -1,20 +1,21 @@
 # Core
 [English](README.md)
 
-Core通过api以实体为对象对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务，按操作分为控制平面和数据平面。
+Core通过api以实体为对象对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务，按操作分为控制平面和数据平面。  
 控制平面通过http进行实体的创建查询等操作，数据平面通过dapr的pubsub完成数据的高效写入和订阅。
 
 ![img.png](docs/images/architecture.png)
 
     
 ## 快速入门
-core可以作为tkeel的一个基础组件运行，也可以单独部署提供相关的能力
+core可以作为tkeel的一个基础组件运行，也可以部署为一个单独的服务。
 
 ### 作为tkeel的组件运行
 
-core作为tkeel的基础组件，相关API的调用需要通过tkeel代理  
-在tkeel相关组件完成之后，我们可以生成用于mqtt使用的token，创建实体，上报属性，获取快照，订阅等功能
-为了方便说明，我们使用外部流量方式访问keel，使用python作为示例代码语言
+core作为tkeel的基础组件，相关API的调用需要通过tkeel代理。参见tkeel文档。    
+在tkeel相关组件完成之后，我们可以生成用于mqtt使用的token，创建实体，上报属性，获取快照，订阅实体的属性等。  
+为了方便说明，我们使用外部流量方式访问keel，使用python作为示例代码语言。
+[code](examples/iot-paas.py)
 #### 获取服务端口
 1. keel服务端口
 ```bash
