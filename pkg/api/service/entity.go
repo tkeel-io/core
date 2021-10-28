@@ -41,10 +41,12 @@ func (e *EntityService) RegisterService(daprService common.Service) (err error) 
 	// register all handlers.
 	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities/{entity}", e.entityHandler); nil != err {
 		return
-	}
-	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
+	} else if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
+		return
+	} else if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities/{entity}/mappers", e.AppendMapper); nil != err {
 		return
 	}
+
 	return
 }
 
@@ -60,6 +62,8 @@ func (e *EntityService) entityHandler(ctx context.Context, in *common.Invocation
 	switch in.Verb {
 	case http.MethodGet:
 		return e.entityGet(ctx, in)
+	case http.MethodPost:
+		return e.entityCreate(ctx, in)
 	case http.MethodPut:
 		return e.entityUpdate(ctx, in)
 	case http.MethodDelete:
@@ -114,7 +118,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 	}
 
 	if entity.Owner, err = getStringFrom(ctx, service.HeaderOwner); nil == err {
-		// userId field required.
+		// owner field required.
 		log.Info("parse http request field(owner) from header successed.")
 	} else if entity.Owner, err = e.getValFromValues(values, entityFieldOwner); nil != err {
 		log.Error("parse http request field(owner) from query failed", ctx, err)
@@ -122,7 +126,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 	}
 
 	if source, err = getStringFrom(ctx, service.HeaderSource); nil == err {
-		// userId field required.
+		// source field required.
 		log.Info("parse http request field(source) from header successed.")
 	} else if source, err = e.getValFromValues(values, entityFieldSource); nil != err {
 		log.Error("parse http request field(source) from query failed", ctx, err)
@@ -284,6 +288,42 @@ func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEve
 
 	defer errResult(out, err)
 	return
+}
+
+func (e *EntityService) AppendMapper(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	var entity = new(Entity)
+
+	out = &common.Content{
+		Data:        in.Data,
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+
+	defer errResult(out, err)
+
+	_, err = e.getEntityFrom(ctx, entity, in, false)
+	if nil != err {
+		return
+	}
+
+	if len(in.Data) > 0 {
+		mapperDesc := entities.MapperDesc{}
+		if err = json.Unmarshal(in.Data, &mapperDesc); nil != err {
+			return out, errBodyMustBeJSON
+		}
+		entity.Mappers = []entities.MapperDesc{mapperDesc}
+	}
+
+	// set properties.
+	entity, err = e.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
+
+	return out, errors.Wrap(err, "append mapper failed")
 }
 
 // Echo test for RegisterService.

@@ -236,17 +236,28 @@ func computing(input string) int {
 	return listener.pop()
 }
 
-func (l *Listener) GetParseConfigs() map[string]interface{} {
-	configMap := make(map[string]interface{})
-	configMap["SourceEntity"] = l.sourceEntity
-	configMap["TargetEntity"] = l.targetEntity
+func (l *Listener) GetParseConfigs() TQLConfig {
+	tqlConfig := TQLConfig{
+		SourceEntities: l.sourceEntity,
+	}
+
+	if len(l.targetEntity) > 0 {
+		tqlConfig.TargetEntity = l.targetEntity[0]
+	}
+
 	// if tentacles is null map, it should be map["*"]["*", ]
 	if l.tentacles == nil {
-		l.tentacles = make(map[string][]string)
-		l.tentacles["*"] = append(l.tentacles["*"], "*")
+		tqlConfig.Tentacles = []TentacleConfig{
+			{SourceEntity: "*", PropertyKeys: []string{"*"}},
+		}
 	}
-	configMap["Tentacles"] = l.tentacles
-	return configMap
+
+	for entityID, propertyKeys := range l.tentacles {
+		tqlConfig.Tentacles = append(tqlConfig.Tentacles,
+			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
+	}
+
+	return tqlConfig
 }
 
 func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]interface{} {

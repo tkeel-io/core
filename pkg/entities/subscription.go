@@ -84,7 +84,7 @@ func (s *subscription) InvokeMsg() {
 		case *EntityMessage:
 			s.invokeMsg(msg)
 		case *TentacleMsg:
-			// do nothing...
+			// todo nothing...
 		default:
 			// invalid msg type.
 			log.Errorf("undefine message type, msg: %s", msg)

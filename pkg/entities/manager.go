@@ -110,6 +110,12 @@ func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase
 		return nil, fmt.Errorf("entityManager.SetProperties failed, %w", err)
 	}
 
+	if len(entityObj.Mappers) > 0 {
+		if err = entityInst.SetMapper(entityObj.Mappers[0]); nil != err {
+			return nil, errors.Wrap(err, "entityManager.SetProperties failed")
+		}
+	}
+
 	return entityInst.SetProperties(entityObj)
 }
 
@@ -151,15 +157,21 @@ func (m *EntityManager) Start() error {
 				// invoke msg.
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				var err error
-				entityInst, has := m.entities[entityCtx.TargetID()]
+				entityInst, has := m.entities[entityCtx.Headers.GetTargetID()]
 				if !has {
-					m.lock.RLock()
-					entityInst, err = m.checkEntity(context.TODO(), &EntityBase{})
-					m.lock.RUnlock()
+					m.lock.Lock()
+					entityObj := &EntityBase{
+						ID:       entityCtx.Headers.GetTargetID(),
+						Type:     entityCtx.Headers.GetEntityType(),
+						Owner:    entityCtx.Headers.GetOwner(),
+						PluginID: entityCtx.Headers.GetPluginID(),
+					}
+					entityInst, err = m.checkEntity(context.TODO(), entityObj)
+					m.lock.Unlock()
 				}
 
 				if nil != err {
-					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
+					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.Headers.GetTargetID())
 					continue
 				}
 
@@ -177,6 +189,22 @@ func (m *EntityManager) Start() error {
 func (m *EntityManager) HandleMsg(ctx context.Context, msg EntityContext) {
 	// dispose message from pubsub.
 	m.msgCh <- msg
+}
+
+func (m *EntityManager) EscapedEntities(expression string) []string {
+	entities := []string{}
+	switch expression {
+	case "*":
+		m.lock.RLock()
+		for entityID := range m.entities {
+			entities = append(entities, entityID)
+		}
+		m.lock.RUnlock()
+	default:
+		entities = []string{expression}
+	}
+
+	return entities
 }
 
 func init() {}

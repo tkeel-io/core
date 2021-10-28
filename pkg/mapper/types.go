@@ -5,7 +5,7 @@ const (
 	TentacleTypeEntity    = "entity"
 	TentacleTypeMapper    = "mapper"
 
-	WatchKeyDelimiter = "#"
+	WatchKeyDelimiter = "."
 )
 
 type Mapper interface {
@@ -36,6 +36,8 @@ type Tentacler interface {
 	Items() []WatchKey
 	// Copy duplicate a mapper.
 	Copy() Tentacler
+	// IsRemote return remote flag.
+	IsRemote() bool
 }
 
 type WatchKey struct {

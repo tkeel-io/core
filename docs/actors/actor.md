@@ -141,11 +141,52 @@ Entity Attach 流程图如下：
 实体查询直接从 `Actor` 查询实体的完整数据。
 
 
+
+
+## 属性数据的顺序性
+
+对于包含时序数据的系统而言，我们对于时序数据的顺序性一定是需要得到保证的，但是顺序性和并发性是存在性能取舍的。
+
+对于时序数据对实体的更新顺序，存在以下可能：
+
+1. 消息流中的事件消息处理和`映射`数据传递乱序。
+
+![entity-tseries-order1](../images/entity-tseries-order1.png)
+
+2. 消息流中的事件消息处理和`映射`数据传递没有乱序。
+
+![entity-tseries-order2](../images/entity-tseries-order2.png)
+
+
+
+## 关系和映射
+
+`关系`和`映射`的逻辑，我觉得可以使用两个逻辑层面来表达这两种东西。
+
+![relationshi-mapper-planes](../images/relationshi-mapper-planes.png)
+
+
+**实体与实体之间的关系：**
+
+![entities-relationships](../images/entities-relationships.png)
+
+
+**实体与实体之间的数据映射：**
+
+![entities-data-mapping](../images/entities-data-mapping.png)
+
+
+**实体关系和实体数据映射：**
+
+![entities-relationships-data-mapping](../images/entities-relationships-data-mapping.png)
+
+
+
 ## Issues
 
 1. 一个dispatcher对应于一个Topic吗？
     - 不应该是这样，试想一下，数据映射中写同步的Topic应该是哪一个，毫无疑问应该是`core-pubsub`。
-
+2. 对于时序消息处理的有序性，我们仅仅保证实体自身时序消息的有序行，不保证`实体自身变更`和`实体间的变更传递和自身变更`的有序性。
 
 
 

@@ -99,7 +99,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
      }'
 
 # upsert
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?source=abcd&owner=admin&type=device" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?source=abcd&owner=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -180,6 +180,21 @@ curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entit
   -H "Owner: admin"  \
   -H "Type: DEVICE" 
 ```
+
+
+## Mapper
+
+### Append 
+
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123/mappers" \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '{
+       "name": "subscribe-test234",
+       "tql": "insert into test123 select test234.temp as temp"
+     }'
 
 
 ## openapi 
