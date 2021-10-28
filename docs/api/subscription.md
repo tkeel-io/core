@@ -1,6 +1,6 @@
 ## Subscription APIs
 
-> Subscription 其实也是Entity的一种，不过我们为了更简单的操作Subcription，将其APIs独立出来。
+> Subscription 本质也是 Entity 的一种，不过我们为了更简单的操作 Subscription，将其APIs独立出来。
 
 
 
