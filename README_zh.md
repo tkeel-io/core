@@ -87,7 +87,7 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 
 ### 独立部署
 当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
-示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体  
+示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体。  
 参见[examples](examples/entity/README.md)
 
 
@@ -110,7 +110,7 @@ actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Ent
 关系是实体与实体之间的关系
 
 ### 映射
-映射用来实现实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播
+映射用来实现实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
 ![img.png](docs/images/message_passing.png)
  
  蓝色线条代表上行，黑色代表下行
@@ -121,13 +121,13 @@ actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Ent
 参见[映射](docs/mapper/mapper.md)
 ### 模型
 模型用来约束实体的属性
-有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索
+有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索。
 
 ### 订阅
 core提供的订阅用于plugin之间以及plugin内部以实体为对象的数据交换。  
-每个plugin在注册的时候自动创建一个与core交互的pubsub，名称统一为pluginID-pubsub, topic统一为pub-core，sub-core，只有core与改plugin有相关权限
+每个plugin在注册的时候自动创建一个与core交互的pubsub，名称统一为pluginID-pubsub, topic统一为pub-core，sub-core，只有core与该plugin有相关权限
 比如
-pluginA: pluginA-pubsub
+iothub: iothub-pubsub
 
 订阅分为三种：
 1. 实时订阅（收到消息就触发）
