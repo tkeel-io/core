@@ -115,7 +115,7 @@ actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Ent
  
  蓝色线条代表上行，黑色代表下行
  
-映射的操作包含两个部分: 写复制和计算更新
+映射的操作包含两个部分: 写复制和计算更新  
 ![img.png](docs/images/mapping.png)
 
 参见[映射](docs/mapper/mapper.md)
