@@ -3,7 +3,6 @@ package mapper
 import "testing"
 
 func TestMapper(t *testing.T) {
-
 	tqlTexts := []struct {
 		id      string
 		tqlText string
@@ -31,5 +30,4 @@ func TestMapper(t *testing.T) {
 			m.Copy()
 		})
 	}
-
 }

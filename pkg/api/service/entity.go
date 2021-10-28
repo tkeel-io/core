@@ -41,10 +41,12 @@ func (e *EntityService) RegisterService(daprService common.Service) (err error) 
 	// register all handlers.
 	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities/{entity}", e.entityHandler); nil != err {
 		return
-	}
-	if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
+	} else if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities", e.entitiesHandler); nil != err {
+		return
+	} else if err = daprService.AddServiceInvocationHandler("/plugins/{plugin}/entities/{entity}/mappers", e.AppendMapper); nil != err {
 		return
 	}
+
 	return
 }
 
@@ -284,6 +286,42 @@ func (e *EntityService) entityList(ctx context.Context, in *common.InvocationEve
 
 	defer errResult(out, err)
 	return
+}
+
+func (e *EntityService) AppendMapper(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	var entity = new(Entity)
+
+	out = &common.Content{
+		Data:        in.Data,
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+
+	defer errResult(out, err)
+
+	_, err = e.getEntityFrom(ctx, entity, in, false)
+	if nil != err {
+		return
+	}
+
+	if len(in.Data) > 0 {
+		mapperDesc := entities.MapperDesc{}
+		if err = json.Unmarshal(in.Data, &mapperDesc); nil != err {
+			return out, errBodyMustBeJSON
+		}
+		entity.Mappers = []entities.MapperDesc{mapperDesc}
+	}
+
+	// set properties.
+	entity, err = e.entityManager.SetProperties(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	// encode kvs.
+	out.Data, err = json.Marshal(entity)
+
+	return out, errors.Wrap(err, "append mapper failed")
 }
 
 // Echo test for RegisterService.

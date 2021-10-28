@@ -248,13 +248,13 @@ func (l *Listener) GetParseConfigs() TQLConfig {
 	// if tentacles is null map, it should be map["*"]["*", ]
 	if l.tentacles == nil {
 		tqlConfig.Tentacles = []TentacleConfig{
-			TentacleConfig{SourceEntity: "*", PropertyKeys: []string{"*"}},
+			{SourceEntity: "*", PropertyKeys: []string{"*"}},
 		}
 	}
 
-	for entityId, propertyKeys := range l.tentacles {
+	for entityID, propertyKeys := range l.tentacles {
 		tqlConfig.Tentacles = append(tqlConfig.Tentacles,
-			TentacleConfig{SourceEntity: entityId, PropertyKeys: propertyKeys})
+			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
 	}
 
 	return tqlConfig

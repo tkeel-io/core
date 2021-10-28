@@ -110,6 +110,12 @@ func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase
 		return nil, fmt.Errorf("entityManager.SetProperties failed, %w", err)
 	}
 
+	if len(entityObj.Mappers) > 0 {
+		if err = entityInst.SetMapper(entityObj.Mappers[0]); nil != err {
+			return nil, errors.Wrap(err, "entityManager.SetProperties failed")
+		}
+	}
+
 	return entityInst.SetProperties(entityObj)
 }
 
