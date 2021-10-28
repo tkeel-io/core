@@ -1,24 +1,153 @@
 # Core
 [English](README.md)
 
-Core通过api以实体为对象对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务，按操作分为控制平面和数据平面。
+Core通过api以实体为对象对外提供属性搜索，时序查询，数据写入，数据查询，数据订阅等服务，按操作分为控制平面和数据平面。  
 控制平面通过http进行实体的创建查询等操作，数据平面通过dapr的pubsub完成数据的高效写入和订阅。
 
 ![img.png](docs/images/architecture.png)
 
     
 ## 快速入门
-core可以作为tkeel的一个基础组件运行，也可以单独部署提供相关的能力
+core可以作为tkeel的一个基础组件运行，也可以部署为一个单独的服务。
 
 ### 作为tkeel的组件运行
 
-core作为tkeel的基础组件，相关API的调用需要通过tkeel代理
+core作为tkeel的基础组件，相关API的调用需要通过tkeel代理。参见tkeel文档。    
+在tkeel相关组件完成之后，我们可以生成用于mqtt使用的token，创建实体，上报属性，获取快照，订阅实体的属性等。  
+为了方便说明，我们使用外部流量方式访问keel，使用python作为示例代码语言。
+[code](examples/iot-paas.py)
+#### 获取服务端口
+1. keel服务端口
+```bash
+KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
+```
+2. mqtt server服务端口
+```bash
+MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
+```
+
+keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
+```python
+keel_url = "http://{host}:{port}/v0.1.0"
+```
+
+#### 创建token
+
+```python
+def create_entity_token(entity_id, entity_type, user_id):
+    data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
+    token_create = "/auth/token/create"
+    res = requests.post(keel_url + token_create, json=data)
+    return res.json()["data"]["entity_token"]
+```
+
+#### 创建实体
+```python
+def create_entity(entity_id, entity_type, user_id, plugin_id, token):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
+    entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
+        **query)
+    data = dict(token=token)
+    res = requests.post(keel_url + entity_create, json=data)
+    print(res.json())
+```
+
+#### 上报实体属性
+```python
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt_client.Client(entity_id)
+    client.username_pw_set(username=user_id, password=token)
+    client.on_connect = on_connect
+    client.connect(host=broker, port=port)
+    client.loop_start()
+    time.sleep(1)
+    payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
+    client.publish("system/test", payload=payload)
+```
+
+#### 获取实体快照
+```python
+def get_entity(entity_id, entity_type, user_id, plugin_id):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
+    entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
+        **query)
+    res = requests.get(keel_url + entity_create)
+    print(res.json()["properties"])
+
+```
+
+#### 订阅实体
+#### 消费topic数据
+
 
 ### 独立部署
 当前dapr sdk不能处理http请求中的header，参数通过path和query进行传递
-示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体  
-参见[examples](examples/entity/README.md)
+示例程序的功能，创建实体，通过pubsub更新实体属性，查询实体。 
+运行参见[examples](examples/entity/README.md)
+#### 创建实体
+```go
+	client, err := dapr.NewClient()
+	if nil != err {
+		panic(err)
+	}
 
+	// create entity.
+	createUrl := "plugins/pluginA/entities?id=test1&owner=abc&source=abc&type=device"
+
+	result, err := client.InvokeMethodWithContent(context.Background(),
+		"core",
+		createUrl,
+		"POST",
+		&dapr.DataContent{
+			ContentType: "application/json",
+		})
+	if nil != err {
+		panic(err)
+	}
+	fmt.Println(string(result))
+```
+#### 更新实体属性
+```go
+    data := make(map[string]interface{})
+	data["entity_id"] = "test1"
+	data["owner"] = "abc"
+	dataItem := make(map[string]interface{})
+	dataItem["core"] = ValueType{Value: 189, Time: time.Now().UnixNano() / 1e6}
+	data["data"] = dataItem
+
+	err = client.PublishEvent(context.Background(),
+		"client-pubsub",
+		"core-pub",
+		data,
+	)
+
+	if nil != err {
+		panic(err)
+	}
+```
+
+#### 获取实体属性
+```go
+    getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
+
+	result, err = client.InvokeMethodWithContent(context.Background(),
+		"core",
+		getUrl,
+		"GET",
+		&dapr.DataContent{
+			ContentType: "application/json",
+		})
+	if nil != err {
+		panic(err)
+	}
+	fmt.Println(string(result))
+```
+ 
 
 ## 基本概念
 ### 实体
@@ -39,24 +168,24 @@ actor是 Entity的运行时模式, 用于维护Entity的实时状态和提供Ent
 关系是实体与实体之间的关系
 
 ### 映射
-映射用来实现实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播
+映射用来实现实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
 ![img.png](docs/images/message_passing.png)
  
  蓝色线条代表上行，黑色代表下行
  
-映射的操作包含两个部分: 写复制和计算更新
+映射的操作包含两个部分: 写复制和计算更新  
 ![img.png](docs/images/mapping.png)
 
 参见[映射](docs/mapper/mapper.md)
 ### 模型
 模型用来约束实体的属性
-有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索
+有模型的属性需要按照模型的要求对属性的值进行处理，比如要进时序DB或者要用于搜索。
 
 ### 订阅
 core提供的订阅用于plugin之间以及plugin内部以实体为对象的数据交换。  
-每个plugin在注册的时候自动创建一个与core交互的pubsub，名称统一为pluginID-pubsub, topic统一为pub-core，sub-core，只有core与改plugin有相关权限
+每个plugin在注册的时候自动创建一个与core交互的pubsub，名称统一为pluginID-pubsub, topic统一为pub-core，sub-core，只有core与该plugin有相关权限
 比如
-pluginA: pluginA-pubsub
+iothub: iothub-pubsub
 
 订阅分为三种：
 1. 实时订阅（收到消息就触发）
