@@ -43,7 +43,7 @@ $ git clone  git@github.com:tkeel-io/core.git
 ```bash
 dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
 ```
-### Kubernetes
+#### Kubernetes
 1. 部署reids服务
     ```bash
     helm install redis bitnami/redis
@@ -189,7 +189,9 @@ def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription
     res = requests.post(keel_url + entity_create, json=data)
     print(res.json())
 ```
+
 ##### 消费topic数据
+消费程序作为一个独立的app消费相关topic数据并展示[消费示例](examples/subclient)
 ```python
 // examples/subclient/app.py
 import flask
