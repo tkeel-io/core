@@ -6,14 +6,14 @@
 
 ### Subscription Get
 ```bash
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions/sub123?owner=admin&type=DEVICE" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions/sub123?owner=admin&type=SUBSCRIPTION" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" 
 ```
 
 ### Subscription Create
 ```bash
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions?id=sub123&owner=admin&type=DEVICE" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions?id=sub123&owner=admin&type=SUBSCRIPTION" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" \
   -d '{
