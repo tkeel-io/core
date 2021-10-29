@@ -30,6 +30,24 @@ def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     print(res.json())
 
 
+def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
+    entity_create = "/core/plugins/{plugin_id}/subscriptions?id={subscription_id}&type={entity_type}&owner={user_id}&source={source}".format(
+        **query)
+    data = dict(mode="realtime", source="ignore", filter="insert into abc select " + entity_id + ".p1", target="ignore", topic="abc", pubsub_name="client-pubsub")
+    print(data)
+    res = requests.post(keel_url + entity_create, json=data)
+    print(res.json())
+
+
+def get_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
+    entity_create = "/core/plugins/{plugin_id}/subscriptions/{subscription_id}?type={entity_type}&owner={user_id}&source={source}".format(
+        **query)
+    res = requests.get(keel_url + entity_create)
+    print(res.json())
+
+
 def get_entity(entity_id, entity_type, user_id, plugin_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
@@ -68,6 +86,13 @@ if __name__ == "__main__":
         print(traceback.format_exc())
         print("create entity failed")
     time.sleep(1)
+
+    print("-" * 80)
+    print("create subscription")
+    create_subscription(entity_id, "SUBSCRIPTION", user_id, "pluginA", entity_id+"sub")
+    print("-" * 80)
+    print("get subscription")
+    get_subscription(entity_id, "SUBSCRIPTION", user_id, "pluginA", entity_id+"sub")
     print("-" * 80)
     print("update properties by mqtt")
     client = mqtt_client.Client(entity_id)
@@ -80,8 +105,13 @@ if __name__ == "__main__":
     payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
     print(payload)
     client.publish("system/test", payload=payload)
-    time.sleep(1)
-    client.disconnect()
     print("-" * 80)
     print("get entity")
     get_entity(entity_id, entity_type, user_id, "pluginA")
+    time.sleep(5)
+    while True:
+        payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
+        print(payload)
+        client.publish("system/test", payload=payload)
+        time.sleep(5)
+    client.disconnect()
