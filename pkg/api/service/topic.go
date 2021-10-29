@@ -59,7 +59,6 @@ func getSourceFrom(pubsubName string) (source string) {
 
 func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) { //nolint
 	ec := entities.NewEntityContext(nil)
-	_ = getSourceFrom(in.PubsubName)
 	var entityID, owner, plugin string
 
 	log.Infof("dispose event, pubsub: %s. topic: %s, datatype: %T, data: %v.",
@@ -89,13 +88,17 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		}
 
 		// get entity source plugin.
-		switch tempPlugin := inData["plugin"].(type) {
-		case string:
-			plugin = tempPlugin
-		default:
-			err = errTypeError
-			return
-		}
+		plugin = getSourceFrom(in.PubsubName)
+
+		/*
+			switch tempPlugin := inData["plugin"].(type) {
+			case string:
+				plugin = tempPlugin
+			default:
+				err = errTypeError
+				return
+			}
+		*/
 
 		// get entity data.
 		switch tempData := inData["data"].(type) {
