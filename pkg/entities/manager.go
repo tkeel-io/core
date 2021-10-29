@@ -11,7 +11,7 @@ import (
 )
 
 type EntityManager struct {
-	entities      map[string]*entity
+	entities      map[string]EntityOp
 	msgCh         chan EntityContext
 	disposeCh     chan EntityContext
 	coroutinePool *ants.Pool
@@ -35,7 +35,7 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) (*EntityMan
 		ctx:           ctx,
 		cancel:        cancel,
 		daprClient:    daprClient,
-		entities:      make(map[string]*entity),
+		entities:      make(map[string]EntityOp),
 		msgCh:         make(chan EntityContext, 10),
 		disposeCh:     make(chan EntityContext, 10),
 		coroutinePool: coroutinePool,
@@ -85,16 +85,28 @@ func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityB
 	return entityInst.GetAllProperties(), nil
 }
 
-func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst *entity, err error) {
+func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst EntityOp, err error) {
 	var has bool
 
 	if entityInst, has = m.entities[entityObj.ID]; has {
 		return
 	}
 
-	entityInst, err = newEntity(context.Background(), m, entityObj)
+	// create entity.
+	switch entityObj.Type {
+	case EntityTypeState:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	case EntityTypeDevice:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	case EntityTypeSpace:
+	case EntityTypeSubscription:
+		entityInst, err = newSubscription(context.Background(), m, entityObj)
+	default:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	}
+
 	if nil == err {
-		m.entities[entityInst.ID] = entityInst
+		m.entities[entityInst.GetID()] = entityInst
 	}
 
 	return
@@ -116,7 +128,9 @@ func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase
 		}
 	}
 
-	return entityInst.SetProperties(entityObj)
+	entityObj, err = entityInst.SetProperties(entityObj)
+
+	return entityObj, errors.Wrap(err, "set properties failed")
 }
 
 func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
@@ -130,7 +144,7 @@ func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBas
 		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
 	}
 
-	for key := range entityInst.KValues {
+	for key := range entityObj.KValues {
 		entityInst.DeleteProperty(key)
 	}
 
