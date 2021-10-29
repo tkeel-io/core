@@ -104,6 +104,10 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *EntityBase) (*entity
 	return et, nil
 }
 
+func (e *entity) GetID() string {
+	return e.ID
+}
+
 // GetMapper returns a mapper.
 func (e *entity) GetMapper(name string) (MapperDesc, error) {
 	reqID := uuid()

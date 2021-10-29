@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/mapper"
 )
 
 const (
@@ -26,6 +25,8 @@ var (
 )
 
 type EntityOp interface {
+	// GetID returns entity id.
+	GetID() string
 	// GetProperty returns entity property.
 	GetProperty(string) interface{}
 	// GetAllProperties returns entity properties.
@@ -39,11 +40,11 @@ type EntityOp interface {
 	// InvokeMsg dispose entity message.
 	InvokeMsg()
 	// SetMapper set mapper into entity.
-	SetMapper(m mapper.Mapper) error
+	SetMapper(m MapperDesc) error
 	// GetMapper returns a mapper.
-	GetMapper(mid string) mapper.Mapper
+	GetMapper(mid string) (MapperDesc, error)
 	// GetMappers
-	GetMappers() []mapper.Mapper
+	GetMappers() []MapperDesc
 }
 
 type EntitySubscriptionOp interface {

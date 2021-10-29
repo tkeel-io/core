@@ -53,11 +53,11 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
   -H "Content-Type: application/json" \
   -d '{
-       "entity_id": "test234",
+       "entity_id": "test123",
        "owner": "admin",
        "plugin": "abcd",
        "data": {
-           "temp": 12
+           "temp": 1233
        }
      }'
 

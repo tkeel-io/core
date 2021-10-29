@@ -6,6 +6,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/mapper"
 )
 
 const (
@@ -57,6 +58,9 @@ func newSubscription(ctx context.Context, mgr *EntityManager, in *EntityBase) (*
 	err = mapstructure.Decode(in.KValues, &subsc)
 	subsc.Status = subsc.checkSubscription()
 
+	// setup subscription.
+	subsc.setup()
+
 	return &subsc, errors.Wrap(err, "create subscription failed")
 }
 
@@ -96,34 +100,40 @@ func (s *subscription) InvokeMsg() {
 
 // invokeMsg invoke property messages.
 func (s *subscription) invokeMsg(msg *EntityMessage) {
+	var err error
 	switch s.Mode {
 	case SubscriptionModeRealtime:
-		s.invokeRealtime(msg)
+		err = s.invokeRealtime(msg)
 	case SubscriptionModePeriod:
-		s.invokePeriod(msg)
+		err = s.invokePeriod(msg)
 	case SubscriptionModeChanged:
-		s.invokeChanged(msg)
+		err = s.invokeChanged(msg)
 	default:
 		// invalid subscription mode.
 	}
+
+	log.Infof("invoke message: %v,  err: %v", msg, err)
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg *EntityMessage) {
+func (s *subscription) invokeRealtime(msg *EntityMessage) error {
 	// 对于 Realtime 直接转发就OK了.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	return errors.Wrap(err, "invoke realtime message failed")
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msg *EntityMessage) {
+func (s *subscription) invokePeriod(msg *EntityMessage) error {
 	// 对于 Period 直接查询快照.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	return errors.Wrap(err, "invoke period message failed")
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msg *EntityMessage) {
+func (s *subscription) invokeChanged(msg *EntityMessage) error {
 	// 对于 Changed 直接转发就OK了.
-	s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	return errors.Wrap(err, "invoke changed message failed")
 }
 
 // checkSubscription returns subscription status.
@@ -132,5 +142,53 @@ func (s *subscription) checkSubscription() string {
 		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
 		return EntityStatusInactive
 	}
+
 	return EntityStatusActive
+}
+
+func (s *subscription) setup() error {
+	m := mapper.NewMapper(s.ID+"#"+"subscription", s.Filter)
+
+	s.mappers[m.ID()] = m
+
+	// generate indexTentacles again.
+	for _, mp := range s.mappers {
+		for _, tentacle := range mp.Tentacles() {
+			s.indexTentacles[tentacle.TargetID()] =
+				append(s.indexTentacles[tentacle.TargetID()], tentacle)
+		}
+	}
+
+	delete(s.indexTentacles, m.ID())
+
+	log.Info("setup subscription", s.indexTentacles)
+
+	// generate tentacles again.
+	s.generateTentacles()
+
+	sourceEntities := []string{}
+	for _, expr := range m.SourceEntities() {
+		sourceEntities = append(sourceEntities,
+			s.entityManager.EscapedEntities(expr)...)
+	}
+
+	for _, entityID := range sourceEntities {
+		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
+
+		if nil != tentacle {
+			// send tentacle msg.
+			s.entityManager.SendMsg(EntityContext{
+				Headers: Header{
+					EntityCtxHeaderSourceID: s.ID,
+					EntityCtxHeaderTargetID: entityID,
+				},
+				Message: &TentacleMsg{
+					TargetID: s.ID,
+					Operator: TentacleOperatorAppend,
+					Items:    tentacle.Copy().Items(),
+				},
+			})
+		}
+	}
+	return nil
 }
