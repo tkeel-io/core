@@ -2,6 +2,7 @@ package entities
 
 import (
 	"context"
+	"encoding/json"
 	"sync/atomic"
 
 	"github.com/mitchellh/mapstructure"
@@ -118,21 +119,24 @@ func (s *subscription) invokeMsg(msg *EntityMessage) {
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg *EntityMessage) error {
 	// 对于 Realtime 直接转发就OK了.
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	bytes, _ := json.Marshal(msg.Values)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
 	return errors.Wrap(err, "invoke realtime message failed")
 }
 
 // invokePeriod.
 func (s *subscription) invokePeriod(msg *EntityMessage) error {
 	// 对于 Period 直接查询快照.
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	bytes, _ := json.Marshal(msg.Values)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
 	return errors.Wrap(err, "invoke period message failed")
 }
 
 // invokeChanged.
 func (s *subscription) invokeChanged(msg *EntityMessage) error {
 	// 对于 Changed 直接转发就OK了.
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, nil)
+	bytes, _ := json.Marshal(msg.Values)
+	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
 	return errors.Wrap(err, "invoke changed message failed")
 }
 
