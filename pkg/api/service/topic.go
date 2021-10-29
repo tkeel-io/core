@@ -57,7 +57,7 @@ func getSourceFrom(pubsubName string) (source string) {
 	return strings.Split(pubsubName, "-")[0]
 }
 
-func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) { //nolint
+func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
 	ec := entities.NewEntityContext(nil)
 	var entityID, owner, plugin string
 
