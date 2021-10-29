@@ -33,14 +33,25 @@ Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理�
 ### 独立部署
 通过 Dapr 启动该项目。
 
-1. 拉去仓库
+#### Self-hosted
+本地运行一个redis，监听6379端口，无密码  
+1. 拉取仓库
 ```bash 
 $ git clone  git@github.com:tkeel-io/core.git
 ```
 2. 启动程序
 ```bash
- 
+dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
 ```
+#### Kubernetes
+1. 部署reids服务
+    ```bash
+    helm install redis bitnami/redis
+    ```
+2. 运行core程序
+    ```bash
+    kubectl apply -f k8s/core.yaml
+    ```
 
 ## 基本概念
 ### 实体（Entity）
@@ -95,7 +106,7 @@ iothub: iothub-pubsub
 ### 作为 tKeel 组件运行
 #### 示例
 在 tKeel 相关组件安装完成之后，[Python 示例](examples/iot-paas.py) 展示了生成 MQTT 使用的 `token`，然后创建实体，上报属性，获取快照，订阅实体的属性等功能。  
-为了方便说明，下面是我们使用外部流量方式访问 Keel，和 Python 作为示例语言的代码。
+为了方便说明，下面是我们使用外部流量方式访问 Keel，和 Python 作为示例语言的代码。我们需要keel和mqtt broker的服务端口用于演示。
 
 ##### 获取服务端口
 1. Keel 服务端口
@@ -167,7 +178,44 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 ```
 
 ##### 订阅实体
+```python
+// examples/iot-paas.py
+def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
+    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
+    entity_create = "/core/plugins/{plugin_id}/subscriptions?id={subscription_id}&type={entity_type}&owner={user_id}&source={source}".format(
+        **query)
+    data = dict(mode="realtime", source="ignore", filter="insert into abc select " + entity_id + ".p1", target="ignore", topic="abc", pubsub_name="client-pubsub")
+    print(data)
+    res = requests.post(keel_url + entity_create, json=data)
+    print(res.json())
+```
+
 ##### 消费topic数据
+消费程序作为一个独立的app消费相关topic数据并展示[消费示例](examples/subclient)
+```python
+// examples/subclient/app.py
+import flask
+from flask import request, jsonify
+from flask_cors import CORS
+import json
+import sys
+
+app = flask.Flask(__name__)
+CORS(app)
+
+@app.route('/dapr/subscribe', methods=['GET'])
+def subscribe():
+    subscriptions = [{'pubsubname': 'client-pubsub',
+                      'topic': 'abc',
+                      'route': 'data'}]
+    return jsonify(subscriptions)
+
+@app.route('/data', methods=['POST'])
+def ds_subscriber():
+    print(request.json, flush=True)
+    return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
+app.run()
+```
 
 ### Entity 示例
 因为当前 Dapr SDK 不能处理 HTTP 请求中的 Header，参数通过 path 和 query 的方式传递。
