@@ -150,12 +150,13 @@ func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
 
 func (l *Listener) GetExpression(index int, in map[string]interface{}) string {
 	e := l.execs[index]
+	field := e.Field
 	for k, v := range in {
 		// convert to string, need to add space otherwise "expecting <EOF>" error
 		nk := " " + fmt.Sprintf("%v", v) + " "
-		e.Field = strings.ReplaceAll(e.Field, k, nk)
+		field = strings.ReplaceAll(field, k, nk)
 	}
-	e.Expression = e.Field
+	e.Expression = field
 	return e.Expression
 }
 
@@ -256,6 +257,7 @@ func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]inter
 	out := make(map[string]interface{})
 	for ind, e := range l.execs {
 		numExpr := l.GetExpression(ind, in)
+		log.Infof("get number expression %s", numExpr)
 		out[e.TargetProperty] = computing(numExpr)
 	}
 	return out
