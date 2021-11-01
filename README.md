@@ -87,6 +87,7 @@ $ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 35
 <div align="center">
 
 ![img.png](docs/images/message_passing.png)
+
 <i>映射模拟</i>
 </div>
 
