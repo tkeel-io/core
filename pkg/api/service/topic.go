@@ -58,21 +58,27 @@ func getSourceFrom(pubsubName string) (source string) {
 }
 
 func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
-	ec := entities.EntityContext{}
-	_ = getSourceFrom(in.PubsubName)
-	var entityID, owner string
-	ec.Headers = make(map[string]string)
+	ec := entities.NewEntityContext(nil)
+	var entityID, owner, plugin string
+
+	log.Infof("dispose event, pubsub: %s. topic: %s, datatype: %T, data: %v.",
+		in.PubsubName, in.Topic, in.Data, in.Data)
+
 	if in.DataContentType == "application/json" {
 		inData, ok := in.Data.(map[string]interface{})
 		if !ok {
 			return nil, errTypeError
 		}
+
+		// get entity id.
 		switch entityIds := inData["entity_id"].(type) {
 		case string:
 			entityID = entityIds
 		default:
 			return nil, errTypeError
 		}
+
+		// get entity owner.
 		switch tempOwner := inData["owner"].(type) {
 		case string:
 			owner = tempOwner
@@ -80,6 +86,21 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 			err = errTypeError
 			return
 		}
+
+		// get entity source plugin.
+		plugin = getSourceFrom(in.PubsubName)
+
+		/*
+			switch tempPlugin := inData["plugin"].(type) {
+			case string:
+				plugin = tempPlugin
+			default:
+				err = errTypeError
+				return
+			}
+		*/
+
+		// get entity data.
 		switch tempData := inData["data"].(type) {
 		case string, []byte:
 			values := make(map[string]interface{})
@@ -92,8 +113,9 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 			return
 		}
 
-		ec.Headers["user_id"] = owner
-		ec.SetTarget(entityID)
+		ec.Headers.SetOwner(owner)
+		ec.Headers.SetPluginID(plugin)
+		ec.Headers.SetTargetID(entityID)
 	}
 	return &ec, nil
 }

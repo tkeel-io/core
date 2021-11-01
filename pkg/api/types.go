@@ -9,7 +9,7 @@ import (
 const (
 	OpenAPISuccessCode = 0
 
-	OpenAPIVersion      = "v0.0.1"
+	OpenAPIVersion      = "v0.1.0"
 	OpenAPISuccessMsg   = "ok"
 	OpenAPIStatusActive = "ACTIVE"
 )

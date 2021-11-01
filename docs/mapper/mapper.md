@@ -49,6 +49,17 @@
 <!-- ![mapper-parse](../images/mapper-parse.png) -->
 
 
+### 解析 Tentacle
+
+对于 `Tentacle` 在定义`TQL` 的时候我们有时候就能够指代清楚我们定义的选取的实体或属性，我们可能需要通过结合服务节点的上下文计算解析才能得到结论。
+
+![tentacle-tow-layer-parse](../images/tentacle-tow-layer-parse.png)
+
+
+在结合服务节点上下文解析的时候，我们分为动态和静态两种方式。
+
+
+
 
 
 ## tentacle 分发
@@ -66,5 +77,9 @@ mapper通过解析`MQL`生成`tentacle`，`mapper`为每一个`SourceActor`生�
 
 
 
+
+## Issues
+
+在我们设计的系统中，实体与实体之间的数据是可以相互传递的，对于上行数据而言，是对真实状态的扩散和传递，但是对于下行的调用数据，其实一个期望值向下传递的过程，是否需要Ack，需要desired？ 同事实体的调用属性是否会处于`占用`状态？
 
 

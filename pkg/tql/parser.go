@@ -150,12 +150,13 @@ func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
 
 func (l *Listener) GetExpression(index int, in map[string]interface{}) string {
 	e := l.execs[index]
+	field := e.Field
 	for k, v := range in {
 		// convert to string, need to add space otherwise "expecting <EOF>" error
 		nk := " " + fmt.Sprintf("%v", v) + " "
-		e.Field = strings.ReplaceAll(e.Field, k, nk)
+		field = strings.ReplaceAll(field, k, nk)
 	}
-	e.Expression = e.Field
+	e.Expression = field
 	return e.Expression
 }
 
@@ -236,17 +237,28 @@ func computing(input string) int {
 	return listener.pop()
 }
 
-func (l *Listener) GetParseConfigs() map[string]interface{} {
-	configMap := make(map[string]interface{})
-	configMap["SourceEntity"] = l.sourceEntity
-	configMap["TargetEntity"] = l.targetEntity
+func (l *Listener) GetParseConfigs() TQLConfig {
+	tqlConfig := TQLConfig{
+		SourceEntities: l.sourceEntity,
+	}
+
+	if len(l.targetEntity) > 0 {
+		tqlConfig.TargetEntity = l.targetEntity[0]
+	}
+
 	// if tentacles is null map, it should be map["*"]["*", ]
 	if l.tentacles == nil {
-		l.tentacles = make(map[string][]string)
-		l.tentacles["*"] = append(l.tentacles["*"], "*")
+		tqlConfig.Tentacles = []TentacleConfig{
+			{SourceEntity: "*", PropertyKeys: []string{"*"}},
+		}
 	}
-	configMap["Tentacles"] = l.tentacles
-	return configMap
+
+	for entityID, propertyKeys := range l.tentacles {
+		tqlConfig.Tentacles = append(tqlConfig.Tentacles,
+			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
+	}
+
+	return tqlConfig
 }
 
 func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]interface{} {
@@ -256,6 +268,7 @@ func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]inter
 	out := make(map[string]interface{})
 	for ind, e := range l.execs {
 		numExpr := l.GetExpression(ind, in)
+		log.Infof("get number expression %s", numExpr)
 		out[e.TargetProperty] = computing(numExpr)
 	}
 	return out

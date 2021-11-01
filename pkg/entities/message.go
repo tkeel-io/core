@@ -16,6 +16,7 @@ func (esm EntityMessage) Promise() PromiseFunc { return esm.PromiseHandler }
 type TentacleMsg struct {
 	messageBase
 
+	Operator string            `json:"operator"`
 	TargetID string            `json:"target"` //nolint
 	Items    []mapper.WatchKey `json:"items"`
 }

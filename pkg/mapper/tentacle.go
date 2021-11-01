@@ -4,6 +4,7 @@ import "log"
 
 type tentacle struct {
 	tp       TentacleType
+	remote   bool
 	targetID string
 	items    []WatchKey // key=entityId#propertyKey
 }
@@ -12,6 +13,15 @@ func NewTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
 	return &tentacle{
 		tp:       tp,
 		items:    items,
+		targetID: targetID,
+	}
+}
+
+func NewRemoteTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
+	return &tentacle{
+		tp:       tp,
+		items:    items,
+		remote:   true,
 		targetID: targetID,
 	}
 }
@@ -42,6 +52,10 @@ func (t *tentacle) Copy() Tentacler {
 		items:    items,
 		targetID: t.targetID,
 	}
+}
+
+func (t *tentacle) IsRemote() bool {
+	return t.remote
 }
 
 func MergeTentacles(tentacles ...Tentacler) Tentacler {

@@ -1,17 +1,29 @@
 ## Subscription APIs
 
-> Subscription 其实也是Entity的一种，不过我们为了更简单的操作Subcription，将其APIs独立出来。
+> Subscription 本质也是 Entity 的一种，不过我们为了更简单的操作 Subscription，将其APIs独立出来。
 
 
 
 ### Subscription Get
 ```bash
-get .../plugins/{plugin}/subscriptions/{subscription}
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions/sub123?owner=admin&type=SUBSCRIPTION" \
+  -H "Content-Type: application/json" \
+  -H "Source: abcd" 
 ```
 
 ### Subscription Create
 ```bash
-post .../plugins/{plugin}/subscriptions
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions?id=sub123&owner=admin&type=SUBSCRIPTION" \
+  -H "Content-Type: application/json" \
+  -H "Source: abcd" \
+  -d '{
+        "mode": "realtime",
+        "source": "ignore",
+        "filter":"insert into sub123 select test123.temp",
+        "target": "ignore",
+        "topic": "sub123",
+        "pubsub_name": "core-pubsub"
+     }'
 ```
 
 ### Subscription Update

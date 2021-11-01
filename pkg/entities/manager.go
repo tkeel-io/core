@@ -11,7 +11,7 @@ import (
 )
 
 type EntityManager struct {
-	entities      map[string]*entity
+	entities      map[string]EntityOp
 	msgCh         chan EntityContext
 	disposeCh     chan EntityContext
 	coroutinePool *ants.Pool
@@ -35,7 +35,7 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) (*EntityMan
 		ctx:           ctx,
 		cancel:        cancel,
 		daprClient:    daprClient,
-		entities:      make(map[string]*entity),
+		entities:      make(map[string]EntityOp),
 		msgCh:         make(chan EntityContext, 10),
 		disposeCh:     make(chan EntityContext, 10),
 		coroutinePool: coroutinePool,
@@ -85,16 +85,28 @@ func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityB
 	return entityInst.GetAllProperties(), nil
 }
 
-func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst *entity, err error) {
+func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst EntityOp, err error) {
 	var has bool
 
 	if entityInst, has = m.entities[entityObj.ID]; has {
 		return
 	}
 
-	entityInst, err = newEntity(context.Background(), m, entityObj)
+	// create entity.
+	switch entityObj.Type {
+	case EntityTypeState:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	case EntityTypeDevice:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	case EntityTypeSpace:
+	case EntityTypeSubscription:
+		entityInst, err = newSubscription(context.Background(), m, entityObj)
+	default:
+		entityInst, err = newEntity(context.Background(), m, entityObj)
+	}
+
 	if nil == err {
-		m.entities[entityInst.ID] = entityInst
+		m.entities[entityInst.GetID()] = entityInst
 	}
 
 	return
@@ -110,7 +122,15 @@ func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase
 		return nil, fmt.Errorf("entityManager.SetProperties failed, %w", err)
 	}
 
-	return entityInst.SetProperties(entityObj)
+	if len(entityObj.Mappers) > 0 {
+		if err = entityInst.SetMapper(entityObj.Mappers[0]); nil != err {
+			return nil, errors.Wrap(err, "entityManager.SetProperties failed")
+		}
+	}
+
+	entityObj, err = entityInst.SetProperties(entityObj)
+
+	return entityObj, errors.Wrap(err, "set properties failed")
 }
 
 func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
@@ -124,7 +144,7 @@ func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBas
 		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
 	}
 
-	for key := range entityInst.KValues {
+	for key := range entityObj.KValues {
 		entityInst.DeleteProperty(key)
 	}
 
@@ -151,15 +171,21 @@ func (m *EntityManager) Start() error {
 				// invoke msg.
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				var err error
-				entityInst, has := m.entities[entityCtx.TargetID()]
+				entityInst, has := m.entities[entityCtx.Headers.GetTargetID()]
 				if !has {
-					m.lock.RLock()
-					entityInst, err = m.checkEntity(context.TODO(), &EntityBase{})
-					m.lock.RUnlock()
+					m.lock.Lock()
+					entityObj := &EntityBase{
+						ID:       entityCtx.Headers.GetTargetID(),
+						Type:     entityCtx.Headers.GetEntityType(),
+						Owner:    entityCtx.Headers.GetOwner(),
+						PluginID: entityCtx.Headers.GetPluginID(),
+					}
+					entityInst, err = m.checkEntity(context.TODO(), entityObj)
+					m.lock.Unlock()
 				}
 
 				if nil != err {
-					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.TargetID())
+					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.Headers.GetTargetID())
 					continue
 				}
 
@@ -177,6 +203,22 @@ func (m *EntityManager) Start() error {
 func (m *EntityManager) HandleMsg(ctx context.Context, msg EntityContext) {
 	// dispose message from pubsub.
 	m.msgCh <- msg
+}
+
+func (m *EntityManager) EscapedEntities(expression string) []string {
+	entities := []string{}
+	switch expression {
+	case "*":
+		m.lock.RLock()
+		for entityID := range m.entities {
+			entities = append(entities, entityID)
+		}
+		m.lock.RUnlock()
+	default:
+		entities = []string{expression}
+	}
+
+	return entities
 }
 
 func init() {}

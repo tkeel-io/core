@@ -1,8 +1,11 @@
 ## run example
 
 ### 运行core
+通过命令行运行core，core内部端口为6789，会定义一个core-pubsub自己使用，一个client-pubsub供client发送数据和一个client-subscription供core消费client发送的数据使用。
 ```bash
 dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
+```
+```bash
 INFO[0001] application discovered on port 6789           app_id=core instance=i-i2j8ujhr scope=dapr.runtime type=log ver=1.4.2
 INFO[0001] application configuration loaded              app_id=core instance=i-i2j8ujhr scope=dapr.runtime type=log ver=1.4.2
 INFO[0001] actor runtime started. actor idle timeout: 1h0m0s. actor scan interval: 30s  app_id=core instance=i-i2j8ujhr scope=dapr.runtime.actor type=log ver=1.4.2
@@ -21,9 +24,12 @@ DEBU[0001] placement order received: unlock              app_id=core instance=i-
 ```
 
 ### 运行client
+client通过api创建一个实体，通过pubsub更新实体的属性，然后获取当前实体的快照。[code](examples/enitity/main.go)
 ```bash
 cd examples/entity
 dapr run --app-id client  --log-level debug  --components-path ../configs/entity/ go run .
+```
+```bash
 ℹ️  Checking if Dapr sidecar is listening on GRPC port 28007
 ℹ️  Dapr sidecar is up and running.
 ℹ️  Updating metadata for app command: go run .
@@ -47,4 +53,24 @@ DEBU[0002] found mDNS IPv4 address in cache: 192.168.181.2:33773  app_id=client 
 ✅  Exited App successfully
 ℹ️
 terminated signal received: shutting down
+```
+
+
+
+
+
+### publish Event
+
+```bash
+curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
+  -H "Content-Type: application/json" \
+  -d '{
+       "entity_id": "test234",
+       "owner": "admin",
+       "plugin": "abcd",
+       "data": {
+           "temp": 234
+       }
+     }'
+
 ```
