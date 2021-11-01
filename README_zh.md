@@ -126,22 +126,22 @@ iothub: iothub-pubsub
 ##### 获取服务端口
 1. Keel 服务端口
 ```bash
-KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
+$ KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
 ```
 2. MQTT Server 服务端口
 ```bash
-MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
+$ MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
 ```
 
 keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 keel_url = "http://{host}:{port}/v0.1.0"
 ```
 
 ##### 创建 token
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 def create_entity_token(entity_id, entity_type, user_id):
     data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
     token_create = "/auth/token/create"
@@ -151,7 +151,7 @@ def create_entity_token(entity_id, entity_type, user_id):
 
 ##### 创建实体
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
@@ -163,7 +163,7 @@ def create_entity(entity_id, entity_type, user_id, plugin_id, token):
 
 ##### 上报实体属性
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected to MQTT Broker!")
@@ -182,7 +182,7 @@ client.publish("system/test", payload=payload)
 
 ##### 获取实体快照
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 def get_entity(entity_id, entity_type, user_id, plugin_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
@@ -194,7 +194,7 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 
 ##### 订阅实体
 ```python
-// examples/iot-paas.py
+// Source: examples/iot-paas.py
 def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
     entity_create = "/core/plugins/{plugin_id}/subscriptions?id={subscription_id}&type={entity_type}&owner={user_id}&source={source}".format(
@@ -208,7 +208,7 @@ def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription
 ##### 消费 topic 数据
 消费程序作为一个独立的app消费相关topic数据并展示[消费示例](examples/subclient)
 ```python
-// examples/subclient/app.py
+// Source: examples/subclient/app.py
 import flask
 from flask import request, jsonify
 from flask_cors import CORS
@@ -239,7 +239,7 @@ app.run()
 
 #### 创建实体
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
 	client, err := dapr.NewClient()
 	if nil != err {
 		panic(err)
@@ -262,7 +262,7 @@ app.run()
 ```
 #### 更新实体属性
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
     data := make(map[string]interface{})
 	data["entity_id"] = "test1"
 	data["owner"] = "abc"
@@ -283,7 +283,7 @@ app.run()
 
 #### 获取实体属性
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
     getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
 
 	result, err = client.InvokeMethodWithContent(context.Background(),
