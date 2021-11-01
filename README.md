@@ -1,5 +1,5 @@
 <h1 align="center"> tKeel-Core</h1>
-<h5 align="center"> 用惊奇的方式连接世界万物</h5>
+<h5 align="center"> The digital engine of world</h5>
 <div align="center">
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/tkeel-io/core)](https://goreportcard.com/report/github.com/tkeel-io/core)
