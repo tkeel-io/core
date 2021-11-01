@@ -1,59 +1,69 @@
-<h1 align="left"> tKeel-Core </h1>
-🌰 tKeel 物联网平台的数据中心。将世界万物数字化的数据库。
+<h1 align="center"> tKeel-Core</h1>
+<h5 align="center"> 用惊奇的方式连接世界万物</h5>
+<div align="center">
 
-[comment]: <> (🌰 tKeel 物联网平台的数据中心。将世界万物抽象成类似于元宇宙的一个数值化高拓展性的数据库。)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tkeel-io/core)](https://goreportcard.com/report/github.com/tkeel-io/core)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tkeel-io/core)
+![GitHub](https://img.shields.io/github/license/tkeel-io/core?style=plastic)
+[![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
+</div>
 
-Core 以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
+🌰 Core 是 tKeel 物联网平台的数据中心，将世界万物数字化的数据库。
+
+以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
 
 [English](README.md)
 
-## 架构设计
-架构按操作分为 **控制平面** 和 **数据平面**。
+## 🪜 架构设计
+架构按操作分为分为了两个平面。
 
-- 控制平面：
-  <br> 通过 http 进行实体的创建查询等操作，
-- 数据平面：
-  <br> 通过 dapr 的 pubsub 完成数据的高效读写与订阅。
+- **控制**：
+  <br> 通过 HTTP 进行实体的创建查询等操作，
+- **数据**：
+  <br> 通过 Dapr 的 pubsub 完成数据的高效读写与订阅。
 
-架构图：
+<div align="center">
+
 ![img.png](docs/images/architecture.png)
+<i>架构图 </i>
+</div>
 
     
-## 快速入门
+## 🚪 快速入门
 Core 是 tKeel 的一个重要基础组件，拥有单独部署能力，使用相关特性做满足广大用户需求的功能也是我们竭力想要的。
 
 ### 安装需要
+🔧 在使用 Core 之前请先确保你做足了准备。 
 1. [Kubernetes](https://kubernetes.io/)
-2. [Dapr](https://docs.dapr.io/getting-started/)
+2. [Dapr with k8s](https://docs.dapr.io/getting-started/)
 
 
 ### 通过 tKeel 安装
 Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理实现。（详细请见[tKeel CLI 安装文档](https://github.com/tkeel-io/cli )）
 
 ### 独立部署
-通过 Dapr 启动该项目。
-
-#### Self-hosted
-本地运行一个redis，监听6379端口，无密码  
-1. 拉取仓库
+拉取仓库
 ```bash 
 $ git clone  git@github.com:tkeel-io/core.git
+$ cd core
 ```
-2. 启动程序
+#### Self-hosted
+> ⚠️ 注意：请本地先运行一个 redis 进程，监听 6379 端口，无密码
+##### 通过 Dapr 启动项目
 ```bash
-dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
+$ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
 ```
 #### Kubernetes
-1. 部署reids服务
+1. 部署 reids 服务
     ```bash
-    helm install redis bitnami/redis
+    $ helm install redis bitnami/redis
     ```
-2. 运行core程序
+2. 运行 core 程序
     ```bash
-    kubectl apply -f k8s/core.yaml
+    $ kubectl apply -f k8s/core.yaml
     ```
 
-## 基本概念
+## 🌱 基本概念
 ### 实体（Entity）
 实体是我们在物联网世界中对 Things 的一种抽象，是所有操作的基础对象。包括网关、设备、关于设备的聚合等概念，都进行了抽象，
 抽象出来了这样一个实体的概念。
@@ -73,21 +83,27 @@ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500
 
 
 ### 映射
-映射是实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
+[映射](docs/mapper/mapper.md) 是实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
+<div align="center">
+
 ![img.png](docs/images/message_passing.png)
+<i>映射模拟</i>
+</div>
 
 蓝色线条代表上行，黑色代表下行
 
 映射的操作包含两个部分: 写复制和计算更新  
-![img.png](docs/images/mapping.png)
+<div align="center">
 
-参见[映射](docs/mapper/mapper.md)
+![img.png](docs/images/mapping.png)
+</div>
+
 ### 模型
 模型是用来约束实体属性的定义。
 有模型的实体属性需要按照模型的要求对值进行处理，比如需要进时序数据库时或者需要用于搜索等。
 
 ### 订阅
-Core 提供了简捷方便的订阅功能，供开发者实时获取自己关心的数据。
+Core 提供了简捷方便的[订阅](docs/subscription/subscription.md) ，供开发者实时获取自己关心的数据。
 
 在 tKeel 平台中用于多个 plugin 之间和一个 plugin 内所有以实体为操作对象的数据交换。
 
@@ -101,7 +117,6 @@ iothub: iothub-pubsub
 - **变更订阅**： 实体属性有变动时触发 
 - **周期订阅**： 周期性触发
 
-详细请参见[订阅文档](docs/subscription/subscription.md)
 
 ### 作为 tKeel 组件运行
 #### 示例
@@ -190,7 +205,7 @@ def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription
     print(res.json())
 ```
 
-##### 消费topic数据
+##### 消费 topic 数据
 消费程序作为一个独立的app消费相关topic数据并展示[消费示例](examples/subclient)
 ```python
 // examples/subclient/app.py
@@ -285,5 +300,37 @@ app.run()
 ```
 
 
-## API
+## ⚙️ API
 Core 的更多功能 API 详细请参见[ API 文档](docs/api/index.md)
+
+## 💬 一起点亮世界
+如果您有任何的建议和想法，欢迎您随时开启一个 [Issue](https://github.com/tkeel-io/core/issues )，期待我们可以一起交流，让世界更美好。
+
+同时 **非常感谢** 您的 `反馈` 与 `建议` ！
+
+[社区文档](docs/development/README.md) 将会带领您了解如何开始为 tKeel 贡献。
+
+### 🧱 贡献一己之力
+
+[开发指南](docs/development/developing-tkeel.md) 向您解释了如何配置您的开发环境。
+
+我们有这样一份希望项目参与者遵守的 [行为准则](docs/community/code-of-conduct.md)。请阅读全文，以便您了解哪些行为会被容忍，哪些行为不会被容忍。
+
+### ☎️ 联系我们
+提出您可能有的任何问题，我们将确保尽快答复！
+
+| 平台 | 链接 |
+|:---|----|
+|email| tkeel@yunify.com|
+|微博| [@tkeel]()|
+
+
+## 🏘️ 仓库
+
+| 仓库 | 描述 |
+|:-----|:------------|
+| [tKeel](https://github.com/tkeel-io/tkeel) | tKeel 开放物联网平台|
+| [Core](https://github.com/tkeel-io/core) | tKeel 的数据中心 |
+| [CLI](https://github.com/tkeel-io/cli) | tKeel CLI 是用于各种 tKeel 相关任务的主要工具 |
+| [Helm](https://github.com/tkeel-io/helm-charts) | tKeel 对应的 Helm charts |
+
