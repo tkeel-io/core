@@ -8,9 +8,9 @@
 [![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
 </div>
 
-🌰 Core 是 tKeel 物联网平台的数据中心，将世界万物数字化的数据库。
+🌰 Core 是 tKeel 物联网平台的数据中心，高性能、可拓展的轻量级下一代数字化数据引擎。
 
-以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
+将世间万物映射为实体（entity），以实体为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
 
 [English](README.md)
 
