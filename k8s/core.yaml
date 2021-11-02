@@ -43,55 +43,18 @@ spec:
       port: 6789
       targetPort: 6789
 
-
----
-apiVersion: dapr.io/v1alpha1
-kind: Configuration
-metadata:
-  name: core
-  namespace: keel-system
-spec:
-  accessControl:
-    defaultAction: allow
-    trustDomain: "keel"
-    policies:
-      - appId: plugins
-        defaultAction: allow
-        trustDomain: 'keel'
-        namespace: "keel-system"
-      - appId: keel
-        defaultAction: allow
-        trustDomain: 'keel'
-        namespace: "keel-system"
-      - appId: client
-        defaultAction: deny
-        trustDomain: 'keel'
-        namespace: "keel-system"
-  httpPipeline:
-    handlers:
-      - name: core-oauth2-client
-        type: middleware.http.oauth2clientcredentials
-
 ---
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: core-oauth2-client
-  namespace: keel-system
+  name: core-pubsub
 spec:
-  type: middleware.http.oauth2clientcredentials
+  type: pubsub.redis
   version: v1
   metadata:
-    - name: clientId
-      value: "core"
-    - name: clientSecret
-      value: "zhu88jie"
-    - name: scopes
-      value: "http://iothub.com"
-    - name: tokenURL
-      value: "http://plugins:8080/oauth2/token"
-    - name: headerName
-      value: "x-plugin-jwt"
-    - name: authStyle
-      value: 0
-
+    - name: redisHost
+      value: redis-master:6379
+    - name: redisPassword
+      secretKeyRef:
+        name: redis
+        key: redis-password
