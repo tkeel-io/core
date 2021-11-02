@@ -8,9 +8,9 @@
 [![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
 </div>
 
-🌰 Core 是 tKeel 物联网平台的数据中心，将世界万物数字化的数据库。
+🌰 Core 是 tKeel 物联网平台的数据中心，高性能、可拓展的轻量级下一代数字化数据引擎。
 
-以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
+以实体（entity）为操作单元，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅，映射等）。
 
 [English](README.md)
 
@@ -25,6 +25,7 @@
 <div align="center">
 
 ![img.png](docs/images/architecture.png)
+
 <i>架构图 </i>
 </div>
 
@@ -87,6 +88,7 @@ $ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 35
 <div align="center">
 
 ![img.png](docs/images/message_passing.png)
+
 <i>映射模拟</i>
 </div>
 
