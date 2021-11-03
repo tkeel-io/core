@@ -119,11 +119,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-  - name: Get version from tag
-      id: tag_name
-      run: |
-        echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
-      shell: bash
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+        shell: bash
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Update Changelog
@@ -141,7 +141,6 @@ jobs:
         with:
           version: ${{ github.ref }}
           path: CHANGELOG.md
-
       - name: Create Release
         id: create_release
         uses: ncipollo/release-action@v1
