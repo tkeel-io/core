@@ -12,8 +12,6 @@
 
 以实体（entity）为操作单元，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅，映射等）。
 
-[English](README.md)
-
 ## 🪜 架构设计
 架构按操作分为分为了两个平面。
 
@@ -207,6 +205,8 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 ```
 
 ##### 订阅实体
+运行订阅实体之前，先要创建订阅目的地的pubsub，可以通过运行消费topic的示例yaml创建[消费示例yaml](examples/subclient/client.yaml)
+
 ```python
 // Source: examples/iot-paas.py
 def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
