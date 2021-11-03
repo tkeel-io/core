@@ -1,4 +1,4 @@
-name: core
+name: main
 on:
   push:
     branches:
