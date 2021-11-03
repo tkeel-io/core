@@ -55,7 +55,7 @@ jobs:
   build:
     name: Build ${{ matrix.target_os }}_${{ matrix.target_arch }} binaries
     runs-on: ${{ matrix.os }}
-    needs: [ lint, test_ADM64 ]
+    needs: [ test ]
     env:
       GOVER: 1.17.2
       GOOS: ${{ matrix.target_os }}
@@ -124,8 +124,6 @@ jobs:
         run: |
           echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
         shell: bash
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Update Changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.1.1
         with:
@@ -140,7 +138,7 @@ jobs:
         uses: mindsers/changelog-reader-action@v1
         with:
           version: ${{ github.ref }}
-          path: CHANGELOG.md
+          path: ./CHANGELOG.md
       - name: Create Release
         id: create_release
         uses: ncipollo/release-action@v1
