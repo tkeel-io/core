@@ -115,16 +115,8 @@ jobs:
     name: Update Changelog
     runs-on: ubuntu-latest
     steps:
-      - name: Get version from tag
-        env:
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          export CURRENT_VERSION=${GITHUB_TAG/refs\/tags\/v/}
-          echo "::set-env name=CURRENT_VERSION::$CURRENT_VERSION"
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          ref: main
       - name: Update Changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.1.1
         with:
@@ -145,13 +137,6 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Get version from tag
-        env:
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          export CURRENT_VERSION=${GITHUB_TAG/refs\/tags\/v/}
-          echo "::set-env name=CURRENT_VERSION::$CURRENT_VERSION"
-
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -164,17 +149,24 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body_path: CHANGELOG.md
+          # This pulls from the "Get Changelog Entry" step above, referencing it's ID to get its outputs object.
+          # See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          tag: ${{ steps.changelog_reader.outputs.version }}
+          name: Release ${{ steps.changelog_reader.outputs.version }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+          draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
   upload:
     name: Upload release files
     needs:
       - release
+      - build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
