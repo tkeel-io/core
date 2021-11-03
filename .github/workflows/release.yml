@@ -178,4 +178,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          asset_paths: ${{ steps.download.outputs.download-path }}/${{ matrix.project }}
+          asset_paths: '["${{ steps.download.outputs.download-path }}/${{ matrix.project }}"]'
