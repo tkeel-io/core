@@ -115,6 +115,11 @@ jobs:
     name: Update Changelog
     runs-on: ubuntu-latest
     steps:
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+        shell: bash
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Update Changelog
@@ -126,10 +131,6 @@ jobs:
           pullRequests: true
           prWoLabels: true
           addSections: '{"documentation":{"prefix":"**Documentation:**","labels":["documentation"]}}'
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: Update Changelog for tag ${{ github.ref }}
-          file_pattern: CHANGELOG.md
   release:
     name: Create Release Notes
     runs-on: ubuntu-latest
