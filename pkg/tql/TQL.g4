@@ -65,7 +65,7 @@ SUB:                '-';
 DOT:                '.';
 TRUE:               T R U E;
 FALSE:              F A L S E;
-ENTITYNAME:         [a-zA-Z_#*0-9]([a-zA-Z_\-#$@]+[0-9]* | [0-9]*[a-zA-Z_\-#$@]+);
+ENTITYNAME:         [a-zA-Z_#*0-9]([a-zA-Z_\-#$@]+[0-9]* | [0-9]*[a-zA-Z_\-#$@]+) [a-zA-Z_\-#$@0-9]*;
 PROPERTYNAME:       '.' [a-zA-Z_#][a-zA-Z_\-#$@0-9.]*;
 TARGETENTITY:       [a-zA-Z_#*][a-zA-Z_\-#$@0-9]*;
 NUMBER:             '0' | [1-9][0-9]* ;
