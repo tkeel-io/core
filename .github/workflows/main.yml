@@ -11,4 +11,4 @@ on:
       - main
 jobs:
   call-lint-test-build:
-    uses: uptutu/core/.github/workflows/public_call.yml@fix/action
+    uses: uptutu/core/.github/workflows/public_call.yml@main
