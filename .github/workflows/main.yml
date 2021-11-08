@@ -10,7 +10,7 @@ on:
       - master
       - main
 jobs:
-  call-lint-test-build:
+  check:
     uses: uptutu/core/.github/workflows/public_call.yml@main
     with:
       upload_require: false

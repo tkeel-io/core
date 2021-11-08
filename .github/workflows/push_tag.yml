@@ -45,8 +45,7 @@ jobs:
           body: ${{ steps.changelog_reader.outputs.changes }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
           draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-  call_lint_test_build:
+  check:
     needs:
       - release
     name: Run lint test and build
@@ -54,7 +53,6 @@ jobs:
     with:
       archive_outdir: dist/archivers
       go_version: 1.17.3
-
   upload:
     name: Upload release files
     needs:
