@@ -1,4 +1,4 @@
-name: on release created
+name: on release published
 on:
   release:
     types: [ published ]

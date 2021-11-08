@@ -12,3 +12,5 @@ on:
 jobs:
   call-lint-test-build:
     uses: uptutu/core/.github/workflows/public_call.yml@main
+    with:
+      upload_require: false
