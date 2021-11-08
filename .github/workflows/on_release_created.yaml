@@ -13,8 +13,7 @@ jobs:
   upload:
     name: Upload release files
     needs:
-      - release
-      - build
+      - call_lint_test_build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
