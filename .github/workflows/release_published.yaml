@@ -1,19 +1,18 @@
-name: on release created
+name: on release published
 on:
   release:
     types: [ published ]
 jobs:
-  call_lint_test_build:
+  check:
     name: Run lint test and build
-    uses: uptutu/core/.github/workflows/public_call.yml@fix/action
+    uses: tkeel-io/tkeel/.github/workflows/public_call.yml@main
     with:
-      archive_outdir: 'dist/archivers'
-      go_version: '1.17.3'
-
+      archive_outdir: dist/archivers
+      go_version: 1.17.3
   upload:
     name: Upload release files
     needs:
-      - call_lint_test_build
+      - check
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -26,7 +25,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: my-artifact
-          path: 'dist/archivers'
+          path: dist/archivers
 
       - name: Upload release binaries
         uses: alexellis/upload-assets@0.2.2

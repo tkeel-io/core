@@ -4,12 +4,6 @@ on:
     tags:
       - v*
 jobs:
-  call_lint_test_build:
-    name: Run lint test and build
-    uses: uptutu/core/.github/workflows/public_call.yml@fix/action
-    with:
-      archive_outdir: dist/archivers
-      go_version: 1.17.3
   release:
     name: Create Release Notes
     runs-on: ubuntu-latest
@@ -51,11 +45,18 @@ jobs:
           body: ${{ steps.changelog_reader.outputs.changes }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
           draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+  check:
+    needs:
+      - release
+    name: Run lint test and build
+    uses: tkeel-io/tkeel/.github/workflows/public_call.yml@main
+    with:
+      archive_outdir: dist/archivers
+      go_version: 1.17.3
   upload:
     name: Upload release files
     needs:
-      - call_lint_test_build
+      - check
       - release
     runs-on: ubuntu-latest
     strategy:

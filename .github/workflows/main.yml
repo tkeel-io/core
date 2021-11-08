@@ -10,5 +10,7 @@ on:
       - master
       - main
 jobs:
-  call-lint-test-build:
-    uses: uptutu/core/.github/workflows/public_call.yml@main
+  check:
+    uses: tkeel-io/tkeel/.github/workflows/public_call.yml@main
+    with:
+      upload_require: false
