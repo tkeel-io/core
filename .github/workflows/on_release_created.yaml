@@ -1,7 +1,7 @@
 name: on release created
 on:
   release:
-    types: [ created ]
+    types: [ published ]
 jobs:
   call_lint_test_build:
     name: Run lint test and build
