@@ -10,11 +10,12 @@
 
 🌰 Core 是 tKeel 物联网平台的数据中心，高性能、可拓展的轻量级下一代数字化数据引擎。
 
-以实体（entity）为操作单元，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅，映射等）。
+以 *实体（entity）* 为操作单元，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅，映射等）。
 
+[English](README.md)
 
 ## 🚪 快速入门
-Core 是 tKeel 的一个重要基础组件，拥有单独部署能力，使用相关特性做满足广大用户需求的功能也是我们竭力想要的。
+Core 是 tKeel 的一个重要基础组件，同时它还有可以单独部署的能力。使用 core 的特性去做伟大的事情，比如说那些你现在正棘手不知道怎么解决的问题，我想也许 core 可以帮助您。
 
 ### 安装需要
 🔧 在使用 Core 之前请先确保你做足了准备。
@@ -23,28 +24,28 @@ Core 是 tKeel 的一个重要基础组件，拥有单独部署能力，使用�
 
 
 ### 通过 tKeel 安装
-Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理实现。（详细请见[tKeel CLI 安装文档](https://github.com/tkeel-io/cli )）
+Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理可以实现。（详细请见[tKeel CLI 安装文档](https://github.com/tkeel-io/cli )）
 
 ### 独立部署
 拉取仓库
 ```bash 
-$ git clone  git@github.com:tkeel-io/core.git
-$ cd core
+git clone  git@github.com:tkeel-io/core.git
+cd core
 ```
 #### Self-hosted
 > ⚠️ 注意：请本地先运行一个 redis 进程，监听 6379 端口，无密码
 ##### 通过 Dapr 启动项目
 ```bash
-$ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
+dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
 ```
 #### Kubernetes
 1. 部署 reids 服务
     ```bash
-    $ helm install redis bitnami/redis
+    helm install redis bitnami/redis
     ```
 2. 运行 core 程序
     ```bash
-    $ kubectl apply -f k8s/core.yaml
+    kubectl apply -f k8s/core.yaml
     ```
 
 ## 🪜 架构设计
@@ -57,6 +58,7 @@ $ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 35
 <div align="center">
 
 ![img.png](docs/images/architecture.png)
+
 <i>架构图 </i>
 </div>
 
@@ -65,10 +67,9 @@ $ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 35
 实体是我们在物联网世界中对 Things 的一种抽象，是 Core 操作的基础对象。包括智能灯、空调、网关，房间，楼层，甚至是通过数据聚合生成的虚拟设备等等，我们将这些 `Things` 进行抽象，
 定义为实体。
 
-*属性* 是对实体某种信息的描述，一个实体包含两类属性
+*属性* 是对某种实体一部分信息的描述。一个实体包含两类属性：
 1. **基础属性**: 每个实体都必备的属性，如 `id`，`owner`等用于标识实体共有特征的属性。
 2. **扩展属性**: 实体除基础属性外的属性，这种属性属于某一类或某一个实体的特征描述，比如一个 **温度计** 的温度。
-
 
 更多设计细节请阅读[实体文档](docs/entity/entity.md)
 
@@ -76,7 +77,7 @@ $ dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 35
 [Actor](docs/actors/actor.md) 是实体（Entity）的运行时的一种模式抽象, 用于维护实体的实时状态以及提供实体的一些具体行为。
 
 ### 映射
-[映射](docs/mapper/mapper.md) 是实体之间数据传递和映射的一种规则的定义，用于实现上报数据的向上传播以及控制命令的向下传播。
+[映射](docs/mapper/mapper.md) 是实体属性传播的抽象，可以实现数据的向上传递以及控制命令的向下传递。
 <div align="center">
 
 ![img.png](docs/images/message_passing.png)
@@ -119,18 +120,19 @@ Core 提供了简捷方便的[订阅](docs/subscription/subscription.md) ，供�
 iothub: iothub-pubsub
 
 **订阅** 分为三种：
-- **实时订阅**： 订阅将实体的实时数据发送给订阅者。
+- **实时订阅**： 订阅会把实体的实时数据发送给订阅者。
 - **变更订阅**： 订阅者订阅的实体属性发生变更且满足变更条件时，订阅将实体属性数据发送给订阅者。
 - **周期订阅**： 订阅周期性的将实体属性数据发送给订阅者。
 
 
-### 作为 tKeel 组件运行
+### 作为 *tKeel* 组件运行
 #### 示例
 在 tKeel 相关组件安装完成之后，[Python 示例](examples/iot-paas.py) 展示了生成 MQTT 使用的 `token`，然后创建实体，上报属性，获取快照，订阅实体的属性等功能。  
-为了方便说明，下面是我们使用外部流量方式访问 Keel，和 Python 作为示例语言的代码。我们需要keel和mqtt broker的服务端口用于演示。
+
+为了方便说明，下面是我们使用外部流量方式访问 tKeel，和 Python 作为示例语言的代码。我们需要 tKeel 和 MQTT broker 的服务端口用于演示。
 
 ##### 获取服务端口
-1. Keel 服务端口
+1. tKeel 服务端口
 ```bash
 KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
 ```
@@ -139,7 +141,7 @@ KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
 MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
 ```
 
-keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
+tKeel OpenAPI 服务地址为 k8s ip:keel暴露的 NodePort 端口
 ```python
 # Source: examples/iot-paas.py
 keel_url = "http://{host}:{port}/v0.1.0"
@@ -188,7 +190,7 @@ client.publish("system/test", payload=payload)
 
 ##### 获取实体快照
 ```python
-// Source: examples/iot-paas.py
+# Source: examples/iot-paas.py
 def get_entity(entity_id, entity_type, user_id, plugin_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
