@@ -1,8 +1,17 @@
-name: release
 on:
-  push:
-    tags:
-      - v*
+  workflow_call:
+    inputs:
+      archive_outdir:
+        description: archive dir
+        default: dist/archivers
+        required: false
+        type: string
+      go_version:
+        description: go version in action
+        default: 1.17.3
+        required: false
+        type: string
+
 jobs:
   lint:
     name: lint
@@ -13,20 +22,18 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.42
-  test_ADM64:
+  test:
     name: Test in ${{ matrix.target_os }}_${{ matrix.target_arch }} with Go_${{ matrix.go }}
     runs-on: ${{ matrix.os }}
     needs: [ lint ]
     env:
-      GOVER: ${{ matrix.go }}
       GOOS: ${{ matrix.target_os }}
       GOARCH: ${{ matrix.target_arch }}
       GOPROXY: https://proxy.golang.org
-      ARCHIVE_OUTDIR: dist/archives
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macOS-latest ]
-        go: [ 1.17.2, 1.16 ]
+        go: [ 1.17.3, 1.16 ]
         target_arch: [ amd64 ]
         include:
           - os: ubuntu-latest
@@ -55,13 +62,13 @@ jobs:
   build:
     name: Build ${{ matrix.target_os }}_${{ matrix.target_arch }} binaries
     runs-on: ${{ matrix.os }}
-    needs: [ lint, test_ADM64 ]
+    needs: [ lint, test ]
     env:
-      GOVER: 1.17.2
+      GOVER: ${{inputs.go_version}}
       GOOS: ${{ matrix.target_os }}
       GOARCH: ${{ matrix.target_arch }}
       GOPROXY: https://proxy.golang.org
-      ARCHIVE_OUTDIR: dist/archives
+      ARCHIVE_OUTDIR: ${{ inputs.archive_outdir }}
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macOS-latest ]
@@ -96,77 +103,13 @@ jobs:
       - name: Codecov
         if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
         uses: codecov/codecov-action@v1
-      - name: Parse release version and set REL_VERSION
-        run: python ./.github/scripts/get_release_version.py
-      - name: Setup test output
-        shell: bash
+      - name: Run make release
         run: |
-          export TEST_OUTPUT_FILE=$GITHUB_WORKSPACE/test-unit.json
-          echo "TEST_OUTPUT_FILE=$TEST_OUTPUT_FILE" >> $GITHUB_ENV
-      - name: Run make release to build and archive binaries
-        run: |
-          mkdir -p ${{ env.ARCHIVE_OUTDIR }}
-          make release GOOS=${{ matrix.target_os }} GOARCH=${{ matrix.target_arch }} ARCHIVE_OUT_DIR=${{ env.ARCHIVE_OUTDIR }}
-      - name: Create release_version.txt
-        if: matrix.target_arch == 'amd64' && matrix.target_os == 'linux'
-        run: |
-          [ ! -z "${{ env.REL_VERSION }}" ] && echo "${{ env.REL_VERSION }}" > "${{ env.ARCHIVE_OUTDIR }}/release_version.txt"
+          mkdir -p ${{ env.archive_outdir }}
+          make release GOOS=${{ matrix.target_os }} GOARCH=${{ matrix.target_arch }} ARCHIVE_OUT_DIR=${{ env.archive_outdir }}
       - name: upload artifacts
+        if: ${{ env.GITHUB_EVENT_NAME == 'push tag and release' || env.GITHUB_EVENT_NAME == 'on release created'}}
         uses: actions/upload-artifact@master
         with:
           name: my-artifact
-          path: ${{ env.ARCHIVE_OUTDIR }}
-
-  release:
-    name: Create latest release
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v2
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: Auto build from ${{ github.sha }} (master)
-          draft: false
-          prerelease: true
-
-  upload:
-    name: Upload release files
-    needs:
-      - release
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        project:
-          - core_darwin_amd64.tar.gz
-          - core_linux_amd64.tar.gz
-          - core_linux_arm.tar.gz
-          - core_linux_arm64.tar.gz
-          - core_windows_amd64.zip
-    steps:
-      - name: Download Artifact
-        id: download
-        uses: actions/download-artifact@v2
-        with:
-          name: my-artifact
-          path: ${{ env.ARCHIVE_OUTDIR }}
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ${{ steps.download.outputs.download-path }}/${{ matrix.project }}
-          asset_name: ${{ matrix.project }}
-          asset_content_type: application/octet-stream
+          path: ${{ env.archive_outdir }}
