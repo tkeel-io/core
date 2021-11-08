@@ -3,12 +3,12 @@ on:
     inputs:
       archive_outdir:
         description: archive dir
-        default: 'dist/archivers'
+        default: dist/archivers
         required: false
         type: string
       go_version:
         description: go version in action
-        default: '1.17.3'
+        default: 1.17.3
         required: false
         type: string
 
