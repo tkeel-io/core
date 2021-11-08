@@ -16,7 +16,7 @@ jobs:
       - name: assert released
         if: ${{release.ID　!= 0}}
         run: |
-        echo "::stop-commands::`echo -n ${{ github.token }} | sha256sum | head -c 64`"
+         echo "::stop-commands::`echo -n ${{ github.token }} | sha256sum | head -c 64`"
 
   call_lint_test_build:
     name: Run lint test and build
