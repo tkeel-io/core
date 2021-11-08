@@ -6,7 +6,7 @@ on:
 jobs:
   call_lint_test_build:
     name: Run lint test and build
-    uses: uptutu/core/.github/workflows/public_call.yml@fix/action
+    uses: uptutu/core/.github/workflows/public_call.yml@main
     with:
       archive_outdir: dist/archivers
       go_version: 1.17.3
