@@ -56,7 +56,7 @@ jobs:
   upload:
     name: Upload release files
     needs:
-      - call_lint_test_build
+      - check
       - release
     runs-on: ubuntu-latest
     strategy:
