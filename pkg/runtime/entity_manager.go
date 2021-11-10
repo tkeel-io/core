@@ -11,13 +11,11 @@ import (
 
 type MessageRouter struct{}
 
-type Container struct{}
-
 type EntityManager struct {
 	// router route message.
 	msgRouter MessageRouter
 	// inboxes 用于提供数据的可靠性.
-	msgInboxes []inbox.Inbox
+	msgInbox inbox.Inbox
 	// enContainer store entities.
 	enContainer Container
 	// coroutinePool coroutine pool.
@@ -34,7 +32,7 @@ func NewEntityManager(ctx context.Context) *EntityManager {
 	ctx, cancel := context.WithCancel(ctx)
 	return &EntityManager{
 		msgRouter:     MessageRouter{},
-		msgInboxes:    []inbox.Inbox{},
+		msgInboxes:    inbox.Inbox{},
 		enContainer:   Container{},
 		daprClient:    nil,
 		coroutinePool: nil,
