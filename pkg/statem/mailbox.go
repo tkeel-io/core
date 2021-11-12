@@ -1,4 +1,4 @@
-package entities
+package statem
 
 import (
 	"errors"

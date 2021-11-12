@@ -2,18 +2,18 @@ package entities
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 type EntityManager struct {
 	entities      map[string]EntityOp
-	msgCh         chan EntityContext
-	disposeCh     chan EntityContext
+	msgCh         chan statem.MessageContext
+	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
 
 	daprClient dapr.Client
@@ -36,124 +36,16 @@ func NewEntityManager(ctx context.Context, coroutinePool *ants.Pool) (*EntityMan
 		cancel:        cancel,
 		daprClient:    daprClient,
 		entities:      make(map[string]EntityOp),
-		msgCh:         make(chan EntityContext, 10),
-		disposeCh:     make(chan EntityContext, 10),
+		msgCh:         make(chan statem.MessageContext, 10),
+		disposeCh:     make(chan statem.MessageContext, 10),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
 	}, nil
 }
 
-func (m *EntityManager) DeleteEntity(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
-	m.lock.Lock()
-	entityInst, has := m.entities[entityObj.ID]
-	delete(m.entities, entityObj.ID)
-	m.lock.Unlock()
-
-	if !has {
-		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
-		return nil, errEntityNotFound
-	}
-
-	entityObj = entityInst.GetAllProperties()
-
-	return entityObj, nil
-}
-
-func (m *EntityManager) GetProperty(ctx context.Context, entityID, propertyKey string) (resp interface{}, err error) {
-	m.lock.Lock()
-	entityInst, has := m.entities[entityID]
-	m.lock.Unlock()
-
-	if !has {
-		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
-		return nil, errEntityNotFound
-	}
-
-	return entityInst.GetProperty(propertyKey), err
-}
-
-func (m *EntityManager) GetAllProperties(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
-	m.lock.Lock()
-	entityInst, has := m.entities[entityObj.ID]
-	m.lock.Unlock()
-
-	if !has {
-		log.Errorf("EntityManager.GetAllProperties failed, entity not found.")
-		return nil, errEntityNotFound
-	}
-
-	return entityInst.GetAllProperties(), nil
-}
-
-func (m *EntityManager) checkEntity(ctx context.Context, entityObj *EntityBase) (entityInst EntityOp, err error) {
-	var has bool
-
-	if entityInst, has = m.entities[entityObj.ID]; has {
-		return
-	}
-
-	// create entity.
-	switch entityObj.Type {
-	case EntityTypeState:
-		entityInst, err = newEntity(context.Background(), m, entityObj)
-	case EntityTypeDevice:
-		entityInst, err = newEntity(context.Background(), m, entityObj)
-	case EntityTypeSpace:
-	case EntityTypeSubscription:
-		entityInst, err = newSubscription(context.Background(), m, entityObj)
-	default:
-		entityInst, err = newEntity(context.Background(), m, entityObj)
-	}
-
-	if nil == err {
-		m.entities[entityInst.GetID()] = entityInst
-	}
-
-	return
-}
-
-func (m *EntityManager) SetProperties(ctx context.Context, entityObj *EntityBase) (*EntityBase, error) {
-	m.lock.Lock()
-	// check id, type, source, userId.
-	entityInst, err := m.checkEntity(ctx, entityObj)
-	m.lock.Unlock()
-
-	if nil != err {
-		return nil, fmt.Errorf("entityManager.SetProperties failed, %w", err)
-	}
-
-	if len(entityObj.Mappers) > 0 {
-		if err = entityInst.SetMapper(entityObj.Mappers[0]); nil != err {
-			return nil, errors.Wrap(err, "entityManager.SetProperties failed")
-		}
-	}
-
-	entityObj, err = entityInst.SetProperties(entityObj)
-
-	return entityObj, errors.Wrap(err, "set properties failed")
-}
-
-func (m *EntityManager) DeleteProperty(ctx context.Context, entityObj *EntityBase) error {
-	m.lock.Lock()
-	entityInst, has := m.entities[entityObj.ID]
-	// check id, source, userId, ...
-	m.lock.Unlock()
-
-	if !has {
-		err := errEntityNotFound
-		log.Errorf("EntityManager.GetAllProperties failed, err: %s", err.Error())
-	}
-
-	for key := range entityObj.KValues {
-		entityInst.DeleteProperty(key)
-	}
-
-	return nil
-}
-
-func (m *EntityManager) SendMsg(ctx EntityContext) {
+func (m *EntityManager) SendMsg(msgCtx statem.MessageContext) {
 	// 解耦actor之间的直接调用
-	m.msgCh <- ctx
+	m.msgCh <- msgCtx
 }
 
 func (m *EntityManager) Start() error {
@@ -163,35 +55,27 @@ func (m *EntityManager) Start() error {
 			case <-m.ctx.Done():
 				log.Info("entity EntityManager exited.")
 				return
-			case entityCtx := <-m.msgCh:
+			case msgCtx := <-m.msgCh:
 				// dispatch message. 将消息分发到不同的节点。
-				m.disposeCh <- entityCtx
+				m.disposeCh <- msgCtx
 
-			case entityCtx := <-m.disposeCh:
+			case msgCtx := <-m.disposeCh:
 				// invoke msg.
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
-				var err error
-				entityInst, has := m.entities[entityCtx.Headers.GetTargetID()]
+				// 消费的消息统一来自Inbox，不存在无entityID的情况.
+				// 如果entity在当前节点不存在就将entity调度到当前节点.
+				entityInst, has := m.entities[msgCtx.Headers.GetTargetID()]
 				if !has {
-					m.lock.Lock()
-					entityObj := &EntityBase{
-						ID:       entityCtx.Headers.GetTargetID(),
-						Type:     entityCtx.Headers.GetEntityType(),
-						Owner:    entityCtx.Headers.GetOwner(),
-						PluginID: entityCtx.Headers.GetPluginID(),
+					// rebalance entity.
+					if err := m.rebalanceEntity(context.Background(), msgCtx); nil != err {
+						log.Errorf("dispose message failed, err: %s", err.Error())
 					}
-					entityInst, err = m.checkEntity(context.TODO(), entityObj)
-					m.lock.Unlock()
-				}
-
-				if nil != err {
-					log.Warnf("dispose msg failed, entity(%s) not found.", entityCtx.Headers.GetTargetID())
 					continue
 				}
 
-				if entityInst.OnMessage(entityCtx) {
+				if entityInst.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
-					m.coroutinePool.Submit(entityInst.InvokeMsg)
+					m.coroutinePool.Submit(entityInst.HandleLoop)
 				}
 			}
 		}
@@ -200,25 +84,42 @@ func (m *EntityManager) Start() error {
 	return nil
 }
 
-func (m *EntityManager) HandleMsg(ctx context.Context, msg EntityContext) {
+func (m *EntityManager) HandleMsg(ctx context.Context, msg statem.MessageContext) {
 	// dispose message from pubsub.
 	m.msgCh <- msg
 }
 
-func (m *EntityManager) EscapedEntities(expression string) []string {
-	entities := []string{}
-	switch expression {
-	case "*":
-		m.lock.RLock()
-		for entityID := range m.entities {
-			entities = append(entities, entityID)
-		}
-		m.lock.RUnlock()
-	default:
-		entities = []string{expression}
+func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.MessageContext) error {
+	// 1. 通过placement查询entity是否在当前节点.
+	// 2.1. 如果在当前节点则在当前节点创建该实体.
+	// 2.2 如果实体不属于当前节点，则将消息转发出去.
+
+	var (
+		err        error
+		entityInst EntityOp
+	)
+
+	if false {
+		// 从状态存储中获取实体信息.
+	} else {
+		entityInst, err = statem.NewState(context.Background(), m, &statem.Base{
+			ID:    msgCtx.Headers.GetTargetID(),
+			Type:  msgCtx.Headers.GetStateType(),
+			Owner: msgCtx.Headers.GetOwner(),
+		}, nil)
 	}
 
-	return entities
+	if nil != err {
+		return errors.Wrap(err, "rrebalance entity failed")
+	}
+
+	entityInst.OnMessage(msgCtx.Message)
+	m.entities[entityInst.GetID()] = entityInst
+	return nil
 }
 
-func init() {}
+func (m *EntityManager) EscapedEntities(expression string) []string {
+	return nil
+}
+
+// ------------------------------------APIs-----------------------------.

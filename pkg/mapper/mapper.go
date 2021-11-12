@@ -11,12 +11,12 @@ type mapper struct {
 	tqlInst tql.TQL
 }
 
-func NewMapper(id, tqlText string) Mapper {
+func NewMapper(id, tqlText string) (Mapper, error) {
 	return &mapper{
 		id:      id,
 		tqlText: tqlText,
 		tqlInst: tql.NewTQL(tqlText),
-	}
+	}, nil
 }
 
 // ID returns mapper id.
@@ -66,7 +66,8 @@ func (m *mapper) Tentacles() []Tentacler {
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	return NewMapper(m.id, m.tqlText)
+	mCopy, _ := NewMapper(m.id, m.tqlText)
+	return mCopy
 }
 
 // Exec input returns output.
