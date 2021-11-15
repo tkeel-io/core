@@ -2,6 +2,8 @@ package entities
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
 	"sync"
 
 	dapr "github.com/dapr/go-sdk/client"
@@ -64,18 +66,22 @@ func (m *EntityManager) Start() error {
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				// 消费的消息统一来自Inbox，不存在无entityID的情况.
 				// 如果entity在当前节点不存在就将entity调度到当前节点.
-				entityInst, has := m.entities[msgCtx.Headers.GetTargetID()]
+				eid := msgCtx.Headers.GetTargetID()
+				_, has := m.entities[eid]
 				if !has {
 					// rebalance entity.
 					if err := m.rebalanceEntity(context.Background(), msgCtx); nil != err {
 						log.Errorf("dispose message failed, err: %s", err.Error())
 						continue
 					}
+
+					log.Infof("rebalance entity(%s)", eid)
 				}
 
-				if entityInst.OnMessage(msgCtx.Message) {
+				enInst := m.entities[eid]
+				if enInst.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
-					m.coroutinePool.Submit(entityInst.HandleLoop)
+					m.coroutinePool.Submit(enInst.HandleLoop)
 				}
 			}
 		}
@@ -156,6 +162,10 @@ func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*st
 
 // SetProperties set properties into entity.
 func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	if en.ID == "" {
+		en.ID = uuid()
+	}
+
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
@@ -213,4 +223,17 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 
 	m.SendMsg(msgCtx)
 	return en, nil
+}
+
+// uuid generate an uuid.
+func uuid() string {
+	uuid := make([]byte, 16)
+	if _, err := rand.Read(uuid); err != nil {
+		return ""
+	}
+	// see section 4.1.1.
+	uuid[8] = uuid[8]&^0xc0 | 0x80
+	// see section 4.1.3.
+	uuid[6] = uuid[6]&^0xf0 | 0x40
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }
