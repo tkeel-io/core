@@ -69,8 +69,8 @@ func (m *EntityManager) Start() error {
 					// rebalance entity.
 					if err := m.rebalanceEntity(context.Background(), msgCtx); nil != err {
 						log.Errorf("dispose message failed, err: %s", err.Error())
+						continue
 					}
-					continue
 				}
 
 				if entityInst.OnMessage(msgCtx.Message) {
@@ -104,8 +104,8 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.Messa
 	} else {
 		entityInst, err = statem.NewState(context.Background(), m, &statem.Base{
 			ID:    msgCtx.Headers.GetTargetID(),
-			Type:  msgCtx.Headers.GetStateType(),
 			Owner: msgCtx.Headers.GetOwner(),
+			Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
 		}, nil)
 	}
 
@@ -113,7 +113,6 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.Messa
 		return errors.Wrap(err, "rrebalance entity failed")
 	}
 
-	entityInst.OnMessage(msgCtx.Message)
 	m.entities[entityInst.GetID()] = entityInst
 	return nil
 }
@@ -128,25 +127,90 @@ func (m *EntityManager) EscapedEntities(expression string) []string {
 
 // DeleteEntity delete an entity from manager.
 func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	panic("implement me.")
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.StateMessage{
+			StateID:  en.ID,
+			Operator: "",
+		},
+	}
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+
+	m.SendMsg(msgCtx)
+
+	return en, nil
 }
 
 // GetProperties returns statem.Base.
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	panic("implement me.")
+	// just for standalone.
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("GetProperties failed, %s", errEntityNotFound.Error())
+		return nil, errors.Wrap(errEntityNotFound, "GetProperties failed")
+	}
+
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // SetProperties set properties into entity.
 func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	panic("implement me.")
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:    en.ID,
+			Properties: en.KValues,
+		},
+	}
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+
+	m.SendMsg(msgCtx)
+
+	return en, nil
 }
 
 // AppendMapper append a mapper into entity.
 func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	panic("implement me.")
+	if len(en.Mappers) == 0 {
+		log.Errorf("append mapper into entity failed, %s", errEmptyEntityMapper)
+		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
+	}
+
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.MapperMessage{
+			Operator: statem.MapperOperatorAppend,
+			Mapper:   en.Mappers[0],
+		},
+	}
+
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+
+	m.SendMsg(msgCtx)
+	return en, nil
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *EntityManager) DeleteMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	panic("implement me.")
+func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	if len(en.Mappers) == 0 {
+		log.Errorf("append mapper into entity failed, %s", errEmptyEntityMapper)
+		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
+	}
+
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.MapperMessage{
+			Operator: statem.MapperOperatorRemove,
+			Mapper:   en.Mappers[0],
+		},
+	}
+
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+
+	m.SendMsg(msgCtx)
+	return en, nil
 }

@@ -2,6 +2,14 @@ package statem
 
 import "github.com/tkeel-io/core/pkg/mapper"
 
+// PropertyMessage state property message.
+type StateMessage struct {
+	messageBase
+
+	StateID  string `json:"state_id"`
+	Operator string `json:"operator"`
+}
+
 func NewPropertyMessage(id string, props map[string]interface{}) PropertyMessage {
 	return PropertyMessage{
 		StateID:    id,

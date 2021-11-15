@@ -87,16 +87,21 @@ func (h Header) GetOwner() string { return h[MessageCtxHeaderOwner] }
 // SetOwner set message owner.
 func (h Header) SetOwner(owner string) { h[MessageCtxHeaderOwner] = owner }
 
-// GetEntityType returns state type.
-func (h Header) GetStateType() string {
-	t, has := h[MessageCtxHeaderStateType]
-	if !has {
-		t = StateTypeBase
+// GetSource returns message source field.
+func (h Header) GetSource() string { return h[MessageCtxHeaderOwner] }
+
+// SetSource set message source.
+func (h Header) SetSource(owner string) { h[MessageCtxHeaderOwner] = owner }
+
+func (h Header) Get(key string) string { return h[key] }
+
+func (h Header) GetDefault(key, defaultValue string) string {
+	if _, has := h[key]; !has {
+		return defaultValue
 	}
-	return t
+	return h[key]
 }
 
-// SetStateType set state marchine type.
-func (h Header) SetStateType(t string) { h[MessageCtxHeaderStateType] = t }
+func (h Header) Set(key, value string) { h[key] = value }
 
 type WatchKey = mapper.WatchKey

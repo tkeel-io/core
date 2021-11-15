@@ -60,6 +60,20 @@ type Base struct {
 	KValues  map[string]interface{} `json:"properties"` //nolint
 }
 
+func (b *Base) Copy() Base {
+	return Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Status:   b.Status,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+		Mappers:  b.Mappers,
+		KValues:  b.KValues,
+	}
+}
+
 // statem state marchins.
 type statem struct {
 	Base
