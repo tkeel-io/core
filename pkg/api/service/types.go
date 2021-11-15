@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tkeel-io/core/pkg/entities"
-
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 var log = logger.NewLogger("core.api.service")
@@ -34,4 +33,4 @@ func entityFieldRequired(fieldName string) error {
 	return fmt.Errorf("entity field(%s) required", fieldName)
 }
 
-type Entity = entities.EntityBase
+type Entity = statem.Base

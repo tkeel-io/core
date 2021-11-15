@@ -118,8 +118,35 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.Messa
 	return nil
 }
 
+// Tools.
+
 func (m *EntityManager) EscapedEntities(expression string) []string {
 	return nil
 }
 
 // ------------------------------------APIs-----------------------------.
+
+// DeleteEntity delete an entity from manager.
+func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	panic("implement me.")
+}
+
+// GetProperties returns statem.Base.
+func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	panic("implement me.")
+}
+
+// SetProperties set properties into entity.
+func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	panic("implement me.")
+}
+
+// AppendMapper append a mapper into entity.
+func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	panic("implement me.")
+}
+
+// DeleteMapper delete mapper from entity.
+func (m *EntityManager) DeleteMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	panic("implement me.")
+}

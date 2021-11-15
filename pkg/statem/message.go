@@ -2,6 +2,13 @@ package statem
 
 import "github.com/tkeel-io/core/pkg/mapper"
 
+func NewPropertyMessage(id string, props map[string]interface{}) PropertyMessage {
+	return PropertyMessage{
+		StateID:    id,
+		Properties: props,
+	}
+}
+
 // PropertyMessage state property message.
 type PropertyMessage struct {
 	messageBase

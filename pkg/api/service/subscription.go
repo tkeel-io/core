@@ -90,7 +90,7 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 		return source, errors.Wrap(err, "parse URL failed")
 	}
 
-	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil != err {
 		// plugin field required.
 		log.Error("parse http request field(pluginId) from path failed", ctx, err)
 		return source, err
@@ -142,7 +142,7 @@ func (s *SubscriptionService) subscriptionGet(ctx context.Context, in *common.In
 	}
 
 	// get entity from entity manager.
-	entity, err = s.entityManager.GetAllProperties(ctx, entity)
+	entity, err = s.entityManager.GetProperties(ctx, entity)
 	if nil != err {
 		log.Errorf("get entity failed, %s", err.Error())
 		return

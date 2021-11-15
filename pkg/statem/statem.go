@@ -53,6 +53,7 @@ type Base struct {
 	Type     string                 `json:"type"`
 	Owner    string                 `json:"owner"`
 	Status   string                 `json:"status"`
+	Source   string                 `json:"source"`
 	Version  int64                  `json:"version"`
 	LastTime int64                  `json:"last_time"`
 	Mappers  []MapperDesc           `json:"mappers"`
@@ -63,7 +64,7 @@ type Base struct {
 type statem struct {
 	Base
 
-	// mapper & tentacls.
+	// mapper & tentacles.
 	mappers        map[string]mapper.Mapper          // key=mapperId
 	tentacles      map[string][]mapper.Tentacler     // key=Sid#propertyKey
 	cacheProps     map[string]map[string]interface{} // cache other property.

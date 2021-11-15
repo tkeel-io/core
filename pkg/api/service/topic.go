@@ -6,6 +6,7 @@ import (
 
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 // TopicEventService is a dapr pubsub subscription service.
@@ -57,9 +58,9 @@ func getSourceFrom(pubsubName string) (source string) {
 	return strings.Split(pubsubName, "-")[0]
 }
 
-func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
-	ec := entities.NewEntityContext(nil)
-	var entityID, owner, plugin string
+func TopicEvent2EntityContext(in *common.TopicEvent) (out *statem.MessageContext, err error) {
+	ec := statem.MessageContext{}
+	var entityID, owner string
 
 	log.Infof("dispose event, pubsub: %s. topic: %s, datatype: %T, data: %v.",
 		in.PubsubName, in.Topic, in.Data, in.Data)
@@ -88,7 +89,7 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		}
 
 		// get entity source plugin.
-		plugin = getSourceFrom(in.PubsubName)
+		_ = getSourceFrom(in.PubsubName)
 
 		/*
 			switch tempPlugin := inData["plugin"].(type) {
@@ -105,16 +106,15 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: values}
+			ec.Message = statem.NewPropertyMessage(entityID, values)
 		case map[string]interface{}:
-			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: tempData}
+			ec.Message = statem.NewPropertyMessage(entityID, tempData)
 		default:
 			err = errTypeError
 			return
 		}
 
 		ec.Headers.SetOwner(owner)
-		ec.Headers.SetPluginID(plugin)
 		ec.Headers.SetTargetID(entityID)
 	}
 	return &ec, nil

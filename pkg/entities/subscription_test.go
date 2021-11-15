@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ants "github.com/panjf2000/ants/v2"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 func TestSubscriptionCreate(t *testing.T) {
@@ -15,11 +16,11 @@ func TestSubscriptionCreate(t *testing.T) {
 
 	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
 
-	en := &EntityBase{
-		ID:       "",
-		Type:     EntityTypeSubscription,
-		Owner:    "tomas",
-		PluginID: "PluginB",
+	en := &statem.Base{
+		ID:     "",
+		Type:   EntityTypeSubscription,
+		Owner:  "tomas",
+		Source: "PluginB",
 		KValues: map[string]interface{}{
 			SubscriptionFieldMode:   SubscriptionModeRealtime,
 			SubscriptionFieldSource: "PluginA",
@@ -31,5 +32,5 @@ func TestSubscriptionCreate(t *testing.T) {
 	sub, err := newSubscription(context.Background(), mgr, en)
 
 	t.Log("mapstructure: ", sub.SubscriptionBase, err)
-	t.Log("subscription status: ", sub.Status)
+	t.Log("subscription status: ")
 }

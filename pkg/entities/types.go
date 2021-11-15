@@ -10,6 +10,11 @@ var (
 	log = logger.NewLogger("core.entities")
 )
 
+const (
+	EntityTypeBaseEntity   = "base"
+	EntityTypeSubscription = "subscription"
+)
+
 type EntityOp interface {
 	statem.StateMarchiner
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/statem"
 
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/pkg/errors"
@@ -111,7 +112,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return source, err
 	}
 
-	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil != err {
 		// plugin field required.
 		log.Error("parse http request field(source) from path failed", ctx, err)
 		return source, err
@@ -164,7 +165,7 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 	}
 
 	// get entity from entity manager.
-	entity, err = e.entityManager.GetAllProperties(ctx, entity)
+	entity, err = e.entityManager.GetProperties(ctx, entity)
 	if nil != err {
 		log.Errorf("get entity failed, %s", err.Error())
 		return
@@ -307,11 +308,11 @@ func (e *EntityService) AppendMapper(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		mapperDesc := entities.MapperDesc{}
+		mapperDesc := statem.MapperDesc{}
 		if err = json.Unmarshal(in.Data, &mapperDesc); nil != err {
 			return out, errBodyMustBeJSON
 		}
-		entity.Mappers = []entities.MapperDesc{mapperDesc}
+		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	}
 
 	// set properties.

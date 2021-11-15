@@ -23,7 +23,7 @@ func TestMapper(t *testing.T) {
 
 	for _, tqlInst := range tqlTexts {
 		t.Run(tqlInst.id, func(t *testing.T) {
-			m := NewMapper(tqlInst.id, tqlInst.tqlText)
+			m, _ := NewMapper(tqlInst.id, tqlInst.tqlText)
 
 			t.Log("parse ID: ", m.ID())
 
