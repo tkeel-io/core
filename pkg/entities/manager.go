@@ -173,6 +173,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 			Properties: en.KValues,
 		},
 	}
+
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 

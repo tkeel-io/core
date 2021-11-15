@@ -214,6 +214,8 @@ func (s *statem) HandleLoop() {
 			s.activeTentacle(watchKeys)
 		}
 
+		log.Infof("disposed message: %v", message)
+
 		// reset be surs.
 		Ensure = 3
 	}

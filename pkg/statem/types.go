@@ -68,12 +68,12 @@ func (ms messageBase) Promise() PromiseFunc {
 	return ms.PromiseHandler
 }
 
+type Header map[string]string
+
 type MessageContext struct {
 	Headers Header
 	Message Message
 }
-
-type Header map[string]string
 
 // GetTargetID returns message target id.
 func (h Header) GetTargetID() string { return h[MessageCtxHeaderTargetID] }

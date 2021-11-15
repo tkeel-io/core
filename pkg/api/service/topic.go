@@ -114,6 +114,7 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *statem.MessageContext
 			return
 		}
 
+		ec.Headers = statem.Header{}
 		ec.Headers.SetOwner(owner)
 		ec.Headers.SetTargetID(entityID)
 	}

@@ -316,7 +316,7 @@ func (e *EntityService) AppendMapper(ctx context.Context, in *common.InvocationE
 	}
 
 	// set properties.
-	entity, err = e.entityManager.SetProperties(ctx, entity)
+	entity, err = e.entityManager.AppendMapper(ctx, entity)
 	if nil != err {
 		return
 	}
