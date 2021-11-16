@@ -238,15 +238,6 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 	return en, nil
 }
 
-func (m *EntityManager) AppendSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	return en, nil
-}
-
-// DeleteMapper delete mapper from entity.
-func (m *EntityManager) RemoveSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	return en, nil
-}
-
 // uuid generate an uuid.
 func uuid() string {
 	uuid := make([]byte, 16)
