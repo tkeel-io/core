@@ -7,6 +7,7 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/statem"
 )
 
@@ -99,6 +100,10 @@ func (s *subscription) GetBase() *statem.Base {
 
 func (s *subscription) GetManager() statem.StateManager {
 	return s.stateMarchine.GetManager()
+}
+
+func (s *subscription) SetConfig(configs map[string]constraint.Config) error {
+	return s.stateMarchine.SetConfig(configs)
 }
 
 // OnMessage recv message from pubsub.

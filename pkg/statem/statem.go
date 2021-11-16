@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
 
@@ -47,27 +48,18 @@ type MapperDesc struct {
 	TQLString string `json:"tql"` //nolint
 }
 
-type PropertyConfig struct{}
-
-type Constraint struct{}
-
-type PValue struct {
-	Value       []byte
-	Config      PropertyConfig
-	Constraints []Constraint
-}
-
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                 `json:"id"`
-	Type     string                 `json:"type"`
-	Owner    string                 `json:"owner"`
-	Status   string                 `json:"status"`
-	Source   string                 `json:"source"`
-	Version  int64                  `json:"version"`
-	LastTime int64                  `json:"last_time"`
-	Mappers  []MapperDesc           `json:"mappers"`
-	KValues  map[string]interface{} `json:"properties"` //nolint
+	ID       string                       `json:"id"`
+	Type     string                       `json:"type"`
+	Owner    string                       `json:"owner"`
+	Status   string                       `json:"status"`
+	Source   string                       `json:"source"`
+	Version  int64                        `json:"version"`
+	LastTime int64                        `json:"last_time"`
+	Mappers  []MapperDesc                 `json:"mappers"`
+	KValues  map[string][]byte            `json:"properties"` //nolint ``
+	Configs  map[string]constraint.Config `json:"configs"`
 }
 
 func (b *Base) Copy() Base {
@@ -89,10 +81,10 @@ type statem struct {
 	Base
 
 	// mapper & tentacles.
-	mappers        map[string]mapper.Mapper          // key=mapperId
-	tentacles      map[string][]mapper.Tentacler     // key=Sid#propertyKey
-	cacheProps     map[string]map[string]interface{} // cache other property.
-	indexTentacles map[string][]mapper.Tentacler     // key=targetId(mapperId/Sid)
+	mappers        map[string]mapper.Mapper      // key=mapperId
+	tentacles      map[string][]mapper.Tentacler // key=Sid#propertyKey
+	cacheProps     map[string]map[string][]byte  // cache other property.
+	indexTentacles map[string][]mapper.Tentacler // key=targetId(mapperId/Sid)
 
 	// mailbox & state runtime status.
 	mailBox      *mailbox
@@ -119,7 +111,8 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 			Type:    in.Type,
 			Owner:   in.Owner,
 			Status:  StateStatusActive,
-			KValues: make(map[string]interface{}),
+			KValues: make(map[string][]byte),
+			Configs: make(map[string]constraint.Config),
 		},
 
 		ctx:            ctx,
@@ -129,7 +122,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		mailBox:        newMailbox(10),
 		disposing:      StateDisposingIdle,
 		mappers:        make(map[string]mapper.Mapper),
-		cacheProps:     make(map[string]map[string]interface{}),
+		cacheProps:     make(map[string]map[string][]byte),
 		indexTentacles: make(map[string][]mapper.Tentacler),
 	}
 
@@ -163,6 +156,13 @@ func (s *statem) GetBase() *Base {
 
 func (s *statem) GetManager() StateManager {
 	return s.stateManager
+}
+
+func (s *statem) SetConfig(configs map[string]constraint.Config) error {
+	for k, c := range configs {
+		s.Configs[k] = c
+	}
+	return nil
 }
 
 func (s *statem) SetMessageHandler(msgHandler MessageHandler) {
@@ -264,7 +264,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	if _, has := s.cacheProps[setStateID]; !has {
-		s.cacheProps[setStateID] = make(map[string]interface{})
+		s.cacheProps[setStateID] = make(map[string][]byte)
 	}
 
 	stateProps := s.cacheProps[setStateID]
@@ -284,7 +284,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 // activeTentacle active tentacles.
 func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 	var (
-		messages        = make(map[string]map[string]interface{})
+		messages        = make(map[string]map[string][]byte)
 		activeTentacles = make(map[string][]mapper.Tentacler)
 	)
 
@@ -298,7 +298,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
 					if _, exists := messages[targetID]; !exists {
-						messages[targetID] = make(map[string]interface{})
+						messages[targetID] = make(map[string][]byte)
 					}
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
@@ -335,7 +335,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 // activeMapper active mappers.
 func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	for mapperID := range actives {
-		msg := make(map[string]interface{})
+		msg := make(map[string][]byte)
 		for _, tentacle := range s.indexTentacles[mapperID] {
 			for _, item := range tentacle.Items() {
 				msg[item.String()] = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
@@ -359,7 +359,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 }
 
-func (s *statem) getProperty(properties map[string]interface{}, propertyKey string) interface{} {
+func (s *statem) getProperty(properties map[string][]byte, propertyKey string) []byte {
 	if len(properties) == 0 {
 		return nil
 	}
@@ -368,8 +368,12 @@ func (s *statem) getProperty(properties map[string]interface{}, propertyKey stri
 	return properties[propertyKey]
 }
 
-func (s *statem) setProperty(propertyKey string, value interface{}) {
+func (s *statem) setProperty(propertyKey string, value []byte) {
 	// 我们或许应该在这里解析propertyKey中的嵌套层次.
+	if _, has := s.KValues[propertyKey]; !has {
+		s.KValues[propertyKey] = value
+		return
+	}
 	s.KValues[propertyKey] = value
 }
 

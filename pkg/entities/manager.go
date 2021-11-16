@@ -70,7 +70,13 @@ func (m *EntityManager) Start() error {
 				_, has := m.entities[eid]
 				if !has {
 					// rebalance entity.
-					if err := m.rebalanceEntity(context.Background(), msgCtx); nil != err {
+					en := &statem.Base{
+						ID:    msgCtx.Headers.GetTargetID(),
+						Owner: msgCtx.Headers.GetOwner(),
+						Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
+					}
+
+					if err := m.rebalanceEntity(context.Background(), en); nil != err {
 						log.Errorf("dispose message failed, err: %s", err.Error())
 						continue
 					}
@@ -95,7 +101,7 @@ func (m *EntityManager) HandleMsg(ctx context.Context, msg statem.MessageContext
 	m.msgCh <- msg
 }
 
-func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.MessageContext) error {
+func (m *EntityManager) rebalanceEntity(ctx context.Context, en *statem.Base) error {
 	// 1. 通过placement查询entity是否在当前节点.
 	// 2.1. 如果在当前节点则在当前节点创建该实体.
 	// 2.2 如果实体不属于当前节点，则将消息转发出去.
@@ -109,21 +115,13 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.Messa
 	// TODO: 这里从状态存储中拿到实体信息.
 
 	// 临时创建
-	switch msgCtx.Headers.Get(MessageCtxHeaderEntityType) {
+	switch en.Type {
 	case EntityTypeSubscription:
 		// subscription entity type.
-		entityInst, err = newSubscription(context.Background(), m, &statem.Base{
-			ID:    msgCtx.Headers.GetTargetID(),
-			Owner: msgCtx.Headers.GetOwner(),
-			Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
-		})
+		entityInst, err = newSubscription(context.Background(), m, en)
 	default:
 		// default base entity type.
-		entityInst, err = newEntity(context.Background(), m, &statem.Base{
-			ID:    msgCtx.Headers.GetTargetID(),
-			Owner: msgCtx.Headers.GetOwner(),
-			Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
-		})
+		entityInst, err = newEntity(context.Background(), m, en)
 	}
 
 	if nil != err {
@@ -172,6 +170,42 @@ func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*st
 }
 
 // SetProperties set properties into entity.
+func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	if en.ID == "" {
+		en.ID = uuid()
+	}
+
+	// set configs.
+	// 如果不存在实体则创建.
+	// 如果实体在当前节点则直接调用设置Configs.
+	// 如果实体不在当前节点则调用rpc同步.
+	enInst, exists := m.entities[en.ID]
+	if !exists {
+		//临时直接创建.
+		m.rebalanceEntity(ctx, en)
+	}
+
+	enInst.SetConfig(en.Configs)
+
+	// set properties.
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:    en.ID,
+			Properties: en.KValues,
+		},
+	}
+
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
+
+	m.SendMsg(msgCtx)
+
+	return nil, nil
+}
+
+// SetProperties set properties into entity.
 func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	if en.ID == "" {
 		en.ID = uuid()
@@ -191,7 +225,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 
 	m.SendMsg(msgCtx)
 
-	return en, nil
+	return nil, nil
 }
 
 // AppendMapper append a mapper into entity.

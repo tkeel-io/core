@@ -1,7 +1,5 @@
 package tql
 
-import "errors"
-
 type tql struct {
 	text     string
 	config   TQLConfig
@@ -33,11 +31,6 @@ func (t *tql) Tentacles() []TentacleConfig {
 }
 
 // Exec execute MQL.
-func (t *tql) Exec(in map[string]interface{}) (map[string]interface{}, error) {
+func (t *tql) Exec(in map[string][]byte) (map[string][]byte, error) {
 	return t.listener.GetComputeResults(in), nil
-}
-
-// ExecJSONE execute MQL with json input.
-func (t *tql) ExecJSONE([]byte) (map[string]interface{}, error) {
-	return nil, errors.New("not implement")
 }

@@ -10,7 +10,7 @@ type StateMessage struct {
 	Operator string `json:"operator"`
 }
 
-func NewPropertyMessage(id string, props map[string]interface{}) PropertyMessage {
+func NewPropertyMessage(id string, props map[string][]byte) PropertyMessage {
 	return PropertyMessage{
 		StateID:    id,
 		Properties: props,
@@ -21,8 +21,8 @@ func NewPropertyMessage(id string, props map[string]interface{}) PropertyMessage
 type PropertyMessage struct {
 	messageBase
 
-	StateID    string                 `json:"state_id"`
-	Properties map[string]interface{} `json:"properties"`
+	StateID    string            `json:"state_id"`
+	Properties map[string][]byte `json:"properties"`
 }
 
 func (esm PropertyMessage) Promise() PromiseFunc { return esm.PromiseHandler }

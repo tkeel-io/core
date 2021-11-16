@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/statem"
 )
 
@@ -33,6 +34,10 @@ func (e *Entity) GetBase() *statem.Base {
 // Setup state marchine setup.
 func (e *Entity) Setup() error {
 	return errors.Wrap(e.stateMarchine.Setup(), "entity setup failed")
+}
+
+func (e *Entity) SetConfig(configs map[string]constraint.Config) error {
+	return e.stateMarchine.SetConfig(configs)
 }
 
 // OnMessage recv message from pubsub.

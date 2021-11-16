@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
@@ -41,6 +42,8 @@ type StateMarchiner interface {
 	GetBase() *Base
 	// Setup state marchine setup.
 	Setup() error
+	// SetConfig set configs.
+	SetConfig(map[string]constraint.Config) error
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.

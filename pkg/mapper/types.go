@@ -22,7 +22,7 @@ type Mapper interface {
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
-	Exec(map[string]interface{}) (map[string]interface{}, error)
+	Exec(map[string][]byte) (map[string][]byte, error)
 }
 
 type TentacleType = string

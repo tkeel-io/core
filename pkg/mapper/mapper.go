@@ -71,7 +71,7 @@ func (m *mapper) Copy() Mapper {
 }
 
 // Exec input returns output.
-func (m *mapper) Exec(values map[string]interface{}) (res map[string]interface{}, err error) {
+func (m *mapper) Exec(values map[string][]byte) (res map[string][]byte, err error) {
 	res, err = m.tqlInst.Exec(values)
 	return res, errors.Wrap(err, "execute tql failed")
 }

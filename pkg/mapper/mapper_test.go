@@ -3,20 +3,20 @@ package mapper
 import "testing"
 
 func TestMapper(t *testing.T) {
-	input := map[string]interface{}{
-		"entity1.property1":      123,
-		"entity2.property2.name": 1,
-		"entity2.property3":      234,
+	input := map[string][]byte{
+		"entity1.property1":      []byte("123"),
+		"entity2.property2.name": []byte("123"),
+		"entity2.property3":      []byte("123"),
 	}
 
 	tqlTexts := []struct {
 		id       string
 		tqlText  string
-		input    map[string]interface{}
+		input    map[string][]byte
 		computed bool
 	}{
-		{"tql1", "insert into device1 select *", map[string]interface{}{}, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]interface{}{"test234.temp": 123}, true},
+		{"tql1", "insert into device1 select *", map[string][]byte{}, false},
+		{"tql2", "insert into test123 select test234.temp as temp", map[string][]byte{"test234.temp": []byte(`123`)}, true},
 		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
 		{"tql4", "insert into sub123 select test123.temp", nil, false},
 	}

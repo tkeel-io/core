@@ -26,6 +26,5 @@ type TQL interface {
 	Target() string
 	Entities() []string
 	Tentacles() []TentacleConfig
-	Exec(map[string]interface{}) (map[string]interface{}, error)
-	ExecJSONE([]byte) (map[string]interface{}, error)
+	Exec(map[string][]byte) (map[string][]byte, error)
 }

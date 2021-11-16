@@ -21,16 +21,16 @@ func TestSubscriptionCreate(t *testing.T) {
 		Type:   EntityTypeSubscription,
 		Owner:  "tomas",
 		Source: "PluginB",
-		KValues: map[string]interface{}{
-			SubscriptionFieldMode:   SubscriptionModeRealtime,
-			SubscriptionFieldSource: "PluginA",
-			SubscriptionFieldTarget: "PluginA",
-			SubscriptionFieldFilter: "select *",
+		KValues: map[string][]byte{
+			SubscriptionFieldMode:   []byte(SubscriptionModeRealtime),
+			SubscriptionFieldSource: []byte("PluginA"),
+			SubscriptionFieldTarget: []byte("PluginA"),
+			SubscriptionFieldFilter: []byte("select *"),
 		},
 	}
 
 	sub, err := newSubscription(context.Background(), mgr, en)
 
-	t.Log("mapstructure: ", sub.GetBase(), err)
+	t.Log("mapstructure: ", sub, err)
 	t.Log("subscription status: ")
 }
