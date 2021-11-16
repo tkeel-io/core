@@ -93,7 +93,7 @@ build:
 	@echo "---------------------------"
 	@echo "-        build...         -"
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(GCFLAGS) -ldflags $(LDFLAGS) \
-     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
+     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) cmd/core/main.go
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"

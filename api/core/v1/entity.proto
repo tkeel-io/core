@@ -1,0 +1,90 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+service Entity {
+	rpc CreateEntity (CreateEntityRequest) returns (CreateEntityResponse) {
+		option (google.api.http) = {
+			post : "/plugins/{plugin}/entities"
+			body: "obj"
+		};
+	};
+	rpc UpdateEntity (UpdateEntityRequest) returns (UpdateEntityResponse) {
+		option (google.api.http) = {
+			put : "/plugins/{plugin}/entities/{id}"
+			body : "obj"
+		};
+	};
+	rpc DeleteEntity (DeleteEntityRequest) returns (DeleteEntityResponse) {
+		option (google.api.http) = {
+			delete : "/plugins/{plugin}/entities/{id}"
+		};
+	};
+	rpc GetEntity (GetEntityRequest) returns (GetEntityResponse) {
+		option (google.api.http) = {
+			get : "/plugins/{plugin}/entities/{id}"
+		};
+	};
+	rpc ListEntity (ListEntityRequest) returns (ListEntityResponse) {
+		option (google.api.http) = {
+			get : "/plugins/{plugin}/entities"
+		};
+	};
+}
+
+message EntityObject {
+	string uid = 1;
+}
+
+message CreateEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    map<string, google.protobuf.Value> obj = 5;
+ }
+message CreateEntityResponse {}
+
+message UpdateEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    map<string, google.protobuf.Value> obj = 5;
+}
+
+message UpdateEntityResponse {}
+
+message DeleteEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+}
+message DeleteEntityResponse { EntityObject obj = 1; }
+
+message GetEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+}
+
+message GetEntityResponse { EntityObject obj = 1; }
+
+message ListEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+}
+message ListEntityResponse { repeated EntityObject objList = 1; }
