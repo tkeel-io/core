@@ -105,14 +105,25 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, msgCtx statem.Messa
 		entityInst EntityOp
 	)
 
-	if false {
-		// 从状态存储中获取实体信息.
-	} else {
-		entityInst, err = statem.NewState(context.Background(), m, &statem.Base{
+	// 从状态存储中获取实体信息.
+	// TODO: 这里从状态存储中拿到实体信息.
+
+	// 临时创建
+	switch msgCtx.Headers.Get(MessageCtxHeaderEntityType) {
+	case EntityTypeSubscription:
+		// subscription entity type.
+		entityInst, err = newSubscription(context.Background(), m, &statem.Base{
 			ID:    msgCtx.Headers.GetTargetID(),
 			Owner: msgCtx.Headers.GetOwner(),
 			Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
-		}, nil)
+		})
+	default:
+		// default base entity type.
+		entityInst, err = newEntity(context.Background(), m, &statem.Base{
+			ID:    msgCtx.Headers.GetTargetID(),
+			Owner: msgCtx.Headers.GetOwner(),
+			Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
+		})
 	}
 
 	if nil != err {
@@ -176,6 +187,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
 
 	m.SendMsg(msgCtx)
 
@@ -223,6 +235,15 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 	msgCtx.Headers.SetTargetID(en.ID)
 
 	m.SendMsg(msgCtx)
+	return en, nil
+}
+
+func (m *EntityManager) AppendSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	return en, nil
+}
+
+// DeleteMapper delete mapper from entity.
+func (m *EntityManager) RemoveSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	return en, nil
 }
 

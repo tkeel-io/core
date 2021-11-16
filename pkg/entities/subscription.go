@@ -44,17 +44,16 @@ type subscription struct {
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (*subscription, error) {
-	stateM, err := statem.NewState(ctx, mgr, in, nil)
-	if nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
-	}
-
+func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (statem.StateMarchiner, error) {
 	subsc := subscription{
-		stateMarchine: stateM,
 		SubscriptionBase: SubscriptionBase{
 			Mode: SubscriptionModeUndefine,
 		},
+	}
+
+	stateM, err := statem.NewState(ctx, mgr, in, subsc.HandleMessage)
+	if nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
 	stateM.GetBase().Status = subsc.checkSubscription()
@@ -62,12 +61,26 @@ func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
+	subsc.stateMarchine = stateM
 	return &subsc, errors.Wrap(err, "create subscription failed")
 }
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
-	return nil
+	if statem.StateStatusInactive == s.stateMarchine.GetBase().Status {
+		return errors.Wrap(errEntityNotAready, "setup subscription failed")
+	}
+
+	// set mapper.
+	s.stateMarchine.GetBase().Mappers =
+		[]statem.MapperDesc{
+			{
+				Name:      "subscription",
+				TQLString: s.Filter,
+			},
+		}
+
+	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup failed")
 }
 
 // GetID return state marchine id.
@@ -78,6 +91,14 @@ func (s *subscription) GetID() string {
 // GetMode returns subscription mode.
 func (s *subscription) GetMode() string {
 	return s.Mode
+}
+
+func (s *subscription) GetBase() *statem.Base {
+	return s.stateMarchine.GetBase()
+}
+
+func (s *subscription) GetManager() statem.StateManager {
+	return s.stateMarchine.GetManager()
 }
 
 // OnMessage recv message from pubsub.

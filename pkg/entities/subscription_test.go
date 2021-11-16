@@ -31,6 +31,6 @@ func TestSubscriptionCreate(t *testing.T) {
 
 	sub, err := newSubscription(context.Background(), mgr, en)
 
-	t.Log("mapstructure: ", sub.SubscriptionBase, err)
+	t.Log("mapstructure: ", sub.GetBase(), err)
 	t.Log("subscription status: ")
 }

@@ -12,6 +12,7 @@ var (
 
 	errEntityNotFound    = errors.New("entity not found")
 	errEmptyEntityMapper = errors.New("empty entity mapper")
+	errEntityNotAready   = errors.New("entity not already")
 )
 
 const (

@@ -39,6 +39,8 @@ type StateMarchiner interface {
 	GetID() string
 	// GetBase returns state.Base
 	GetBase() *Base
+	// Setup state marchine setup.
+	Setup() error
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.

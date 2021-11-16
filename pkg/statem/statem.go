@@ -47,6 +47,16 @@ type MapperDesc struct {
 	TQLString string `json:"tql"` //nolint
 }
 
+type PropertyConfig struct{}
+
+type Constraint struct{}
+
+type PValue struct {
+	Value       []byte
+	Config      PropertyConfig
+	Constraints []Constraint
+}
+
 // EntityBase statem basic informatinon.
 type Base struct {
 	ID       string                 `json:"id"`
@@ -132,6 +142,15 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 	}
 
 	return state, nil
+}
+
+func (s *statem) Setup() error {
+	descs := s.Mappers
+	s.Mappers = make([]MapperDesc, 0)
+	for _, desc := range descs {
+		s.appendMapper(desc)
+	}
+	return nil
 }
 
 func (s *statem) GetID() string {
