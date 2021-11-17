@@ -58,7 +58,7 @@ type Base struct {
 	Version  int64                        `json:"version"`
 	LastTime int64                        `json:"last_time"`
 	Mappers  []MapperDesc                 `json:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties"` //nolint ``
+	KValues  map[string]constraint.Node   `json:"properties"` //nolint
 	Configs  map[string]constraint.Config `json:"configs"`
 }
 

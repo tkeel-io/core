@@ -103,7 +103,7 @@ func (s *subscription) GetManager() statem.StateManager {
 }
 
 func (s *subscription) SetConfig(configs map[string]constraint.Config) error {
-	return s.stateMarchine.SetConfig(configs)
+	return errors.Wrap(s.stateMarchine.SetConfig(configs), "subscription.SetConfig failed")
 }
 
 // OnMessage recv message from pubsub.

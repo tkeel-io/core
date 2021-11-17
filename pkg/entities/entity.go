@@ -37,7 +37,7 @@ func (e *Entity) Setup() error {
 }
 
 func (e *Entity) SetConfig(configs map[string]constraint.Config) error {
-	return e.stateMarchine.SetConfig(configs)
+	return errors.Wrap(e.stateMarchine.SetConfig(configs), "entity.SetConfig failed")
 }
 
 // OnMessage recv message from pubsub.

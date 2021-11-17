@@ -209,7 +209,7 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 	// 如果实体不在当前节点则调用rpc同步.
 	enInst, exists := m.entities[en.ID]
 	if !exists {
-		//临时直接创建.
+		// 临时直接创建.
 		m.rebalanceEntity(ctx, en)
 	}
 

@@ -10,7 +10,7 @@ type enableFlag struct {
 	value uint8
 }
 
-func NewEnableFlag() *enableFlag {
+func NewEnableFlag() *enableFlag { //nolint
 	return &enableFlag{}
 }
 
@@ -45,9 +45,9 @@ func (ef *enableFlag) EnableTS(flag bool) bool {
 func (ef *enableFlag) enable(flag bool, flagValue uint8) bool {
 	retFlag := ef.value
 	if flag {
-		ef.value = ef.value | flagValue
+		ef.value |= flagValue
 	} else {
-		ef.value = ef.value & (0xff ^ flagValue)
+		ef.value &= (0xff ^ flagValue)
 	}
 
 	return flagValue == (retFlag & flagValue)

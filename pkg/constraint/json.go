@@ -9,30 +9,30 @@ import (
 )
 
 var (
-	UNDEFINED_RESULT = &DefaultNode{typ: Undefined}
-	NULL_RESULT      = &DefaultNode{typ: Undefined}
+	UndefineResult = &DefaultNode{typ: Undefined}
+	NullResult     = &DefaultNode{typ: Undefined}
 )
 
-// Type node type
+// Type node type.
 type Type int
 
 const (
-	// Undefine is Not a value
+	// Undefine is Not a value.
 	// This isn't explicitly representable in JSON except by omitting the value.
 	Undefined Type = iota
-	// Null is a null json value
+	// Null is a null json value.
 	Null
-	// Bool is a json boolean
+	// Bool is a json boolean.
 	Bool
-	// Number is json number, include Int and Float
+	// Number is json number, include Int and Float.
 	Number
-	// Int is json number, a discrete Int
+	// Int is json number, a discrete Int.
 	Integer
-	// Float is json number
+	// Float is json number.
 	Float
-	// String is a json string
+	// String is a json string.
 	String
-	// JSON is a raw block of JSON
+	// JSON is a raw block of JSON.
 	JSON
 	// RAW for golang runtine.
 	RAW
@@ -58,18 +58,18 @@ func (t Type) String() string {
 	}
 }
 
-//Node interface
+// Node interface.
 type Node interface {
 	Type() Type
 	To(Type) Node
 	String() string
 }
 
-//DefaultNode interface
+// DefaultNode interface.
 type DefaultNode struct {
-	// Type is the json type
+	// Type is the json type.
 	typ Type
-	// raw is the raw json
+	// raw is the raw json.
 	raw string
 }
 
@@ -91,7 +91,7 @@ func (r BoolNode) To(typ Type) Node {
 	case String:
 		return StringNode(fmt.Sprintf("%t", r))
 	}
-	return UNDEFINED_RESULT
+	return UndefineResult
 }
 func (r BoolNode) String() string {
 	return fmt.Sprintf("%t", r)
@@ -109,7 +109,7 @@ func (r IntNode) To(typ Type) Node {
 	case String:
 		return StringNode(fmt.Sprintf("%d", r))
 	}
-	return UNDEFINED_RESULT
+	return UndefineResult
 }
 func (r IntNode) String() string {
 	return fmt.Sprintf("%d", r)
@@ -127,7 +127,7 @@ func (r FloatNode) To(typ Type) Node {
 	case String:
 		return StringNode(strconv.FormatFloat(float64(r), 'f', -1, 64))
 	}
-	return UNDEFINED_RESULT
+	return UndefineResult
 }
 func (r FloatNode) String() string {
 	return fmt.Sprintf("%f", r)
@@ -143,7 +143,7 @@ func (r StringNode) To(typ Type) Node {
 	case Bool:
 		b, err := strconv.ParseBool(string(r))
 		if err != nil {
-			return UNDEFINED_RESULT
+			return UndefineResult
 		}
 		return BoolNode(b)
 	case Number:
@@ -154,28 +154,28 @@ func (r StringNode) To(typ Type) Node {
 	case Integer:
 		b, err := strconv.ParseInt(string(r), 10, 64)
 		if err != nil {
-			return UNDEFINED_RESULT
+			return UndefineResult
 		}
 		return IntNode(b)
 	case Float:
 		b, err := strconv.ParseFloat(string(r), 64)
 		if err != nil {
-			return UNDEFINED_RESULT
+			return UndefineResult
 		}
 		return FloatNode(b)
 	}
-	return UNDEFINED_RESULT
+	return UndefineResult
 }
 func (r StringNode) String() string {
 	return string(r)
 }
 
-// JSONNode maybe Object or Array
+// JSONNode maybe Object or Array.
 type JSONNode string
 
 func (r JSONNode) Type() Type { return JSON }
 func (r JSONNode) To(typ Type) Node {
-	return UNDEFINED_RESULT
+	return UndefineResult
 }
 
 func (r JSONNode) String() string {
@@ -192,7 +192,7 @@ func (r RawNode) To(tp Type) Node {
 	case JSON:
 		return JSONNode(r)
 	default:
-		return UNDEFINED_RESULT
+		return UndefineResult
 	}
 }
 
