@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 // TopicEventService is a dapr pubsub subscription service.
@@ -57,9 +59,9 @@ func getSourceFrom(pubsubName string) (source string) {
 	return strings.Split(pubsubName, "-")[0]
 }
 
-func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContext, err error) {
-	ec := entities.NewEntityContext(nil)
-	var entityID, owner, plugin string
+func TopicEvent2EntityContext(in *common.TopicEvent) (out *statem.MessageContext, err error) {
+	ec := statem.MessageContext{}
+	var entityID, owner string
 
 	log.Infof("dispose event, pubsub: %s. topic: %s, datatype: %T, data: %v.",
 		in.PubsubName, in.Topic, in.Data, in.Data)
@@ -88,7 +90,7 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		}
 
 		// get entity source plugin.
-		plugin = getSourceFrom(in.PubsubName)
+		_ = getSourceFrom(in.PubsubName)
 
 		/*
 			switch tempPlugin := inData["plugin"].(type) {
@@ -105,16 +107,20 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *entities.EntityContex
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: values}
+
+			// 这里对2进制编码是存在问题的.
+			ec.Message = statem.NewPropertyMessage(entityID, tempConvert(values))
 		case map[string]interface{}:
-			ec.Message = &entities.EntityMessage{SourceID: entityID, Values: tempData}
+			// 临时处理为了先完成entity-config的功能.
+
+			ec.Message = statem.NewPropertyMessage(entityID, tempConvert(tempData))
 		default:
 			err = errTypeError
 			return
 		}
 
+		ec.Headers = statem.Header{}
 		ec.Headers.SetOwner(owner)
-		ec.Headers.SetPluginID(plugin)
 		ec.Headers.SetTargetID(entityID)
 	}
 	return &ec, nil
@@ -128,4 +134,12 @@ func (e *TopicEventService) topicHandler(ctx context.Context, in *common.TopicEv
 	}
 
 	return false, nil
+}
+
+func tempConvert(values map[string]interface{}) map[string][]byte {
+	ret := make(map[string][]byte)
+	for key, val := range values {
+		ret[key] = []byte(constraint.NewNode(val).String())
+	}
+	return ret
 }

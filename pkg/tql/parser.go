@@ -148,12 +148,12 @@ func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
 	log.Info("ExitCompareValue", c.GetText())
 }
 
-func (l *Listener) GetExpression(index int, in map[string]interface{}) string {
+func (l *Listener) GetExpression(index int, in map[string][]byte) string {
 	e := l.execs[index]
 	field := e.Field
 	for k, v := range in {
 		// convert to string, need to add space otherwise "expecting <EOF>" error
-		nk := " " + fmt.Sprintf("%v", v) + " "
+		nk := " " + fmt.Sprintf("%v", string(v)) + " "
 		field = strings.ReplaceAll(field, k, nk)
 	}
 	e.Expression = field
@@ -219,7 +219,7 @@ func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
 }
 
 // Computing takes a number expression and returns results.
-func computing(input string) int {
+func computing(input string) string {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -234,7 +234,7 @@ func computing(input string) int {
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
 	// log.Info("========results: \n", listener.pop())
-	return listener.pop()
+	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
 func (l *Listener) GetParseConfigs() TQLConfig {
@@ -261,15 +261,15 @@ func (l *Listener) GetParseConfigs() TQLConfig {
 	return tqlConfig
 }
 
-func (l *Listener) GetComputeResults(in map[string]interface{}) map[string]interface{} {
+func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
 	//
 	// log.Info("get Expression:", l.GetExpression(0, in))
 
-	out := make(map[string]interface{})
+	out := make(map[string][]byte)
 	for ind, e := range l.execs {
 		numExpr := l.GetExpression(ind, in)
 		log.Infof("get number expression %s", numExpr)
-		out[e.TargetProperty] = computing(numExpr)
+		out[e.TargetProperty] = []byte(computing(numExpr))
 	}
 	return out
 }

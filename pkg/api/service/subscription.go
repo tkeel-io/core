@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
 
@@ -90,7 +91,7 @@ func (s *SubscriptionService) getEntityFrom(ctx context.Context, entity *Entity,
 		return source, errors.Wrap(err, "parse URL failed")
 	}
 
-	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil != err {
 		// plugin field required.
 		log.Error("parse http request field(pluginId) from path failed", ctx, err)
 		return source, err
@@ -142,7 +143,7 @@ func (s *SubscriptionService) subscriptionGet(ctx context.Context, in *common.In
 	}
 
 	// get entity from entity manager.
-	entity, err = s.entityManager.GetAllProperties(ctx, entity)
+	entity, err = s.entityManager.GetProperties(ctx, entity)
 	if nil != err {
 		log.Errorf("get entity failed, %s", err.Error())
 		return
@@ -184,13 +185,13 @@ func (s *SubscriptionService) subscriptionCreate(ctx context.Context, in *common
 	}
 
 	entity.Type = entities.EntityTypeSubscription
-	entity.KValues = map[string]interface{}{
-		entities.SubscriptionFieldSource:     subscription.Source,
-		entities.SubscriptionFieldFilter:     subscription.Filter,
-		entities.SubscriptionFieldTarget:     subscription.Target,
-		entities.SubscriptionFieldTopic:      subscription.Topic,
-		entities.SubscriptionFieldMode:       subscription.Mode,
-		entities.SubscriptionFieldPubsubName: subscription.PubsubName,
+	entity.KValues = map[string]constraint.Node{
+		entities.SubscriptionFieldSource:     constraint.StringNode(subscription.Source),
+		entities.SubscriptionFieldFilter:     constraint.StringNode(subscription.Filter),
+		entities.SubscriptionFieldTarget:     constraint.StringNode(subscription.Target),
+		entities.SubscriptionFieldTopic:      constraint.StringNode(subscription.Topic),
+		entities.SubscriptionFieldMode:       constraint.StringNode(subscription.Mode),
+		entities.SubscriptionFieldPubsubName: constraint.StringNode(subscription.PubsubName),
 	}
 
 	// set properties.
@@ -235,11 +236,11 @@ func (s *SubscriptionService) subscriptionUpdate(ctx context.Context, in *common
 	}
 
 	entity.Type = entities.EntityTypeSubscription
-	entity.KValues = map[string]interface{}{
-		"source": subscription.Source,
-		"filter": subscription.Filter,
-		"target": subscription.Target,
-		"mode":   subscription.Mode,
+	entity.KValues = map[string]constraint.Node{
+		"source": constraint.StringNode(subscription.Source),
+		"filter": constraint.StringNode(subscription.Filter),
+		"target": constraint.StringNode(subscription.Target),
+		"mode":   constraint.StringNode(subscription.Mode),
 	}
 
 	// set properties.

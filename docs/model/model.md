@@ -80,6 +80,154 @@ type ChangeDelta struct {
 
 func (cd ChangeDelta) Void() {}
 
+
+
+
+// model | entity 合体.
+type Value struct {
+    Value []byte
+    Configs ConstraintConf
+    Contraints []Contraint
+}
+
+
+{
+    "id": "xxxx",
+    "name": "e1",
+    "props": map[string]Value{},
+}
+
+{
+    "id": "xxxx",
+    "name": "e1",
+    "props": 
+    "configs",
+    "constrinats":
+}
+
+
 // ..........
 
 ```
+
+
+## Example
+
+```bash
+# device entity
+{
+    "id": "iotd-1234",
+    "name": "处理器1",
+    "type": "DEVICE",
+    "props": {
+        "mem_used": '0.58',
+        "cpu_used": '0.9',
+        "temp": '25'
+    }
+}
+
+# model entity
+{
+    "id": "iotm-xxxx",
+    "name": "处理器模型",
+    "type": "MODEL",
+    "props": {
+        "mem_used": {
+            "type": "float",
+            "max": 1,
+            "dataType": "time-series",
+            "displayName": "内存使用率",
+            "define": {}
+        },
+        "cpu_used": {
+            "type": "float",
+            "max": 1,
+            "dataType": "property",
+            "displayName": "cup使用率",
+            "define": {}
+        },
+        "temp":  {
+            "type": "double",
+            "max": 120,
+            "min": -50,
+            "unit": "°",
+            "define": {}
+        },
+    }
+}
+
+
+
+# entity defination.
+
+
+{
+    "id": "iotd-1234",
+    "name": "处理器1",
+    "type": "DEVICE",
+    "props": {
+        "mem_used": {
+            "value": 0.7,
+            "config": {
+                "type": "float",
+                "max": 1,
+            }
+        },
+        "temp": {
+            "value": {
+                "t1": 12,
+                "tt": "xxxx"
+            },
+            "config": {
+                "type": "struct",
+                "define": {
+                    "items": {
+                        "t1": {
+                            "type": "int",
+                        },
+                        "t2": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+# constraint generate.
+{
+  "iot-001": {
+    "size.value.type": "float",
+    "size.value.max": "100",
+    "size.value.min": "10",
+    "size.value.search": true,
+    "power.ts": true,
+    "light.light1.name.search": true,
+    "light.light1.power.ts": true,
+    "light.light2.name.search": true,
+    "light.light2.power.ts": true
+  }
+}
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

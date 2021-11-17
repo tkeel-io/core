@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/statem"
 
 	"github.com/dapr/go-sdk/service/common"
 	"github.com/pkg/errors"
@@ -111,7 +113,7 @@ func (e *EntityService) getEntityFrom(ctx context.Context, entity *Entity, in *c
 		return source, err
 	}
 
-	if entity.PluginID, err = getStringFrom(ctx, service.Plugin); nil != err {
+	if entity.Source, err = getStringFrom(ctx, service.Plugin); nil != err {
 		// plugin field required.
 		log.Error("parse http request field(source) from path failed", ctx, err)
 		return source, err
@@ -164,7 +166,7 @@ func (e *EntityService) entityGet(ctx context.Context, in *common.InvocationEven
 	}
 
 	// get entity from entity manager.
-	entity, err = e.entityManager.GetAllProperties(ctx, entity)
+	entity, err = e.entityManager.GetProperties(ctx, entity)
 	if nil != err {
 		log.Errorf("get entity failed, %s", err.Error())
 		return
@@ -194,9 +196,14 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		entity.KValues = make(map[string]interface{})
-		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+		kvalues := make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
+		}
+
+		entity.KValues = make(map[string]constraint.Node)
+		for key, val := range kvalues {
+			entity.KValues[key] = constraint.NewNode(val)
 		}
 	}
 
@@ -230,9 +237,14 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		entity.KValues = make(map[string]interface{})
-		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+		kvalues := make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
+		}
+
+		entity.KValues = make(map[string]constraint.Node)
+		for key, val := range kvalues {
+			entity.KValues[key] = constraint.NewNode(val)
 		}
 	}
 
@@ -307,15 +319,15 @@ func (e *EntityService) AppendMapper(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		mapperDesc := entities.MapperDesc{}
+		mapperDesc := statem.MapperDesc{}
 		if err = json.Unmarshal(in.Data, &mapperDesc); nil != err {
 			return out, errBodyMustBeJSON
 		}
-		entity.Mappers = []entities.MapperDesc{mapperDesc}
+		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	}
 
 	// set properties.
-	entity, err = e.entityManager.SetProperties(ctx, entity)
+	entity, err = e.entityManager.AppendMapper(ctx, entity)
 	if nil != err {
 		return
 	}
