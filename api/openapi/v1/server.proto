@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package openapi.v1;
+
+import "openapi/v1/openapi.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/tkeel-io/core/api/openapi/v1;v1";
+option java_multiple_files = true;
+option java_package = "dev.tkeel.hello.api.openapi.v1";
+option java_outer_classname = "OpenapiProtoV1";
+
+// The openapi service definition.
+service Openapi {
+  // Query identify.
+  rpc Identify(google.protobuf.Empty) returns (IdentifyResponse) {
+    option (google.api.http) = {
+      get : "/identify"
+    };
+  }
+
+  // Post addons identify.
+  rpc AddonsIdentify(AddonsIdentifyRequest) returns (AddonsIdentifyResponse) {
+    option (google.api.http) = {
+      post : "/addons/identify"
+      body : "*"
+    };
+  }
+
+  // Post tenant bind.
+  rpc TenantBind(TenantBindRequst) returns (TenantBindResponse) {
+    option (google.api.http) = {
+      post : "/tenant/bind"
+      body : "*"
+    };
+  }
+  // Post tenant bind.
+  rpc TenantUnbind(TenantUnbindRequst) returns (TenantUnbindResponse) {
+    option (google.api.http) = {
+      post : "/tenant/unbind"
+      body : "*"
+    };
+  }
+  // Query status.
+  rpc tatus(google.protobuf.Empty) returns (StatusResponse) {
+    option (google.api.http) = {
+      get : "/status"
+    };
+  }
+}
