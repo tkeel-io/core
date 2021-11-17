@@ -89,11 +89,31 @@ OUT_DIR := ./dist
 BINS_OUT_DIR := $(OUT_DIR)/$(GOOS)_$(GOARCH)/$(BUILDTYPE_DIR)
 LDFLAGS := "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
 
+INTERNAL_PROTO_FILES=$(shell find internal -name *.proto)
+API_PROTO_FILES=$(shell find api -name *.proto)
+
+.PHONY: init
+# init env
+init:
+	go get -u github.com/tkeel-io/tkeel-interface/tool
+	go get -u google.golang.org/protobuf/cmd/protoc-gen-go
+	go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	go get -u github.com/tkeel-io/tkeel-interface/protoc-gen-go-httap
+.PHONY: api
+# generate api proto
+api:
+	protoc --proto_path=. \
+               --proto_path=./third_party \
+               --go_out=paths=source_relative:. \
+               --go-http_out=paths=source_relative:. \
+               --go-grpc_out=paths=source_relative:. \
+               $(API_PROTO_FILES)
+
 build:
 	@echo "---------------------------"
 	@echo "-        build...         -"
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(GCFLAGS) -ldflags $(LDFLAGS) \
-     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)
+     	-o $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) cmd/core/main.go
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
