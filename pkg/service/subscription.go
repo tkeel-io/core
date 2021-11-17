@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 )
 
@@ -42,7 +43,7 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Plugin = entity.PluginID
+	out.Plugin = entity.Source
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Subscription = &pb.SubscriptionObject{}
@@ -62,16 +63,16 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		entity.ID = req.Id
 	}
 	entity.Owner = req.Owner
-	entity.PluginID = req.Plugin
+	entity.Source = req.Plugin
 	entity.Type = entities.EntityTypeSubscription
 
-	entity.KValues = map[string]interface{}{
-		entities.SubscriptionFieldSource:     req.Subscription.Source,
-		entities.SubscriptionFieldFilter:     req.Subscription.Filter,
-		entities.SubscriptionFieldTarget:     req.Subscription.Target,
-		entities.SubscriptionFieldTopic:      req.Subscription.Topic,
-		entities.SubscriptionFieldMode:       req.Subscription.Mode,
-		entities.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+	entity.KValues = map[string]constraint.Node{
+		entities.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
+		entities.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
+		entities.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
+		entities.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		entities.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
+		entities.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
 	// set properties.
@@ -90,16 +91,16 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.PluginID = req.Plugin
+	entity.Source = req.Plugin
 	entity.Type = entities.EntityTypeSubscription
 
-	entity.KValues = map[string]interface{}{
-		entities.SubscriptionFieldSource:     req.Subscription.Source,
-		entities.SubscriptionFieldFilter:     req.Subscription.Filter,
-		entities.SubscriptionFieldTarget:     req.Subscription.Target,
-		entities.SubscriptionFieldTopic:      req.Subscription.Topic,
-		entities.SubscriptionFieldMode:       req.Subscription.Mode,
-		entities.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+	entity.KValues = map[string]constraint.Node{
+		entities.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
+		entities.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
+		entities.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
+		entities.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		entities.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
+		entities.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
 	// set properties.
@@ -118,7 +119,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.PluginID = req.Plugin
+	entity.Source = req.Plugin
 	// delete entity.
 	_, err = s.entityManager.DeleteEntity(ctx, entity)
 	if nil != err {
@@ -134,9 +135,9 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.PluginID = req.Plugin
+	entity.Source = req.Plugin
 	// delete entity.
-	entity, err = s.entityManager.GetAllProperties(ctx, entity)
+	entity, err = s.entityManager.GetProperties(ctx, entity)
 	if nil != err {
 		return
 	}

@@ -1,14 +1,14 @@
 package service
 
 import (
-	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/statem"
 
 	"github.com/tkeel-io/core/pkg/logger"
 )
 
 var log = logger.NewLogger("core.api.service")
 
-type Entity = entities.EntityBase
+type Entity = statem.Base
 
 const (
 	HeaderSource      = "Source"
