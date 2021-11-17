@@ -1,29 +1,33 @@
 package mapper
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tkeel-io/core/pkg/constraint"
+)
 
 func TestMapper(t *testing.T) {
-	input := map[string]interface{}{
-		"entity1.property1":      123,
-		"entity2.property2.name": 1,
-		"entity2.property3":      234,
+	input := map[string]constraint.Node{
+		"entity1.property1":      constraint.RawNode("123"),
+		"entity2.property2.name": constraint.RawNode("123"),
+		"entity2.property3":      constraint.RawNode("123"),
 	}
 
 	tqlTexts := []struct {
 		id       string
 		tqlText  string
-		input    map[string]interface{}
+		input    map[string]constraint.Node
 		computed bool
 	}{
-		{"tql1", "insert into device1 select *", map[string]interface{}{}, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]interface{}{"test234.temp": 123}, true},
+		{"tql1", "insert into device1 select *", map[string]constraint.Node{}, false},
+		{"tql2", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.RawNode(`123`)}, true},
 		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
 		{"tql4", "insert into sub123 select test123.temp", nil, false},
 	}
 
 	for _, tqlInst := range tqlTexts {
 		t.Run(tqlInst.id, func(t *testing.T) {
-			m := NewMapper(tqlInst.id, tqlInst.tqlText)
+			m, _ := NewMapper(tqlInst.id, tqlInst.tqlText)
 
 			t.Log("parse ID: ", m.ID())
 

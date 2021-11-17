@@ -1,6 +1,8 @@
 package tql
 
-import "errors"
+import (
+	"github.com/tkeel-io/core/pkg/constraint"
+)
 
 type tql struct {
 	text     string
@@ -33,11 +35,17 @@ func (t *tql) Tentacles() []TentacleConfig {
 }
 
 // Exec execute MQL.
-func (t *tql) Exec(in map[string]interface{}) (map[string]interface{}, error) {
-	return t.listener.GetComputeResults(in), nil
-}
+func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, error) {
+	input := make(map[string][]byte)
+	for key, val := range in {
+		input[key] = []byte(val.String())
+	}
+	ret := t.listener.GetComputeResults(input)
 
-// ExecJSONE execute MQL with json input.
-func (t *tql) ExecJSONE([]byte) (map[string]interface{}, error) {
-	return nil, errors.New("not implement")
+	out := make(map[string]constraint.Node)
+	for key, val := range ret {
+		out[key] = constraint.RawNode(val)
+	}
+
+	return out, nil
 }
