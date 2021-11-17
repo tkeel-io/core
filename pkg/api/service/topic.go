@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	"github.com/dapr/go-sdk/service/common"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/statem"
 )
@@ -139,7 +139,7 @@ func (e *TopicEventService) topicHandler(ctx context.Context, in *common.TopicEv
 func tempConvert(values map[string]interface{}) map[string][]byte {
 	ret := make(map[string][]byte)
 	for key, val := range values {
-		ret[key], _ = json.Marshal(val)
+		ret[key] = []byte(constraint.NewNode(val).String())
 	}
 	return ret
 }

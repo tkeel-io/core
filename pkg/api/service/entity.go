@@ -200,6 +200,11 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
 		}
+
+		entity.KValues = make(map[string]constraint.Node)
+		for key, val := range kvalues {
+			entity.KValues[key] = constraint.NewNode(val)
+		}
 	}
 
 	// set properties.
@@ -237,6 +242,7 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 			return out, errBodyMustBeJSON
 		}
 
+		entity.KValues = make(map[string]constraint.Node)
 		for key, val := range kvalues {
 			entity.KValues[key] = constraint.NewNode(val)
 		}
