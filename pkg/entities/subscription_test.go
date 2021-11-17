@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ants "github.com/panjf2000/ants/v2"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/statem"
 )
 
@@ -21,11 +22,11 @@ func TestSubscriptionCreate(t *testing.T) {
 		Type:   EntityTypeSubscription,
 		Owner:  "tomas",
 		Source: "PluginB",
-		KValues: map[string][]byte{
-			SubscriptionFieldMode:   []byte(SubscriptionModeRealtime),
-			SubscriptionFieldSource: []byte("PluginA"),
-			SubscriptionFieldTarget: []byte("PluginA"),
-			SubscriptionFieldFilter: []byte("select *"),
+		KValues: map[string]constraint.Node{
+			SubscriptionFieldMode:   constraint.RawNode(SubscriptionModeRealtime),
+			SubscriptionFieldSource: constraint.RawNode("PluginA"),
+			SubscriptionFieldTarget: constraint.RawNode("PluginA"),
+			SubscriptionFieldFilter: constraint.RawNode("select *"),
 		},
 	}
 

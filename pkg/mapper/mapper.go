@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/tql"
 )
 
@@ -71,7 +72,7 @@ func (m *mapper) Copy() Mapper {
 }
 
 // Exec input returns output.
-func (m *mapper) Exec(values map[string][]byte) (res map[string][]byte, err error) {
+func (m *mapper) Exec(values map[string]constraint.Node) (res map[string]constraint.Node, err error) {
 	res, err = m.tqlInst.Exec(values)
 	return res, errors.Wrap(err, "execute tql failed")
 }

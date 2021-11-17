@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/dapr/go-sdk/service/common"
@@ -106,9 +107,13 @@ func TopicEvent2EntityContext(in *common.TopicEvent) (out *statem.MessageContext
 		case string, []byte:
 			values := make(map[string]interface{})
 			values["__data__"] = tempData
-			ec.Message = statem.NewPropertyMessage(entityID, values)
+
+			// 这里对2进制编码是存在问题的.
+			ec.Message = statem.NewPropertyMessage(entityID, tempConvert(values))
 		case map[string]interface{}:
-			ec.Message = statem.NewPropertyMessage(entityID, tempData)
+			// 临时处理为了先完成entity-config的功能.
+
+			ec.Message = statem.NewPropertyMessage(entityID, tempConvert(tempData))
 		default:
 			err = errTypeError
 			return
@@ -129,4 +134,12 @@ func (e *TopicEventService) topicHandler(ctx context.Context, in *common.TopicEv
 	}
 
 	return false, nil
+}
+
+func tempConvert(values map[string]interface{}) map[string][]byte {
+	ret := make(map[string][]byte)
+	for key, val := range values {
+		ret[key], _ = json.Marshal(val)
+	}
+	return ret
 }

@@ -170,6 +170,34 @@ func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*st
 }
 
 // SetProperties set properties into entity.
+func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	if en.ID == "" {
+		en.ID = uuid()
+	}
+
+	msg := make(map[string][]byte)
+	for key, val := range en.KValues {
+		msg[key] = []byte(val.String())
+	}
+
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:    en.ID,
+			Properties: msg,
+		},
+	}
+
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
+
+	m.SendMsg(msgCtx)
+
+	return nil, nil
+}
+
+// SetProperties set properties into entity.
 func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	if en.ID == "" {
 		en.ID = uuid()
@@ -188,34 +216,16 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 	enInst.SetConfig(en.Configs)
 
 	// set properties.
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
-			StateID:    en.ID,
-			Properties: en.KValues,
-		},
-	}
-
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
-	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
-
-	m.SendMsg(msgCtx)
-
-	return nil, nil
-}
-
-// SetProperties set properties into entity.
-func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if en.ID == "" {
-		en.ID = uuid()
+	msg := make(map[string][]byte)
+	for key, val := range en.KValues {
+		msg[key] = []byte(val.String())
 	}
 
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
-			Properties: en.KValues,
+			Properties: msg,
 		},
 	}
 

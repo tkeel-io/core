@@ -1,5 +1,7 @@
 package tql
 
+import "github.com/tkeel-io/core/pkg/constraint"
+
 /*
    1. 对MQL的静态分析
    	1. 解析Target Entity
@@ -26,5 +28,5 @@ type TQL interface {
 	Target() string
 	Entities() []string
 	Tentacles() []TentacleConfig
-	Exec(map[string][]byte) (map[string][]byte, error)
+	Exec(map[string]constraint.Node) (map[string]constraint.Node, error)
 }

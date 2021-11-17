@@ -58,7 +58,7 @@ type Base struct {
 	Version  int64                        `json:"version"`
 	LastTime int64                        `json:"last_time"`
 	Mappers  []MapperDesc                 `json:"mappers"`
-	KValues  map[string][]byte            `json:"properties"` //nolint ``
+	KValues  map[string]constraint.Node   `json:"properties"` //nolint ``
 	Configs  map[string]constraint.Config `json:"configs"`
 }
 
@@ -81,10 +81,10 @@ type statem struct {
 	Base
 
 	// mapper & tentacles.
-	mappers        map[string]mapper.Mapper      // key=mapperId
-	tentacles      map[string][]mapper.Tentacler // key=Sid#propertyKey
-	cacheProps     map[string]map[string][]byte  // cache other property.
-	indexTentacles map[string][]mapper.Tentacler // key=targetId(mapperId/Sid)
+	mappers        map[string]mapper.Mapper              // key=mapperId
+	tentacles      map[string][]mapper.Tentacler         // key=Sid#propertyKey
+	cacheProps     map[string]map[string]constraint.Node // cache other property.
+	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
 	// mailbox & state runtime status.
 	mailBox      *mailbox
@@ -111,7 +111,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 			Type:    in.Type,
 			Owner:   in.Owner,
 			Status:  StateStatusActive,
-			KValues: make(map[string][]byte),
+			KValues: make(map[string]constraint.Node),
 			Configs: make(map[string]constraint.Config),
 		},
 
@@ -122,7 +122,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		mailBox:        newMailbox(10),
 		disposing:      StateDisposingIdle,
 		mappers:        make(map[string]mapper.Mapper),
-		cacheProps:     make(map[string]map[string][]byte),
+		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
 	}
 
@@ -264,12 +264,12 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	if _, has := s.cacheProps[setStateID]; !has {
-		s.cacheProps[setStateID] = make(map[string][]byte)
+		s.cacheProps[setStateID] = make(map[string]constraint.Node)
 	}
 
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
-		stateProps[key] = value
+		stateProps[key] = constraint.RawNode(value)
 		watchKeys = append(watchKeys, mapper.WatchKey{EntityId: setStateID, PropertyKey: key})
 	}
 
@@ -303,7 +303,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-					messages[targetID][active.PropertyKey] = thisStateProps[active.PropertyKey]
+					messages[targetID][active.PropertyKey] = []byte(thisStateProps[active.PropertyKey].String())
 				} else {
 					// undefined tentacle typs.
 					log.Warnf("undefined tentacle type, %v", tentacle)
@@ -335,15 +335,15 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 // activeMapper active mappers.
 func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	for mapperID := range actives {
-		msg := make(map[string][]byte)
+		input := make(map[string]constraint.Node)
 		for _, tentacle := range s.indexTentacles[mapperID] {
 			for _, item := range tentacle.Items() {
-				msg[item.String()] = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
+				input[item.String()] = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
 			}
 		}
 
 		// excute mapper.
-		properties, err := s.mappers[mapperID].Exec(msg)
+		properties, err := s.mappers[mapperID].Exec(input)
 		if nil != err {
 			log.Errorf("exec statem mapper failed ", err)
 		}
@@ -359,7 +359,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 }
 
-func (s *statem) getProperty(properties map[string][]byte, propertyKey string) []byte {
+func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) constraint.Node {
 	if len(properties) == 0 {
 		return nil
 	}
@@ -368,7 +368,7 @@ func (s *statem) getProperty(properties map[string][]byte, propertyKey string) [
 	return properties[propertyKey]
 }
 
-func (s *statem) setProperty(propertyKey string, value []byte) {
+func (s *statem) setProperty(propertyKey string, value constraint.Node) {
 	// 我们或许应该在这里解析propertyKey中的嵌套层次.
 	if _, has := s.KValues[propertyKey]; !has {
 		s.KValues[propertyKey] = value

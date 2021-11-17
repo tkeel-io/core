@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/statem"
@@ -195,8 +196,8 @@ func (e *EntityService) entityCreate(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		entity.KValues = make(map[string]interface{})
-		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+		kvalues := make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
 		}
 	}
@@ -231,9 +232,13 @@ func (e *EntityService) entityUpdate(ctx context.Context, in *common.InvocationE
 	}
 
 	if len(in.Data) > 0 {
-		entity.KValues = make(map[string]interface{})
-		if err = json.Unmarshal(in.Data, &entity.KValues); nil != err {
+		kvalues := make(map[string]interface{})
+		if err = json.Unmarshal(in.Data, &kvalues); nil != err {
 			return out, errBodyMustBeJSON
+		}
+
+		for key, val := range kvalues {
+			entity.KValues[key] = constraint.NewNode(val)
 		}
 	}
 
