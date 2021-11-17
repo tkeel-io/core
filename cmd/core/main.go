@@ -7,24 +7,21 @@ import (
 	"os/signal"
 	"syscall"
 
+	Core_v1 "github.com/tkeel-io/core/api/core/v1"
+	openapi "github.com/tkeel-io/core/api/openapi/v1"
+	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
+
+	"github.com/panjf2000/ants/v2"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/kit/transport"
-
-	// User import
-	Entity_v1 "github.com/tkeel-io/core/api/core/v1"
-
-	openapi "github.com/tkeel-io/core/api/openapi/v1"
 )
 
 var (
-	// app name
-	Name string
-	// http addr
+	Name     string
 	HTTPAddr string
-	// grpc addr
 	GRPCAddr string
 )
 
@@ -41,7 +38,7 @@ func main() {
 	grpcSrv := server.NewGRPCServer(GRPCAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
-	app := app.New(Name,
+	coreApp := app.New(Name,
 		&log.Conf{
 			App:   Name,
 			Level: "debug",
@@ -51,16 +48,36 @@ func main() {
 	)
 
 	{ // User service
-		EntitySrv := service.NewEntityService()
-		Entity_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
-		Entity_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
+		// create coroutine pool.
+		coroutinePool, err := ants.NewPool(100)
+		if nil != err {
+			log.Fatal(err)
+		}
+
+		entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool)
+		if nil != err {
+			log.Fatal(err)
+		}
+		EntitySrv, err := service.NewEntityService(context.Background(), entityManager)
+		if nil != err {
+			log.Fatal(err)
+		}
+		Core_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
+		Core_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
+
+		SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), entityManager)
+		if nil != err {
+			log.Fatal(err)
+		}
+		Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
+		Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
 
 		OpenapiSrv := service.NewOpenapiService()
 		openapi.RegisterOpenapiHTTPServer(httpSrv.Container, OpenapiSrv)
 		openapi.RegisterOpenapiServer(grpcSrv.GetServe(), OpenapiSrv)
 	}
 
-	if err := app.Run(context.TODO()); err != nil {
+	if err := coreApp.Run(context.TODO()); err != nil {
 		panic(err)
 	}
 
@@ -68,7 +85,7 @@ func main() {
 	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
 	<-stop
 
-	if err := app.Stop(context.TODO()); err != nil {
+	if err := coreApp.Stop(context.TODO()); err != nil {
 		panic(err)
 	}
 }

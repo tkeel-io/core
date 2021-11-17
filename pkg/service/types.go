@@ -1,5 +1,15 @@
 package service
 
+import (
+	"github.com/tkeel-io/core/pkg/entities"
+
+	"github.com/tkeel-io/core/pkg/logger"
+)
+
+var log = logger.NewLogger("core.api.service")
+
+type Entity = entities.EntityBase
+
 const (
 	HeaderSource      = "Source"
 	HeaderTopic       = "Topic"
@@ -10,10 +20,5 @@ const (
 	QueryType         = "type"
 
 	Plugin = "plugin"
-	Entity = "entity"
 	User   = "user_id"
 )
-
-type ContextKey string
-
-var HeaderList = []string{HeaderSource, HeaderTopic, HeaderOwner, HeaderType, HeaderMetadata, HeaderContentType}

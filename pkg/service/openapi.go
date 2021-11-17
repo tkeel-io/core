@@ -21,14 +21,14 @@ func NewOpenapiService() *OpenapiService {
 	}
 }
 
-// AddonsIdentify implements AddonsIdentify.OpenapiServer
+// AddonsIdentify implements AddonsIdentify.OpenapiServer.
 func (s *OpenapiService) AddonsIdentify(ctx context.Context, in *openapi_v1.AddonsIdentifyRequest) (*openapi_v1.AddonsIdentifyResponse, error) {
 	return &openapi_v1.AddonsIdentifyResponse{
 		Res: util.GetV1ResultBadRequest("not declare addons"),
 	}, nil
 }
 
-// Identify implements Identify.OpenapiServer
+// Identify implements Identify.OpenapiServer.
 func (s *OpenapiService) Identify(ctx context.Context, in *emptypb.Empty) (*openapi_v1.IdentifyResponse, error) {
 	return &openapi_v1.IdentifyResponse{
 		Res:          util.GetV1ResultOK(),
@@ -38,7 +38,7 @@ func (s *OpenapiService) Identify(ctx context.Context, in *emptypb.Empty) (*open
 	}, nil
 }
 
-// Status implements Status.OpenapiServer
+// Status implements Status.OpenapiServer.
 func (s *OpenapiService) Status(ctx context.Context, in *emptypb.Empty) (*openapi_v1.StatusResponse, error) {
 	return &openapi_v1.StatusResponse{
 		Res:    util.GetV1ResultOK(),
@@ -46,14 +46,14 @@ func (s *OpenapiService) Status(ctx context.Context, in *emptypb.Empty) (*openap
 	}, nil
 }
 
-// TenantBind implements TenantBind.OpenapiServer
+// TenantBind implements TenantBind.OpenapiServer.
 func (s *OpenapiService) TenantBind(ctx context.Context, in *openapi_v1.TenantBindRequst) (*openapi_v1.TenantBindResponse, error) {
 	return &openapi_v1.TenantBindResponse{
 		Res: util.GetV1ResultOK(),
 	}, nil
 }
 
-// TenantUnbind implements TenantUnbind.OpenapiServer
+// TenantUnbind implements TenantUnbind.OpenapiServer.
 func (s *OpenapiService) TenantUnbind(ctx context.Context, in *openapi_v1.TenantUnbindRequst) (*openapi_v1.TenantUnbindResponse, error) {
 	return &openapi_v1.TenantUnbindResponse{
 		Res: util.GetV1ResultOK(),

@@ -18,11 +18,12 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EntityClient interface {
-	CreateEntity(ctx context.Context, in *CreateEntityRequest, opts ...grpc.CallOption) (*CreateEntityResponse, error)
-	UpdateEntity(ctx context.Context, in *UpdateEntityRequest, opts ...grpc.CallOption) (*UpdateEntityResponse, error)
+	CreateEntity(ctx context.Context, in *CreateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	UpdateEntity(ctx context.Context, in *UpdateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteEntityResponse, error)
-	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*GetEntityResponse, error)
+	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
+	AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 }
 
 type entityClient struct {
@@ -33,8 +34,8 @@ func NewEntityClient(cc grpc.ClientConnInterface) EntityClient {
 	return &entityClient{cc}
 }
 
-func (c *entityClient) CreateEntity(ctx context.Context, in *CreateEntityRequest, opts ...grpc.CallOption) (*CreateEntityResponse, error) {
-	out := new(CreateEntityResponse)
+func (c *entityClient) CreateEntity(ctx context.Context, in *CreateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/CreateEntity", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -42,8 +43,8 @@ func (c *entityClient) CreateEntity(ctx context.Context, in *CreateEntityRequest
 	return out, nil
 }
 
-func (c *entityClient) UpdateEntity(ctx context.Context, in *UpdateEntityRequest, opts ...grpc.CallOption) (*UpdateEntityResponse, error) {
-	out := new(UpdateEntityResponse)
+func (c *entityClient) UpdateEntity(ctx context.Context, in *UpdateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/UpdateEntity", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -60,8 +61,8 @@ func (c *entityClient) DeleteEntity(ctx context.Context, in *DeleteEntityRequest
 	return out, nil
 }
 
-func (c *entityClient) GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*GetEntityResponse, error) {
-	out := new(GetEntityResponse)
+func (c *entityClient) GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/GetEntity", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -78,15 +79,25 @@ func (c *entityClient) ListEntity(ctx context.Context, in *ListEntityRequest, op
 	return out, nil
 }
 
+func (c *entityClient) AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/AppendMapper", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EntityServer is the server API for Entity service.
 // All implementations must embed UnimplementedEntityServer
 // for forward compatibility
 type EntityServer interface {
-	CreateEntity(context.Context, *CreateEntityRequest) (*CreateEntityResponse, error)
-	UpdateEntity(context.Context, *UpdateEntityRequest) (*UpdateEntityResponse, error)
+	CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error)
+	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
-	GetEntity(context.Context, *GetEntityRequest) (*GetEntityResponse, error)
+	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
 }
 
@@ -94,20 +105,23 @@ type EntityServer interface {
 type UnimplementedEntityServer struct {
 }
 
-func (UnimplementedEntityServer) CreateEntity(context.Context, *CreateEntityRequest) (*CreateEntityResponse, error) {
+func (UnimplementedEntityServer) CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEntity not implemented")
 }
-func (UnimplementedEntityServer) UpdateEntity(context.Context, *UpdateEntityRequest) (*UpdateEntityResponse, error) {
+func (UnimplementedEntityServer) UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateEntity not implemented")
 }
 func (UnimplementedEntityServer) DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntity not implemented")
 }
-func (UnimplementedEntityServer) GetEntity(context.Context, *GetEntityRequest) (*GetEntityResponse, error) {
+func (UnimplementedEntityServer) GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntity not implemented")
 }
 func (UnimplementedEntityServer) ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListEntity not implemented")
+}
+func (UnimplementedEntityServer) AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendMapper not implemented")
 }
 func (UnimplementedEntityServer) mustEmbedUnimplementedEntityServer() {}
 
@@ -212,6 +226,24 @@ func _Entity_ListEntity_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_AppendMapper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendMapperRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).AppendMapper(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/AppendMapper",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).AppendMapper(ctx, req.(*AppendMapperRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Entity_ServiceDesc is the grpc.ServiceDesc for Entity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -238,6 +270,10 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEntity",
 			Handler:    _Entity_ListEntity_Handler,
+		},
+		{
+			MethodName: "AppendMapper",
+			Handler:    _Entity_AppendMapper_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
