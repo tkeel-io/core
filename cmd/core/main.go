@@ -72,6 +72,13 @@ func main() {
 		Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
 		Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
 
+		TopicSrv, err := service.NewTopicService(context.Background(), entityManager)
+		if nil != err {
+			log.Fatal(err)
+		}
+		Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
+		Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+
 		OpenapiSrv := service.NewOpenapiService()
 		openapi.RegisterOpenapiHTTPServer(httpSrv.Container, OpenapiSrv)
 		openapi.RegisterOpenapiServer(grpcSrv.GetServe(), OpenapiSrv)
