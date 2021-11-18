@@ -17,6 +17,8 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
+const _ = transportHTTP.ImportAndUsed
+
 type EntityHTTPServer interface {
 	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
 	CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error)
