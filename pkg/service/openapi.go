@@ -42,7 +42,7 @@ func (s *OpenapiService) Identify(ctx context.Context, in *emptypb.Empty) (*open
 func (s *OpenapiService) Status(ctx context.Context, in *emptypb.Empty) (*openapi_v1.StatusResponse, error) {
 	return &openapi_v1.StatusResponse{
 		Res:    util.GetV1ResultOK(),
-		Status: openapi_v1.PluginStatus_runing,
+		Status: openapi_v1.PluginStatus_runing, //nolint
 	}, nil
 }
 

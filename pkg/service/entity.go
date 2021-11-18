@@ -43,6 +43,8 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		for k, v := range kv {
 			entity.KValues[k] = constraint.NewNode(v)
 		}
+	case []byte:
+
 	default:
 		return
 	}
