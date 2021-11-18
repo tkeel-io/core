@@ -19,6 +19,8 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
+const _ = transportHTTP.ImportAndUsed
+
 type OpenapiHTTPServer interface {
 	AddonsIdentify(context.Context, *v1.AddonsIdentifyRequest) (*v1.AddonsIdentifyResponse, error)
 	Identify(context.Context, *emptypb.Empty) (*v1.IdentifyResponse, error)
