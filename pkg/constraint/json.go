@@ -1,6 +1,7 @@
 package constraint
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -63,6 +64,7 @@ type Node interface {
 	Type() Type
 	To(Type) Node
 	String() string
+	Value() interface{}
 }
 
 // DefaultNode interface.
@@ -80,6 +82,9 @@ func (r DefaultNode) To(Type) Node {
 func (r DefaultNode) String() string {
 	return r.raw
 }
+func (r DefaultNode) Value() interface{} {
+	return r.raw
+}
 
 type BoolNode bool
 
@@ -95,6 +100,9 @@ func (r BoolNode) To(typ Type) Node {
 }
 func (r BoolNode) String() string {
 	return fmt.Sprintf("%t", r)
+}
+func (r BoolNode) Value() interface{} {
+	return bool(r)
 }
 
 type IntNode int64
@@ -115,6 +123,10 @@ func (r IntNode) String() string {
 	return fmt.Sprintf("%d", r)
 }
 
+func (r IntNode) Value() interface{} {
+	return int64(r)
+}
+
 type FloatNode float64
 
 func (r FloatNode) Type() Type { return Float }
@@ -131,6 +143,10 @@ func (r FloatNode) To(typ Type) Node {
 }
 func (r FloatNode) String() string {
 	return fmt.Sprintf("%f", r)
+}
+
+func (r FloatNode) Value() interface{} {
+	return float64(r)
 }
 
 type StringNode string
@@ -170,8 +186,12 @@ func (r StringNode) String() string {
 	return string(r)
 }
 
+func (r StringNode) Value() interface{} {
+	return string(r)
+}
+
 // JSONNode maybe Object or Array.
-type JSONNode string
+type JSONNode []byte
 
 func (r JSONNode) Type() Type { return JSON }
 func (r JSONNode) To(typ Type) Node {
@@ -180,6 +200,12 @@ func (r JSONNode) To(typ Type) Node {
 
 func (r JSONNode) String() string {
 	return string(r)
+}
+
+func (r JSONNode) Value() interface{} {
+	data := make(map[string]interface{})
+	_ = json.Unmarshal(r, &data)
+	return data
 }
 
 type RawNode []byte
@@ -200,6 +226,9 @@ func (r RawNode) String() string {
 	return string(r)
 }
 
+func (r RawNode) Value() interface{} {
+	return []byte(r)
+}
 func NewNode(v interface{}) Node {
 	switch val := v.(type) {
 	case float32:
@@ -214,6 +243,10 @@ func NewNode(v interface{}) Node {
 		return RawNode(val)
 	case bool:
 		return BoolNode(val)
+	case map[string]interface{}:
+		data, _ := json.Marshal(v)
+
+		return JSONNode(string(data))
 	default:
 		if reflect.Ptr == reflect.TypeOf(val).Kind() {
 			// deference pointer.

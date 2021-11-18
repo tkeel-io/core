@@ -48,7 +48,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
+	_, err = s.entityManager.SetProperties(ctx, entity)
 	if nil != err {
 		return
 	}
@@ -128,7 +128,13 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	out = &pb.EntityResponse{}
-	out.Properties, _ = structpb.NewValue(entity.KValues)
+
+	kv := make(map[string]interface{})
+	for k, v := range entity.KValues {
+		kv[k] = v.Value()
+	}
+
+	out.Properties, _ = structpb.NewValue(kv)
 	out.Mappers = make([]*pb.MapperDesc, 0)
 
 	for _, mapper := range entity.Mappers {

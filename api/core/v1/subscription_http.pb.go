@@ -17,6 +17,8 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
+const _ = transportHTTP.ImportAndUsed
+
 type SubscriptionHTTPServer interface {
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*SubscriptionResponse, error)
 	DeleteSubscription(context.Context, *DeleteSubscriptionRequest) (*DeleteSubscriptionResponse, error)
