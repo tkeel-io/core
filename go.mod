@@ -10,6 +10,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.4.2
+	github.com/olivere/elastic/v7 v7.0.29
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1

@@ -1,0 +1,44 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "api/core/v1/list.proto";
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+service Search {
+	rpc Index (IndexObject) returns (IndexResponse) {
+		option (google.api.http) = {
+			post : "/index"
+			body : "obj"
+		};
+	};
+	rpc Search (SearchRequest) returns (SearchResponse) {
+		option (google.api.http) = {
+			get : "/search/{data}"
+		};
+	};
+}
+
+message IndexObject {
+    google.protobuf.Value obj = 1;
+}
+
+message IndexResponse {
+    string status = 1;
+}
+
+message SearchRequest {
+    string data = 1;
+    Pager pager = 2;
+}
+
+message SearchResponse {
+    int32 total_count = 1;
+    repeated google.protobuf.Value items = 2;
+}
