@@ -176,8 +176,8 @@ type SearchResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TotalCount int32             `protobuf:"varint,1,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
-	Items      []*structpb.Value `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	TotalCount int32             `protobuf:"varint,1,opt,name=total_count,json=totalCount,proto3" json:"total_count"`
+	Items      []*structpb.Value `protobuf:"bytes,2,rep,name=items,proto3" json:"items"`
 }
 
 func (x *SearchResponse) Reset() {

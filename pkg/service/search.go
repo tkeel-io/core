@@ -8,15 +8,16 @@ import (
 
 type SearchService struct {
 	pb.UnimplementedSearchServer
+	searchClient pb.SearchHTTPServer
 }
 
-func NewSearchService() *SearchService {
-	return &SearchService{}
+func NewSearchService(searchClient pb.SearchHTTPServer) *SearchService {
+	return &SearchService{searchClient: searchClient}
 }
 
 func (s *SearchService) Index(ctx context.Context, req *pb.IndexObject) (*pb.IndexResponse, error) {
-	return &pb.IndexResponse{}, nil
+	return s.searchClient.Index(ctx, req)
 }
 func (s *SearchService) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
-	return &pb.SearchResponse{}, nil
+	return s.searchClient.Search(ctx, req)
 }

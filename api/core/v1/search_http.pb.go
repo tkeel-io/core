@@ -67,6 +67,10 @@ func (h *SearchHTTPHandler) Search(req *go_restful.Request, resp *go_restful.Res
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	out, err := h.srv.Search(req.Request.Context(), &in)
 	if err != nil {
