@@ -17,18 +17,18 @@ func TestParserAndComputing(t *testing.T) {
 	cfg := l.GetParseConfigs()
 	fmt.Println("========\n ", cfg)
 
-	in := make(map[string]interface{})
-	in["entity1.property1"] = 1
-	in["entity.property2.name"] = 2
-	in["entity.property3"] = 3
+	in := make(map[string][]byte)
+	in["entity1.property1"] = []byte("1")
+	in["entity.property2.name"] = []byte("2")
+	in["entity.property3"] = []byte("3")
 	fmt.Println("========\n in: ", in)
 	out := l.GetComputeResults(in)
 	fmt.Println(" out: ", out)
 
 	// out2
-	in["entity1.property1"] = 4
-	in["entity.property2.name"] = 7
-	in["entity.property3"] = 6
+	in["entity1.property1"] = []byte("4")
+	in["entity.property2.name"] = []byte("7")
+	in["entity.property3"] = []byte("6")
 	fmt.Println("========\n in: ", in)
 	out2 := l.GetComputeResults(in)
 	fmt.Println(" out2: ", out2)
