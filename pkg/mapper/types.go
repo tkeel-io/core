@@ -1,5 +1,7 @@
 package mapper
 
+import "github.com/tkeel-io/core/pkg/constraint"
+
 const (
 	TentacleTypeUndefined = "undefined"
 	TentacleTypeEntity    = "entity"
@@ -22,7 +24,7 @@ type Mapper interface {
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
-	Exec(map[string]interface{}) (map[string]interface{}, error)
+	Exec(map[string]constraint.Node) (map[string]constraint.Node, error)
 }
 
 type TentacleType = string

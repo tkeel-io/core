@@ -1,132 +1,151 @@
-<h1 align="left"> tKeel-Core </h1>
-🌰 tKeel 物联网平台的数据中心。将世界万物数字化的数据库。
+<h1 align="center"> tKeel-Core</h1>
+<h5 align="center"> The digital engine of world</h5>
+<div align="center">
 
-[comment]: <> (🌰 tKeel 物联网平台的数据中心。将世界万物抽象成类似于元宇宙的一个数值化高拓展性的数据库。)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tkeel-io/core)](https://goreportcard.com/report/github.com/tkeel-io/core)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tkeel-io/core)
+![GitHub](https://img.shields.io/github/license/tkeel-io/core?style=plastic)
+[![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
+</div>
 
-Core 以实体（entity）为操作对象，通过简易明了的 API 对外提供读写能力（属性读写、时序查询、订阅等）。
+🌰 Core is the data centre of the tKeel IoT Open Platform, a high-performance, scalable and lightweight next-generation digital data engine.
 
-[English](README.md)
+The *entity* is the smallest unit of operation, providing read and write capabilities (attribute reading and writing, time series, subscriptions, mapping, etc.) through a simple API.
 
-## 架构设计
-架构按操作分为 **控制平面** 和 **数据平面**。
+[中文](README_zh.md)
 
-- 控制平面：
-  <br> 通过 http 进行实体的创建查询等操作，
-- 数据平面：
-  <br> 通过 dapr 的 pubsub 完成数据的高效读写与订阅。
+## 🚪 QuickStart
 
-架构图：
-![img.png](docs/images/architecture.png)
+Core is an important base component of tKeel, and it also has the ability to be deployed separately. Use the features of core to do great things, like those problems you're having trouble solving right now, and I think maybe core can help you.
 
-    
-## 快速入门
-Core 是 tKeel 的一个重要基础组件，拥有单独部署能力，使用相关特性做满足广大用户需求的功能也是我们竭力想要的。
-
-### 安装需要
+### Requirement
+🔧 Make sure you are well-prepared before using Core.
 1. [Kubernetes](https://kubernetes.io/)
-2. [Dapr](https://docs.dapr.io/getting-started/)
+2. [Dapr with k8s](https://docs.dapr.io/getting-started/)
 
 
-### 通过 tKeel 安装
-Core 作为 tKeel 的基础组件，相关 API 的调用均通过 tKeel 代理实现。（详细请见[tKeel CLI 安装文档](https://github.com/tkeel-io/cli )）
+### Installation via tKeel
+Core is the base component of tKeel and the API calls are made through the tKeel proxy. (See the [tKeel CLI installation documentation](https://github.com/tkeel-io/cli ) for details)
 
-### 独立部署
-通过 Dapr 启动该项目。
-
-#### Self-hosted
-本地运行一个redis，监听6379端口，无密码  
-1. 拉取仓库
+### Independent Deployment
+Clone this repo.
 ```bash 
-$ git clone  git@github.com:tkeel-io/core.git
+git clone  git@github.com:tkeel-io/core.git
+cd core
 ```
-2. 启动程序
+#### Self-hosted
+> ⚠️ Note: Please run a redis process locally first, listening on port 6379, without password
+##### Start your project with Dapr
 ```bash
 dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
 ```
 #### Kubernetes
-1. 部署reids服务
+1. Deploying the reids service
     ```bash
     helm install redis bitnami/redis
     ```
-2. 运行core程序
+2. Running core programs
     ```bash
     kubectl apply -f k8s/core.yaml
     ```
 
-## 基本概念
-### 实体（Entity）
-实体是我们在物联网世界中对 Things 的一种抽象，是所有操作的基础对象。包括网关、设备、关于设备的聚合等概念，都进行了抽象，
-抽象出来了这样一个实体的概念。
+## 🪜 Architecture
+The architecture is divided into two planes, distinguished by operation.
 
-*属性* 是对实体某种信息的描述，一个实体包含三类属性
-1. **基础属性** 每个实体都必备的属性，如 `owner`，`plugin`
-2. **自身属性** 实体自身的属性，比如一个 **温度计** 的 `温度`
-3. **映射属性** 由其他实体属性映射而来的一个缓存聚合属性。
+- **Control Plane**：
+  <br> entity creation, querying, etc. via HTTP.
+- **Data Plane**：
+  <br> Efficient reading, writing and subscribing to data is achieved through Dapr's pubsub.
 
-更多设计细节请阅读[实体文档](docs/entity/entity.md)
+<div align="center">
+
+![img.png](docs/images/architecture.png)
+
+<i>Architecture </i>
+</div>
+
+## 🌱 Concepts
+### Entity
+
+An *entity* is an abstraction of Things in our IoT world, the smallest object that Core operates on. This includes smart lights, air conditioners, gateways, rooms, floors, even virtual devices generated through data aggregation, etc. We abstract these `Things` and define them as *Entity*.
+
+*A Property* is a description of a part of information about an entity. An entity contains two types of property.
+1. **Basic Property**: Properties that are required for every entity, such as `id`, `owner`, etc., to identify common characteristics of entities.
+2. **Extended Property**: properties of an entity in addition to the base property that characterize a class or entity, such as the temperature of a **thermometer**.
+
+For more design details please read [entity documentation](docs/entity/entity.md)
 
 ### Actor
-[Actor](docs/actors/actor.md) 是 实体（Entity）的运行时的一种模式抽象, 用于维护实体的实时状态以及提供实体的一些具体行为。
+[Actor](docs/actors/actor.md) is a runtime schema abstraction of an entity, used to maintain the real-time state of the entity and to provide some concrete behaviour for the provided entity.
 
-### 关系
-关系是实体与实体之间的联系。
+### Relation
+A relation is a link between entities.
 
+### Mapper
+[Mapper](docs/mapper/mapper.md) s an abstraction of entity property communication, enabling the upward transfer of data and the downward transfer of control commands.
+<div align="center">
 
-### 映射
-映射是实体属性的传播，可以实现上报数据的向上传播以及控制命令的向下传播。  
 ![img.png](docs/images/message_passing.png)
 
-蓝色线条代表上行，黑色代表下行
+<i>Mapper Simulation</i>
+</div>
 
-映射的操作包含两个部分: 写复制和计算更新  
+The blue line represents the upward transfer and the black represents the downward transfer.
+
+The *mapper* operation consists of two parts: `write copy` and `compute update`
+<div align="center">
+
 ![img.png](docs/images/mapping.png)
+</div>
 
-参见[映射](docs/mapper/mapper.md)
-### 模型
-模型是用来约束实体属性的定义。
-有模型的实体属性需要按照模型的要求对值进行处理，比如需要进时序数据库时或者需要用于搜索等。
+### Model
 
-### 订阅
-Core 提供了简捷方便的订阅功能，供开发者实时获取自己关心的数据。
+We define the set of constraints on an entity's properties as a model. An entity is a carrier of property data, but to parse and use the property data of an entity, we need descriptive information about the entity properties, such as type, range of values, etc. We call this descriptive information `constraints`. A model is a carrier containing a collection of `constraints`, and a model exists as an entity, [read the model documentation for more design details](docs/model/model.md).
 
-在 tKeel 平台中用于多个 plugin 之间和一个 plugin 内所有以实体为操作对象的数据交换。
+### Subscription
 
-底层实现逻辑是这样的：每个 plugin 在注册的时候在 Core 内部自动创建一个交互的 `pubsub`，名称统一为 pluginID-pubsub,
-订阅的 `topic` 统一为 pub-core，sub-core，只有 core 与该 plugin 有相关权限
-比如
+Core provides easy and convenient [subscriptions](docs/subscription/subscription.md) for developers to access the data they care about in real time.
+
+Used in the tKeel platform for the exchange of data between multiple plugins and within a plugin for all entity-based operations.
+
+The underlying implementation logic is as follows: each plugin sends a request to Core when it registers, allowing core to automatically create an interactive `pubsub` with a uniform name of pluginID-pubsub,
+
+The subscribed `topic`s are unified as pub-core, sub-core, and only core has permissions associated with the plugin
+For example:
 iothub: iothub-pubsub
 
-**订阅** 分为三种：
-- **实时订阅**： 收到消息时触发 
-- **变更订阅**： 实体属性有变动时触发 
-- **周期订阅**： 周期性触发
+**Subscription**  is available in three ways:
+- **Real-time Subscription**: Subscriptions send real-time data about the entity to the subscriber.
+- **Change Subscription**: The subscription sends entity property data to the subscriber when the subscriber's subscribed entity properties change and the change conditions are met.
+- **Periodic Subscription**: Subscriptions periodically send entity property data to subscribers.
 
-详细请参见[订阅文档](docs/subscription/subscription.md)
 
-### 作为 tKeel 组件运行
-#### 示例
-在 tKeel 相关组件安装完成之后，[Python 示例](examples/iot-paas.py) 展示了生成 MQTT 使用的 `token`，然后创建实体，上报属性，获取快照，订阅实体的属性等功能。  
-为了方便说明，下面是我们使用外部流量方式访问 Keel，和 Python 作为示例语言的代码。我们需要keel和mqtt broker的服务端口用于演示。
+### Run as a *tKeel* component
+#### Example 
 
-##### 获取服务端口
-1. Keel 服务端口
+After the tKeel-related components have been installed, [Python example](examples/iot-paas.py) shows the ability to generate a `token` for use with MQTT, then create an entity, report properties, get a snapshot, subscribe to the entity's properties, etc.
+
+For illustration purposes, here is our code using external traffic to access Keel, and Python as the example language. We need the service ports of keel and mqtt broker for the demonstration.
+
+##### Get Service Port
+1. tKeel Service Port
 ```bash
 KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
 ```
-2. MQTT Server 服务端口
+2. MQTT Server service port
 ```bash
 MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
 ```
 
-keel openapi 服务地址为k8s ip:keel暴露的nodeport端口
+tKeel OpenAPI service address is the NodePort exposed by k8s ip:keel.
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 keel_url = "http://{host}:{port}/v0.1.0"
 ```
 
-##### 创建 token
+##### Create token
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 def create_entity_token(entity_id, entity_type, user_id):
     data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
     token_create = "/auth/token/create"
@@ -134,9 +153,9 @@ def create_entity_token(entity_id, entity_type, user_id):
     return res.json()["data"]["entity_token"]
 ```
 
-##### 创建实体
+##### Create Entity
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
@@ -146,9 +165,9 @@ def create_entity(entity_id, entity_type, user_id, plugin_id, token):
     print(res.json())
 ```
 
-##### 上报实体属性
+##### Upward Transfer
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected to MQTT Broker!")
@@ -165,9 +184,9 @@ payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.ti
 client.publish("system/test", payload=payload)
 ```
 
-##### 获取实体快照
+##### Get Entity Snapshot
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 def get_entity(entity_id, entity_type, user_id, plugin_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
     entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
@@ -177,9 +196,9 @@ def get_entity(entity_id, entity_type, user_id, plugin_id):
 
 ```
 
-##### 订阅实体
+##### Subscribe Entity
 ```python
-// examples/iot-paas.py
+# Source: examples/iot-paas.py
 def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
     query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
     entity_create = "/core/plugins/{plugin_id}/subscriptions?id={subscription_id}&type={entity_type}&owner={user_id}&source={source}".format(
@@ -190,10 +209,10 @@ def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription
     print(res.json())
 ```
 
-##### 消费topic数据
-消费程序作为一个独立的app消费相关topic数据并展示[消费示例](examples/subclient)
+##### Consume Topic
+The consumer app consumes the relevant topic data as a standalone app and displays it [sample consumption](examples/subclient)
 ```python
-// examples/subclient/app.py
+# Source: examples/subclient/app.py
 import flask
 from flask import request, jsonify
 from flask_cors import CORS
@@ -217,14 +236,13 @@ def ds_subscriber():
 app.run()
 ```
 
-### Entity 示例
-因为当前 Dapr SDK 不能处理 HTTP 请求中的 Header，参数通过 path 和 query 的方式传递。
+### Entity Example
+As the current Dapr SDK cannot handle the *header in HTTP requests*, the parameters are passed by way of *path* and *query*.
+The functions in this [examples](examples/entity) , create entities, update entity properties via pubsub, query entities.
 
-[examples](examples/entity) 该示例中的功能，创建实体，通过 pubsub 更新实体属性，查询实体。
-
-#### 创建实体
+#### Create Entity
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
 	client, err := dapr.NewClient()
 	if nil != err {
 		panic(err)
@@ -245,9 +263,9 @@ app.run()
 	}
 	fmt.Println(string(result))
 ```
-#### 更新实体属性
+#### Update Entity Properties
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
     data := make(map[string]interface{})
 	data["entity_id"] = "test1"
 	data["owner"] = "abc"
@@ -266,9 +284,9 @@ app.run()
 	}
 ```
 
-#### 获取实体属性
+#### Get Entity Properties
 ```go
-    // examples/entity/main.go
+    // Source: examples/entity/main.go
     getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
 
 	result, err = client.InvokeMethodWithContent(context.Background(),
@@ -285,5 +303,37 @@ app.run()
 ```
 
 
-## API
-Core 的更多功能 API 详细请参见[ API 文档](docs/api/index.md)
+## ⚙️ API
+For more details on Core's functional API, please see the [ API documentation ](docs/api/index.md).
+
+## 💬 Shall We Talk
+If you have any suggestions or ideas, you are welcome to file an Issue at any time, we'll look forward to sharing them together to make the world a better place.
+
+Thank you very much for your feedback and suggestions!
+
+[Community Document](docs/development/README.md) will give you an idea of how you can start contributing to tKeel.
+
+### 🙌 Contributing
+
+[开发指南](docs/development/developing-tkeel.md) explains how to configure your development environment.
+
+We have this [Code of Conduct](docs/community/code-of-conduct.md) that we expect project participants to follow. Please read it in full so that you know what will and will not be tolerated.
+
+### 🌟 Find Us
+You may have many questions, and we will ensure that they are answered as soon as possible!
+
+| Social Platforms | Links |
+|:---|----|
+|email| tkeel@yunify.com|
+|Weibo| [@tkeel]()|
+
+
+## 🏘️ Repos
+
+| repo | Descriptions |
+|:-----|:------------|
+| [tKeel](https://github.com/tkeel-io/tkeel) | The code for the platform and an overview of the *IoT Open Platform* are included|
+| [Core](https://github.com/tkeel-io/core) | tKeel's data centre |
+| [CLI](https://github.com/tkeel-io/cli) | The tKeel CLI is the main tool for various tKeel-related tasks
+| [Helm](https://github.com/tkeel-io/helm-charts) | Helm charts corresponding to tKeel |
+

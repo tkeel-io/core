@@ -1,0 +1,107 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+service Subscription {
+	rpc CreateSubscription (CreateSubscriptionRequest) returns (SubscriptionResponse) {
+		option (google.api.http) = {
+			post : "/plugins/{plugin}/subscriptions"
+			body : "subscription"
+		};
+	};
+	rpc UpdateSubscription (UpdateSubscriptionRequest) returns (SubscriptionResponse) {
+		option (google.api.http) = {
+			put : "/plugins/{plugin}/subscriptions/{id}"
+			body : "subscription"
+		};
+	};
+	rpc DeleteSubscription (DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse) {
+		option (google.api.http) = {
+			delete : "/plugins/{plugin}/subscriptions/{id}"
+		};
+	};
+	rpc GetSubscription (GetSubscriptionRequest) returns (SubscriptionResponse) {
+		option (google.api.http) = {
+			get : "/plugins/{plugin}/subscriptions/{id}"
+		};
+	};
+	rpc ListSubscription (ListSubscriptionRequest) returns (ListSubscriptionResponse) {
+		option (google.api.http) = {
+			get : "/plugins/{plugin}/subscriptions"
+		};
+	};
+}
+
+message SubscriptionObject {
+    string mode = 1;
+    string source = 2;
+    string filter = 3;
+    string target = 4;
+    string topic = 5;
+    string pubsub_name = 6;
+}
+
+
+
+message SubscriptionResponse {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    SubscriptionObject subscription = 5;
+}
+
+message CreateSubscriptionRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    SubscriptionObject subscription = 5;
+}
+
+
+message UpdateSubscriptionRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    SubscriptionObject subscription = 5;
+}
+
+
+message DeleteSubscriptionRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+}
+message DeleteSubscriptionResponse {
+    string id = 1;
+    string status = 2;
+}
+
+message GetSubscriptionRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+}
+
+message ListSubscriptionRequest {
+    string plugin = 1;
+    string source = 2;
+    string owner = 3;
+}
+
+message ListSubscriptionResponse {
+    int32 count = 1;
+    repeated SubscriptionResponse items = 2;
+}
+

@@ -3,11 +3,12 @@ package entities
 import (
 	"context"
 	"encoding/json"
-	"sync/atomic"
 
+	dapr "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 const (
@@ -38,31 +39,54 @@ type SubscriptionBase struct {
 
 // subscription subscription actor based entity.
 type subscription struct {
-	*entity
 	SubscriptionBase `mapstructure:",squash"`
+	daprClient       dapr.Client
+	stateMarchine    statem.StateMarchiner `mapstructure:"-"`
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *EntityManager, in *EntityBase) (*subscription, error) {
-	en, err := newEntity(ctx, mgr, in)
-	if nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
-	}
-
+func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (statem.StateMarchiner, error) {
 	subsc := subscription{
-		entity: en,
 		SubscriptionBase: SubscriptionBase{
 			Mode: SubscriptionModeUndefine,
 		},
 	}
 
-	err = mapstructure.Decode(in.KValues, &subsc)
-	subsc.Status = subsc.checkSubscription()
+	stateM, err := statem.NewState(ctx, mgr, in, subsc.HandleMessage)
+	if nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	}
 
-	// setup subscription.
-	subsc.setup()
+	stateM.GetBase().Status = subsc.checkSubscription()
+	if err = mapstructure.Decode(in.KValues, &subsc); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	}
 
+	subsc.stateMarchine = stateM
 	return &subsc, errors.Wrap(err, "create subscription failed")
+}
+
+// Setup setup filter.
+func (s *subscription) Setup() error {
+	if statem.StateStatusInactive == s.stateMarchine.GetBase().Status {
+		return errors.Wrap(errEntityNotAready, "setup subscription failed")
+	}
+
+	// set mapper.
+	s.stateMarchine.GetBase().Mappers =
+		[]statem.MapperDesc{
+			{
+				Name:      "subscription",
+				TQLString: s.Filter,
+			},
+		}
+
+	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup failed")
+}
+
+// GetID return state marchine id.
+func (s *subscription) GetID() string {
+	return s.stateMarchine.GetID()
 }
 
 // GetMode returns subscription mode.
@@ -70,129 +94,90 @@ func (s *subscription) GetMode() string {
 	return s.Mode
 }
 
-// InvokeMsg dispose subscription input messages.
-func (s *subscription) InvokeMsg() {
-	for {
-		var msgCtx Message
-		if msgCtx = s.mailBox.Get(); nil == msgCtx {
-			// detach this entity.
-			if atomic.CompareAndSwapInt32(&s.attached, EntityAttached, EntityDetached) {
-				log.Infof("detached entity, id: %s.", s.ID)
-				break
-			}
-		}
-
-		// lock messages.
-		s.lock.Lock()
-
-		switch msg := msgCtx.(type) {
-		case *EntityMessage:
-			s.invokeMsg(msg)
-		case *TentacleMsg:
-			// todo nothing...
-		default:
-			// invalid msg type.
-			log.Errorf("undefine message type, msg: %s", msg)
-		}
-
-		s.lock.Unlock()
-	}
+func (s *subscription) GetBase() *statem.Base {
+	return s.stateMarchine.GetBase()
 }
 
-// invokeMsg invoke property messages.
-func (s *subscription) invokeMsg(msg *EntityMessage) {
-	var err error
-	switch s.Mode {
-	case SubscriptionModeRealtime:
-		err = s.invokeRealtime(msg)
-	case SubscriptionModePeriod:
-		err = s.invokePeriod(msg)
-	case SubscriptionModeChanged:
-		err = s.invokeChanged(msg)
+func (s *subscription) GetManager() statem.StateManager {
+	return s.stateMarchine.GetManager()
+}
+
+func (s *subscription) SetConfig(configs map[string]constraint.Config) error {
+	return errors.Wrap(s.stateMarchine.SetConfig(configs), "subscription.SetConfig failed")
+}
+
+// OnMessage recv message from pubsub.
+func (s *subscription) OnMessage(msg statem.Message) bool {
+	return s.stateMarchine.OnMessage(msg)
+}
+
+// InvokeMsg dispose entity message.
+func (s *subscription) HandleLoop() {
+	s.stateMarchine.HandleLoop()
+}
+
+func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
+	var watchKeys []WatchKey
+	switch msg := message.(type) {
+	case statem.PropertyMessage:
+		switch s.Mode {
+		case SubscriptionModeRealtime:
+			watchKeys = s.invokeRealtime(msg)
+		case SubscriptionModePeriod:
+			watchKeys = s.invokePeriod(msg)
+		case SubscriptionModeChanged:
+			watchKeys = s.invokeChanged(msg)
+		default:
+			// invalid subscription mode.
+			log.Errorf("undefine subscription mode, mode: %s", s.Mode)
+		}
 	default:
-		// invalid subscription mode.
+		// invalid msg typs.
+		log.Errorf("undefine message type, msg: %s", msg)
 	}
 
-	log.Infof("invoke message: %v,  err: %v", msg, err)
+	return watchKeys
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg *EntityMessage) error {
+func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Realtime 直接转发就OK了.
-	bytes, _ := json.Marshal(msg.Values)
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
-	return errors.Wrap(err, "invoke realtime message failed")
+	bytes, _ := json.Marshal(msg.Properties)
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+	}
+
+	return nil
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msg *EntityMessage) error {
+func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Period 直接查询快照.
-	bytes, _ := json.Marshal(msg.Values)
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
-	return errors.Wrap(err, "invoke period message failed")
+	bytes, _ := json.Marshal(msg.Properties)
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+	}
+
+	return nil
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msg *EntityMessage) error {
+func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Changed 直接转发就OK了.
-	bytes, _ := json.Marshal(msg.Values)
-	err := s.entityManager.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes)
-	return errors.Wrap(err, "invoke changed message failed")
+	bytes, _ := json.Marshal(msg.Properties)
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+	}
+
+	return nil
 }
 
 // checkSubscription returns subscription status.
 func (s *subscription) checkSubscription() string {
 	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
 		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
-		return EntityStatusInactive
+		return statem.StateStatusInactive
 	}
 
-	return EntityStatusActive
-}
-
-func (s *subscription) setup() error {
-	m := mapper.NewMapper(s.ID+"#"+"subscription", s.Filter)
-
-	s.mappers[m.ID()] = m
-
-	// generate indexTentacles again.
-	for _, mp := range s.mappers {
-		for _, tentacle := range mp.Tentacles() {
-			s.indexTentacles[tentacle.TargetID()] =
-				append(s.indexTentacles[tentacle.TargetID()], tentacle)
-		}
-	}
-
-	delete(s.indexTentacles, m.ID())
-
-	log.Info("setup subscription", s.indexTentacles)
-
-	// generate tentacles again.
-	s.generateTentacles()
-
-	sourceEntities := []string{}
-	for _, expr := range m.SourceEntities() {
-		sourceEntities = append(sourceEntities,
-			s.entityManager.EscapedEntities(expr)...)
-	}
-
-	for _, entityID := range sourceEntities {
-		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-
-		if nil != tentacle {
-			// send tentacle msg.
-			s.entityManager.SendMsg(EntityContext{
-				Headers: Header{
-					EntityCtxHeaderSourceID: s.ID,
-					EntityCtxHeaderTargetID: entityID,
-				},
-				Message: &TentacleMsg{
-					TargetID: s.ID,
-					Operator: TentacleOperatorAppend,
-					Items:    tentacle.Copy().Items(),
-				},
-			})
-		}
-	}
-	return nil
+	return statem.StateStatusActive
 }

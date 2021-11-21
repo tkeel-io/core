@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/tql"
 )
 
@@ -11,12 +12,12 @@ type mapper struct {
 	tqlInst tql.TQL
 }
 
-func NewMapper(id, tqlText string) Mapper {
+func NewMapper(id, tqlText string) (Mapper, error) {
 	return &mapper{
 		id:      id,
 		tqlText: tqlText,
 		tqlInst: tql.NewTQL(tqlText),
-	}
+	}, nil
 }
 
 // ID returns mapper id.
@@ -66,11 +67,12 @@ func (m *mapper) Tentacles() []Tentacler {
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	return NewMapper(m.id, m.tqlText)
+	mCopy, _ := NewMapper(m.id, m.tqlText)
+	return mCopy
 }
 
 // Exec input returns output.
-func (m *mapper) Exec(values map[string]interface{}) (res map[string]interface{}, err error) {
+func (m *mapper) Exec(values map[string]constraint.Node) (res map[string]constraint.Node, err error) {
 	res, err = m.tqlInst.Exec(values)
 	return res, errors.Wrap(err, "execute tql failed")
 }
