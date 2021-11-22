@@ -11,7 +11,8 @@ import (
 var log = logger.NewLogger("core.api.service")
 
 var (
-	ErrEntityMapperNil = errors.New("mapper is nil")
+	ErrEntityMapperNil     = errors.New("mapper is nil")
+	ErrEntityConfigInvalid = errors.New("entity config format invalid")
 )
 
 type Entity = statem.Base

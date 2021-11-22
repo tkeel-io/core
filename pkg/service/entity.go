@@ -194,6 +194,24 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 	return out, errors.Wrap(err, "entity set config failed")
 }
 
-func parseConfigFrom(ctx context.Context, configs *pb.PropertyConfig) (map[string]constraint.Config, error) {
-	return nil, nil
+func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
+	// parse configs from.
+	out = make(map[string]constraint.Config)
+	switch configs := data.(type) {
+	case []interface{}:
+		for _, cfg := range configs {
+			if c, ok := cfg.(map[string]interface{}); ok {
+				var cfgRet constraint.Config
+				if cfgRet, err = constraint.ParseConfigsFrom(c); nil != err {
+					return out, errors.Wrap(err, "parse entity config failed")
+				}
+				out[cfgRet.ID] = cfgRet
+				continue
+			}
+			return out, ErrEntityConfigInvalid
+		}
+	default:
+		return out, ErrEntityConfigInvalid
+	}
+	return out, errors.Wrap(err, "parse entity config failed")
 }

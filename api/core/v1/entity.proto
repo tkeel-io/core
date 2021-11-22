@@ -135,7 +135,7 @@ message SetEntityConfigRequest {
     string plugin = 2;
     string source = 3;
     string owner = 4;
-    PropertyConfig configs = 5;
+    google.protobuf.Value configs = 5;
 }
 
 
