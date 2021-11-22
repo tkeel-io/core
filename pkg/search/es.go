@@ -66,8 +66,10 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
 			case "$neq":
 				boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
-			default:
+			case "$eq":
 				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+			default:
+				boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
 			}
 		}
 	}
