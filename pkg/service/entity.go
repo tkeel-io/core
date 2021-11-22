@@ -43,8 +43,11 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		for k, v := range kv {
 			entity.KValues[k] = constraint.NewNode(v)
 		}
+	case nil:
+		log.Warn("empty params")
 	default:
-		return
+		log.Errorf("create entity failed, invalid params, %v", kv)
+		return out, ErrEntityInvalidParams
 	}
 
 	// set properties.

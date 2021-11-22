@@ -66,6 +66,7 @@ func (m *EntityManager) Start() error {
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				// 消费的消息统一来自Inbox，不存在无entityID的情况.
 				// 如果entity在当前节点不存在就将entity调度到当前节点.
+				log.Infof("dispose message failed, entity: %s", msgCtx.Headers.GetTargetID())
 				eid := msgCtx.Headers.GetTargetID()
 				_, has := m.entities[eid]
 				if !has {
@@ -161,7 +162,7 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("GetProperties failed, %s", errEntityNotFound.Error())
+		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
 		return nil, errors.Wrap(errEntityNotFound, "GetProperties failed")
 	}
 
