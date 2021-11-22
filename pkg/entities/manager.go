@@ -66,6 +66,7 @@ func (m *EntityManager) Start() error {
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				// 消费的消息统一来自Inbox，不存在无entityID的情况.
 				// 如果entity在当前节点不存在就将entity调度到当前节点.
+				log.Infof("dispose message failed, entity: %s", msgCtx.Headers.GetTargetID())
 				eid := msgCtx.Headers.GetTargetID()
 				_, has := m.entities[eid]
 				if !has {
@@ -142,30 +143,27 @@ func (m *EntityManager) EscapedEntities(expression string) []string {
 
 // DeleteEntity delete an entity from manager.
 func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.StateMessage{
-			StateID:  en.ID,
-			Operator: "",
-		},
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("DeleteEntity failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
 	}
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
 
-	m.SendMsg(msgCtx)
+	m.entities[en.ID].GetBase().Status = statem.StateStatusDeleted
+	enObj := m.entities[en.ID].GetBase().Copy()
 
-	return en, nil
+	return &enObj, nil
 }
 
 // GetProperties returns statem.Base.
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("GetProperties failed, %s", errEntityNotFound.Error())
-		return nil, errors.Wrap(errEntityNotFound, "GetProperties failed")
+		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
 	}
 
 	enObj := m.entities[en.ID].GetBase().Copy()
+
 	return &enObj, nil
 }
 
@@ -175,16 +173,12 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 		en.ID = uuid()
 	}
 
-	msg := make(map[string][]byte)
-	for key, val := range en.KValues {
-		msg[key] = []byte(val.String())
-	}
-
+	// set properties.
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
-			Properties: msg,
+			Properties: en.KValues,
 		},
 	}
 
@@ -207,33 +201,29 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 	// 如果不存在实体则创建.
 	// 如果实体在当前节点则直接调用设置Configs.
 	// 如果实体不在当前节点则调用rpc同步.
-	enInst, exists := m.entities[en.ID]
+	_, exists := m.entities[en.ID]
 	if !exists {
 		// 临时直接创建.
 		m.rebalanceEntity(ctx, en)
 	}
 
-	enInst.SetConfig(en.Configs)
+	m.entities[en.ID].SetConfig(en.Configs)
 
-	// set properties.
-	msg := make(map[string][]byte)
-	for key, val := range en.KValues {
-		msg[key] = []byte(val.String())
+	if len(en.KValues) > 0 {
+		msgCtx := statem.MessageContext{
+			Headers: statem.Header{},
+			Message: statem.PropertyMessage{
+				StateID:    en.ID,
+				Properties: en.KValues,
+			},
+		}
+
+		msgCtx.Headers.SetOwner(en.Owner)
+		msgCtx.Headers.SetTargetID(en.ID)
+		msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
+
+		m.SendMsg(msgCtx)
 	}
-
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
-			StateID:    en.ID,
-			Properties: msg,
-		},
-	}
-
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
-	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
-
-	m.SendMsg(msgCtx)
 
 	return nil, nil
 }

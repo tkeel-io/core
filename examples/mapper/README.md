@@ -26,23 +26,38 @@ curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
      }'
 
 # query test234
-curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test234" \
-  -H "Source: abcd" \
-  -H "Owner: admin"  \
-  -H "Type: DEVICE"
+curl -X GET "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123?source=abcd&owner=admin&type=DEVICE" 
 
 # create test123 through APIs.
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123?source=abcd&owner=admin&type=DEVICE" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities" \
   -H "Content-Type: application/json" \
   -d '{
-       "temp": 234
+        "id": "test123",
+        "type": "DEVICE",
+        "source": "abcd",
+        "owner": "admin",
+        "properties": {
+          "temp": 123
+        }
      }'
 
+# update entity<test123>
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "type": "DEVICE",
+        "source": "abcd",
+        "owner": "admin",
+        "properties": {
+          "temp": 123,
+          "color": "red"
+        }
+     }'
+
+
+
 # create mapper for test123.
-curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123/mappers" \
-  -H "Source: abcd" \
-  -H "Owner: admin" \
-  -H "Type: DEVICE" \
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123/mappers?source=abcd&type=DEVICE&owner=admin" \
   -H "Content-Type: application/json" \
   -d '{
        "name": "subscribe-test234",
@@ -66,6 +81,27 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
   -H "Source: abcd" \
   -H "Owner: admin"  \
   -H "Type: DEVICE"
+
+
+# update entity config.
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/configs" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "type": "DEVICE",
+        "source": "abcd",
+        "owner": "admin",
+        "configs": [
+          {
+            "id": "property1",
+            "type": "int",
+            "define": {}
+          }
+        ]
+     }'
+
 ```
+
+
+
 
 

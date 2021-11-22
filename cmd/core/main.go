@@ -28,7 +28,7 @@ var (
 
 func init() {
 	flag.StringVar(&Name, "name", "core", "app name.")
-	flag.StringVar(&HTTPAddr, "http_addr", ":31234", "http listen address.")
+	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
 }
 
@@ -48,19 +48,26 @@ func main() {
 		serverList...,
 	)
 
-	{ // User service
+	coroutinePool, err := ants.NewPool(100)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	{
+		// User service
 		// create coroutine pool.
-		coroutinePool, err := ants.NewPool(100)
-		if nil != err {
-			log.Fatal(err)
-		}
 
 		entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool)
 		if nil != err {
 			log.Fatal(err)
 		}
 
-		searchClient := search.NewESClient("https://127.0.0.1:9200")
+		searchClient := search.NewESClient("http://127.0.0.1:9200")
 
 		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
 		if nil != err {
@@ -92,7 +99,10 @@ func main() {
 		openapi.RegisterOpenapiServer(grpcSrv.GetServe(), OpenapiSrv)
 	}
 
-	if err := coreApp.Run(context.TODO()); err != nil {
+	// run.
+	if err := entityManager.Start(); nil != err {
+		panic(err)
+	} else if err = coreApp.Run(context.TODO()); err != nil {
 		panic(err)
 	}
 

@@ -25,6 +25,7 @@ type EntityHTTPServer interface {
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 }
 
@@ -189,6 +190,39 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 	}
 }
 
+func (h *EntityHTTPHandler) SetEntityConfigs(req *go_restful.Request, resp *go_restful.Response) {
+	in := SetEntityConfigRequest{}
+	if err := transportHTTP.GetBody(req, &in.Configs); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	out, err := h.srv.SetEntityConfigs(req.Request.Context(), &in)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
 func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := UpdateEntityRequest{}
 	if err := transportHTTP.GetBody(req, &in.Properties); err != nil {
@@ -250,4 +284,6 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.ListEntity))
 	ws.Route(ws.POST("/plugins/{plugin}/entities/{id}/mappers").
 		To(handler.AppendMapper))
+	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}/configs").
+		To(handler.SetEntityConfigs))
 }

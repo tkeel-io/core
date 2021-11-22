@@ -48,6 +48,12 @@ service Entity {
 			body: "mapper"
 		};
 	};
+    rpc SetEntityConfigs(SetEntityConfigRequest) returns (EntityResponse) {
+        	option (google.api.http) = {
+			put : "/plugins/{plugin}/entities/{id}/configs"
+			body: "configs"
+		};
+    };
 }
 
 message EntityObject {
@@ -70,8 +76,9 @@ message EntityResponse {
     string source = 3;
     string owner = 4;
     string type = 5;
-    google.protobuf.Value properties = 6;
-    repeated MapperDesc mappers = 7;
+    repeated MapperDesc mappers = 6;
+    google.protobuf.Value configs = 7;
+    google.protobuf.Value properties = 8;
 }
 
 message UpdateEntityRequest {
@@ -129,4 +136,14 @@ message ListEntityResponse {
     int64 limit = 3;
     int64 offset = 4;
     repeated EntityResponse items = 5;
+}
+
+message PropertyConfig {}
+
+message SetEntityConfigRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    google.protobuf.Value configs = 5;
 }

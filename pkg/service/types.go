@@ -1,12 +1,20 @@
 package service
 
 import (
+	"errors"
+
 	"github.com/tkeel-io/core/pkg/statem"
 
 	"github.com/tkeel-io/core/pkg/logger"
 )
 
 var log = logger.NewLogger("core.api.service")
+
+var (
+	ErrEntityMapperNil     = errors.New("mapper is nil")
+	ErrEntityConfigInvalid = errors.New("entity config format invalid")
+	ErrEntityInvalidParams = errors.New("invalid params")
+)
 
 type Entity = statem.Base
 
