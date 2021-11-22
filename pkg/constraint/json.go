@@ -115,12 +115,12 @@ func (r IntNode) To(typ Type) Node {
 	case Float:
 		return FloatNode(r)
 	case String:
-		return StringNode(fmt.Sprintf("%d", r))
+		return StringNode(r.String())
 	}
 	return UndefineResult
 }
 func (r IntNode) String() string {
-	return fmt.Sprintf("%d", r)
+	return strconv.FormatInt(int64(r), 10)
 }
 
 func (r IntNode) Value() interface{} {

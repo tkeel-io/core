@@ -41,7 +41,7 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 	switch kv := req.Data.AsInterface().(type) {
 	case map[string]interface{}:
 		entity.ID = interface2string(kv["id"])
-		entity.Owner = interface2string(kv["owner"].(string))
+		entity.Owner = interface2string(kv["owner"])
 
 		switch kvv := kv["data"].(type) {
 		case map[string]interface{}:

@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
@@ -43,8 +43,11 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		for k, v := range kv {
 			entity.KValues[k] = constraint.NewNode(v)
 		}
+	case nil:
+		log.Warn("empty params")
 	default:
-		return
+		log.Errorf("create entity failed, invalid params, %v", kv)
+		return out, ErrEntityInvalidParams
 	}
 
 	// set properties.
@@ -160,7 +163,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		mapperDesc.TQLString = req.Mapper.Tql
 		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	} else {
-		return nil, errors.New("mapper is nil")
+		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
 	// set properties.
 	entity, err = s.entityManager.SetProperties(ctx, entity)
@@ -170,4 +173,48 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 	out = s.entity2EntityResponse(entity)
 	return
+}
+
+func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityConfigRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Owner = req.Owner
+	entity.Source = req.Plugin
+
+	entity.Configs, err = parseConfigFrom(ctx, req.Configs)
+	if nil != err {
+		log.Errorf("set entity config failed, %s", err.Error())
+		return out, err
+	}
+
+	// set properties.
+	entity, err = s.entityManager.SetConfigs(ctx, entity)
+	if nil != err {
+		log.Errorf("set entity config failed, %s", err.Error())
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "entity set config failed")
+}
+
+func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
+	// parse configs from.
+	out = make(map[string]constraint.Config)
+	switch configs := data.(type) {
+	case []interface{}:
+		for _, cfg := range configs {
+			if c, ok := cfg.(map[string]interface{}); ok {
+				var cfgRet constraint.Config
+				if cfgRet, err = constraint.ParseConfigsFrom(c); nil != err {
+					return out, errors.Wrap(err, "parse entity config failed")
+				}
+				out[cfgRet.ID] = cfgRet
+				continue
+			}
+			return out, ErrEntityConfigInvalid
+		}
+	default:
+		return out, ErrEntityConfigInvalid
+	}
+	return out, errors.Wrap(err, "parse entity config failed")
 }
