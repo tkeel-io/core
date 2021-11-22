@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"runtime"
+	"sort"
 	"sync/atomic"
 	"time"
 
@@ -86,6 +87,10 @@ type statem struct {
 	tentacles      map[string][]mapper.Tentacler         // key=Sid#propertyKey
 	cacheProps     map[string]map[string]constraint.Node // cache other property.
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
+
+	constraints       map[string][]constraint.Constraint
+	tsConstraints     sort.StringSlice //nolint
+	searchConstraints sort.StringSlice
 
 	// mailbox & state runtime status.
 	mailBox      *mailbox
@@ -218,6 +223,8 @@ func (s *statem) HandleLoop() {
 					stateRuntimeStatusString(atomic.LoadInt32(&s.attached)))
 			}
 
+			// flush properties.
+			s.flush()
 			// detach coroutins.
 			break
 		}

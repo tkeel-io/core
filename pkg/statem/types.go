@@ -33,6 +33,7 @@ type StateManager interface {
 	SendMsg(msgCtx MessageContext)
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
+	SearchFlush(context.Context, map[string]interface{}) error
 }
 
 type StateMarchiner interface {

@@ -9,7 +9,10 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
+	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/statem"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type EntityManager struct {
@@ -18,7 +21,8 @@ type EntityManager struct {
 	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
 
-	daprClient dapr.Client
+	daprClient   dapr.Client
+	searchClient search.ESClient
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -270,6 +274,12 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 
 	m.SendMsg(msgCtx)
 	return en, nil
+}
+
+func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
+	val, _ := structpb.NewValue(values)
+	_, err := m.searchClient.Index(ctx, &pb.IndexObject{Obj: val})
+	return errors.Wrap(err, "SearchFlushfailed")
 }
 
 // uuid generate an uuid.

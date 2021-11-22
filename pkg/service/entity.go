@@ -153,7 +153,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		case map[string]interface{}:
 			properties, _ := structpb.NewValue(kv)
 			entityItem := &pb.EntityResponse{
-				Id:         kv["id"].(string),
+				Id:         interface2string(kv["id"]),
 				Plugin:     "",
 				Source:     "",
 				Owner:      "",
