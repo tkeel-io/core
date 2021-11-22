@@ -5,6 +5,8 @@ package api.core.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/struct.proto";
+import "api/core/v1/search.proto";
+import "api/core/v1/list.proto";
 
 
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
@@ -36,7 +38,8 @@ service Entity {
 	};
 	rpc ListEntity (ListEntityRequest) returns (ListEntityResponse) {
 		option (google.api.http) = {
-			get : "/plugins/{plugin}/entities"
+			post : "/plugins/{plugin}/entities/search"
+            body: "*"
 		};
 	};
 	rpc AppendMapper (AppendMapperRequest) returns (EntityResponse) {
@@ -123,10 +126,16 @@ message ListEntityRequest {
     string plugin = 1;
     string source = 2;
     string owner = 3;
+    string query = 4;
+    Pager page = 5;
+	repeated SearchCondition condition = 6;
 }
 message ListEntityResponse {
-    int32 count = 1;
-    repeated EntityResponse items = 2;
+    int64 total = 1;
+    int64 page = 2;
+    int64 limit = 3;
+    int64 offset = 4;
+    repeated EntityResponse items = 5;
 }
 
 message PropertyConfig {}
@@ -138,5 +147,3 @@ message SetEntityConfigRequest {
     string owner = 4;
     google.protobuf.Value configs = 5;
 }
-
-

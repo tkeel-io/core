@@ -10,6 +10,7 @@ import (
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
 	openapi "github.com/tkeel-io/core/api/openapi/v1"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 
@@ -61,7 +62,9 @@ func main() {
 		// User service
 		// create coroutine pool.
 
-		EntitySrv, err := service.NewEntityService(context.Background(), entityManager)
+		searchClient := search.NewESClient("http://127.0.0.1:9200")
+
+		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
 		if nil != err {
 			log.Fatal(err)
 		}
@@ -81,6 +84,10 @@ func main() {
 		}
 		Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
 		Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+
+		SearchSrv := service.NewSearchService(searchClient)
+		Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
+		Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
 
 		OpenapiSrv := service.NewOpenapiService()
 		openapi.RegisterOpenapiHTTPServer(httpSrv.Container, OpenapiSrv)

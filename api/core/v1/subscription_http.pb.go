@@ -17,6 +17,8 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
+const _ = transportHTTP.ImportAndUsed
+
 type SubscriptionHTTPServer interface {
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*SubscriptionResponse, error)
 	DeleteSubscription(context.Context, *DeleteSubscriptionRequest) (*DeleteSubscriptionResponse, error)
@@ -34,17 +36,21 @@ func newSubscriptionHTTPHandler(s SubscriptionHTTPServer) *SubscriptionHTTPHandl
 }
 
 func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, resp *go_restful.Response) {
-	in := &CreateSubscriptionRequest{}
-	if err := transportHTTP.GetBody(req, in); err != nil {
+	in := CreateSubscriptionRequest{}
+	if err := transportHTTP.GetBody(req, &in.Subscription); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, in); err != nil {
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.CreateSubscription(req.Request.Context(), in)
+	out, err := h.srv.CreateSubscription(req.Request.Context(), &in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -63,17 +69,17 @@ func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, re
 }
 
 func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, resp *go_restful.Response) {
-	in := &DeleteSubscriptionRequest{}
-	if err := transportHTTP.GetQuery(req, in); err != nil {
+	in := DeleteSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, in); err != nil {
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.DeleteSubscription(req.Request.Context(), in)
+	out, err := h.srv.DeleteSubscription(req.Request.Context(), &in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -92,17 +98,17 @@ func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, re
 }
 
 func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp *go_restful.Response) {
-	in := &GetSubscriptionRequest{}
-	if err := transportHTTP.GetQuery(req, in); err != nil {
+	in := GetSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, in); err != nil {
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.GetSubscription(req.Request.Context(), in)
+	out, err := h.srv.GetSubscription(req.Request.Context(), &in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -121,17 +127,17 @@ func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp 
 }
 
 func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp *go_restful.Response) {
-	in := &ListSubscriptionRequest{}
-	if err := transportHTTP.GetQuery(req, in); err != nil {
+	in := ListSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, in); err != nil {
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.ListSubscription(req.Request.Context(), in)
+	out, err := h.srv.ListSubscription(req.Request.Context(), &in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -150,17 +156,21 @@ func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp
 }
 
 func (h *SubscriptionHTTPHandler) UpdateSubscription(req *go_restful.Request, resp *go_restful.Response) {
-	in := &UpdateSubscriptionRequest{}
-	if err := transportHTTP.GetBody(req, in); err != nil {
+	in := UpdateSubscriptionRequest{}
+	if err := transportHTTP.GetBody(req, &in.Subscription); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, in); err != nil {
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.UpdateSubscription(req.Request.Context(), in)
+	out, err := h.srv.UpdateSubscription(req.Request.Context(), &in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return

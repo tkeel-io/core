@@ -18,15 +18,17 @@ type EntityService struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	entityManager *entities.EntityManager
+	searchClient  pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, mgr *entities.EntityManager) (*EntityService, error) {
+func NewEntityService(ctx context.Context, mgr *entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
 		ctx:           ctx,
 		cancel:        cancel,
 		entityManager: mgr,
+		searchClient:  searchClient,
 	}, nil
 }
 
@@ -125,8 +127,47 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	return
 }
 
-func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (*pb.ListEntityResponse, error) {
-	return &pb.ListEntityResponse{}, nil
+func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (out *pb.ListEntityResponse, err error) {
+	searchReq := &pb.SearchRequest{}
+	searchReq.Query = req.Query
+	searchReq.Page = req.Page
+	searchReq.Condition = req.Condition
+	entityCondition := &pb.SearchCondition{Field: "type", Operator: "$eq", Value: structpb.NewStringValue("device")}
+
+	if searchReq.Condition == nil {
+		searchReq.Condition = make([]*pb.SearchCondition, 1)
+	}
+	searchReq.Condition = append(searchReq.Condition, entityCondition)
+
+	resp, err := s.searchClient.Search(ctx, searchReq)
+	if err != nil {
+		return
+	}
+
+	out = &pb.ListEntityResponse{}
+	out.Total = resp.Total
+	out.Limit = resp.Limit
+	out.Items = make([]*pb.EntityResponse, resp.Limit)
+	for _, item := range resp.Items {
+		switch kv := item.AsInterface().(type) {
+		case map[string]interface{}:
+			properties, _ := structpb.NewValue(kv)
+			entityItem := &pb.EntityResponse{
+				Id:         kv["id"].(string),
+				Plugin:     "",
+				Source:     "",
+				Owner:      "",
+				Type:       "",
+				Properties: properties,
+				Mappers:    []*pb.MapperDesc{},
+			}
+			out.Items = append(out.Items, entityItem)
+		}
+	}
+	if err != nil {
+		return out, errors.Wrap(err, "entity search failed")
+	}
+	return out, nil
 }
 
 func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityResponse) {
