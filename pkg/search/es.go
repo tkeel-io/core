@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 
 	"github.com/olivere/elastic/v7"
@@ -47,6 +48,27 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	return
 }
 
+func condition2boolQuery(condition []*pb.SearchCondition, boolQuery *elastic.BoolQuery) {
+	for _, condition := range condition {
+		switch condition.Operator {
+		case "$lt":
+			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))
+		case "$lte":
+			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lte(condition.Value.AsInterface()))
+		case "$gt":
+			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gt(condition.Value.AsInterface()))
+		case "$gte":
+			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
+		case "$neq":
+			boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+		case "$eq":
+			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+		default:
+			boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
+		}
+	}
+}
+
 func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.SearchResponse, err error) {
 	out = &pb.SearchResponse{}
 	out.Items = make([]*structpb.Value, 0)
@@ -54,24 +76,7 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 
 	boolQuery := elastic.NewBoolQuery()
 	if req.Condition != nil {
-		for _, condition := range req.Condition {
-			switch condition.Operator {
-			case "$lt":
-				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))
-			case "$lte":
-				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lte(condition.Value.AsInterface()))
-			case "$gt":
-				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gt(condition.Value.AsInterface()))
-			case "$gte":
-				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
-			case "$neq":
-				boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
-			case "$eq":
-				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
-			default:
-				boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
-			}
-		}
+		condition2boolQuery(req.Condition, boolQuery)
 	}
 	if req.Query != "" {
 		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
@@ -92,11 +97,11 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 		out.Limit = req.Page.Limit
 		out.Offset = req.Page.Offset
 	}
-	return
+	return out, errors.Wrap(err, "search failed")
 }
 
 func NewESClient(url ...string) pb.SearchHTTPServer {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
 	if err != nil {
 		panic(err)

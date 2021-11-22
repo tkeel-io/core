@@ -62,11 +62,6 @@ func main() {
 		// User service
 		// create coroutine pool.
 
-		entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool)
-		if nil != err {
-			log.Fatal(err)
-		}
-
 		searchClient := search.NewESClient("http://127.0.0.1:9200")
 
 		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)

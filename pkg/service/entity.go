@@ -161,14 +161,13 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 				Properties: properties,
 				Mappers:    []*pb.MapperDesc{},
 			}
-
 			out.Items = append(out.Items, entityItem)
-
 		}
-
 	}
-
-	return
+	if err != nil {
+		return out, errors.Wrap(err, "entity search failed")
+	}
+	return out, nil
 }
 
 func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityResponse) {
