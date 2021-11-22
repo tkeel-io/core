@@ -19,8 +19,6 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
-const _ = transportHTTP.ImportAndUsed
-
 type OpenapiHTTPServer interface {
 	AddonsIdentify(context.Context, *v1.AddonsIdentifyRequest) (*v1.AddonsIdentifyResponse, error)
 	Identify(context.Context, *emptypb.Empty) (*v1.IdentifyResponse, error)
@@ -38,13 +36,13 @@ func newOpenapiHTTPHandler(s OpenapiHTTPServer) *OpenapiHTTPHandler {
 }
 
 func (h *OpenapiHTTPHandler) AddonsIdentify(req *go_restful.Request, resp *go_restful.Response) {
-	in := v1.AddonsIdentifyRequest{}
-	if err := transportHTTP.GetBody(req, &in); err != nil {
+	in := &v1.AddonsIdentifyRequest{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.AddonsIdentify(req.Request.Context(), &in)
+	out, err := h.srv.AddonsIdentify(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -63,9 +61,13 @@ func (h *OpenapiHTTPHandler) AddonsIdentify(req *go_restful.Request, resp *go_re
 }
 
 func (h *OpenapiHTTPHandler) Identify(req *go_restful.Request, resp *go_restful.Response) {
-	in := emptypb.Empty{}
+	in := &emptypb.Empty{}
+	if err := transportHTTP.GetQuery(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 
-	out, err := h.srv.Identify(req.Request.Context(), &in)
+	out, err := h.srv.Identify(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -84,9 +86,13 @@ func (h *OpenapiHTTPHandler) Identify(req *go_restful.Request, resp *go_restful.
 }
 
 func (h *OpenapiHTTPHandler) Tatus(req *go_restful.Request, resp *go_restful.Response) {
-	in := emptypb.Empty{}
+	in := &emptypb.Empty{}
+	if err := transportHTTP.GetQuery(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 
-	out, err := h.srv.Tatus(req.Request.Context(), &in)
+	out, err := h.srv.Tatus(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -105,13 +111,13 @@ func (h *OpenapiHTTPHandler) Tatus(req *go_restful.Request, resp *go_restful.Res
 }
 
 func (h *OpenapiHTTPHandler) TenantBind(req *go_restful.Request, resp *go_restful.Response) {
-	in := v1.TenantBindRequst{}
-	if err := transportHTTP.GetBody(req, &in); err != nil {
+	in := &v1.TenantBindRequst{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.TenantBind(req.Request.Context(), &in)
+	out, err := h.srv.TenantBind(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -130,13 +136,13 @@ func (h *OpenapiHTTPHandler) TenantBind(req *go_restful.Request, resp *go_restfu
 }
 
 func (h *OpenapiHTTPHandler) TenantUnbind(req *go_restful.Request, resp *go_restful.Response) {
-	in := v1.TenantUnbindRequst{}
-	if err := transportHTTP.GetBody(req, &in); err != nil {
+	in := &v1.TenantUnbindRequst{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.TenantUnbind(req.Request.Context(), &in)
+	out, err := h.srv.TenantUnbind(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return

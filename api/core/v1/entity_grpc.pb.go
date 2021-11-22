@@ -24,6 +24,7 @@ type EntityClient interface {
 	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
 	AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	SetEntityConfigs(ctx context.Context, in *SetEntityConfigRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 }
 
 type entityClient struct {
@@ -88,6 +89,15 @@ func (c *entityClient) AppendMapper(ctx context.Context, in *AppendMapperRequest
 	return out, nil
 }
 
+func (c *entityClient) SetEntityConfigs(ctx context.Context, in *SetEntityConfigRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/SetEntityConfigs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EntityServer is the server API for Entity service.
 // All implementations must embed UnimplementedEntityServer
 // for forward compatibility
@@ -98,6 +108,7 @@ type EntityServer interface {
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
 	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
+	SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
 }
 
@@ -122,6 +133,9 @@ func (UnimplementedEntityServer) ListEntity(context.Context, *ListEntityRequest)
 }
 func (UnimplementedEntityServer) AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppendMapper not implemented")
+}
+func (UnimplementedEntityServer) SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetEntityConfigs not implemented")
 }
 func (UnimplementedEntityServer) mustEmbedUnimplementedEntityServer() {}
 
@@ -244,6 +258,24 @@ func _Entity_AppendMapper_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_SetEntityConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetEntityConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).SetEntityConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/SetEntityConfigs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).SetEntityConfigs(ctx, req.(*SetEntityConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Entity_ServiceDesc is the grpc.ServiceDesc for Entity service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -274,6 +306,10 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AppendMapper",
 			Handler:    _Entity_AppendMapper_Handler,
+		},
+		{
+			MethodName: "SetEntityConfigs",
+			Handler:    _Entity_SetEntityConfigs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

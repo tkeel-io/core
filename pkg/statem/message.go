@@ -1,6 +1,9 @@
 package statem
 
-import "github.com/tkeel-io/core/pkg/mapper"
+import (
+	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/mapper"
+)
 
 // PropertyMessage state property message.
 type StateMessage struct {
@@ -10,7 +13,7 @@ type StateMessage struct {
 	Operator string `json:"operator"`
 }
 
-func NewPropertyMessage(id string, props map[string][]byte) PropertyMessage {
+func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {
 	return PropertyMessage{
 		StateID:    id,
 		Properties: props,
@@ -21,8 +24,8 @@ func NewPropertyMessage(id string, props map[string][]byte) PropertyMessage {
 type PropertyMessage struct {
 	messageBase
 
-	StateID    string            `json:"state_id"`
-	Properties map[string][]byte `json:"properties"`
+	StateID    string                     `json:"state_id"`
+	Properties map[string]constraint.Node `json:"properties"`
 }
 
 func (esm PropertyMessage) Promise() PromiseFunc { return esm.PromiseHandler }

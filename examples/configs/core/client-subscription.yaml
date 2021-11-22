@@ -4,7 +4,7 @@ metadata:
   name:
 spec:
   topic: core-pub
-  route: /
+  route: /v1/topic
   pubsubname: client-pubsub
 scopes:
   - core

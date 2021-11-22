@@ -73,6 +73,7 @@ func (b *Base) Copy() Base {
 		LastTime: b.LastTime,
 		Mappers:  b.Mappers,
 		KValues:  b.KValues,
+		Configs:  b.Configs,
 	}
 }
 
@@ -269,7 +270,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
-		stateProps[key] = constraint.RawNode(value)
+		stateProps[key] = value
 		watchKeys = append(watchKeys, mapper.WatchKey{EntityId: setStateID, PropertyKey: key})
 	}
 
@@ -284,7 +285,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 // activeTentacle active tentacles.
 func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 	var (
-		messages        = make(map[string]map[string][]byte)
+		messages        = make(map[string]map[string]constraint.Node)
 		activeTentacles = make(map[string][]mapper.Tentacler)
 	)
 
@@ -298,12 +299,12 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
 					if _, exists := messages[targetID]; !exists {
-						messages[targetID] = make(map[string][]byte)
+						messages[targetID] = make(map[string]constraint.Node)
 					}
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-					messages[targetID][active.PropertyKey] = []byte(thisStateProps[active.PropertyKey].String())
+					messages[targetID][active.PropertyKey] = thisStateProps[active.PropertyKey]
 				} else {
 					// undefined tentacle typs.
 					log.Warnf("undefined tentacle type, %v", tentacle)
