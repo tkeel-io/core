@@ -73,8 +73,9 @@ message EntityResponse {
     string source = 3;
     string owner = 4;
     string type = 5;
-    google.protobuf.Value properties = 6;
-    repeated MapperDesc mappers = 7;
+    repeated MapperDesc mappers = 6;
+    google.protobuf.Value configs = 7;
+    google.protobuf.Value properties = 8;
 }
 
 message UpdateEntityRequest {

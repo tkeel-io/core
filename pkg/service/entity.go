@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -133,6 +134,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 		return
 	}
 
+	var err error
 	out = &pb.EntityResponse{}
 
 	kv := make(map[string]interface{})
@@ -140,7 +142,16 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 		kv[k] = v.Value()
 	}
 
-	out.Properties, _ = structpb.NewValue(kv)
+	configs := make(map[string]interface{})
+	bytes, _ := json.Marshal(entity.Configs)
+	json.Unmarshal(bytes, &configs)
+
+	if out.Properties, err = structpb.NewValue(kv); nil != err {
+		log.Errorf("convert entity failed, err: %s", err)
+	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
+		log.Errorf("convert entity failed, err: %s", err)
+	}
+
 	out.Mappers = make([]*pb.MapperDesc, 0)
 
 	for _, mapper := range entity.Mappers {
@@ -151,6 +162,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
+
 	return out
 }
 
@@ -184,7 +196,7 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
 
-	entity.Configs, err = parseConfigFrom(ctx, req.Configs)
+	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
 	if nil != err {
 		log.Errorf("set entity config failed, %s", err.Error())
 		return out, err

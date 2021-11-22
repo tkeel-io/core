@@ -73,6 +73,7 @@ func (b *Base) Copy() Base {
 		LastTime: b.LastTime,
 		Mappers:  b.Mappers,
 		KValues:  b.KValues,
+		Configs:  b.Configs,
 	}
 }
 

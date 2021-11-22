@@ -201,27 +201,29 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 	// 如果不存在实体则创建.
 	// 如果实体在当前节点则直接调用设置Configs.
 	// 如果实体不在当前节点则调用rpc同步.
-	enInst, exists := m.entities[en.ID]
+	_, exists := m.entities[en.ID]
 	if !exists {
 		// 临时直接创建.
 		m.rebalanceEntity(ctx, en)
 	}
 
-	enInst.SetConfig(en.Configs)
+	m.entities[en.ID].SetConfig(en.Configs)
 
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
-			StateID:    en.ID,
-			Properties: en.KValues,
-		},
+	if len(en.KValues) > 0 {
+		msgCtx := statem.MessageContext{
+			Headers: statem.Header{},
+			Message: statem.PropertyMessage{
+				StateID:    en.ID,
+				Properties: en.KValues,
+			},
+		}
+
+		msgCtx.Headers.SetOwner(en.Owner)
+		msgCtx.Headers.SetTargetID(en.ID)
+		msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
+
+		m.SendMsg(msgCtx)
 	}
-
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
-	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
-
-	m.SendMsg(msgCtx)
 
 	return nil, nil
 }
