@@ -143,19 +143,15 @@ func (m *EntityManager) EscapedEntities(expression string) []string {
 
 // DeleteEntity delete an entity from manager.
 func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.StateMessage{
-			StateID:  en.ID,
-			Operator: "",
-		},
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("DeleteEntity failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
 	}
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
 
-	m.SendMsg(msgCtx)
+	m.entities[en.ID].GetBase().Status = statem.StateStatusDeleted
+	enObj := m.entities[en.ID].GetBase().Copy()
 
-	return en, nil
+	return &enObj, nil
 }
 
 // GetProperties returns statem.Base.
@@ -163,7 +159,7 @@ func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*st
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
 		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
-		return nil, errors.Wrap(errEntityNotFound, "GetProperties failed")
+		return nil, errEntityNotFound
 	}
 
 	enObj := m.entities[en.ID].GetBase().Copy()

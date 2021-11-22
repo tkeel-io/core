@@ -5,13 +5,14 @@
 package v1
 
 import (
-	context "context"
-	json "encoding/json"
+	"context"
+	"encoding/json"
 	go_restful "github.com/emicklei/go-restful"
-	http "net/http"
-)
 
-import transportHTTP "github.com/tkeel-io/kit/transport/http"
+	"net/http"
+
+	transportHTTP "github.com/tkeel-io/kit/transport/http"
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.

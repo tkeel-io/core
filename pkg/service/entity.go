@@ -65,11 +65,14 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
 		for k, v := range kv {
 			entity.KValues[k] = constraint.NewNode(v)
 		}
+	case nil:
+		log.Warn("empty params")
 	default:
 		return
 	}
