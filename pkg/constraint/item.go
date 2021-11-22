@@ -2,7 +2,7 @@ package constraint
 
 // define里面存储的是关于property属性的定义.
 type Define struct {
-	Items []Itemer
+	Items []Itemer `json:"items"`
 }
 
 func (d Define) Extract() map[string]interface{} {

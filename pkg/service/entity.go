@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
@@ -160,7 +160,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		mapperDesc.TQLString = req.Mapper.Tql
 		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	} else {
-		return nil, errors.New("mapper is nil")
+		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
 	// set properties.
 	entity, err = s.entityManager.SetProperties(ctx, entity)
@@ -170,4 +170,30 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 	out = s.entity2EntityResponse(entity)
 	return
+}
+
+func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityConfigRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Owner = req.Owner
+	entity.Source = req.Plugin
+
+	entity.Configs, err = parseConfigFrom(ctx, req.Configs)
+	if nil != err {
+		log.Errorf("set entity config failed, %s", err.Error())
+		return out, err
+	}
+
+	// set properties.
+	entity, err = s.entityManager.SetConfigs(ctx, entity)
+	if nil != err {
+		log.Errorf("set entity config failed, %s", err.Error())
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "entity set config failed")
+}
+
+func parseConfigFrom(ctx context.Context, configs *pb.PropertyConfig) (map[string]constraint.Config, error) {
+	return nil, nil
 }

@@ -17,14 +17,13 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // is compatible with the tkeel package it is being compiled against.
 // import package.context.http.go_restful.json.
 
-const _ = transportHTTP.ImportAndUsed
-
 type EntityHTTPServer interface {
 	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
 	CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 }
 
@@ -37,21 +36,17 @@ func newEntityHTTPHandler(s EntityHTTPServer) *EntityHTTPHandler {
 }
 
 func (h *EntityHTTPHandler) AppendMapper(req *go_restful.Request, resp *go_restful.Response) {
-	in := AppendMapperRequest{}
-	if err := transportHTTP.GetBody(req, &in.Mapper); err != nil {
+	in := &AppendMapperRequest{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.AppendMapper(req.Request.Context(), &in)
+	out, err := h.srv.AppendMapper(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -70,21 +65,17 @@ func (h *EntityHTTPHandler) AppendMapper(req *go_restful.Request, resp *go_restf
 }
 
 func (h *EntityHTTPHandler) CreateEntity(req *go_restful.Request, resp *go_restful.Response) {
-	in := CreateEntityRequest{}
-	if err := transportHTTP.GetBody(req, &in.Properties); err != nil {
+	in := &CreateEntityRequest{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.CreateEntity(req.Request.Context(), &in)
+	out, err := h.srv.CreateEntity(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -103,13 +94,17 @@ func (h *EntityHTTPHandler) CreateEntity(req *go_restful.Request, resp *go_restf
 }
 
 func (h *EntityHTTPHandler) DeleteEntity(req *go_restful.Request, resp *go_restful.Response) {
-	in := DeleteEntityRequest{}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	in := &DeleteEntityRequest{}
+	if err := transportHTTP.GetQuery(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.DeleteEntity(req.Request.Context(), &in)
+	out, err := h.srv.DeleteEntity(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -128,13 +123,17 @@ func (h *EntityHTTPHandler) DeleteEntity(req *go_restful.Request, resp *go_restf
 }
 
 func (h *EntityHTTPHandler) GetEntity(req *go_restful.Request, resp *go_restful.Response) {
-	in := GetEntityRequest{}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	in := &GetEntityRequest{}
+	if err := transportHTTP.GetQuery(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.GetEntity(req.Request.Context(), &in)
+	out, err := h.srv.GetEntity(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -153,13 +152,46 @@ func (h *EntityHTTPHandler) GetEntity(req *go_restful.Request, resp *go_restful.
 }
 
 func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful.Response) {
-	in := ListEntityRequest{}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	in := &ListEntityRequest{}
+	if err := transportHTTP.GetQuery(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.ListEntity(req.Request.Context(), &in)
+	out, err := h.srv.ListEntity(req.Request.Context(), in)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+func (h *EntityHTTPHandler) SetEntityConfigs(req *go_restful.Request, resp *go_restful.Response) {
+	in := &SetEntityConfigRequest{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	out, err := h.srv.SetEntityConfigs(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -178,21 +210,17 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 }
 
 func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restful.Response) {
-	in := UpdateEntityRequest{}
-	if err := transportHTTP.GetBody(req, &in.Properties); err != nil {
+	in := &UpdateEntityRequest{}
+	if err := transportHTTP.GetBody(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+	if err := transportHTTP.GetPathValue(req, in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.UpdateEntity(req.Request.Context(), &in)
+	out, err := h.srv.UpdateEntity(req.Request.Context(), in)
 	if err != nil {
 		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
@@ -238,4 +266,6 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.ListEntity))
 	ws.Route(ws.POST("/plugins/{plugin}/entities/{id}/mappers").
 		To(handler.AppendMapper))
+	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}/configs").
+		To(handler.SetEntityConfigs))
 }
