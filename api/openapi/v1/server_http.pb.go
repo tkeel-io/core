@@ -64,6 +64,10 @@ func (h *OpenapiHTTPHandler) AddonsIdentify(req *go_restful.Request, resp *go_re
 
 func (h *OpenapiHTTPHandler) Identify(req *go_restful.Request, resp *go_restful.Response) {
 	in := emptypb.Empty{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	out, err := h.srv.Identify(req.Request.Context(), &in)
 	if err != nil {
@@ -85,6 +89,10 @@ func (h *OpenapiHTTPHandler) Identify(req *go_restful.Request, resp *go_restful.
 
 func (h *OpenapiHTTPHandler) Tatus(req *go_restful.Request, resp *go_restful.Response) {
 	in := emptypb.Empty{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 
 	out, err := h.srv.Tatus(req.Request.Context(), &in)
 	if err != nil {

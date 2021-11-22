@@ -60,9 +60,9 @@ func main() {
 			log.Fatal(err)
 		}
 
-		searchClient := search.NewESClient("http://127.0.0.1:9200")
+		searchClient := search.NewESClient("https://127.0.0.1:9200")
 
-		EntitySrv, err := service.NewEntityService(context.Background(), entityManager)
+		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
 		if nil != err {
 			log.Fatal(err)
 		}

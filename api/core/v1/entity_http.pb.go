@@ -104,6 +104,10 @@ func (h *EntityHTTPHandler) CreateEntity(req *go_restful.Request, resp *go_restf
 
 func (h *EntityHTTPHandler) DeleteEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := DeleteEntityRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -129,6 +133,10 @@ func (h *EntityHTTPHandler) DeleteEntity(req *go_restful.Request, resp *go_restf
 
 func (h *EntityHTTPHandler) GetEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := GetEntityRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -154,6 +162,10 @@ func (h *EntityHTTPHandler) GetEntity(req *go_restful.Request, resp *go_restful.
 
 func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := ListEntityRequest{}
+	if err := transportHTTP.GetBody(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -234,7 +246,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.DeleteEntity))
 	ws.Route(ws.GET("/plugins/{plugin}/entities/{id}").
 		To(handler.GetEntity))
-	ws.Route(ws.GET("/plugins/{plugin}/entities").
+	ws.Route(ws.POST("/plugins/{plugin}/entities/search").
 		To(handler.ListEntity))
 	ws.Route(ws.POST("/plugins/{plugin}/entities/{id}/mappers").
 		To(handler.AppendMapper))

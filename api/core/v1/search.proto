@@ -20,7 +20,8 @@ service Search {
 	};
 	rpc Search (SearchRequest) returns (SearchResponse) {
 		option (google.api.http) = {
-			get : "/search/{data}"
+			post : "/search"
+			body: "*"
 		};
 	};
 }
@@ -33,12 +34,22 @@ message IndexResponse {
     string status = 1;
 }
 
+message SearchCondition {
+    string field = 1;
+    string operator = 2;
+    google.protobuf.Value value = 3;
+}
+
 message SearchRequest {
-    string data = 1;
-    Pager pager = 2;
+    string query = 1;
+    Pager page = 2;
+    repeated SearchCondition condition = 3;
 }
 
 message SearchResponse {
-    int32 total_count = 1;
-    repeated google.protobuf.Value items = 2;
+    int64 total = 1;
+    int64 page = 2;
+    int64 limit = 3;
+    int64 offset = 4;
+    repeated google.protobuf.Value items = 5;
 }

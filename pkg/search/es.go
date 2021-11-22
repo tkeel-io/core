@@ -2,6 +2,8 @@ package search
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 	"reflect"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -28,6 +30,7 @@ func interface2string(in interface{}) (out string) {
 	}
 	return
 }
+
 func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.IndexResponse, err error) {
 	var indexID string
 	out = &pb.IndexResponse{}
@@ -47,7 +50,31 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.SearchResponse, err error) {
 	out = &pb.SearchResponse{}
 	out.Items = make([]*structpb.Value, 0)
-	searchResult, err := es.client.Search().Index(EntityIndex).Query(elastic.NewMultiMatchQuery(req.Data)).Pretty(true).Do(ctx)
+	searchQuery := es.client.Search().Index(EntityIndex)
+
+	boolQuery := elastic.NewBoolQuery()
+	if req.Condition != nil {
+		for _, condition := range req.Condition {
+			switch condition.Operator {
+			case "$lt":
+				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))
+			case "$lte":
+				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lte(condition.Value.AsInterface()))
+			case "$gt":
+				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gt(condition.Value.AsInterface()))
+			case "$gte":
+				boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
+			case "$neq":
+				boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+			default:
+				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+			}
+		}
+	}
+	if req.Query != "" {
+		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
+	}
+	searchResult, err := searchQuery.Query(boolQuery).Pretty(true).Do(ctx)
 	if err != nil {
 		return
 	}
@@ -56,14 +83,19 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 		if t, ok := item.(map[string]interface{}); ok {
 			tt, _ := structpb.NewValue(t)
 			out.Items = append(out.Items, tt)
-			out.TotalCount++
 		}
+	}
+	out.Total = searchResult.TotalHits()
+	if req.Page != nil {
+		out.Limit = req.Page.Limit
+		out.Offset = req.Page.Offset
 	}
 	return
 }
 
 func NewESClient(url ...string) pb.SearchHTTPServer {
-	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false))
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
 	if err != nil {
 		panic(err)
 	}

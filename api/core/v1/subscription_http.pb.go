@@ -70,6 +70,10 @@ func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, re
 
 func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := DeleteSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -95,6 +99,10 @@ func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, re
 
 func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := GetSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -120,6 +128,10 @@ func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp 
 
 func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := ListSubscriptionRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return

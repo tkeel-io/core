@@ -63,11 +63,7 @@ func (h *SearchHTTPHandler) Index(req *go_restful.Request, resp *go_restful.Resp
 
 func (h *SearchHTTPHandler) Search(req *go_restful.Request, resp *go_restful.Response) {
 	in := SearchRequest{}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
+	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -108,6 +104,6 @@ func RegisterSearchHTTPServer(container *go_restful.Container, srv SearchHTTPSer
 	handler := newSearchHTTPHandler(srv)
 	ws.Route(ws.POST("/index").
 		To(handler.Index))
-	ws.Route(ws.GET("/search/{data}").
+	ws.Route(ws.POST("/search").
 		To(handler.Search))
 }
