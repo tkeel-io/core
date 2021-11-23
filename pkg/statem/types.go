@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	StateFlushPeried = 10
+
 	MessageCtxHeaderOwner     = "x-owner"
 	MessageCtxHeaderSourceID  = "x-source"
 	MessageCtxHeaderTargetID  = "x-target"

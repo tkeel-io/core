@@ -96,6 +96,7 @@ type statem struct {
 	mailBox      *mailbox
 	attached     int32
 	disposing    int32
+	nextFlushNum int32
 	stateManager StateManager
 	msgHandler   MessageHandler
 
@@ -236,6 +237,13 @@ func (s *statem) HandleLoop() {
 			break
 		}
 
+		if s.nextFlushNum == 0 {
+			// flush properties.
+			if err := s.flush(); nil != err {
+				log.Errorf("flush state status failed, entity: %s, err: %s", s.ID, err.Error())
+			}
+		}
+
 		switch msg := message.(type) {
 		case MapperMessage:
 			s.invokeMapperMsg(msg)
@@ -252,6 +260,7 @@ func (s *statem) HandleLoop() {
 
 		// reset be surs.
 		Ensure = 3
+		s.nextFlushNum = (s.nextFlushNum + StateFlushPeried - 1) % StateFlushPeried
 	}
 
 	log.Infof("detached statem, id: %s.", s.ID)
