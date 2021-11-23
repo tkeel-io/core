@@ -7,11 +7,11 @@ package v1
 import (
 	context "context"
 	json "encoding/json"
-	go_restful "github.com/emicklei/go-restful"
 	http "net/http"
-)
 
-import transportHTTP "github.com/tkeel-io/kit/transport/http"
+	go_restful "github.com/emicklei/go-restful"
+	transportHTTP "github.com/tkeel-io/kit/transport/http"
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
@@ -34,6 +34,7 @@ func newSearchHTTPHandler(s SearchHTTPServer) *SearchHTTPHandler {
 
 func (h *SearchHTTPHandler) Index(req *go_restful.Request, resp *go_restful.Response) {
 	in := IndexObject{}
+	req.Request.Header.Set(go_restful.HEADER_ContentType, go_restful.MIME_JSON)
 	if err := transportHTTP.GetBody(req, &in.Obj); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
