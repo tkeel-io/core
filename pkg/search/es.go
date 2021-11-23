@@ -55,8 +55,8 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	return out, errors.Wrap(err, "es index failed")
 }
 
-func condition2boolQuery(condition []*pb.SearchCondition, boolQuery *elastic.BoolQuery) {
-	for _, condition := range condition {
+func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.BoolQuery) {
+	for _, condition := range conditions {
 		switch condition.Operator {
 		case "$lt":
 			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))

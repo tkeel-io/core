@@ -132,15 +132,10 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	searchReq.Query = req.Query
 	searchReq.Page = req.Page
 	searchReq.Condition = req.Condition
-	entityCondition := &pb.SearchCondition{Field: "type", Operator: "$eq", Value: structpb.NewStringValue("device")}
-
-	if searchReq.Condition == nil {
-		searchReq.Condition = make([]*pb.SearchCondition, 1)
-	}
-	searchReq.Condition = append(searchReq.Condition, entityCondition)
 
 	resp, err := s.searchClient.Search(ctx, searchReq)
 	if err != nil {
+		log.Errorf("list entities failed, err: %s", err.Error())
 		return
 	}
 
@@ -165,6 +160,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		}
 	}
 	if err != nil {
+		log.Errorf("list entities failed, err: %s", err.Error())
 		return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil

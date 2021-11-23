@@ -124,6 +124,15 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entit
           }
     ]'
 
+
+
+# search
+
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/search?source=abcd&type=DEVICE&owner=admin" 
+
+
+
+
 ```
 
 
