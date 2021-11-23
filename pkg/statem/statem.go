@@ -89,7 +89,7 @@ type statem struct {
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
 	constraints       map[string][]constraint.Constraint
-	tsConstraints     sort.StringSlice //nolint
+	tsConstraints     sort.StringSlice
 	searchConstraints sort.StringSlice
 
 	// mailbox & state runtime status.
@@ -167,6 +167,9 @@ func (s *statem) GetManager() StateManager {
 func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 	for k, c := range configs {
 		s.Configs[k] = c
+		tsSlice, searcgSlice := constraint.ParseFlushableFrom(c)
+		s.tsConstraints = SliceAppend(s.tsConstraints, tsSlice)
+		s.searchConstraints = SliceAppend(s.searchConstraints, searcgSlice)
 	}
 	return nil
 }

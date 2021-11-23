@@ -13,6 +13,10 @@ const (
 	PropertyTypeString = "string"
 	PropertyTypeArray  = "array"
 	PropertyTypeStruct = "struct"
+
+	DefineFieldArrayLength  = "length"
+	DefineFieldArrayElemCfg = "elem_type"
+	DefineFieldStructFields = "fields"
 )
 
 type Config struct {
@@ -28,6 +32,25 @@ type Config struct {
 	Description       string                 `json:"description"`
 	Define            map[string]interface{} `json:"define"`
 	LastTime          int64                  `json:"last_time"`
+}
+
+func (cfg Config) getArrayDefine() DefineArray {
+	var arrDefine DefineArray
+	if length, ok := cfg.Define[DefineFieldArrayLength].(int); !ok {
+		arrDefine.Length = length
+	}
+	if elemT, ok := cfg.Define[DefineFieldArrayElemCfg].(Config); !ok {
+		arrDefine.ElemType = elemT
+	}
+	return arrDefine
+}
+
+func (cfg Config) getStructDefine() DefineStruct {
+	var jsonDefine DefineStruct
+	if fields, ok := cfg.Define[DefineFieldStructFields].([]Config); !ok {
+		jsonDefine.Fields = fields
+	}
+	return jsonDefine
 }
 
 type DefineStruct struct {
