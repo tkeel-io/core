@@ -29,15 +29,19 @@ curl -X POST http://localhost:3500/v1.0/publish/core-pubsub/core-pub \
 curl -X GET "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123?source=abcd&owner=admin&type=DEVICE" 
 
 # create test123 through APIs.
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities?id=test123&source=abcd&owner=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
   -d '{
-        "id": "test123",
-        "type": "DEVICE",
-        "source": "abcd",
-        "owner": "admin",
-        "properties": {
-          "temp": 123
+        "temp": 123
+     }'
+
+
+
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities?id=test123&source=abcd&owner=admin&type=DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "property1": {
+          "test1": 123
         }
      }'
 
@@ -84,20 +88,41 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 
 
 # update entity config.
-curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/configs" \
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/configs?source=abcd&type=DEVICE&owner=admin" \
   -H "Content-Type: application/json" \
-  -d '{
-        "type": "DEVICE",
-        "source": "abcd",
-        "owner": "admin",
-        "configs": [
+  -d '[
           {
             "id": "property1",
             "type": "int",
-            "define": {}
+            "define": {},
+            "enabled": true,
+            "enabled_search": true
           }
-        ]
-     }'
+    ]'
+
+
+
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/configs?source=abcd&type=DEVICE&owner=admin" \
+  -H "Content-Type: application/json" \
+  -d '[
+          {
+            "id": "property1",
+            "type": "struct",
+            "define": {
+              "fields": [
+                {
+                  "id": "test1",
+                  "type": "int",
+                  "enabled": true,
+                  "enabled_search": true,
+                  "define": {}
+                }
+              ]
+            },
+            "enabled": true,
+            "enabled_search": true
+          }
+    ]'
 
 ```
 

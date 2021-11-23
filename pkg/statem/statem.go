@@ -171,6 +171,7 @@ func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 		s.tsConstraints = SliceAppend(s.tsConstraints, tsSlice)
 		s.searchConstraints = SliceAppend(s.searchConstraints, searcgSlice)
 	}
+
 	return nil
 }
 
@@ -227,7 +228,10 @@ func (s *statem) HandleLoop() {
 			}
 
 			// flush properties.
-			s.flush()
+			if err := s.flush(); nil != err {
+				log.Errorf("flush state status failed, entity: %s, err: %s",
+					s.ID, err.Error())
+			}
 			// detach coroutins.
 			break
 		}

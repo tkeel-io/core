@@ -8,10 +8,13 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/logger"
 
 	"github.com/olivere/elastic/v7"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+var log = logger.NewLogger("core.search.es")
 
 const EntityIndex = "entity"
 
@@ -40,12 +43,16 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	switch kv := req.Obj.AsInterface().(type) {
 	case map[string]interface{}:
 		indexID = interface2string(kv["id"])
+	case nil:
+		// do nothing.
+		return out, nil
 	default:
-		return
+		return out, ErrIndexParamInvalid
 	}
+
 	objBytes, _ := req.Obj.MarshalJSON()
-	es.client.Index().Index(EntityIndex).Id(indexID).BodyString(string(objBytes)).Do(context.Background())
-	return
+	_, err = es.client.Index().Index(EntityIndex).Id(indexID).BodyString(string(objBytes)).Do(context.Background())
+	return out, errors.Wrap(err, "es index failed")
 }
 
 func condition2boolQuery(condition []*pb.SearchCondition, boolQuery *elastic.BoolQuery) {
@@ -106,6 +113,14 @@ func NewESClient(url ...string) pb.SearchHTTPServer {
 	if err != nil {
 		panic(err)
 	}
+
+	// ping.
+	info, code, err := client.Ping(url[0]).Do(context.Background())
+	if nil != err {
+		panic(err)
+	}
+
+	log.Infof("Elasticsearch returned with code<%d>, version<%s>\n", code, info.Version.Number)
 
 	return &ESClient{client: client}
 }

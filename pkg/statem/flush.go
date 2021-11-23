@@ -22,18 +22,31 @@ func (s *statem) flush() error {
 func (s *statem) flushSeatch() error {
 	var (
 		err       error
-		flushData = make(map[string]interface{})
+		flushData map[string]interface{}
 	)
 
+	if len(s.searchConstraints) == 0 {
+		return nil
+	}
+
+	flushData = make(map[string]interface{})
 	for _, JSONPath := range s.searchConstraints {
 		if val := s.getValByJSONPath(JSONPath); nil != val {
-			flushData[JSONPath], err = constraint.ExecData(val, s.constraints[JSONPath])
+			var n constraint.Node
+			n, err = constraint.ExecData(val, s.constraints[JSONPath])
 			if nil != err {
 				return errors.Wrap(err, "Search flush failed")
 			}
+			flushData[JSONPath] = n.Value()
 		}
 	}
-	err = s.stateManager.SearchFlush(context.Background(), flushData)
+
+	if len(flushData) > 0 {
+		flushData["id"] = s.ID
+		err = s.stateManager.SearchFlush(context.Background(), flushData)
+	}
+
+	log.Debugf("flush state Search, data: %v", flushData)
 	return errors.Wrap(err, "Search flush failed")
 }
 
