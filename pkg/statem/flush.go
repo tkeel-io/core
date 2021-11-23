@@ -2,6 +2,7 @@ package statem
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
@@ -33,10 +34,15 @@ func (s *statem) flushSeatch() error {
 	for _, JSONPath := range s.searchConstraints {
 		if val := s.getValByJSONPath(JSONPath); nil != val {
 			var n constraint.Node
-			n, err = constraint.ExecData(val, s.constraints[JSONPath])
-			if nil != err {
-				return errors.Wrap(err, "Search flush failed")
+			var ct *constraint.Constraint
+
+			if ct, err = s.getConstraint(JSONPath); nil != err {
+				log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
+			} else if n, err = constraint.ExecData(val, ct); nil != err {
+				log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
+				continue
 			}
+
 			flushData[JSONPath] = n.Value()
 		}
 	}
@@ -50,8 +56,39 @@ func (s *statem) flushSeatch() error {
 	return errors.Wrap(err, "Search flush failed")
 }
 
-func (s *statem) flushTimeSeries() error { //nolint
-	panic("implement me")
+func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) {
+	arr := strings.Split(jsonPath, ".")
+	if len(arr) == 0 {
+		return nil, errInvalidJSONPath
+	} else if len(arr) == 1 {
+		return s.constraints[arr[0]], nil
+	}
+
+	var ct *constraint.Constraint
+	if ct = s.constraints[arr[0]]; nil != ct {
+		return nil, nil
+	}
+
+	var index int
+	for indx, key := range arr[1:] {
+		var nextCt *constraint.Constraint
+		for _, childCt := range ct.ChildNodes {
+			if key == childCt.ID {
+				nextCt, index = childCt, indx+1
+				break
+			}
+		}
+		if nextCt == nil {
+			break
+		}
+		ct = nextCt
+	}
+
+	if index != len(arr)-1 {
+		return nil, nil
+	}
+
+	return ct, nil
 }
 
 func (s *statem) getValByJSONPath(jsonPath string) constraint.Node {

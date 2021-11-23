@@ -88,8 +88,7 @@ type statem struct {
 	cacheProps     map[string]map[string]constraint.Node // cache other property.
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
-	constraints       map[string][]constraint.Constraint
-	tsConstraints     sort.StringSlice
+	constraints       map[string]*constraint.Constraint
 	searchConstraints sort.StringSlice
 
 	// mailbox & state runtime status.
@@ -131,6 +130,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		mappers:        make(map[string]mapper.Mapper),
 		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
+		constraints:    make(map[string]*constraint.Constraint),
 	}
 
 	// set KValues into cacheProps.
@@ -168,11 +168,15 @@ func (s *statem) GetManager() StateManager {
 func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 	for k, c := range configs {
 		s.Configs[k] = c
-		tsSlice, searcgSlice := constraint.ParseFlushableFrom(c)
-		s.tsConstraints = SliceAppend(s.tsConstraints, tsSlice)
-		s.searchConstraints = SliceAppend(s.searchConstraints, searcgSlice)
+		if ct := constraint.NewConstraintsFrom(c); nil != ct {
+			s.constraints[ct.ID] = ct
+			searchIndexes := ct.GenSearchIndex()
+			if len(searchIndexes) > 0 {
+				s.searchConstraints =
+					SliceAppend(s.searchConstraints, searchIndexes)
+			}
+		}
 	}
-
 	return nil
 }
 
@@ -207,7 +211,7 @@ func (s *statem) OnMessage(msg Message) bool {
 }
 
 // InvokeMsg run loopHandler.
-func (s *statem) HandleLoop() {
+func (s *statem) HandleLoop() { //nolint
 	var (
 		Ensure  = 3
 		message Message

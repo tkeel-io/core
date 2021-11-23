@@ -29,6 +29,7 @@ var (
 	log = logger.NewLogger("core.state-marchine")
 
 	errInvalidMapperOp = errors.New("invalid mapper operator")
+	errInvalidJSONPath = errors.New("invalid JSONPath")
 )
 
 type StateManager interface {
