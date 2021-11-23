@@ -81,7 +81,23 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 	if req.Query != "" {
 		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
 	}
-	searchResult, err := searchQuery.Query(boolQuery).Pretty(true).Do(ctx)
+
+	if req.Page == nil {
+		req.Page = &pb.Pager{
+			Limit:   10,
+			Offset:  0,
+			Sort:    "",
+			Reverse: false,
+		}
+	}
+	searchQuery = searchQuery.Query(boolQuery)
+	if req.Page.Sort != "" {
+		searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse)
+	}
+
+	searchQuery = searchQuery.From(int(req.Page.Offset)).Size(int(req.Page.Limit))
+
+	searchResult, err := searchQuery.Pretty(true).Do(ctx)
 	if err != nil {
 		return
 	}
