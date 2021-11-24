@@ -3,6 +3,7 @@ package statem
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
@@ -10,6 +11,8 @@ import (
 )
 
 const (
+	StateFlushPeried = 10
+
 	MessageCtxHeaderOwner     = "x-owner"
 	MessageCtxHeaderSourceID  = "x-source"
 	MessageCtxHeaderTargetID  = "x-target"
@@ -26,6 +29,7 @@ var (
 	log = logger.NewLogger("core.state-marchine")
 
 	errInvalidMapperOp = errors.New("invalid mapper operator")
+	errInvalidJSONPath = errors.New("invalid JSONPath")
 )
 
 type StateManager interface {
@@ -33,6 +37,7 @@ type StateManager interface {
 	SendMsg(msgCtx MessageContext)
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
+	SearchFlush(context.Context, map[string]interface{}) error
 }
 
 type StateMarchiner interface {
@@ -110,3 +115,28 @@ func (h Header) GetDefault(key, defaultValue string) string {
 func (h Header) Set(key, value string) { h[key] = value }
 
 type WatchKey = mapper.WatchKey
+
+func SliceAppend(slice sort.StringSlice, vals []string) sort.StringSlice {
+	slice = append(slice, vals...)
+	return Unique(slice)
+}
+
+func Unique(slice sort.StringSlice) sort.StringSlice {
+	if slice.Len() <= 1 {
+		return slice
+	}
+
+	newSlice := sort.StringSlice{slice[0]}
+
+	preVal := slice[0]
+	sort.Sort(slice)
+	for i := 1; i < slice.Len(); i++ {
+		if preVal == slice[i] {
+			continue
+		}
+
+		preVal = slice[i]
+		newSlice = append(newSlice, preVal)
+	}
+	return newSlice
+}

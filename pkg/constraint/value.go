@@ -13,21 +13,44 @@ const (
 	PropertyTypeString = "string"
 	PropertyTypeArray  = "array"
 	PropertyTypeStruct = "struct"
+
+	DefineFieldArrayLength  = "length"
+	DefineFieldArrayElemCfg = "elem_type"
+	DefineFieldStructFields = "fields"
 )
 
 type Config struct {
 	item
 
-	ID                string                 `json:"id"`
-	Type              string                 `json:"type"`      // 用于描述entity运行时的属性值的结构信息.
-	DataType          string                 `json:"data_type"` // 用于描述entity运行时属性值的存在形式，默认[]byte.
-	Weight            int                    `json:"weight"`
-	Enabled           bool                   `json:"enabled"`
-	EnabledSearch     bool                   `json:"enabled_search"`
-	EnabledTimeSeries bool                   `json:"enabled_time_series"`
-	Description       string                 `json:"description"`
-	Define            map[string]interface{} `json:"define"`
-	LastTime          int64                  `json:"last_time"`
+	ID                string                 `json:"id" mapstructure:"id"`
+	Type              string                 `json:"type" mapstructure:"type"`           // 用于描述entity运行时的属性值的结构信息.
+	DataType          string                 `json:"data_type" mapstructure:"data_type"` // 用于描述entity运行时属性值的存在形式，默认[]byte.
+	Weight            int                    `json:"weight" mapstructure:"weight"`
+	Enabled           bool                   `json:"enabled" mapstructure:"enabled"`
+	EnabledSearch     bool                   `json:"enabled_search" mapstructure:"enabled_search"`
+	EnabledTimeSeries bool                   `json:"enabled_time_series" mapstructure:"enabled_time_series"`
+	Description       string                 `json:"description" mapstructure:"description"`
+	Define            map[string]interface{} `json:"define" mapstructure:"define"`
+	LastTime          int64                  `json:"last_time" mapstructure:"last_time"`
+}
+
+func (cfg Config) getArrayDefine() DefineArray {
+	var arrDefine DefineArray
+	if length, ok := cfg.Define[DefineFieldArrayLength].(int); !ok {
+		arrDefine.Length = length
+	}
+	if elemT, ok := cfg.Define[DefineFieldArrayElemCfg].(Config); !ok {
+		arrDefine.ElemType = elemT
+	}
+	return arrDefine
+}
+
+func (cfg Config) getStructDefine() DefineStruct {
+	var jsonDefine DefineStruct
+	if fields, ok := cfg.Define[DefineFieldStructFields].([]Config); ok {
+		jsonDefine.Fields = fields
+	}
+	return jsonDefine
 }
 
 type DefineStruct struct {

@@ -6,5 +6,5 @@ import (
 )
 
 func TestEntity_GetEntity(t *testing.T) {
-	NewEntityManager(context.Background(), nil)
+	NewEntityManager(context.Background(), nil, nil)
 }

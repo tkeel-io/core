@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
@@ -21,15 +22,17 @@ import (
 )
 
 var (
-	Name     string
-	HTTPAddr string
-	GRPCAddr string
+	Name          string
+	HTTPAddr      string
+	GRPCAddr      string
+	SearchBrokers string
 )
 
 func init() {
 	flag.StringVar(&Name, "name", "core", "app name.")
 	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
+	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
 }
 
 func main() {
@@ -53,7 +56,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool)
+	searchClient := search.NewESClient(strings.Split(SearchBrokers, ",")...)
+	entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool, searchClient)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -61,8 +65,6 @@ func main() {
 	{
 		// User service
 		// create coroutine pool.
-
-		searchClient := search.NewESClient("http://elasticsearch-master:9200")
 
 		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
 		if nil != err {

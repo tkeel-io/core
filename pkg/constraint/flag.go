@@ -1,54 +1,47 @@
 package constraint
 
 const (
-	EnabledFlagSelf       uint8 = 1
-	EnabledFlagSearch     uint8 = 2
-	EnabledFlagTimeSeries uint8 = 4
+	EnabledFlagSelf       = 1
+	EnabledFlagSearch     = 2
+	EnabledFlagTimeSeries = 4
 )
 
-type enableFlag struct {
-	value uint8
+type BitBucket struct {
+	lenth  int
+	bucket []uint8
 }
 
-func NewEnableFlag() *enableFlag { //nolint
-	return &enableFlag{}
-}
-
-func (ef *enableFlag) EnableAll() {
-	ef.value = ef.value | EnabledFlagSelf | EnabledFlagSearch | EnabledFlagTimeSeries
-}
-
-func (ef *enableFlag) Enabled() bool {
-	return EnabledFlagSelf == (ef.value & EnabledFlagSelf)
-}
-
-func (ef *enableFlag) Enable(flag bool) bool {
-	return ef.enable(flag, EnabledFlagSelf)
-}
-
-func (ef *enableFlag) Searchable() bool {
-	return EnabledFlagSearch == (ef.value & EnabledFlagSearch)
-}
-
-func (ef *enableFlag) EnableSearch(flag bool) bool {
-	return ef.enable(flag, EnabledFlagSearch)
-}
-
-func (ef *enableFlag) TSEnabled() bool {
-	return EnabledFlagTimeSeries == (ef.value & EnabledFlagTimeSeries)
-}
-
-func (ef *enableFlag) EnableTS(flag bool) bool {
-	return ef.enable(flag, EnabledFlagTimeSeries)
-}
-
-func (ef *enableFlag) enable(flag bool, flagValue uint8) bool {
-	retFlag := ef.value
-	if flag {
-		ef.value |= flagValue
-	} else {
-		ef.value &= (0xff ^ flagValue)
+func NewBitBucket(length int) *BitBucket {
+	byteLen := (length + 7) / 8
+	return &BitBucket{
+		lenth:  length,
+		bucket: make([]uint8, byteLen),
 	}
+}
 
-	return flagValue == (retFlag & flagValue)
+func (bb *BitBucket) Enabled(n int) bool {
+	byteIndex, remIndex := bb.indexable(n)
+	val, offsetFlag := bb.bucket[byteIndex], uint8(1<<remIndex)
+	return val&offsetFlag > 0
+}
+
+func (bb *BitBucket) Enable(n int) bool {
+	byteIndex, remIndex := bb.indexable(n)
+	oldValue, offsetFlag := bb.bucket[byteIndex], uint8(1<<remIndex)
+	bb.bucket[byteIndex] |= offsetFlag
+	return oldValue&offsetFlag > 0
+}
+
+func (bb *BitBucket) Disable(n int) bool {
+	byteIndex, remIndex := bb.indexable(n)
+	oldValue, offsetFlag := bb.bucket[byteIndex], uint8(1<<remIndex)
+	bb.bucket[byteIndex] &= ^offsetFlag
+	return oldValue&offsetFlag > 0
+}
+
+func (bb *BitBucket) indexable(n int) (int, int) {
+	if bb.lenth <= n {
+		panic("index overflow")
+	}
+	return n / 8, n % 8
 }

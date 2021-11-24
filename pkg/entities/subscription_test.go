@@ -15,7 +15,7 @@ func TestSubscriptionCreate(t *testing.T) {
 		panic(err)
 	}
 
-	mgr, _ := NewEntityManager(context.Background(), coroutinePool)
+	mgr, _ := NewEntityManager(context.Background(), coroutinePool, nil)
 
 	en := &statem.Base{
 		ID:     "",

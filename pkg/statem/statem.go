@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"runtime"
+	"sort"
 	"sync/atomic"
 	"time"
 
@@ -87,10 +88,14 @@ type statem struct {
 	cacheProps     map[string]map[string]constraint.Node // cache other property.
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
+	constraints       map[string]*constraint.Constraint
+	searchConstraints sort.StringSlice
+
 	// mailbox & state runtime status.
 	mailBox      *mailbox
 	attached     int32
 	disposing    int32
+	nextFlushNum int32
 	stateManager StateManager
 	msgHandler   MessageHandler
 
@@ -125,6 +130,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		mappers:        make(map[string]mapper.Mapper),
 		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
+		constraints:    make(map[string]*constraint.Constraint),
 	}
 
 	// set KValues into cacheProps.
@@ -162,6 +168,14 @@ func (s *statem) GetManager() StateManager {
 func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 	for k, c := range configs {
 		s.Configs[k] = c
+		if ct := constraint.NewConstraintsFrom(c); nil != ct {
+			s.constraints[ct.ID] = ct
+			searchIndexes := ct.GenSearchIndex()
+			if len(searchIndexes) > 0 {
+				s.searchConstraints =
+					SliceAppend(s.searchConstraints, searchIndexes)
+			}
+		}
 	}
 	return nil
 }
@@ -197,7 +211,7 @@ func (s *statem) OnMessage(msg Message) bool {
 }
 
 // InvokeMsg run loopHandler.
-func (s *statem) HandleLoop() {
+func (s *statem) HandleLoop() { //nolint
 	var (
 		Ensure  = 3
 		message Message
@@ -218,8 +232,20 @@ func (s *statem) HandleLoop() {
 					stateRuntimeStatusString(atomic.LoadInt32(&s.attached)))
 			}
 
+			// flush properties.
+			if err := s.flush(); nil != err {
+				log.Errorf("flush state status failed, entity: %s, err: %s",
+					s.ID, err.Error())
+			}
 			// detach coroutins.
 			break
+		}
+
+		if s.nextFlushNum == 0 {
+			// flush properties.
+			if err := s.flush(); nil != err {
+				log.Errorf("flush state status failed, entity: %s, err: %s", s.ID, err.Error())
+			}
 		}
 
 		switch msg := message.(type) {
@@ -238,6 +264,7 @@ func (s *statem) HandleLoop() {
 
 		// reset be surs.
 		Ensure = 3
+		s.nextFlushNum = (s.nextFlushNum + StateFlushPeried - 1) % StateFlushPeried
 	}
 
 	log.Infof("detached statem, id: %s.", s.ID)
