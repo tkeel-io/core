@@ -1,0 +1,1407 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "api/core/v1/entity.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Entity"
+    },
+    {
+      "name": "Topic"
+    },
+    {
+      "name": "Subscription"
+    },
+    {
+      "name": "Search"
+    },
+    {
+      "name": "Openapi"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/addons/identify": {
+      "post": {
+        "summary": "Post addons identify.",
+        "operationId": "Openapi_AddonsIdentify",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddonsIdentifyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddonsIdentifyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Openapi"
+        ]
+      }
+    },
+    "/identify": {
+      "get": {
+        "summary": "Query identify.",
+        "operationId": "Openapi_Identify",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IdentifyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Openapi"
+        ]
+      }
+    },
+    "/index": {
+      "post": {
+        "operationId": "Search_Index",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IndexResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/plugins/{plugin}/entities": {
+      "post": {
+        "operationId": "Entity_CreateEntity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/plugins/{plugin}/entities/search": {
+      "post": {
+        "operationId": "Entity_ListEntity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListEntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "owner": {
+                  "type": "string"
+                },
+                "query": {
+                  "type": "string"
+                },
+                "page": {
+                  "$ref": "#/definitions/v1Pager"
+                },
+                "condition": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/v1SearchCondition"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/plugins/{plugin}/entities/{id}": {
+      "get": {
+        "operationId": "Entity_GetEntity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "delete": {
+        "operationId": "Entity_DeleteEntity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteEntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "put": {
+        "operationId": "Entity_UpdateEntity",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/plugins/{plugin}/entities/{id}/configs": {
+      "put": {
+        "operationId": "Entity_SetEntityConfigs",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/plugins/{plugin}/entities/{id}/mappers": {
+      "post": {
+        "operationId": "Entity_AppendMapper",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1MapperDesc"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/plugins/{plugin}/subscriptions": {
+      "get": {
+        "operationId": "Subscription_ListSubscription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListSubscriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Subscription"
+        ]
+      },
+      "post": {
+        "operationId": "Subscription_CreateSubscription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubscriptionObject"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Subscription"
+        ]
+      }
+    },
+    "/plugins/{plugin}/subscriptions/{id}": {
+      "get": {
+        "operationId": "Subscription_GetSubscription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Subscription"
+        ]
+      },
+      "delete": {
+        "operationId": "Subscription_DeleteSubscription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteSubscriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Subscription"
+        ]
+      },
+      "put": {
+        "operationId": "Subscription_UpdateSubscription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubscriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "plugin",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubscriptionObject"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Subscription"
+        ]
+      }
+    },
+    "/search": {
+      "post": {
+        "operationId": "Search_Search",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SearchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SearchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "summary": "Query status.",
+        "operationId": "Openapi_tatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Openapi"
+        ]
+      }
+    },
+    "/tenant/bind": {
+      "post": {
+        "summary": "Post tenant bind.",
+        "operationId": "Openapi_TenantBind",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TenantBindResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TenantBindRequst"
+            }
+          }
+        ],
+        "tags": [
+          "Openapi"
+        ]
+      }
+    },
+    "/tenant/unbind": {
+      "post": {
+        "summary": "Post tenant bind.",
+        "operationId": "Openapi_TenantUnbind",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TenantUnbindResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TenantUnbindRequst"
+            }
+          }
+        ],
+        "tags": [
+          "Openapi"
+        ]
+      }
+    },
+    "/topic": {
+      "post": {
+        "operationId": "Topic_TopicEventHandler",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TopicEventResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1TopicEventRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Topic"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AddonsIdentifyRequest": {
+      "type": "object",
+      "properties": {
+        "plugin": {
+          "$ref": "#/definitions/v1BriefPluginInfo"
+        },
+        "implementedAddons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1ImplementedAddons"
+          }
+        }
+      },
+      "description": "*\nThe request value of the POST /v1/addons/identify,\nused when the plugin in the registration process implements\nthe extension point of the registered plugin."
+    },
+    "v1AddonsIdentifyResponse": {
+      "type": "object",
+      "properties": {
+        "res": {
+          "$ref": "#/definitions/v1Result"
+        }
+      },
+      "description": "*\nThe response value of the POST /v1/addons/identify,\nused when the plugin in the registration process implements\nthe extension point of the registered plugin."
+    },
+    "v1AddonsPoint": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "desc": {
+          "type": "string"
+        }
+      },
+      "description": "*\nmessage plugin declares extension point."
+    },
+    "v1BriefPluginInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "description": "*\nmessage brief plugin information."
+    },
+    "v1DeleteEntityResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DeleteSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1EntityResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "plugin": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "mappers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1MapperDesc"
+          }
+        },
+        "configs": {
+          "type": "object"
+        },
+        "properties": {
+          "type": "object"
+        }
+      }
+    },
+    "v1IdentifyResponse": {
+      "type": "object",
+      "properties": {
+        "res": {
+          "$ref": "#/definitions/v1Result"
+        },
+        "pluginID": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "tkeelVersion": {
+          "type": "string"
+        },
+        "addonsPoint": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1AddonsPoint"
+          }
+        },
+        "implementedPlugin": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1ImplementedPlugin"
+          }
+        }
+      },
+      "description": "*\nThe response value of the GET /v1/identify,\nused when the plugin registered."
+    },
+    "v1ImplementedAddons": {
+      "type": "object",
+      "properties": {
+        "addonsPoint": {
+          "type": "string"
+        },
+        "implementedEndpoint": {
+          "type": "string"
+        }
+      },
+      "description": "*\nmessage plugin declares implemented other plugin extension point."
+    },
+    "v1ImplementedPlugin": {
+      "type": "object",
+      "properties": {
+        "plugin": {
+          "$ref": "#/definitions/v1BriefPluginInfo"
+        },
+        "addons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1ImplementedAddons"
+          }
+        }
+      },
+      "description": "*\nmessage plugin implemented other plugin."
+    },
+    "v1IndexResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ListEntityResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "page": {
+          "type": "string",
+          "format": "int64"
+        },
+        "limit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1EntityResponse"
+          }
+        }
+      }
+    },
+    "v1ListSubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1SubscriptionResponse"
+          }
+        }
+      }
+    },
+    "v1MapperDesc": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "tql": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Pager": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "reverse": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1PluginStatus": {
+      "type": "string",
+      "enum": [
+        "error",
+        "starting",
+        "runing",
+        "stopping",
+        "stopped"
+      ],
+      "default": "error",
+      "description": "*\nplugin state enum."
+    },
+    "v1Result": {
+      "type": "object",
+      "properties": {
+        "ret": {
+          "$ref": "#/definitions/v1Retcode"
+        },
+        "msg": {
+          "type": "string"
+        }
+      },
+      "description": "*\nmessage result."
+    },
+    "v1Retcode": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "badRequest",
+        "internalError"
+      ],
+      "default": "ok",
+      "description": "*\nerror code enum."
+    },
+    "v1SearchCondition": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "value": {
+          "type": "object"
+        }
+      }
+    },
+    "v1SearchRequest": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "page": {
+          "$ref": "#/definitions/v1Pager"
+        },
+        "condition": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1SearchCondition"
+          }
+        }
+      }
+    },
+    "v1SearchResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "format": "int64"
+        },
+        "page": {
+          "type": "string",
+          "format": "int64"
+        },
+        "limit": {
+          "type": "string",
+          "format": "int64"
+        },
+        "offset": {
+          "type": "string",
+          "format": "int64"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "v1StatusResponse": {
+      "type": "object",
+      "properties": {
+        "res": {
+          "$ref": "#/definitions/v1Result"
+        },
+        "status": {
+          "$ref": "#/definitions/v1PluginStatus"
+        }
+      },
+      "description": "*\nThe request value of the GET /v1/Status.\nused when the tkeel checks the status of plugins regularly."
+    },
+    "v1SubscriptionObject": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "filter": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "pubsub_name": {
+          "type": "string"
+        }
+      }
+    },
+    "v1SubscriptionResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "plugin": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "subscription": {
+          "$ref": "#/definitions/v1SubscriptionObject"
+        }
+      }
+    },
+    "v1TenantBindRequst": {
+      "type": "object",
+      "properties": {
+        "tenantID": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "*\nThe request value of the POST /v1/tenant/bind,\nused when the tenant administrator enables the plugin."
+    },
+    "v1TenantBindResponse": {
+      "type": "object",
+      "properties": {
+        "res": {
+          "$ref": "#/definitions/v1Result"
+        }
+      },
+      "description": "*\nThe response value of the POST /v1/tenant/bind,\nused when the tenant administrator enables the plugin."
+    },
+    "v1TenantUnbindRequst": {
+      "type": "object",
+      "properties": {
+        "tenantID": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "*\nThe request value of the POST /v1/tenant/unbind,\nused when the tenant administrator disables the plugin."
+    },
+    "v1TenantUnbindResponse": {
+      "type": "object",
+      "properties": {
+        "res": {
+          "$ref": "#/definitions/v1Result"
+        }
+      },
+      "description": "*\nThe response value of the POST /v1/tenant/unbind,\nused when the tenant administrator disables the plugin."
+    },
+    "v1TopicEventRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "specversion": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "datacontenttype": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "data_base64": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "pubsubname": {
+          "type": "string"
+        }
+      }
+    },
+    "v1TopicEventResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

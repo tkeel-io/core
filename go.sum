@@ -266,6 +266,8 @@ github.com/mattn/go-colorable v0.1.6/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope
 github.com/mattn/go-colorable v0.1.9/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
 github.com/mattn/go-colorable v0.1.11 h1:nQ+aFkoE2TMGc0b68U2OKSexC+eq46+XwZzWXHRmPYs=
 github.com/mattn/go-colorable v0.1.11/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=
+github.com/mattn/go-colorable v0.1.12 h1:jF+Du6AlPIjs2BiUiQlKOX0rt3SujHxPnksPKZbaA40=
+github.com/mattn/go-colorable v0.1.12/go.mod h1:u5H1YNBxpqRaxsYJYSkiCWKzEfiAb1Gb520KVy5xxl4=
 github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNxMWT7Zi4=
 github.com/mattn/go-isatty v0.0.8/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
 github.com/mattn/go-isatty v0.0.10/go.mod h1:qgIWMr58cqv1PHHyhnkY9lrL7etaEgOFcMEpPG5Rm84=
@@ -367,10 +369,16 @@ github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211120061859-03db925d74cd h
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211120061859-03db925d74cd/go.mod h1:tjJgHPar2pFjydhnOCLspww8tSOvcKch241PeP9OL8E=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211122073004-a685e039de52 h1:g5LangXChMMQAT6jmQ1hTceoc1owRtsQtv13FHKwPa4=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211122073004-a685e039de52/go.mod h1:tjJgHPar2pFjydhnOCLspww8tSOvcKch241PeP9OL8E=
+github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211122135618-1bef12bc8c9c h1:QU7A1utT/RiStSrGiUVCH+a+/WriXXHTca51LUKc1HQ=
+github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211122135618-1bef12bc8c9c/go.mod h1:tjJgHPar2pFjydhnOCLspww8tSOvcKch241PeP9OL8E=
 github.com/tkeel-io/tkeel-interface/protoc-gen-go-http v0.0.0-20211122073004-a685e039de52 h1:IO1xfqBgzYQfdLVdC9RSNzAtWkdt5bhswqpjklTd7iI=
 github.com/tkeel-io/tkeel-interface/protoc-gen-go-http v0.0.0-20211122073004-a685e039de52/go.mod h1:JaPca0Fqdxddq5MqIU8ikUu86eqFRfXveJ4/ArLDCaE=
+github.com/tkeel-io/tkeel-interface/protoc-gen-go-http v0.0.0-20211122135618-1bef12bc8c9c h1:dJxALoaC1gpFau8+8Tm9EZOtxgidEWDZq+w+nVs879g=
+github.com/tkeel-io/tkeel-interface/protoc-gen-go-http v0.0.0-20211122135618-1bef12bc8c9c/go.mod h1:JaPca0Fqdxddq5MqIU8ikUu86eqFRfXveJ4/ArLDCaE=
 github.com/tkeel-io/tkeel-interface/tool v0.0.0-20211122073004-a685e039de52 h1:21dctgLElz7jATTgqB8BIGE7xbqDfT8EqLY6gCUjYJY=
 github.com/tkeel-io/tkeel-interface/tool v0.0.0-20211122073004-a685e039de52/go.mod h1:9960sxFvuhgCEy0hDpUNpxcyEVPvYgerreM8D1wUw0w=
+github.com/tkeel-io/tkeel-interface/tool v0.0.0-20211122135618-1bef12bc8c9c h1:tfV3kf2TMenIpNfKh1hLZ3Xd81JSXOxAmL5h9NTd49Q=
+github.com/tkeel-io/tkeel-interface/tool v0.0.0-20211122135618-1bef12bc8c9c/go.mod h1:9960sxFvuhgCEy0hDpUNpxcyEVPvYgerreM8D1wUw0w=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
@@ -575,6 +583,8 @@ golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1 h1:kwrAHlwJ0DUBZwQ238v+Uod/3eZ8B2K5rYsUHBQvzmI=
 golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20211123173158-ef496fb156ab h1:rfJ1bsoJQQIAoAxTxB7bme+vHrNkRw8CqfsYh9w54cw=
+golang.org/x/sys v0.0.0-20211123173158-ef496fb156ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210503060354-a79de5458b56/go.mod h1:tfny5GFUkzUvx4ps4ajbZsCe5lw1metzhBm9T3x7oIY=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 h1:JGgROgKl9N8DuW20oFS5gxc+lE67/N3FcwmBPMe7ArY=

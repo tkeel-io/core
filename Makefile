@@ -95,23 +95,32 @@ API_PROTO_FILES=$(shell find api -name *.proto)
 .PHONY: init
 # init env
 init:
-	go get -u github.com/tkeel-io/tkeel-interface/tool/cmd/artisan
-	go get -u github.com/tkeel-io/tkeel-interface/openapi
-	go get -u github.com/tkeel-io/kit
-	go get -u google.golang.org/protobuf/cmd/protoc-gen-go
-	go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
-	go get -u github.com/tkeel-io/tkeel-interface/protoc-gen-go-http
-	go get -u github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
+	go get -d -u  github.com/tkeel-io/tkeel-interface/openapi
+	go get -d -u  github.com/tkeel-io/kit
+	go get -d -u  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.7.0
+
+	go install  github.com/tkeel-io/tkeel-interface/tool/cmd/artisan@latest
+	go install  google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
+	go install  google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-http@latest
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-errors@latest
+	go install  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.7.0
 
 .PHONY: api
 # generate api proto
 api:
 	protoc --proto_path=. \
-               --proto_path=./third_party \
-               --go_out=paths=source_relative:. \
-               --go-http_out=paths=source_relative:. \
-               --go-grpc_out=paths=source_relative:. \
-               $(API_PROTO_FILES)
+	       --proto_path=./third_party \
+ 	       --go_out=paths=source_relative:. \
+ 	       --go-http_out=paths=source_relative:. \
+ 	       --go-grpc_out=paths=source_relative:. \
+ 	       --go-errors_out=paths=source_relative:. \
+ 	       --openapiv2_out=./api/ \
+		   --openapiv2_opt=allow_merge=true \
+ 	       --openapiv2_opt=logtostderr=true \
+ 	       --openapiv2_opt=json_names_for_fields=false \
+	       $(API_PROTO_FILES)
+
 
 build:
 	@echo "---------------------------"

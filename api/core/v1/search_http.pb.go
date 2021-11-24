@@ -7,17 +7,16 @@ package v1
 import (
 	context "context"
 	json "encoding/json"
-	http "net/http"
-
 	go_restful "github.com/emicklei/go-restful"
-	transportHTTP "github.com/tkeel-io/kit/transport/http"
+	errors "github.com/tkeel-io/kit/errors"
+	http "net/http"
 )
+
+import transportHTTP "github.com/tkeel-io/kit/transport/http"
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
-// import package.context.http.go_restful.json.
-
-const _ = transportHTTP.ImportAndUsed
+// import package.context.http.go_restful.json.errors.
 
 type SearchHTTPServer interface {
 	Index(context.Context, *IndexObject) (*IndexResponse, error)
@@ -34,7 +33,6 @@ func newSearchHTTPHandler(s SearchHTTPServer) *SearchHTTPHandler {
 
 func (h *SearchHTTPHandler) Index(req *go_restful.Request, resp *go_restful.Response) {
 	in := IndexObject{}
-	req.Request.Header.Set(go_restful.HEADER_ContentType, go_restful.MIME_JSON)
 	if err := transportHTTP.GetBody(req, &in.Obj); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -44,9 +42,13 @@ func (h *SearchHTTPHandler) Index(req *go_restful.Request, resp *go_restful.Resp
 		return
 	}
 
-	out, err := h.srv.Index(req.Request.Context(), &in)
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.Index(ctx, &in)
 	if err != nil {
-		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
 
@@ -69,9 +71,13 @@ func (h *SearchHTTPHandler) Search(req *go_restful.Request, resp *go_restful.Res
 		return
 	}
 
-	out, err := h.srv.Search(req.Request.Context(), &in)
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.Search(ctx, &in)
 	if err != nil {
-		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
 

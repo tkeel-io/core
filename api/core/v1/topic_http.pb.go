@@ -8,6 +8,7 @@ import (
 	context "context"
 	json "encoding/json"
 	go_restful "github.com/emicklei/go-restful"
+	errors "github.com/tkeel-io/kit/errors"
 	http "net/http"
 )
 
@@ -15,9 +16,7 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
-// import package.context.http.go_restful.json.
-
-const _ = transportHTTP.ImportAndUsed
+// import package.context.http.go_restful.json.errors.
 
 type TopicHTTPServer interface {
 	TopicEventHandler(context.Context, *TopicEventRequest) (*TopicEventResponse, error)
@@ -33,15 +32,18 @@ func newTopicHTTPHandler(s TopicHTTPServer) *TopicHTTPHandler {
 
 func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_restful.Response) {
 	in := TopicEventRequest{}
-	req.Request.Header.Set(go_restful.HEADER_ContentType, go_restful.MIME_JSON)
 	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	out, err := h.srv.TopicEventHandler(req.Request.Context(), &in)
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.TopicEventHandler(ctx, &in)
 	if err != nil {
-		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
 
