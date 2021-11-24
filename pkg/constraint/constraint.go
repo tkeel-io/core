@@ -14,6 +14,15 @@ var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
 )
 
+var callbacks = map[string]func(op Operator, val Node) (Node, error){
+	"max": func(op Operator, val Node) (Node, error) {
+		return val, nil
+	},
+	"size": func(op Operator, val Node) (Node, error) {
+		return val, nil
+	},
+}
+
 type Operator struct {
 	Callback  string
 	Condition interface{}
@@ -119,7 +128,8 @@ func parseDefine(define map[string]interface{}) []Operator {
 }
 
 func keyContains(key string) bool {
-	return true
+	_, flag := callbacks[key]
+	return flag
 }
 
 func ExecData(val Node, ct *Constraint) (Node, error) {
