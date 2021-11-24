@@ -13,7 +13,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscri
 
 ### Subscription Create
 ```bash
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/subscriptions?id=sub123&owner=admin&type=SUBSCRIPTION" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/subscriptions?id=sub123&owner=admin&type=SUBSCRIPTION" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" \
   -d '{
