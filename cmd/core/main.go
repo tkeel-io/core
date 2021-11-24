@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
@@ -21,15 +22,17 @@ import (
 )
 
 var (
-	Name     string
-	HTTPAddr string
-	GRPCAddr string
+	Name          string
+	HTTPAddr      string
+	GRPCAddr      string
+	SearchBrokers string
 )
 
 func init() {
 	flag.StringVar(&Name, "name", "core", "app name.")
 	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
+	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
 }
 
 func main() {
@@ -53,7 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	searchClient := search.NewESClient("http://127.0.0.1:9200")
+	searchClient := search.NewESClient(strings.Split(SearchBrokers, ",")...)
 	entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool, searchClient)
 	if nil != err {
 		log.Fatal(err)
