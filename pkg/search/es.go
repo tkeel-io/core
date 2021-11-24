@@ -55,6 +55,8 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	return out, errors.Wrap(err, "es index failed")
 }
 
+// reference: https://www.tutorialspoint.com/elasticsearch/elasticsearch_query_dsl.htm#:~:text=In%20Elasticsearch%2C%20searching%20is%20carried%20out%20by%20using,look%20for%20a%20specific%20value%20in%20specific%20field.
+// convert condition.
 func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.BoolQuery) {
 	for _, condition := range conditions {
 		switch condition.Operator {
@@ -78,10 +80,9 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 
 func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.SearchResponse, err error) {
 	out = &pb.SearchResponse{}
-	out.Items = make([]*structpb.Value, 0)
+	boolQuery := elastic.NewBoolQuery()
 	searchQuery := es.client.Search().Index(EntityIndex)
 
-	boolQuery := elastic.NewBoolQuery()
 	if req.Condition != nil {
 		condition2boolQuery(req.Condition, boolQuery)
 	}
@@ -89,25 +90,16 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
 	}
 
-	if req.Page == nil {
-		req.Page = &pb.Pager{
-			Limit:   10,
-			Offset:  0,
-			Sort:    "",
-			Reverse: false,
-		}
-	}
+	req.Page = defaultPage(req.Page)
 	searchQuery = searchQuery.Query(boolQuery)
-	if req.Page.Sort != "" {
-		searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse)
-	}
-
+	// searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse).
 	searchQuery = searchQuery.From(int(req.Page.Offset)).Size(int(req.Page.Limit))
 
 	searchResult, err := searchQuery.Pretty(true).Do(ctx)
 	if err != nil {
 		return
 	}
+
 	var ttyp map[string]interface{}
 	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
 		if t, ok := item.(map[string]interface{}); ok {
@@ -115,12 +107,28 @@ func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.
 			out.Items = append(out.Items, tt)
 		}
 	}
+
 	out.Total = searchResult.TotalHits()
 	if req.Page != nil {
 		out.Limit = req.Page.Limit
 		out.Offset = req.Page.Offset
 	}
+
 	return out, errors.Wrap(err, "search failed")
+}
+
+func defaultPage(page *pb.Pager) *pb.Pager {
+	if nil == page {
+		page = &pb.Pager{}
+	}
+
+	if page.Limit == 0 {
+		page.Limit = 10
+	}
+	if page.Sort == "" {
+		page.Sort = "id"
+	}
+	return page
 }
 
 func NewESClient(url ...string) pb.SearchHTTPServer {

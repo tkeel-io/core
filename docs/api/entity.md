@@ -232,6 +232,16 @@ http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{id}/
 | Mapper.Name | string | true | body | `mapper` 的名称。|
 | Mapper.TQL | string | true | body | `mapper` 的规则。|
 
+
+**Reponse:**
+
+
+
+
+
+
+
+
 ```bash
 curl -XPOST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/mappers" \
   -H "Source: abcd" \
