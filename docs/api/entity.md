@@ -38,7 +38,7 @@
 - URL:
 
  ```
- http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities?id={entity_id}&owner={owner}&type={type}
+ http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities?id={entity_id}&owner={owner}&type={type}
 ```
 
 **Params：**
@@ -46,17 +46,17 @@
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属 Plugin。 | 
-| EntityId | string | false | path/query | 用于标识创建的实体的Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| EntityId | string | false | query | 用于标识创建的实体的Id。`plugins/abcd/entities?id=test123`。|
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起 Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Body |json|false|body|用于创建实体时的初始属性。|
+| Body | json | false | body| 用于创建实体时的初始属性, 以KV的形式存在。|
 
-创建 entity, POST 支持 `upsert` 操作
+> 创建 entity, POST 支持 `upsert` 操作， `id` 参数是可选的。
 
 ```bash
 # 创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?owner=admin&type=DEVICE" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities?owner=admin&type=DEVICE" \
   -H "Content-Type: application/json" \
   -H "Source: abcd" \
   -d '{
@@ -64,7 +64,7 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
      }'
 
 # 指定entityId创建entity
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities?id=test123&source=abcd&owner=admin&type=device" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities?id=test123&source=abcd&owner=admin&type=device" \
   -H "Content-Type: application/json" \
   -d '{
        "status": "start",
@@ -72,13 +72,17 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
      }'
 
 # 不指定entity id
-curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities" \
+curl -X POST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities" \
   -H "Source: abcd" \
   -H "Owner: admin" \
   -H "Type: DEVICE" \
   -H "Content-Type: application/json" \
   -d '{
-       "status": "completed"
+       "key1": "value1",
+       "key2": "value2",
+       "key3": "value3",
+       "key4": "value4",
+       "key5": "value5"
      }'
 ```
 
@@ -88,21 +92,21 @@ curl -X POST "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entitie
 - URL:
 
 ```
-http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
 ```
 
 **Params：**
 
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
-| PluginId | string | true |path | 用于标识操作实体所属Plugin。 |
-| EntityId | string | true | path/query | 实体的Id。|
+| PluginId | string | true | path | 用于标识操作实体所属Plugin。 |
+| EntityId | string | true | path | 实体的Id。|
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
 
 ```bash
-curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
+curl -X GET "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "Owner: admin"  \
   -H "Type: DEVICE"
@@ -114,7 +118,7 @@ curl -X GET "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 - URL:
 
 ```
-http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
 ```
 
 **Params：**
@@ -122,14 +126,14 @@ http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属 Plugin。 | 
-| EntityId | string | true | path/query | 实体的 Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| EntityId | string | true | path | 实体的 Id。`plugins/abcd/entities/test123`。|
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起 Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
-| Body |json|false|body|用于更新的实体的属性|
+| Body | json | false | body | 用于更新的实体的属性, 以KV的形式存在。|
 
 ```bash
-curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "Owner: admin" \
   -H "Type: DEVICE" \
@@ -146,7 +150,7 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities
 - URL:
 
 ```
-http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
 ```
 
 **Params：**
@@ -154,23 +158,119 @@ http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities/{entity_
 | Name | Type | Required | Where | Description |
 | ---- | ---- | -------- | ----- | ----------- |
 | PluginId | string | true |path | 用于标识操作实体所属 Plugin。 | 
-| EntityId | string | true | path/query | 实体的 Id。`plugins/abcd/entities/test123 或 plugins/abcd/entities?id=test123`。|
+| EntityId | string | true | path | 实体的 Id。`plugins/abcd/entities/test123`。|
 | Type | string | true | header/query | 用于标识实体的类型。|
 | Source | string | true | header/query | 用于标识请求的发起 Plugin。|
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
 
 ```bash
-curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/plugins/abcd/entities/test123" \
+curl -X DELETE "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
   -H "Owner: admin" \
   -H "Type: DEVICE" 
 ```
 
-### 筛选 Entities
 
-- Method: **GET**
+### 搜索 Entities
+
+- Method: **POST**
 - URL:
 
 ```
-http://localhost:3500/v1.0/invoke/core/method/plugins/{plugin}/entities?owner={owner}&type={type}
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/search?owner={owner}&type={type}
+```
+
+**Params:** 
+
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属 Plugin。 | 
+| Type | string | true | header/body | 用于标识实体的类型。|
+| Source | string | true | header/body | 用于标识请求的发起 Plugin。|
+| Owner | string | true | header/body | 用于标识请求的发起用户。|
+| Query | string | false | body | TODO |
+| Page.Limit | int | false | body | 分页参数，用于限制分页大小。|
+| Page.Offset | int | false | body | 分页参数，用于限制分页偏移。|
+| Page.Sort | string | false | body | 分页参数，用于指定排序字段。|
+| Page.Reverse | bool | false | body | 分页参数，用于指定排序方式。|
+| Condition | object | false | body | 查询条件参数。|
+
+
+```bash
+curl -XPOST http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/search \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "page": {
+        "limit": 2
+      }
+  }'
+```
+
+
+
+### 增加/更新 Mapper
+
+- Method: **POST**
+- URL:
+
+```
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{id}/mappers?owner={owner}&type={type}
+```
+
+**Params：**
+
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true | path/query | 用于标识操作实体所属 Plugin。 | 
+| EntityId | string | true | path/query | 实体的 Id。`plugins/abcd/entities/test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起 Plugin。|
+| Owner | string | true | header/query | 用于标识请求的发起用户。|
+| Mapper.Name | string | true | body | `mapper` 的名称。|
+| Mapper.TQL | string | true | body | `mapper` 的规则。|
+
+```bash
+curl -XPOST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/mappers" \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '{
+       "name": "mapper001",
+       "tql": "insert into test123 select test234.temp as temp"
+     }'
+```
+
+
+
+### 删除 Mapper
+
+- Method: **Delete**
+- URL:
+
+```
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{id}/mappers/{name}?owner={owner}&type={type}
+```
+
+**Params：**
+
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true | path/query | 用于标识操作实体所属 Plugin。 | 
+| EntityId | string | true | path/query | 实体的 Id。`plugins/abcd/entities/test123`。|
+| Name | string | true | path | `mapper` 的名称。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起 Plugin。|
+| Owner | string | true | header/query | 用于标识请求的发起用户。|
+
+
+```bash
+curl -XPOST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/mappers/mapper001" \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json"
 ```
