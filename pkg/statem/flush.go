@@ -51,7 +51,6 @@ func (s *statem) flushSeatch() error {
 		flushData["id"] = s.ID
 		flushData["type"] = s.Type
 		flushData["owner"] = s.Owner
-		flushData["status"] = s.Status
 		flushData["source"] = s.Source
 		flushData["version"] = s.Version
 		flushData["last_time"] = s.LastTime

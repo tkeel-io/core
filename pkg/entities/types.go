@@ -10,9 +10,9 @@ import (
 var (
 	log = logger.NewLogger("core.entities")
 
-	errEntityNotFound    = errors.New("entity not found")
-	errEmptyEntityMapper = errors.New("empty entity mapper")
-	errEntityNotAready   = errors.New("entity not already")
+	errEntityNotFound      = errors.New("entity not found")
+	errEmptyEntityMapper   = errors.New("empty entity mapper")
+	errSubscriptionInvalid = errors.New("invalid params")
 )
 
 const (
@@ -33,13 +33,3 @@ type EntitySubscriptionOp interface {
 }
 
 type WatchKey = mapper.WatchKey
-
-// EntityBase statem basic informatinon.
-type PropsBase struct {
-	ID      string            `json:"id"`
-	Type    string            `json:"type"`
-	Owner   string            `json:"owner"`
-	Status  string            `json:"status"`
-	Source  string            `json:"source"`
-	KValues map[string][]byte `json:"properties"` //nolint
-}

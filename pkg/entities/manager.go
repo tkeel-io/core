@@ -152,9 +152,10 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 		return nil, errEntityNotFound
 	}
 
-	m.entities[en.ID].GetBase().Status = statem.StateStatusDeleted
+	// 1. 从状态存储中删除.
+	// 2. 从搜索引擎中删除.
+	// 3. 将删除记录写入日志.
 	enObj := m.entities[en.ID].GetBase().Copy()
-
 	return &enObj, nil
 }
 
