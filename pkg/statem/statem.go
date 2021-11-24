@@ -54,7 +54,6 @@ type Base struct {
 	ID       string                       `json:"id"`
 	Type     string                       `json:"type"`
 	Owner    string                       `json:"owner"`
-	Status   string                       `json:"status"`
 	Source   string                       `json:"source"`
 	Version  int64                        `json:"version"`
 	LastTime int64                        `json:"last_time"`
@@ -68,7 +67,6 @@ func (b *Base) Copy() Base {
 		ID:       b.ID,
 		Type:     b.Type,
 		Owner:    b.Owner,
-		Status:   b.Status,
 		Source:   b.Source,
 		Version:  b.Version,
 		LastTime: b.LastTime,
@@ -116,7 +114,6 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 			ID:      in.ID,
 			Type:    in.Type,
 			Owner:   in.Owner,
-			Status:  StateStatusActive,
 			KValues: make(map[string]constraint.Node),
 			Configs: make(map[string]constraint.Config),
 		},

@@ -55,10 +55,9 @@ func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (
 	stateM, err := statem.NewState(ctx, mgr, in, subsc.HandleMessage)
 	if nil != err {
 		return nil, errors.Wrap(err, "create subscription failed")
-	}
-
-	stateM.GetBase().Status = subsc.checkSubscription()
-	if err = mapstructure.Decode(in.KValues, &subsc); nil != err {
+	} else if err = subsc.checkSubscription(); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	} else if err = mapstructure.Decode(in.KValues, &subsc); nil != err {
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
@@ -68,10 +67,6 @@ func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
-	if statem.StateStatusInactive == s.stateMarchine.GetBase().Status {
-		return errors.Wrap(errEntityNotAready, "setup subscription failed")
-	}
-
 	// set mapper.
 	s.stateMarchine.GetBase().Mappers =
 		[]statem.MapperDesc{
@@ -173,11 +168,11 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 }
 
 // checkSubscription returns subscription status.
-func (s *subscription) checkSubscription() string {
+func (s *subscription) checkSubscription() error {
 	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
 		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
-		return statem.StateStatusInactive
+		return errSubscriptionInvalid
 	}
 
-	return statem.StateStatusActive
+	return nil
 }
