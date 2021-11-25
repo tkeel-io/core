@@ -26,6 +26,12 @@ service Entity {
 			body : "properties"
 		};
 	};
+    rpc PatchEntity (PatchEntityRequest) returns (EntityResponse) {
+        option (google.api.http) = {
+            patch: "/plugins/{plugin}/entities/{id}"
+            body: "properties"
+        };
+    };
 	rpc DeleteEntity (DeleteEntityRequest) returns (DeleteEntityResponse) {
 		option (google.api.http) = {
 			delete : "/plugins/{plugin}/entities/{id}"
@@ -89,6 +95,25 @@ message UpdateEntityRequest {
     google.protobuf.Value properties = 5;
 }
 
+
+message PatchData {
+    string path = 1;
+    string operator = 2;
+    google.protobuf.Value value = 3;
+}
+
+
+message PatchDatas {
+    repeated PatchData properties = 1;
+}
+
+message PatchEntityRequest {
+    string id = 1;
+    string plugin = 2;
+    string source = 3;
+    string owner = 4;
+    google.protobuf.Value properties = 5;
+}
 
 message DeleteEntityRequest {
     string id = 1;

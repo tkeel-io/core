@@ -19,8 +19,6 @@ func Patch(destNode, srcNode Node, path, op string) (Node, error) { //nolint
 		s, _ := sVal.Value().(string)
 		collect := collectjs.New(s)
 		switch op {
-		default:
-			return destNode, ErrJSONPatchReservedOp
 		case PatchOperatorRemove:
 			collect.Del(path)
 		case PatchOperatorCopy:
@@ -29,6 +27,8 @@ func Patch(destNode, srcNode Node, path, op string) (Node, error) { //nolint
 			}
 		case PatchOperatorAdd:
 		case PatchOperatorReplace:
+		default:
+			return destNode, ErrJSONPatchReservedOp
 		}
 
 		// dispose 'remove' & 'add'
@@ -42,7 +42,7 @@ func Patch(destNode, srcNode Node, path, op string) (Node, error) { //nolint
 			collect.Append(path, ToBytesWithWrapString(srcNode))
 		}
 
-		return NewNode(collect.GetRaw()), collect.GetError()
+		return JSONNode(collect.GetRaw()), nil
 	}
 	return destNode, ErrInvalidNodeType
 }

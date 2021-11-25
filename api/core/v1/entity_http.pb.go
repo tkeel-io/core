@@ -24,6 +24,7 @@ type EntityHTTPServer interface {
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	PatchEntity(context.Context, *PatchEntityRequest) (*EntityResponse, error)
 	SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 }
@@ -209,6 +210,43 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 	}
 }
 
+func (h *EntityHTTPHandler) PatchEntity(req *go_restful.Request, resp *go_restful.Response) {
+	in := PatchEntityRequest{}
+	if err := transportHTTP.GetBody(req, &in.Properties); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.PatchEntity(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
 func (h *EntityHTTPHandler) SetEntityConfigs(req *go_restful.Request, resp *go_restful.Response) {
 	in := SetEntityConfigRequest{}
 	if err := transportHTTP.GetBody(req, &in.Configs); err != nil {
@@ -303,6 +341,8 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.CreateEntity))
 	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}").
 		To(handler.UpdateEntity))
+	ws.Route(ws.PATCH("/plugins/{plugin}/entities/{id}").
+		To(handler.PatchEntity))
 	ws.Route(ws.DELETE("/plugins/{plugin}/entities/{id}").
 		To(handler.DeleteEntity))
 	ws.Route(ws.GET("/plugins/{plugin}/entities/{id}").

@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
-	"google.golang.org/protobuf/internal/errors"
 )
 
 const (
@@ -410,12 +410,12 @@ func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
 	// 我们或许应该在这里解析propertyKey中的嵌套层次.
 	if !strings.Contains(propertyKey, ".") {
 		s.KValues[propertyKey] = value
+		return
 	}
 
-	arr := strings.Split(propertyKey, ".")
-
 	// patch property.
-	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, op, arr[1])
+	arr := strings.Split(propertyKey, ".")
+	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, arr[1], op)
 	if nil != err {
 		log.Errorf("set property failed, err: %s", err.Error())
 		return

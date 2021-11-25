@@ -10,6 +10,7 @@ import (
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/statem"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -183,6 +184,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
+			Operator:   constraint.PatchOperatorReplace,
 			Properties: en.KValues,
 		},
 	}
@@ -194,6 +196,47 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 	m.SendMsg(msgCtx)
 
 	return nil, nil
+}
+
+func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
+	// just for standalone.
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("PatchEntity failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
+	}
+
+	pdm := make(map[string][]*pb.PatchData)
+	for _, pd := range patchData {
+		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
+	}
+
+	for op, pds := range pdm {
+		kvs := make(map[string]constraint.Node)
+		for _, pd := range pds {
+			kvs[pd.Path] = constraint.NewNode(pd.Value.AsInterface())
+			fmt.Println("=====", pd.Value.AsInterface())
+		}
+
+		if len(kvs) > 0 {
+			msgCtx := statem.MessageContext{
+				Headers: statem.Header{},
+				Message: statem.PropertyMessage{
+					StateID:    en.ID,
+					Operator:   op,
+					Properties: kvs,
+				},
+			}
+
+			// set headers.
+			msgCtx.Headers.SetOwner(en.Owner)
+			msgCtx.Headers.SetTargetID(en.ID)
+			msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
+			m.SendMsg(msgCtx)
+		}
+	}
+
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // SetProperties set properties into entity.
