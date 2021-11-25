@@ -12,6 +12,10 @@ const (
 
 var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
+	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")
+	ErrInvalidNodeType     = errors.New("undefine node type")
+	ErrEmptyParam          = errors.New("empty params")
+	ErrPatchNotFound       = errors.New("patch not found")
 )
 
 type Operator struct {

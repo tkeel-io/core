@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"google.golang.org/protobuf/internal/errors"
 )
 
 const (
@@ -294,7 +296,11 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
-		stateProps[key] = value
+		if s.ID == msg.StateID {
+			s.setProperty(msg.Operator, key, value)
+		} else {
+			stateProps[key] = value
+		}
 		watchKeys = append(watchKeys, mapper.WatchKey{EntityId: setStateID, PropertyKey: key})
 	}
 
@@ -363,7 +369,12 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		input := make(map[string]constraint.Node)
 		for _, tentacle := range s.indexTentacles[mapperID] {
 			for _, item := range tentacle.Items() {
-				input[item.String()] = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
+				val, err := s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
+				if nil != err {
+					log.Errorf("get property(%s) failed, err: %v", item.PropertyKey, err)
+					continue
+				}
+				input[item.String()] = val
 			}
 		}
 
@@ -377,29 +388,40 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
-				s.setProperty(propertyKey, value)
+				s.setProperty(constraint.PatchOperatorReplace, propertyKey, value)
 			}
 			s.LastTime = time.Now().UnixNano() / 1e6
 		}
 	}
 }
 
-func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) constraint.Node {
-	if len(properties) == 0 {
-		return nil
+func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
+	if !strings.Contains(propertyKey, ".") {
+		return s.KValues[propertyKey], nil
 	}
 
-	// 我们或许应该在这里解析propertyKey中的嵌套层次.
-	return properties[propertyKey]
+	arr := strings.Split(propertyKey, ".")
+	// patch property.
+	res, err := constraint.Patch(properties[arr[0]], nil, constraint.PatchOperatorCopy, arr[1])
+	return res, errors.Wrap(err, "get patch failed")
 }
 
-func (s *statem) setProperty(propertyKey string, value constraint.Node) {
+func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
 	// 我们或许应该在这里解析propertyKey中的嵌套层次.
-	if _, has := s.KValues[propertyKey]; !has {
+	if !strings.Contains(propertyKey, ".") {
 		s.KValues[propertyKey] = value
+	}
+
+	arr := strings.Split(propertyKey, ".")
+
+	// patch property.
+	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, op, arr[1])
+	if nil != err {
+		log.Errorf("set property failed, err: %s", err.Error())
 		return
 	}
-	s.KValues[propertyKey] = value
+
+	s.KValues[arr[0]] = resultNode
 }
 
 // invokeMapperMsg dispose mapper msg.
