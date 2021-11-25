@@ -177,6 +177,10 @@ http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{enti
 | Owner | string | true | header/query | 用于标识请求的发起用户。|
 | Body | json | false | body | 用于更新的实体的属性, 以KV的形式存在。|
 
+
+> body: [{"path": "string", "operator": "string", "value": "interface{}"}, ...], operator: [ add | replace | remove ].
+
+
 ```bash
 curl -X PATCH "http://localhost:6789/v1/plugins/abcd/entities/test123" \
   -H "Source: abcd" \
