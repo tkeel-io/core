@@ -297,7 +297,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
 		if s.ID == msg.StateID {
-			s.setProperty(msg.Operator, key, value)
+			s.setProperty(constraint.NewPatchOperator(msg.Operator), key, value)
 		} else {
 			stateProps[key] = value
 		}
@@ -388,7 +388,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
-				s.setProperty(constraint.PatchOperatorReplace, propertyKey, value)
+				s.setProperty(constraint.PatchOpReplace, propertyKey, value)
 			}
 			s.LastTime = time.Now().UnixNano() / 1e6
 		}
@@ -402,11 +402,11 @@ func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey 
 
 	arr := strings.Split(propertyKey, ".")
 	// patch property.
-	res, err := constraint.Patch(properties[arr[0]], nil, constraint.PatchOperatorCopy, arr[1])
+	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
 	return res, errors.Wrap(err, "get patch failed")
 }
 
-func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
+func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, value constraint.Node) {
 	// 我们或许应该在这里解析propertyKey中的嵌套层次.
 	if !strings.Contains(propertyKey, ".") {
 		s.KValues[propertyKey] = value
