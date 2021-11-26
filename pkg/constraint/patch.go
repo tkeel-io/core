@@ -64,10 +64,12 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 		switch op {
 		case PatchOpRemove:
 			collect.Del(path)
+			return JSONNode(collect.GetRaw()), collect.GetError()
 		case PatchOpCopy:
 			if collect = collect.Get(path); nil == collect {
 				return nil, ErrPatchNotFound
 			}
+			return JSONNode(collect.GetRaw()), collect.GetError()
 		case PatchOpAdd:
 		case PatchOpReplace:
 		default:
