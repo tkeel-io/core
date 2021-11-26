@@ -221,7 +221,7 @@ func NewNode(v interface{}) Node { //nolint
 		data, _ := json.Marshal(v)
 		return JSONNode(string(data))
 	case nil:
-		return UndefineResult
+		return NullNode{}
 	default:
 		if reflect.Ptr == reflect.TypeOf(val).Kind() {
 			// deference pointer.

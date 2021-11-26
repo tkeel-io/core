@@ -1,6 +1,8 @@
 package constraint
 
 import (
+	"strings"
+
 	"github.com/tkeel-io/collectjs"
 )
 
@@ -54,6 +56,22 @@ func (po PatchOperator) String() string {
 	default:
 		return "undefine"
 	}
+}
+
+func IsReversedOp(op string) bool {
+	switch op {
+	case "add", "remove", "replace":
+		return false
+	default:
+		return true
+	}
+}
+
+func IsValidPath(path string) bool {
+	if path == "" || strings.HasPrefix(path, ".") || strings.HasSuffix(path, ".") {
+		return false
+	}
+	return true
 }
 
 func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) { //nolint
