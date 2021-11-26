@@ -10,6 +10,7 @@ var (
 	ErrInvalidNodeType     = errors.New("undefine node type")
 	ErrEmptyParam          = errors.New("empty params")
 	ErrPatchNotFound       = errors.New("patch not found")
+	ErrPatchPathInvalid    = errors.New("invalid patch path")
 )
 
 var callbacks = map[string]func(op Operator, val Node) (Node, error){
