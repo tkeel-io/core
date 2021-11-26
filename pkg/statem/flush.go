@@ -26,10 +26,6 @@ func (s *statem) flushSeatch() error {
 		flushData map[string]interface{}
 	)
 
-	if len(s.searchConstraints) == 0 {
-		return nil
-	}
-
 	flushData = make(map[string]interface{})
 	for _, JSONPath := range s.searchConstraints {
 		if val := s.getValByJSONPath(JSONPath); nil != val {
@@ -47,17 +43,16 @@ func (s *statem) flushSeatch() error {
 		}
 	}
 
-	if len(flushData) > 0 {
-		flushData["id"] = s.ID
-		flushData["type"] = s.Type
-		flushData["owner"] = s.Owner
-		flushData["source"] = s.Source
-		flushData["version"] = s.Version
-		flushData["last_time"] = s.LastTime
-		err = s.stateManager.SearchFlush(context.Background(), flushData)
-	}
+	// basic fields.
+	flushData["id"] = s.ID
+	flushData["type"] = s.Type
+	flushData["owner"] = s.Owner
+	flushData["source"] = s.Source
+	flushData["version"] = s.Version
+	flushData["last_time"] = s.LastTime
+	err = s.stateManager.SearchFlush(context.Background(), flushData)
 
-	log.Debugf("flush state Search, data: %v", flushData)
+	log.Infof("flush state Search, data: %v, err: %v", flushData, err)
 	return errors.Wrap(err, "Search flush failed")
 }
 

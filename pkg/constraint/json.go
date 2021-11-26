@@ -167,6 +167,20 @@ func (r StringNode) To(typ Type) Node { //nolint
 	}
 }
 
+type NullNode struct{}
+
+func (r NullNode) Type() Type         { return Null }
+func (r NullNode) String() string     { return "null" }
+func (r NullNode) Value() interface{} { return nil }
+func (r NullNode) To(typ Type) Node {
+	switch typ {
+	case Null:
+		return r
+	default:
+		return UndefineResult
+	}
+}
+
 // JSONNode maybe Object or Array.
 type JSONNode []byte
 
@@ -182,11 +196,14 @@ func (r JSONNode) To(typ Type) Node {
 	switch typ {
 	case String:
 		return StringNode(r)
+	case JSON:
+		return r
+	default:
+		return UndefineResult
 	}
-	return UndefineResult
 }
 
-func NewNode(v interface{}) Node {
+func NewNode(v interface{}) Node { //nolint
 	switch val := v.(type) {
 	case float32:
 		return FloatNode(val)
@@ -203,6 +220,8 @@ func NewNode(v interface{}) Node {
 	case map[string]interface{}:
 		data, _ := json.Marshal(v)
 		return JSONNode(string(data))
+	case nil:
+		return UndefineResult
 	default:
 		if reflect.Ptr == reflect.TypeOf(val).Kind() {
 			// deference pointer.
