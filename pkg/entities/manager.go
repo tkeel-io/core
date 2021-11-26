@@ -214,7 +214,6 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		kvs := make(map[string]constraint.Node)
 		for _, pd := range pds {
 			kvs[pd.Path] = constraint.NewNode(pd.Value.AsInterface())
-			fmt.Println("=====", pd.Value.AsInterface())
 		}
 
 		if len(kvs) > 0 {
