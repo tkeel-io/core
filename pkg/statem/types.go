@@ -63,19 +63,19 @@ type PromiseFunc = func(interface{})
 
 type Message interface {
 	Message()
-	Promise() PromiseFunc
+	Promised(interface{})
 }
 
-type messageBase struct {
+type MessageBase struct {
 	PromiseHandler PromiseFunc `json:"-"`
 }
 
-func (ms messageBase) Message() {}
-func (ms messageBase) Promise() PromiseFunc {
+func (ms MessageBase) Message() {}
+func (ms MessageBase) Promised(v interface{}) {
 	if nil == ms.PromiseHandler {
-		return func(interface{}) {}
+		return
 	}
-	return ms.PromiseHandler
+	ms.PromiseHandler(v)
 }
 
 type Header map[string]string
