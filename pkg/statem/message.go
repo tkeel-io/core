@@ -7,7 +7,7 @@ import (
 
 // PropertyMessage state property message.
 type StateMessage struct {
-	messageBase
+	MessageBase
 
 	StateID  string `json:"state_id"`
 	Operator string `json:"operator"`
@@ -23,24 +23,22 @@ func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMes
 
 // PropertyMessage state property message.
 type PropertyMessage struct {
-	messageBase
+	MessageBase
 
 	StateID    string                     `json:"state_id"`
 	Operator   string                     `json:"operator"`
 	Properties map[string]constraint.Node `json:"properties"`
 }
 
-func (esm PropertyMessage) Promise() PromiseFunc { return esm.PromiseHandler }
-
 type MapperMessage struct {
-	messageBase
+	MessageBase
 
 	Operator string     `json:"operator"`
 	Mapper   MapperDesc `json:"mapper"`
 }
 
 type TentacleMsg struct {
-	messageBase
+	MessageBase
 
 	Operator string            `json:"operator"`
 	StateID  string            `json:"state_id"`

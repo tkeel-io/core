@@ -157,6 +157,7 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 	// 2. 从搜索引擎中删除.
 	// 3. 将删除记录写入日志.
 	enObj := m.entities[en.ID].GetBase().Copy()
+	delete(m.entities, en.ID)
 	return &enObj, nil
 }
 
@@ -179,6 +180,9 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 		en.ID = uuid()
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	// set properties.
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
@@ -186,6 +190,11 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 			StateID:    en.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: en.KValues,
+			MessageBase: statem.MessageBase{
+				PromiseHandler: func(v interface{}) {
+					wg.Done()
+				},
+			},
 		},
 	}
 
@@ -195,7 +204,16 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 
 	m.SendMsg(msgCtx)
 
-	return nil, nil
+	wg.Wait()
+
+	// just for standalone.
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
+	}
+
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
@@ -205,6 +223,7 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		return nil, errEntityNotFound
 	}
 
+	wg := &sync.WaitGroup{}
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
@@ -217,12 +236,18 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		}
 
 		if len(kvs) > 0 {
+			wg.Add(1)
 			msgCtx := statem.MessageContext{
 				Headers: statem.Header{},
 				Message: statem.PropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
+					MessageBase: statem.MessageBase{
+						PromiseHandler: func(v interface{}) {
+							wg.Done()
+						},
+					},
 				},
 			}
 
@@ -234,6 +259,7 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		}
 	}
 
+	wg.Wait()
 	enObj := m.entities[en.ID].GetBase().Copy()
 	return &enObj, nil
 }
@@ -256,12 +282,19 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 
 	m.entities[en.ID].SetConfig(en.Configs)
 
+	wg := &sync.WaitGroup{}
 	if len(en.KValues) > 0 {
+		wg.Add(1)
 		msgCtx := statem.MessageContext{
 			Headers: statem.Header{},
 			Message: statem.PropertyMessage{
 				StateID:    en.ID,
 				Properties: en.KValues,
+				MessageBase: statem.MessageBase{
+					PromiseHandler: func(v interface{}) {
+						wg.Done()
+					},
+				},
 			},
 		}
 
@@ -272,7 +305,9 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 		m.SendMsg(msgCtx)
 	}
 
-	return nil, nil
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // AppendMapper append a mapper into entity.
@@ -282,6 +317,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
 	}
 
+	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -293,8 +329,12 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
+	wg.Add(1)
 	m.SendMsg(msgCtx)
-	return en, nil
+
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // DeleteMapper delete mapper from entity.
@@ -304,6 +344,7 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
 	}
 
+	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -315,8 +356,12 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
+	wg.Add(1)
 	m.SendMsg(msgCtx)
-	return en, nil
+
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {

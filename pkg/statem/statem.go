@@ -259,6 +259,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.activeTentacle(watchKeys)
 		}
 
+		message.Promised(nil)
 		log.Infof("disposed message: %v", message)
 
 		// reset be surs.
