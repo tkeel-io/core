@@ -79,6 +79,10 @@ run:
 	@echo "---------------------------"
 	@$(GORUN) cmd/core/main.go serve
 
+drun:
+	dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run cmd/core/main.go
+
+
 
 ################################################################################
 # Go build details                                                             #
