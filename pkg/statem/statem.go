@@ -395,35 +395,6 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 }
 
-func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	if !strings.Contains(propertyKey, ".") {
-		return s.KValues[propertyKey], nil
-	}
-
-	arr := strings.Split(propertyKey, ".")
-	// patch property.
-	res, err := constraint.Patch(properties[arr[0]], nil, constraint.PatchOperatorCopy, arr[1])
-	return res, errors.Wrap(err, "get patch failed")
-}
-
-func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
-	// 我们或许应该在这里解析propertyKey中的嵌套层次.
-	if !strings.Contains(propertyKey, ".") {
-		s.KValues[propertyKey] = value
-		return
-	}
-
-	// patch property.
-	arr := strings.Split(propertyKey, ".")
-	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, arr[1], op)
-	if nil != err {
-		log.Errorf("set property failed, err: %s", err.Error())
-		return
-	}
-
-	s.KValues[arr[0]] = resultNode
-}
-
 // invokeMapperMsg dispose mapper msg.
 func (s *statem) invokeMapperMsg(msg MapperMessage) {
 	var err error
@@ -583,6 +554,32 @@ func (s *statem) generateTentacles() {
 			}
 		}
 	}
+}
+
+func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
+	if !strings.Contains(propertyKey, ".") {
+		return s.KValues[propertyKey], nil
+	}
+
+	arr := strings.Split(propertyKey, ".")
+	res, err := constraint.Patch(properties[arr[0]], nil, constraint.PatchOperatorCopy, arr[1])
+	return res, errors.Wrap(err, "get patch failed")
+}
+
+func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
+	if !strings.Contains(propertyKey, ".") {
+		s.KValues[propertyKey] = value
+		return
+	}
+
+	arr := strings.Split(propertyKey, ".")
+	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, arr[1], op)
+	if nil != err {
+		log.Errorf("set property failed, err: %s", err.Error())
+		return
+	}
+
+	s.KValues[arr[0]] = resultNode
 }
 
 // uuid generate an uuid.

@@ -21,10 +21,12 @@ func Patch(destNode, srcNode Node, path, op string) (Node, error) { //nolint
 		switch op {
 		case PatchOperatorRemove:
 			collect.Del(path)
+			return RawNode(collect.GetRaw()), collect.GetError()
 		case PatchOperatorCopy:
 			if collect = collect.Get(path); nil == collect {
 				return nil, ErrPatchNotFound
 			}
+			return RawNode(collect.GetRaw()), collect.GetError()
 		case PatchOperatorAdd:
 		case PatchOperatorReplace:
 		default:
