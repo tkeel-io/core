@@ -11,27 +11,27 @@ func TestPatch(t *testing.T) {
 	dest := NewNode(`{"temp":20}`)
 	dest, err = Patch(dest, NewNode(22), "temp", PatchOperatorReplace)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), `{"temp":22}`)
+	assert.Equal(t, `{"temp":22}`, dest.String())
 
 	dest, err = Patch(dest, NewNode("555"), "temp", PatchOperatorReplace)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), `{"temp":"555"}`)
+	assert.Equal(t, `{"temp":"555"}`, dest.String())
 
 	dest, err = Patch(dest, NewNode("555"), "append", PatchOperatorAdd)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), `{"temp":"555","append":["555"]}`)
+	assert.Equal(t, `{"temp":"555","append":["555"]}`, dest.String())
 
 	dest, err = Patch(dest, NewNode("555"), "append[0]", PatchOperatorRemove)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), `{"temp":"555","append":[]}`)
+	assert.Equal(t, `{"temp":"555","append":[]}`, dest.String())
 
 	dest, err = Patch(dest, NewNode(map[string]interface{}{"property1": 12345}), "append", PatchOperatorAdd)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), "{\"temp\":\"555\",\"append\":[{\"property1\":12345}]}")
+	assert.Equal(t, "{\"temp\":\"555\",\"append\":[{\"property1\":12345}]}", dest.String())
 
 	dest, err = Patch(dest, NewNode("test"), "append", PatchOperatorAdd)
 	assert.Nil(t, err)
-	assert.Equal(t, dest.String(), `{"temp":"555","append":[{"property1":12345},"test"]}`)
+	assert.Equal(t, `{"temp":"555","append":[{"property1":12345},"test"]}`, dest.String())
 }
 
 func BenchmarkPatch1(b *testing.B) {

@@ -278,7 +278,7 @@ func ToBytesWithWrapString(val Node) []byte {
 
 	switch val.Type() {
 	case String:
-		return []byte(JSONEscaped(val.String()))
+		return []byte("\"" + val.String() + "\"")
 	default:
 		return []byte(val.String())
 	}

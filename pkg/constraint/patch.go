@@ -35,6 +35,7 @@ func Patch(destNode, srcNode Node, path, op string) (Node, error) { //nolint
 		if nil == srcNode {
 			return destNode, ErrEmptyParam
 		}
+
 		switch op {
 		case PatchOperatorReplace:
 			collect.Set(path, ToBytesWithWrapString(srcNode))
