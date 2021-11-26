@@ -1,9 +1,9 @@
 package constraint
 
 const (
-	EnabledFlagSelf       = 1
-	EnabledFlagSearch     = 2
-	EnabledFlagTimeSeries = 4
+	EnabledFlagSelf = 1 << iota
+	EnabledFlagSearch
+	EnabledFlagTimeSeries
 )
 
 type BitBucket struct {

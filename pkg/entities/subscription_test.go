@@ -23,10 +23,10 @@ func TestSubscriptionCreate(t *testing.T) {
 		Owner:  "tomas",
 		Source: "PluginB",
 		KValues: map[string]constraint.Node{
-			SubscriptionFieldMode:   constraint.RawNode(SubscriptionModeRealtime),
-			SubscriptionFieldSource: constraint.RawNode("PluginA"),
-			SubscriptionFieldTarget: constraint.RawNode("PluginA"),
-			SubscriptionFieldFilter: constraint.RawNode("select *"),
+			SubscriptionFieldMode:   constraint.NewNode(SubscriptionModeRealtime),
+			SubscriptionFieldSource: constraint.NewNode("PluginA"),
+			SubscriptionFieldTarget: constraint.NewNode("PluginA"),
+			SubscriptionFieldFilter: constraint.NewNode("select *"),
 		},
 	}
 

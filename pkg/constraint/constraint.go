@@ -4,12 +4,6 @@ import (
 	"errors"
 )
 
-const (
-	ConstraintOpSearchFlush     = "searchCB"
-	ConstraintOpTimeSeriesFlush = "timeseriesCB"
-	ConstraintOpTypeConvert     = "convert"
-)
-
 var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
 	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")

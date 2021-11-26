@@ -44,7 +44,7 @@ func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, e
 
 	out := make(map[string]constraint.Node)
 	for key, val := range ret {
-		out[key] = constraint.RawNode(val)
+		out[key] = constraint.NewNode(val)
 	}
 
 	return out, nil
