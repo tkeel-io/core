@@ -20,11 +20,8 @@ const (
 )
 
 type Config struct {
-	item
-
 	ID                string                 `json:"id" mapstructure:"id"`
-	Type              string                 `json:"type" mapstructure:"type"`           // 用于描述entity运行时的属性值的结构信息.
-	DataType          string                 `json:"data_type" mapstructure:"data_type"` // 用于描述entity运行时属性值的存在形式，默认[]byte.
+	Type              string                 `json:"type" mapstructure:"type"`
 	Weight            int                    `json:"weight" mapstructure:"weight"`
 	Enabled           bool                   `json:"enabled" mapstructure:"enabled"`
 	EnabledSearch     bool                   `json:"enabled_search" mapstructure:"enabled_search"`
@@ -35,22 +32,14 @@ type Config struct {
 }
 
 func (cfg Config) getArrayDefine() DefineArray {
-	var arrDefine DefineArray
-	if length, ok := cfg.Define[DefineFieldArrayLength].(int); !ok {
-		arrDefine.Length = length
-	}
-	if elemT, ok := cfg.Define[DefineFieldArrayElemCfg].(Config); !ok {
-		arrDefine.ElemType = elemT
-	}
-	return arrDefine
+	length, _ := cfg.Define[DefineFieldArrayLength].(int)
+	etype, _ := cfg.Define[DefineFieldArrayElemCfg].(Config)
+	return DefineArray{Length: length, ElemType: etype}
 }
 
 func (cfg Config) getStructDefine() DefineStruct {
-	var jsonDefine DefineStruct
-	if fields, ok := cfg.Define[DefineFieldStructFields].([]Config); ok {
-		jsonDefine.Fields = fields
-	}
-	return jsonDefine
+	fields, _ := cfg.Define[DefineFieldStructFields].([]Config)
+	return DefineStruct{Fields: fields}
 }
 
 type DefineStruct struct {
@@ -107,5 +96,6 @@ func parseField(in Config) (out Config, err error) { //nolint
 	default:
 		return out, ErrEntityConfigInvalid
 	}
+
 	return in, errors.Wrap(err, "parse property config failed")
 }

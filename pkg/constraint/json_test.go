@@ -18,7 +18,7 @@ func TestNewNode(t *testing.T) {
 	assert.Equal(t, NewNode(-22.1).To(String), StringNode("-22.1"), "StringNode.")
 	assert.Equal(t, NewNode(&valInt), IntNode(valInt), "IntNode PTR.")
 	assert.Equal(t, NewNode(&valFloat), FloatNode(valFloat), "FloatNode PTR.")
-	assert.Equal(t, NewNode([]byte("test bytes.")), RawNode("test bytes."), "RawNode PTR.")
+	assert.Equal(t, NewNode([]byte("test bytes.")), JSONNode("test bytes."), "RawNode PTR.")
 
 	t.Log(NewNode(-22.1).To(String).String())
 

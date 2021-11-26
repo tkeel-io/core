@@ -184,7 +184,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
-			Operator:   constraint.PatchOperatorReplace,
+			Operator:   constraint.PatchOpReplace.String(),
 			Properties: en.KValues,
 		},
 	}
