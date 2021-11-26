@@ -157,6 +157,7 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 	// 2. 从搜索引擎中删除.
 	// 3. 将删除记录写入日志.
 	enObj := m.entities[en.ID].GetBase().Copy()
+	delete(m.entities, en.ID)
 	return &enObj, nil
 }
 
