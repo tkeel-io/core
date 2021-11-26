@@ -95,6 +95,8 @@ func (r BoolNode) To(typ Type) Node {
 		return r
 	case String:
 		return StringNode(fmt.Sprintf("%t", r))
+	case RAW:
+		return r.To(String).To(RAW)
 	}
 	return UndefineResult
 }
@@ -116,6 +118,8 @@ func (r IntNode) To(typ Type) Node {
 		return FloatNode(r)
 	case String:
 		return StringNode(r.String())
+	case RAW:
+		return r.To(String).To(RAW)
 	}
 	return UndefineResult
 }
@@ -138,6 +142,8 @@ func (r FloatNode) To(typ Type) Node {
 		return IntNode(r)
 	case String:
 		return StringNode(strconv.FormatFloat(float64(r), 'f', -1, 64))
+	case RAW:
+		return r.To(String).To(RAW)
 	}
 	return UndefineResult
 }
@@ -152,7 +158,7 @@ func (r FloatNode) Value() interface{} {
 type StringNode string
 
 func (r StringNode) Type() Type { return String }
-func (r StringNode) To(typ Type) Node {
+func (r StringNode) To(typ Type) Node { //nolint
 	switch typ {
 	case String:
 		return r
@@ -179,9 +185,12 @@ func (r StringNode) To(typ Type) Node {
 			return UndefineResult
 		}
 		return FloatNode(b)
+	case RAW:
+		return RawNode([]byte(r))
 	}
 	return UndefineResult
 }
+
 func (r StringNode) String() string {
 	return string(r)
 }
@@ -195,6 +204,12 @@ type JSONNode []byte
 
 func (r JSONNode) Type() Type { return JSON }
 func (r JSONNode) To(typ Type) Node {
+	switch typ {
+	case String:
+		return StringNode(r)
+	case RAW:
+		return RawNode(r)
+	}
 	return UndefineResult
 }
 
@@ -253,5 +268,18 @@ func NewNode(v interface{}) Node {
 			return NewNode(reflect.ValueOf(val).Elem().Interface())
 		}
 		return RawNode(fmt.Sprintf("%v", val))
+	}
+}
+
+func ToBytesWithWrapString(val Node) []byte {
+	if nil == val {
+		return []byte{}
+	}
+
+	switch val.Type() {
+	case String:
+		return []byte("\"" + val.String() + "\"")
+	default:
+		return []byte(val.String())
 	}
 }
