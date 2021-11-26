@@ -142,7 +142,61 @@ curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entit
        "status": "testing",
        "temp":123
      }'
+
+# complex property.
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123" \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '{
+       "person": {
+         "age": 22
+       }
+     }'
 ```
+
+
+### PATCH Entity
+
+- Method: **PATCH**
+- URL:
+
+```
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{entity_id}?owner={owner}&type={type}
+```
+
+**Params：**
+
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true |path | 用于标识操作实体所属 Plugin。 | 
+| EntityId | string | true | path | 实体的 Id。`plugins/abcd/entities/test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起 Plugin。|
+| Owner | string | true | header/query | 用于标识请求的发起用户。|
+| Body | json | false | body | 用于更新的实体的属性, 以KV的形式存在。|
+
+
+> body: [{"path": "string", "operator": "string", "value": "interface{}"}, ...], operator: [ add | replace | remove ].
+
+
+```bash
+curl -X PATCH "http://localhost:6789/v1/plugins/abcd/entities/test123" \
+  -H "Source: abcd" \
+  -H "Owner: admin" \
+  -H "Type: DEVICE" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "path": "person.age",
+      "operator": "replace",
+      "value": 20
+    }
+  ]'
+```
+
+
 
 ### 删除 Entity
 

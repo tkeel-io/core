@@ -16,6 +16,7 @@ type StateMessage struct {
 func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {
 	return PropertyMessage{
 		StateID:    id,
+		Operator:   "replace",
 		Properties: props,
 	}
 }
@@ -25,6 +26,7 @@ type PropertyMessage struct {
 	messageBase
 
 	StateID    string                     `json:"state_id"`
+	Operator   string                     `json:"operator"`
 	Properties map[string]constraint.Node `json:"properties"`
 }
 

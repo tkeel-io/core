@@ -75,9 +75,11 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			entity.KValues[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Warn("empty params")
+		log.Errorf("update entity failed, err: %v", ErrEntityEmptyRequest)
+		return nil, ErrEntityEmptyRequest
 	default:
-		return
+		log.Errorf("update entity failed, err: %v", ErrEntityInvalidParams)
+		return nil, ErrEntityInvalidParams
 	}
 
 	// set properties.
@@ -88,6 +90,38 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 
 	out = s.entity2EntityResponse(entity)
 
+	return
+}
+
+func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Owner = req.Owner
+	entity.Source = req.Plugin
+	entity.KValues = make(map[string]constraint.Node)
+
+	switch kv := req.Properties.AsInterface().(type) {
+	case []interface{}:
+		patchData := make([]*pb.PatchData, 0)
+		data, _ := json.Marshal(kv)
+		if err = json.Unmarshal(data, &patchData); nil != err {
+			log.Errorf("patch entity failed, err: %v", ErrEntityInvalidParams)
+			return nil, ErrEntityInvalidParams
+		}
+		entity, err = s.entityManager.PatchEntity(ctx, entity, patchData)
+		if nil != err {
+			log.Errorf("patch entity failed, err: %v", err)
+			return nil, errors.Wrap(err, "patch entity failed")
+		}
+	case nil:
+		log.Errorf("patch entity failed, err: %v", ErrEntityEmptyRequest)
+		return nil, ErrEntityEmptyRequest
+	default:
+		log.Errorf("patch entity failed, err: %v", ErrEntityInvalidParams)
+		return nil, ErrEntityInvalidParams
+	}
+
+	out = s.entity2EntityResponse(entity)
 	return
 }
 
@@ -264,8 +298,12 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]cons
 			}
 			return out, ErrEntityConfigInvalid
 		}
+	case nil:
+		log.Errorf("set entity configs failed, err: %v", ErrEntityEmptyRequest)
+		return nil, ErrEntityEmptyRequest
 	default:
-		return out, ErrEntityConfigInvalid
+		log.Errorf("set entity configs failed, err: %v", ErrEntityInvalidParams)
+		return nil, ErrEntityConfigInvalid
 	}
 	return out, errors.Wrap(err, "parse entity config failed")
 }

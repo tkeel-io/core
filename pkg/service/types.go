@@ -14,6 +14,7 @@ var (
 	ErrEntityMapperNil     = errors.New("mapper is nil")
 	ErrEntityConfigInvalid = errors.New("entity config format invalid")
 	ErrEntityInvalidParams = errors.New("invalid params")
+	ErrEntityEmptyRequest  = errors.New("empty request")
 )
 
 type Entity = statem.Base
