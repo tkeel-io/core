@@ -171,9 +171,9 @@ else
 endif
 
 docker-build: build
-	docker build -t tkeelio/core:0.1.0 .
+	docker build -t tkeelio/core:0.2.0 .
 docker-push:
-	docker push tkeelio/core:0.1.0
+	docker push tkeelio/core:0.2.0
 
 ################################################################################
 # Target: lint                                                                 #
