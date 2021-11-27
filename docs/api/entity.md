@@ -329,3 +329,53 @@ curl -XPOST "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entit
   -H "Type: DEVICE" \
   -H "Content-Type: application/json"
 ```
+
+
+## 设置 实体属性配置
+
+- Method: **PUT**
+- URL:
+
+```
+http://localhost:3500/v1.0/invoke/core/method/v1/plugins/{plugin}/entities/{id}/mappers/{name}?owner={owner}&type={type}
+```
+
+**Params：**
+
+| Name | Type | Required | Where | Description |
+| ---- | ---- | -------- | ----- | ----------- |
+| PluginId | string | true | path/query | 用于标识操作实体所属 Plugin。 | 
+| EntityId | string | true | path/query | 实体的 Id。`plugins/abcd/entities/test123`。|
+| Type | string | true | header/query | 用于标识实体的类型。|
+| Source | string | true | header/query | 用于标识请求的发起 Plugin。|
+| Owner | string | true | header/query | 用于标识请求的发起用户。|
+| Configs | json(array) | true | body | 实体属性的配置。|
+
+> enabled 标识属性是启用， enabled_search 标识属性是否建立索引。
+
+> 支持属性类型： [integer | float | string | bool | array | json ]
+
+
+```bash
+curl -X PUT "http://localhost:3500/v1.0/invoke/core/method/v1/plugins/abcd/entities/test123/configs?source=abcd&type=DEVICE&owner=admin" \
+  -H "Content-Type: application/json" \
+  -d '[
+          {
+            "id": "person",
+            "type": "struct",
+            "define": {
+              "fields": [
+                {
+                  "id": "age",
+                  "type": "int",
+                  "enabled": true,
+                  "enabled_search": true,
+                  "define": {}
+                }
+              ]
+            },
+            "enabled": true,
+            "enabled_search": true
+          }
+    ]'
+```
