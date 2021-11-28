@@ -115,7 +115,7 @@ func (r IntNode) To(typ Type) Node {
 type FloatNode float64
 
 func (r FloatNode) Type() Type         { return Float }
-func (r FloatNode) String() string     { return fmt.Sprintf("%f", r) }
+func (r FloatNode) String() string     { return strconv.FormatFloat(float64(r), 'f', -1, 64) }
 func (r FloatNode) Value() interface{} { return float64(r) }
 func (r FloatNode) To(typ Type) Node {
 	switch typ {

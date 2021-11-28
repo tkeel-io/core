@@ -43,6 +43,11 @@ func (s *statem) flushSeatch() error {
 		}
 	}
 
+	// flush all.
+	for key, val := range s.KValues {
+		flushData[key] = val.String()
+	}
+
 	// basic fields.
 	flushData["id"] = s.ID
 	flushData["type"] = s.Type

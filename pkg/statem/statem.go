@@ -116,6 +116,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 			ID:      in.ID,
 			Type:    in.Type,
 			Owner:   in.Owner,
+			Source:  in.Source,
 			KValues: make(map[string]constraint.Node),
 			Configs: make(map[string]constraint.Config),
 		},
@@ -126,6 +127,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
 		disposing:      StateDisposingIdle,
+		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
 		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
@@ -307,6 +309,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	// set last active tims.
 	if setStateID == s.ID {
+		s.Version++
 		s.LastTime = time.Now().UnixNano() / 1e6
 	}
 
