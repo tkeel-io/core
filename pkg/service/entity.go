@@ -250,7 +250,6 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	out.Mappers = make([]*pb.MapperDesc, 0)
-
 	for _, mapper := range entity.Mappers {
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}

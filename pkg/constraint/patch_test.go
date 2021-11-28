@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/collectjs"
 )
 
 func TestPatch(t *testing.T) {
@@ -48,4 +49,11 @@ func BenchmarkPatch2(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		Patch(raw, NewNode(9999), "append[0].property1", PatchOpRemove)
 	}
+}
+
+func TestCollectEmptyPath(t *testing.T) {
+	result, _ := collectjs.Append([]byte("[]"), "", []byte(`20`))
+	_, _ = collectjs.Set(result, "[0]", []byte(`2220`))
+	result, _ = collectjs.Set([]byte(`{}`), "age", []byte(`2220`))
+	t.Log("result: ", string(result))
 }

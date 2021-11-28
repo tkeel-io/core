@@ -187,7 +187,7 @@ type JSONNode []byte
 func (r JSONNode) Type() Type     { return JSON }
 func (r JSONNode) String() string { return string(r) }
 func (r JSONNode) Value() interface{} {
-	data := make(map[string]interface{})
+	var data interface{}
 	_ = json.Unmarshal(r, &data)
 	return data
 }
