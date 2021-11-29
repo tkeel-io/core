@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -44,6 +45,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	entity.Owner = req.Owner
 	entity.Type = req.Type
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
@@ -75,6 +77,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
@@ -110,6 +113,7 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 
 	switch kv := req.Properties.AsInterface().(type) {
@@ -159,6 +163,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	// delete entity.
 	_, err = s.entityManager.DeleteEntity(ctx, entity)
@@ -177,6 +182,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
@@ -250,12 +256,11 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	out.Mappers = make([]*pb.MapperDesc, 0)
-
 	for _, mapper := range entity.Mappers {
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}
 
-	out.Plugin = entity.Source
+	out.Source = entity.Source
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
@@ -268,6 +273,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	mapperDesc := statem.MapperDesc{}
 	if req.Mapper != nil {
@@ -294,6 +300,7 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
 	if nil != err {
@@ -335,4 +342,17 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]cons
 		return nil, ErrEntityConfigInvalid
 	}
 	return out, errors.Wrap(err, "parse entity config failed")
+}
+
+func parseHeaderFrom(ctx context.Context, en *statem.Base) {
+	if header := ctx.Value(struct{}{}); nil != header {
+		switch h := header.(type) {
+		case http.Header:
+			en.Type = h.Get(HeaderType)
+			en.Owner = h.Get(HeaderOwner)
+			en.Source = h.Get(HeaderSource)
+		default:
+			panic("invalid HEADERS")
+		}
+	}
 }

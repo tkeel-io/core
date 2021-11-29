@@ -77,9 +77,10 @@ func (m *EntityManager) Start() error {
 				if !has {
 					// rebalance entity.
 					en := &statem.Base{
-						ID:    msgCtx.Headers.GetTargetID(),
-						Owner: msgCtx.Headers.GetOwner(),
-						Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
+						ID:     msgCtx.Headers.GetTargetID(),
+						Owner:  msgCtx.Headers.GetOwner(),
+						Source: msgCtx.Headers.GetSource(),
+						Type:   msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
 					}
 
 					if err := m.rebalanceEntity(context.Background(), en); nil != err {
@@ -197,9 +198,9 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 			},
 		},
 	}
-
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.SetSource(en.Source)
 	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
 
 	m.SendMsg(msgCtx)
@@ -365,10 +366,12 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 }
 
 func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
-	val, _ := structpb.NewValue(values)
-	_, err := m.searchClient.Index(ctx, &pb.IndexObject{Obj: val})
-	if nil != err {
-		log.Errorf("searchDB index failed, %s", err.Error())
+	var err error
+	var val *structpb.Value
+	if val, err = structpb.NewValue(values); nil != err {
+		log.Errorf("search index failed, %s", err.Error())
+	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
+		log.Errorf("search index failed, %s", err.Error())
 	}
 	return errors.Wrap(err, "SearchFlushfailed")
 }
