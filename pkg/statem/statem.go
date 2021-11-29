@@ -116,6 +116,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 			ID:      in.ID,
 			Type:    in.Type,
 			Owner:   in.Owner,
+			Source:  in.Source,
 			KValues: make(map[string]constraint.Node),
 			Configs: make(map[string]constraint.Config),
 		},
@@ -126,6 +127,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
 		disposing:      StateDisposingIdle,
+		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
 		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
@@ -259,6 +261,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.activeTentacle(watchKeys)
 		}
 
+		message.Promised(nil)
 		log.Infof("disposed message: %v", message)
 
 		// reset be surs.
@@ -297,7 +300,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
 		if s.ID == msg.StateID {
-			s.setProperty(msg.Operator, key, value)
+			s.setProperty(constraint.NewPatchOperator(msg.Operator), key, value)
 		} else {
 			stateProps[key] = value
 		}
@@ -306,6 +309,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 	// set last active tims.
 	if setStateID == s.ID {
+		s.Version++
 		s.LastTime = time.Now().UnixNano() / 1e6
 	}
 
@@ -388,11 +392,57 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
-				s.setProperty(constraint.PatchOperatorReplace, propertyKey, value)
+				s.setProperty(constraint.PatchOpReplace, propertyKey, value)
 			}
 			s.LastTime = time.Now().UnixNano() / 1e6
 		}
 	}
+}
+
+func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
+	if !strings.Contains(propertyKey, ".") {
+		return s.KValues[propertyKey], nil
+	}
+
+	arr := strings.Split(propertyKey, ".")
+	// patch property.
+	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+	return res, errors.Wrap(err, "get patch failed")
+}
+
+func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, value constraint.Node) {
+	var err error
+	var resultNode constraint.Node
+
+	if !strings.ContainsAny(propertyKey, ".[") {
+		switch op {
+		case constraint.PatchOpReplace:
+			s.KValues[propertyKey] = value
+		case constraint.PatchOpAdd:
+			// patch property add.
+			if _, has := s.KValues[propertyKey]; !has {
+				s.KValues[propertyKey] = constraint.JSONNode(`[]`)
+			}
+			if resultNode, err = constraint.Patch(s.KValues[propertyKey], value, "", op); nil != err {
+				log.Errorf("set property failed, err: %s", err.Error())
+				return
+			}
+			s.KValues[propertyKey] = resultNode
+		case constraint.PatchOpRemove:
+			delete(s.KValues, propertyKey)
+		}
+		return
+	}
+
+	// patch property.
+	index := strings.IndexAny(propertyKey, ".[")
+	propertyID, patchPath := propertyKey[:index], propertyKey[index:]
+	if resultNode, err = constraint.Patch(s.KValues[propertyID], value, patchPath, op); nil != err {
+		log.Errorf("set property failed, err: %s", err.Error())
+		return
+	}
+
+	s.KValues[propertyID] = resultNode
 }
 
 // invokeMapperMsg dispose mapper msg.
@@ -554,32 +604,6 @@ func (s *statem) generateTentacles() {
 			}
 		}
 	}
-}
-
-func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	if !strings.Contains(propertyKey, ".") {
-		return s.KValues[propertyKey], nil
-	}
-
-	arr := strings.Split(propertyKey, ".")
-	res, err := constraint.Patch(properties[arr[0]], nil, constraint.PatchOperatorCopy, arr[1])
-	return res, errors.Wrap(err, "get patch failed")
-}
-
-func (s *statem) setProperty(op, propertyKey string, value constraint.Node) {
-	if !strings.Contains(propertyKey, ".") {
-		s.KValues[propertyKey] = value
-		return
-	}
-
-	arr := strings.Split(propertyKey, ".")
-	resultNode, err := constraint.Patch(s.KValues[arr[0]], value, arr[1], op)
-	if nil != err {
-		log.Errorf("set property failed, err: %s", err.Error())
-		return
-	}
-
-	s.KValues[arr[0]] = resultNode
 }
 
 // uuid generate an uuid.

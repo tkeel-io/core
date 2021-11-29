@@ -35,8 +35,6 @@ const (
 	String
 	// JSON is a raw block of JSON.
 	JSON
-	// RAW for golang runtine.
-	RAW
 )
 
 // String returns a string representation of the type.
@@ -75,41 +73,32 @@ type DefaultNode struct {
 	raw string
 }
 
-func (r DefaultNode) Type() Type { return r.typ }
-func (r DefaultNode) To(Type) Node {
-	return r
-}
-func (r DefaultNode) String() string {
-	return r.raw
-}
-func (r DefaultNode) Value() interface{} {
-	return r.raw
-}
+func (r DefaultNode) Type() Type         { return r.typ }
+func (r DefaultNode) To(Type) Node       { return r }
+func (r DefaultNode) String() string     { return r.raw }
+func (r DefaultNode) Value() interface{} { return r.raw }
 
 type BoolNode bool
 
-func (r BoolNode) Type() Type { return Bool }
+func (r BoolNode) String() string     { return fmt.Sprintf("%t", r) }
+func (r BoolNode) Value() interface{} { return bool(r) }
+func (r BoolNode) Type() Type         { return Bool }
 func (r BoolNode) To(typ Type) Node {
 	switch typ {
 	case Bool:
 		return r
 	case String:
 		return StringNode(fmt.Sprintf("%t", r))
-	case RAW:
-		return r.To(String).To(RAW)
+	default:
+		return UndefineResult
 	}
-	return UndefineResult
-}
-func (r BoolNode) String() string {
-	return fmt.Sprintf("%t", r)
-}
-func (r BoolNode) Value() interface{} {
-	return bool(r)
 }
 
 type IntNode int64
 
-func (r IntNode) Type() Type { return Integer }
+func (r IntNode) Type() Type         { return Integer }
+func (r IntNode) String() string     { return strconv.FormatInt(int64(r), 10) }
+func (r IntNode) Value() interface{} { return int64(r) }
 func (r IntNode) To(typ Type) Node {
 	switch typ {
 	case Number, Integer:
@@ -118,22 +107,16 @@ func (r IntNode) To(typ Type) Node {
 		return FloatNode(r)
 	case String:
 		return StringNode(r.String())
-	case RAW:
-		return r.To(String).To(RAW)
+	default:
+		return UndefineResult
 	}
-	return UndefineResult
-}
-func (r IntNode) String() string {
-	return strconv.FormatInt(int64(r), 10)
-}
-
-func (r IntNode) Value() interface{} {
-	return int64(r)
 }
 
 type FloatNode float64
 
-func (r FloatNode) Type() Type { return Float }
+func (r FloatNode) Type() Type         { return Float }
+func (r FloatNode) String() string     { return strconv.FormatFloat(float64(r), 'f', -1, 64) }
+func (r FloatNode) Value() interface{} { return float64(r) }
 func (r FloatNode) To(typ Type) Node {
 	switch typ {
 	case Number, Float:
@@ -142,22 +125,16 @@ func (r FloatNode) To(typ Type) Node {
 		return IntNode(r)
 	case String:
 		return StringNode(strconv.FormatFloat(float64(r), 'f', -1, 64))
-	case RAW:
-		return r.To(String).To(RAW)
+	default:
+		return UndefineResult
 	}
-	return UndefineResult
-}
-func (r FloatNode) String() string {
-	return fmt.Sprintf("%f", r)
-}
-
-func (r FloatNode) Value() interface{} {
-	return float64(r)
 }
 
 type StringNode string
 
-func (r StringNode) Type() Type { return String }
+func (r StringNode) Type() Type         { return String }
+func (r StringNode) String() string     { return string(r) }
+func (r StringNode) Value() interface{} { return string(r) }
 func (r StringNode) To(typ Type) Node { //nolint
 	switch typ {
 	case String:
@@ -185,66 +162,48 @@ func (r StringNode) To(typ Type) Node { //nolint
 			return UndefineResult
 		}
 		return FloatNode(b)
-	case RAW:
-		return RawNode([]byte(r))
-	}
-	return UndefineResult
-}
-
-func (r StringNode) String() string {
-	return string(r)
-}
-
-func (r StringNode) Value() interface{} {
-	return string(r)
-}
-
-// JSONNode maybe Object or Array.
-type JSONNode []byte
-
-func (r JSONNode) Type() Type { return JSON }
-func (r JSONNode) To(typ Type) Node {
-	switch typ {
-	case String:
-		return StringNode(r)
-	case RAW:
-		return RawNode(r)
-	}
-	return UndefineResult
-}
-
-func (r JSONNode) String() string {
-	return string(r)
-}
-
-func (r JSONNode) Value() interface{} {
-	data := make(map[string]interface{})
-	_ = json.Unmarshal(r, &data)
-	return data
-}
-
-type RawNode []byte
-
-func (r RawNode) Type() Type { return RAW }
-func (r RawNode) To(tp Type) Node {
-	switch tp {
-	case String:
-		return StringNode(r)
-	case JSON:
-		return JSONNode(r)
 	default:
 		return UndefineResult
 	}
 }
 
-func (r RawNode) String() string {
-	return string(r)
+type NullNode struct{}
+
+func (r NullNode) Type() Type         { return Null }
+func (r NullNode) String() string     { return "null" }
+func (r NullNode) Value() interface{} { return nil }
+func (r NullNode) To(typ Type) Node {
+	switch typ {
+	case Null:
+		return r
+	default:
+		return UndefineResult
+	}
 }
 
-func (r RawNode) Value() interface{} {
-	return []byte(r)
+// JSONNode maybe Object or Array.
+type JSONNode []byte
+
+func (r JSONNode) Type() Type     { return JSON }
+func (r JSONNode) String() string { return string(r) }
+func (r JSONNode) Value() interface{} {
+	var data interface{}
+	_ = json.Unmarshal(r, &data)
+	return data
 }
-func NewNode(v interface{}) Node {
+
+func (r JSONNode) To(typ Type) Node {
+	switch typ {
+	case String:
+		return StringNode(r)
+	case JSON:
+		return r
+	default:
+		return UndefineResult
+	}
+}
+
+func NewNode(v interface{}) Node { //nolint
 	switch val := v.(type) {
 	case float32:
 		return FloatNode(val)
@@ -255,19 +214,20 @@ func NewNode(v interface{}) Node {
 	case string:
 		return StringNode(val)
 	case []byte:
-		return RawNode(val)
+		return JSONNode(val)
 	case bool:
 		return BoolNode(val)
 	case map[string]interface{}:
 		data, _ := json.Marshal(v)
-
 		return JSONNode(string(data))
+	case nil:
+		return NullNode{}
 	default:
 		if reflect.Ptr == reflect.TypeOf(val).Kind() {
 			// deference pointer.
 			return NewNode(reflect.ValueOf(val).Elem().Interface())
 		}
-		return RawNode(fmt.Sprintf("%v", val))
+		return UndefineResult
 	}
 }
 
@@ -277,6 +237,9 @@ func ToBytesWithWrapString(val Node) []byte {
 	}
 
 	switch val.Type() {
+	case JSON:
+		jsonVal, _ := val.(JSONNode)
+		return []byte(jsonVal)
 	case String:
 		return []byte("\"" + val.String() + "\"")
 	default:

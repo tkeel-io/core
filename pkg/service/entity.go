@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -37,9 +38,14 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	if req.Id != "" {
 		entity.ID = req.Id
 	}
+
+	wrapErrMsg := "create entity failed"
+	defer ErrorIf(&err, "error: %v, request: %v", err, req)
+
 	entity.Owner = req.Owner
 	entity.Type = req.Type
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
@@ -47,20 +53,23 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 			entity.KValues[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Warn("empty params")
+		log.Warn("create entity, but empty params")
 	default:
-		log.Errorf("create entity failed, invalid params, %v", kv)
 		return out, ErrEntityInvalidParams
 	}
 
+	// check properties.
+	if _, has := entity.KValues[""]; has {
+		return out, ErrEntityPropertyIDEmpty
+	}
+
 	// set properties.
-	_, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
-		return
+	if _, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+		return out, errors.Wrap(err, wrapErrMsg)
 	}
 
 	out = s.entity2EntityResponse(entity)
-	return
+	return out, errors.Wrap(err, wrapErrMsg)
 }
 
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
@@ -68,6 +77,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
@@ -82,15 +92,20 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, ErrEntityInvalidParams
 	}
 
+	// check properties.
+	if _, has := entity.KValues[""]; has {
+		log.Errorf("update entity failed, err: %v", ErrEntityPropertyIDEmpty)
+		return out, ErrEntityPropertyIDEmpty
+	}
+
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
-		return
+	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+		log.Errorf("update entity failed, err: %v", err)
+		return out, errors.Wrap(err, "update entity failed")
 	}
 
 	out = s.entity2EntityResponse(entity)
-
-	return
+	return out, errors.Wrap(err, "update entity failed")
 }
 
 func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
@@ -98,6 +113,7 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 
 	switch kv := req.Properties.AsInterface().(type) {
@@ -108,8 +124,16 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 			log.Errorf("patch entity failed, err: %v", ErrEntityInvalidParams)
 			return nil, ErrEntityInvalidParams
 		}
-		entity, err = s.entityManager.PatchEntity(ctx, entity, patchData)
-		if nil != err {
+
+		// check path data.
+		for _, pd := range patchData {
+			if err = checkPatchData(pd); nil != err {
+				log.Errorf("patch entity failed, err: %v", err)
+				return nil, errors.Wrap(err, "patch entity failed")
+			}
+		}
+
+		if entity, err = s.entityManager.PatchEntity(ctx, entity, patchData); nil != err {
 			log.Errorf("patch entity failed, err: %v", err)
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
@@ -122,7 +146,16 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	}
 
 	out = s.entity2EntityResponse(entity)
-	return
+	return out, nil
+}
+
+func checkPatchData(patchData *pb.PatchData) error {
+	if constraint.IsReversedOp(patchData.Operator) {
+		return constraint.ErrJSONPatchReservedOp
+	} else if !constraint.IsValidPath(patchData.Path) {
+		return constraint.ErrPatchPathInvalid
+	}
+	return nil
 }
 
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
@@ -130,6 +163,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	// delete entity.
 	_, err = s.entityManager.DeleteEntity(ctx, entity)
@@ -148,16 +182,15 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	// get entity from entity manager.
-	entity, err = s.entityManager.GetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
 		log.Errorf("get entity failed, %s", err.Error())
-		return
+		return out, errors.Wrap(err, "get entity failed")
 	}
 
 	out = s.entity2EntityResponse(entity)
-
 	return
 }
 
@@ -167,10 +200,10 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	searchReq.Page = req.Page
 	searchReq.Condition = req.Condition
 
-	resp, err := s.searchClient.Search(ctx, searchReq)
-	if err != nil {
+	var resp *pb.SearchResponse
+	if resp, err = s.searchClient.Search(ctx, searchReq); err != nil {
 		log.Errorf("list entities failed, err: %s", err.Error())
-		return
+		return out, errors.Wrap(err, "list entity failed")
 	}
 
 	out = &pb.ListEntityResponse{}
@@ -182,9 +215,9 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			properties, _ := structpb.NewValue(kv)
 			entityItem := &pb.EntityResponse{
 				Id:         interface2string(kv["id"]),
-				Plugin:     "",
-				Source:     "",
-				Owner:      "",
+				Plugin:     req.Plugin,
+				Source:     req.Source,
+				Owner:      req.Owner,
 				Type:       "",
 				Properties: properties,
 				Mappers:    []*pb.MapperDesc{},
@@ -223,12 +256,11 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	out.Mappers = make([]*pb.MapperDesc, 0)
-
 	for _, mapper := range entity.Mappers {
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}
 
-	out.Plugin = entity.Source
+	out.Source = entity.Source
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
@@ -241,6 +273,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	mapperDesc := statem.MapperDesc{}
 	if req.Mapper != nil {
@@ -248,8 +281,10 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		mapperDesc.TQLString = req.Mapper.Tql
 		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	} else {
+		log.Errorf("append mapper failed, %v", ErrEntityMapperNil)
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
+
 	// set properties.
 	entity, err = s.entityManager.SetProperties(ctx, entity)
 	if nil != err {
@@ -265,6 +300,7 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
+	parseHeaderFrom(ctx, entity)
 
 	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
 	if nil != err {
@@ -306,4 +342,17 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]cons
 		return nil, ErrEntityConfigInvalid
 	}
 	return out, errors.Wrap(err, "parse entity config failed")
+}
+
+func parseHeaderFrom(ctx context.Context, en *statem.Base) {
+	if header := ctx.Value(struct{}{}); nil != header {
+		switch h := header.(type) {
+		case http.Header:
+			en.Type = h.Get(HeaderType)
+			en.Owner = h.Get(HeaderOwner)
+			en.Source = h.Get(HeaderSource)
+		default:
+			panic("invalid HEADERS")
+		}
+	}
 }

@@ -4,19 +4,23 @@ import (
 	"errors"
 )
 
-const (
-	ConstraintOpSearchFlush     = "searchCB"
-	ConstraintOpTimeSeriesFlush = "timeseriesCB"
-	ConstraintOpTypeConvert     = "convert"
-)
-
 var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
 	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")
 	ErrInvalidNodeType     = errors.New("undefine node type")
 	ErrEmptyParam          = errors.New("empty params")
 	ErrPatchNotFound       = errors.New("patch not found")
+	ErrPatchPathInvalid    = errors.New("invalid patch path")
 )
+
+var callbacks = map[string]func(op Operator, val Node) (Node, error){
+	"max": func(op Operator, val Node) (Node, error) {
+		return val, nil
+	},
+	"size": func(op Operator, val Node) (Node, error) {
+		return val, nil
+	},
+}
 
 type Operator struct {
 	Callback  string
@@ -123,7 +127,8 @@ func parseDefine(define map[string]interface{}) []Operator {
 }
 
 func keyContains(key string) bool {
-	return true
+	_, flag := callbacks[key]
+	return flag
 }
 
 func ExecData(val Node, ct *Constraint) (Node, error) {

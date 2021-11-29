@@ -71,15 +71,16 @@ func (m *EntityManager) Start() error {
 				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
 				// 消费的消息统一来自Inbox，不存在无entityID的情况.
 				// 如果entity在当前节点不存在就将entity调度到当前节点.
-				log.Infof("dispose message failed, entity: %s", msgCtx.Headers.GetTargetID())
+				log.Infof("dispose message, entity: %s, message: %v", msgCtx.Headers.GetTargetID(), msgCtx)
 				eid := msgCtx.Headers.GetTargetID()
 				_, has := m.entities[eid]
 				if !has {
 					// rebalance entity.
 					en := &statem.Base{
-						ID:    msgCtx.Headers.GetTargetID(),
-						Owner: msgCtx.Headers.GetOwner(),
-						Type:  msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
+						ID:     msgCtx.Headers.GetTargetID(),
+						Owner:  msgCtx.Headers.GetOwner(),
+						Source: msgCtx.Headers.GetSource(),
+						Type:   msgCtx.Headers.GetDefault(MessageCtxHeaderEntityType, EntityTypeBaseEntity),
 					}
 
 					if err := m.rebalanceEntity(context.Background(), en); nil != err {
@@ -131,7 +132,7 @@ func (m *EntityManager) rebalanceEntity(ctx context.Context, en *statem.Base) er
 	}
 
 	if nil != err {
-		return errors.Wrap(err, "rrebalance entity failed")
+		return errors.Wrap(err, "rebalance entity failed")
 	}
 
 	m.entities[entityInst.GetID()] = entityInst
@@ -157,6 +158,7 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 	// 2. 从搜索引擎中删除.
 	// 3. 将删除记录写入日志.
 	enObj := m.entities[en.ID].GetBase().Copy()
+	delete(m.entities, en.ID)
 	return &enObj, nil
 }
 
@@ -179,23 +181,40 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 		en.ID = uuid()
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
 	// set properties.
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
-			Operator:   constraint.PatchOperatorReplace,
+			Operator:   constraint.PatchOpReplace.String(),
 			Properties: en.KValues,
+			MessageBase: statem.MessageBase{
+				PromiseHandler: func(v interface{}) {
+					wg.Done()
+				},
+			},
 		},
 	}
-
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.SetSource(en.Source)
 	msgCtx.Headers.Set(MessageCtxHeaderEntityType, en.Type)
 
 	m.SendMsg(msgCtx)
 
-	return nil, nil
+	wg.Wait()
+
+	// just for standalone.
+	if _, has := m.entities[en.ID]; !has {
+		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		return nil, errEntityNotFound
+	}
+
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
@@ -205,6 +224,7 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		return nil, errEntityNotFound
 	}
 
+	wg := &sync.WaitGroup{}
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
@@ -217,12 +237,18 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		}
 
 		if len(kvs) > 0 {
+			wg.Add(1)
 			msgCtx := statem.MessageContext{
 				Headers: statem.Header{},
 				Message: statem.PropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
+					MessageBase: statem.MessageBase{
+						PromiseHandler: func(v interface{}) {
+							wg.Done()
+						},
+					},
 				},
 			}
 
@@ -234,6 +260,7 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 		}
 	}
 
+	wg.Wait()
 	enObj := m.entities[en.ID].GetBase().Copy()
 	return &enObj, nil
 }
@@ -256,12 +283,19 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 
 	m.entities[en.ID].SetConfig(en.Configs)
 
+	wg := &sync.WaitGroup{}
 	if len(en.KValues) > 0 {
+		wg.Add(1)
 		msgCtx := statem.MessageContext{
 			Headers: statem.Header{},
 			Message: statem.PropertyMessage{
 				StateID:    en.ID,
 				Properties: en.KValues,
+				MessageBase: statem.MessageBase{
+					PromiseHandler: func(v interface{}) {
+						wg.Done()
+					},
+				},
 			},
 		}
 
@@ -272,7 +306,9 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 		m.SendMsg(msgCtx)
 	}
 
-	return nil, nil
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // AppendMapper append a mapper into entity.
@@ -282,6 +318,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
 	}
 
+	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -293,8 +330,12 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
+	wg.Add(1)
 	m.SendMsg(msgCtx)
-	return en, nil
+
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 // DeleteMapper delete mapper from entity.
@@ -304,6 +345,7 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
 	}
 
+	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -315,15 +357,21 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
+	wg.Add(1)
 	m.SendMsg(msgCtx)
-	return en, nil
+
+	wg.Wait()
+	enObj := m.entities[en.ID].GetBase().Copy()
+	return &enObj, nil
 }
 
 func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
-	val, _ := structpb.NewValue(values)
-	_, err := m.searchClient.Index(ctx, &pb.IndexObject{Obj: val})
-	if nil != err {
-		log.Errorf("searchDB index failed, %s", err.Error())
+	var err error
+	var val *structpb.Value
+	if val, err = structpb.NewValue(values); nil != err {
+		log.Errorf("search index failed, %s", err.Error())
+	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
+		log.Errorf("search index failed, %s", err.Error())
 	}
 	return errors.Wrap(err, "SearchFlushfailed")
 }

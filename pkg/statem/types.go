@@ -63,19 +63,19 @@ type PromiseFunc = func(interface{})
 
 type Message interface {
 	Message()
-	Promise() PromiseFunc
+	Promised(interface{})
 }
 
-type messageBase struct {
+type MessageBase struct {
 	PromiseHandler PromiseFunc `json:"-"`
 }
 
-func (ms messageBase) Message() {}
-func (ms messageBase) Promise() PromiseFunc {
+func (ms MessageBase) Message() {}
+func (ms MessageBase) Promised(v interface{}) {
 	if nil == ms.PromiseHandler {
-		return func(interface{}) {}
+		return
 	}
-	return ms.PromiseHandler
+	ms.PromiseHandler(v)
 }
 
 type Header map[string]string
@@ -98,10 +98,10 @@ func (h Header) GetOwner() string { return h[MessageCtxHeaderOwner] }
 func (h Header) SetOwner(owner string) { h[MessageCtxHeaderOwner] = owner }
 
 // GetSource returns message source field.
-func (h Header) GetSource() string { return h[MessageCtxHeaderOwner] }
+func (h Header) GetSource() string { return h[MessageCtxHeaderSourceID] }
 
 // SetSource set message source.
-func (h Header) SetSource(owner string) { h[MessageCtxHeaderOwner] = owner }
+func (h Header) SetSource(owner string) { h[MessageCtxHeaderSourceID] = owner }
 
 func (h Header) Get(key string) string { return h[key] }
 
