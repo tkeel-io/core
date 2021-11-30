@@ -300,7 +300,9 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
 		if s.ID == msg.StateID {
-			s.setProperty(constraint.NewPatchOperator(msg.Operator), key, value)
+			if err := s.setProperty(constraint.NewPatchOperator(msg.Operator), key, value); nil != err {
+				log.Errorf("set entity(%s) property(%s) failed, err: %v", s.ID, key, err)
+			}
 		} else {
 			stateProps[key] = value
 		}
@@ -392,9 +394,11 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
-				s.setProperty(constraint.PatchOpReplace, propertyKey, value)
+				if err = s.setProperty(constraint.PatchOpReplace, propertyKey, value); nil != err {
+					log.Errorf("set entity(%s) property(%s) failed, err: %v", s.ID, propertyKey, err)
+				}
+				s.LastTime = time.Now().UnixNano() / 1e6
 			}
-			s.LastTime = time.Now().UnixNano() / 1e6
 		}
 	}
 }
@@ -420,10 +424,11 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 			s.KValues[propertyKey] = value
 		case constraint.PatchOpAdd:
 			// patch property add.
-			if _, has := s.KValues[propertyKey]; !has {
-				s.KValues[propertyKey] = constraint.JSONNode(`[]`)
+			val := s.KValues[propertyKey]
+			if nil == val {
+				val = constraint.JSONNode(`[]`)
 			}
-			if resultNode, err = constraint.Patch(s.KValues[propertyKey], value, "", op); nil != err {
+			if resultNode, err = constraint.Patch(val, value, "", op); nil != err {
 				log.Errorf("set property failed, err: %s", err.Error())
 				return errors.Wrap(err, "set property failed")
 			}
@@ -433,6 +438,7 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 		default:
 			return constraint.ErrJSONPatchReservedOp
 		}
+		return nil
 	}
 
 	// patch property.

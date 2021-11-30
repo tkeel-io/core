@@ -203,8 +203,10 @@ func (r ArrayNode) To(typ Type) Node {
 	switch typ {
 	case String:
 		return StringNode(r)
+	case Array:
+		return r
 	case JSON:
-		return ArrayNode(r)
+		return JSONNode(r)
 	default:
 		return UndefineResult
 	}
@@ -252,10 +254,15 @@ func NewNode(v interface{}) Node { //nolint
 	case nil:
 		return NullNode{}
 	default:
-		if reflect.Ptr == reflect.TypeOf(val).Kind() {
+		valKind := reflect.TypeOf(val).Kind()
+		if reflect.Ptr == valKind {
 			// deference pointer.
 			return NewNode(reflect.ValueOf(val).Elem().Interface())
+		} else if reflect.Slice == valKind {
+			data, _ := json.Marshal(v)
+			return JSONNode(string(data))
 		}
+
 		return UndefineResult
 	}
 }
