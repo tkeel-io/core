@@ -225,10 +225,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			out.Items = append(out.Items, entityItem)
 		}
 	}
-	if err != nil {
-		log.Errorf("list entities failed, err: %s", err.Error())
-		return out, errors.Wrap(err, "entity search failed")
-	}
+
 	return out, nil
 }
 

@@ -104,7 +104,7 @@ type statem struct {
 }
 
 // newEntity create an statem object.
-func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMarchiner, error) {
+func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = uuid()
 	}

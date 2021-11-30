@@ -54,7 +54,7 @@ func (po PatchOperator) String() string {
 	case PatchOpReplace:
 		return "replace"
 	default:
-		return "undefine"
+		return "undefined"
 	}
 }
 

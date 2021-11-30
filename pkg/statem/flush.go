@@ -14,13 +14,13 @@ func (s *statem) Flush() error {
 
 func (s *statem) flush() error {
 	var err error
-	if err = s.flushSeatch(); nil == err {
+	if err = s.flushSearch(); nil == err {
 		log.Debugf("entity(%s) flush Search completed", s.ID)
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
 
-func (s *statem) flushSeatch() error {
+func (s *statem) flushSearch() error {
 	var (
 		err       error
 		flushData map[string]interface{}

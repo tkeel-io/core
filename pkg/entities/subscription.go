@@ -18,7 +18,7 @@ const (
 	SubscriptionModePeriod   = "period"
 	SubscriptionModeChanged  = "changed"
 
-	// subscription required fileds.
+	// subscription required fields.
 	SubscriptionFieldMode       = "mode"
 	SubscriptionFieldSource     = "source"
 	SubscriptionFieldTarget     = "target"
@@ -41,11 +41,11 @@ type SubscriptionBase struct {
 type subscription struct {
 	SubscriptionBase `mapstructure:",squash"`
 	daprClient       dapr.Client
-	stateMarchine    statem.StateMarchiner `mapstructure:"-"`
+	stateMachine     statem.StateMachiner `mapstructure:"-"`
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (statem.StateMarchiner, error) {
+func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (statem.StateMachiner, error) {
 	subsc := subscription{
 		SubscriptionBase: SubscriptionBase{
 			Mode: SubscriptionModeUndefine,
@@ -61,14 +61,14 @@ func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
-	subsc.stateMarchine = stateM
+	subsc.stateMachine = stateM
 	return &subsc, errors.Wrap(err, "create subscription failed")
 }
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
 	// set mapper.
-	s.stateMarchine.GetBase().Mappers =
+	s.stateMachine.GetBase().Mappers =
 		[]statem.MapperDesc{
 			{
 				Name:      "subscription",
@@ -76,12 +76,12 @@ func (s *subscription) Setup() error {
 			},
 		}
 
-	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup failed")
+	return errors.Wrap(s.stateMachine.Setup(), "subscription setup failed")
 }
 
-// GetID return state marchine id.
+// GetID return state machine id.
 func (s *subscription) GetID() string {
-	return s.stateMarchine.GetID()
+	return s.stateMachine.GetID()
 }
 
 // GetMode returns subscription mode.
@@ -90,25 +90,25 @@ func (s *subscription) GetMode() string {
 }
 
 func (s *subscription) GetBase() *statem.Base {
-	return s.stateMarchine.GetBase()
+	return s.stateMachine.GetBase()
 }
 
 func (s *subscription) GetManager() statem.StateManager {
-	return s.stateMarchine.GetManager()
+	return s.stateMachine.GetManager()
 }
 
 func (s *subscription) SetConfig(configs map[string]constraint.Config) error {
-	return errors.Wrap(s.stateMarchine.SetConfig(configs), "subscription.SetConfig failed")
+	return errors.Wrap(s.stateMachine.SetConfig(configs), "subscription.SetConfig failed")
 }
 
 // OnMessage recv message from pubsub.
 func (s *subscription) OnMessage(msg statem.Message) bool {
-	return s.stateMarchine.OnMessage(msg)
+	return s.stateMachine.OnMessage(msg)
 }
 
 // InvokeMsg dispose entity message.
 func (s *subscription) HandleLoop() {
-	s.stateMarchine.HandleLoop()
+	s.stateMachine.HandleLoop()
 }
 
 func (s *subscription) HandleMessage(message statem.Message) []WatchKey {

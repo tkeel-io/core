@@ -7,14 +7,14 @@ const (
 )
 
 type BitBucket struct {
-	lenth  int
+	length int
 	bucket []uint8
 }
 
 func NewBitBucket(length int) *BitBucket {
 	byteLen := (length + 7) / 8
 	return &BitBucket{
-		lenth:  length,
+		length: length,
 		bucket: make([]uint8, byteLen),
 	}
 }
@@ -40,7 +40,7 @@ func (bb *BitBucket) Disable(n int) bool {
 }
 
 func (bb *BitBucket) indexable(n int) (int, int) {
-	if bb.lenth <= n {
+	if bb.length <= n {
 		panic("index overflow")
 	}
 	return n / 8, n % 8

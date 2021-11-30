@@ -93,7 +93,7 @@ func (m *EntityManager) Start() error {
 
 				enInst := m.entities[eid]
 				if enInst.OnMessage(msgCtx.Message) {
-					// attatch goroutine to entity.
+					// attach goroutine to entity.
 					m.coroutinePool.Submit(enInst.HandleLoop)
 				}
 			}

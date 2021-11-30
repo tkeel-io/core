@@ -6,9 +6,9 @@ const (
 	defaultNonBlockNum = 10
 	defaultExpiredTime = 300 // ms.
 
-	MsgReciverID             = "m-reciverid"
-	MsgReciverStatusActive   = "m-active"
-	MsgReciverStatusInactive = "m-inactive"
+	MsgReceiverID             = "m-receiverid"
+	MsgReceiverStatusActive   = "m-active"
+	MsgReceiverStatusInactive = "m-inactive"
 )
 
 var log = logger.NewLogger("core.inbox")
@@ -28,7 +28,7 @@ type Offseter interface {
 	AutoCommit() bool
 }
 
-type MsgReciver interface {
+type MsgReceiver interface {
 	Status() string
 	OnMessage(msg MessageCtx) (int, error)
 }

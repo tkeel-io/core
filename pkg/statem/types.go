@@ -40,7 +40,7 @@ type StateManager interface {
 	SearchFlush(context.Context, map[string]interface{}) error
 }
 
-type StateMarchiner interface {
+type StateMachiner interface {
 	// GetID return state marchine id.
 	GetID() string
 	// GetBase returns state.Base

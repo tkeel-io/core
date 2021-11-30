@@ -10,15 +10,15 @@ import (
 )
 
 var (
-	UndefineResult = &DefaultNode{typ: Undefined}
-	NullResult     = &DefaultNode{typ: Undefined}
+	UndefinedResult = &DefaultNode{typ: Undefined}
+	NullResult      = &DefaultNode{typ: Undefined}
 )
 
 // Type node type.
 type Type int
 
 const (
-	// Undefine is Not a value.
+	// Undefined is Not a value.
 	// This isn't explicitly representable in JSON except by omitting the value.
 	Undefined Type = iota
 	// Null is a null json value.
@@ -90,7 +90,7 @@ func (r BoolNode) To(typ Type) Node {
 	case String:
 		return StringNode(fmt.Sprintf("%t", r))
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -108,7 +108,7 @@ func (r IntNode) To(typ Type) Node {
 	case String:
 		return StringNode(r.String())
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -126,7 +126,7 @@ func (r FloatNode) To(typ Type) Node {
 	case String:
 		return StringNode(strconv.FormatFloat(float64(r), 'f', -1, 64))
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -142,7 +142,7 @@ func (r StringNode) To(typ Type) Node { //nolint
 	case Bool:
 		b, err := strconv.ParseBool(string(r))
 		if err != nil {
-			return UndefineResult
+			return UndefinedResult
 		}
 		return BoolNode(b)
 	case Number:
@@ -153,17 +153,17 @@ func (r StringNode) To(typ Type) Node { //nolint
 	case Integer:
 		b, err := strconv.ParseInt(string(r), 10, 64)
 		if err != nil {
-			return UndefineResult
+			return UndefinedResult
 		}
 		return IntNode(b)
 	case Float:
 		b, err := strconv.ParseFloat(string(r), 64)
 		if err != nil {
-			return UndefineResult
+			return UndefinedResult
 		}
 		return FloatNode(b)
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -177,7 +177,7 @@ func (r NullNode) To(typ Type) Node {
 	case Null:
 		return r
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -199,7 +199,7 @@ func (r JSONNode) To(typ Type) Node {
 	case JSON:
 		return r
 	default:
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 
@@ -227,7 +227,7 @@ func NewNode(v interface{}) Node { //nolint
 			// deference pointer.
 			return NewNode(reflect.ValueOf(val).Elem().Interface())
 		}
-		return UndefineResult
+		return UndefinedResult
 	}
 }
 

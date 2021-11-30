@@ -23,7 +23,7 @@ type Mapper interface {
 	Tentacles() []Tentacler
 	// Copy duplicate a mapper.
 	Copy() Mapper
-	// Exec excute input returns output.
+	// Exec execute input returns output.
 	Exec(map[string]constraint.Node) (map[string]constraint.Node, error)
 }
 

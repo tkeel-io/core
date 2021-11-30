@@ -23,7 +23,7 @@ const (
 )
 
 type EntityOp interface {
-	statem.StateMarchiner
+	statem.StateMachiner
 }
 
 type EntitySubscriptionOp interface {

@@ -9,7 +9,7 @@ import (
 )
 
 type Entity struct {
-	stateMarchine statem.StateMarchiner
+	stateMachine statem.StateMachiner
 }
 
 func newEntity(ctx context.Context, mgr *EntityManager, in *statem.Base) (EntityOp, error) {
@@ -18,39 +18,39 @@ func newEntity(ctx context.Context, mgr *EntityManager, in *statem.Base) (Entity
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
-	return &Entity{stateMarchine: stateM}, nil
+	return &Entity{stateMachine: stateM}, nil
 }
 
-// GetID return state marchine id.
+// GetID return state machine id.
 func (e *Entity) GetID() string {
-	return e.stateMarchine.GetID()
+	return e.stateMachine.GetID()
 }
 
 // GetBase returns state.Base.
 func (e *Entity) GetBase() *statem.Base {
-	return e.stateMarchine.GetBase()
+	return e.stateMachine.GetBase()
 }
 
-// Setup state marchine setup.
+// Setup state machine setup.
 func (e *Entity) Setup() error {
-	return errors.Wrap(e.stateMarchine.Setup(), "entity setup failed")
+	return errors.Wrap(e.stateMachine.Setup(), "entity setup failed")
 }
 
 func (e *Entity) SetConfig(configs map[string]constraint.Config) error {
-	return errors.Wrap(e.stateMarchine.SetConfig(configs), "entity.SetConfig failed")
+	return errors.Wrap(e.stateMachine.SetConfig(configs), "entity.SetConfig failed")
 }
 
 // OnMessage recv message from pubsub.
 func (e *Entity) OnMessage(msg statem.Message) bool {
-	return e.stateMarchine.OnMessage(msg)
+	return e.stateMachine.OnMessage(msg)
 }
 
 // InvokeMsg dispose entity message.
 func (e *Entity) HandleLoop() {
-	e.stateMarchine.HandleLoop()
+	e.stateMachine.HandleLoop()
 }
 
 // StateManager returns state manager.
 func (e *Entity) GetManager() statem.StateManager {
-	return e.stateMarchine.GetManager()
+	return e.stateMachine.GetManager()
 }

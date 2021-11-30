@@ -15,14 +15,14 @@ type MessageCtx struct {
 }
 
 type inbox struct {
-	Buffer    []MessageCtx
-	msgCh     chan MessageCtx
-	ticker    *time.Ticker
-	recivers  map[string]MsgReciver
-	shutdowCh chan struct{}
+	Buffer     []MessageCtx
+	msgCh      chan MessageCtx
+	ticker     *time.Ticker
+	receivers  map[string]MsgReceiver
+	shutdownCh chan struct{}
 
 	size        int
-	capcity     int
+	capacity    int
 	headIdx     int
 	blockNum    int
 	lastCommit  int64
@@ -33,7 +33,7 @@ type inbox struct {
 }
 
 // NewInbox returns a inbox instance.
-func NewInbox(ctx context.Context, capcity, nonBlockNum int, msgHandle MessageHandler) Inbox {
+func NewInbox(ctx context.Context, capacity, nonBlockNum int, msgHandle MessageHandler) Inbox {
 	ctx, cancel := context.WithCancel(ctx)
 
 	if nonBlockNum < 10 {
@@ -44,12 +44,12 @@ func NewInbox(ctx context.Context, capcity, nonBlockNum int, msgHandle MessageHa
 		ctx:         ctx,
 		cancel:      cancel,
 		size:        0,
-		capcity:     capcity,
-		shutdowCh:   make(chan struct{}),
+		capacity:    capacity,
+		shutdownCh:  make(chan struct{}),
 		ticker:      time.NewTicker(10),
 		expiredTime: defaultExpiredTime,
 		msgCh:       make(chan MessageCtx, nonBlockNum),
-		Buffer:      make([]MessageCtx, capcity),
+		Buffer:      make([]MessageCtx, capacity),
 	}
 }
 
@@ -65,16 +65,16 @@ func (ib *inbox) Start() { // nolint
 		case <-ib.ctx.Done():
 			ib.cancel()
 			ib.Stop()
-		case <-ib.shutdowCh:
+		case <-ib.shutdownCh:
 			ib.cancel()
 			ib.Stop()
 		default:
-			// recive msg from msgCh.
-			idelNum := ib.capcity - ib.size
+			// receive msg from msgCh.
+			idelNum := ib.capacity - ib.size
 			for n := 0; n < idelNum; n++ {
 				select {
 				case msg := <-ib.msgCh:
-					ib.Buffer[(ib.headIdx+ib.size)%ib.capcity] = msg
+					ib.Buffer[(ib.headIdx+ib.size)%ib.capacity] = msg
 					ib.size++
 				default:
 					break
@@ -83,14 +83,14 @@ func (ib *inbox) Start() { // nolint
 
 			// handle msg.
 			blockNum := ib.blockNum
-			blockIdx := (ib.headIdx + ib.size - ib.blockNum) % ib.capcity
+			blockIdx := (ib.headIdx + ib.size - ib.blockNum) % ib.capacity
 			for n := 0; n < blockNum; n++ {
-				msg := ib.Buffer[(blockIdx+n)%ib.capcity]
-				reciverID := msg.Headers[MsgReciverID]
-				if reciver, exists := ib.recivers[reciverID]; exists {
-					if MsgReciverStatusInactive == reciver.Status() {
+				msg := ib.Buffer[(blockIdx+n)%ib.capacity]
+				reciverID := msg.Headers[MsgReceiverID]
+				if reciver, exists := ib.receivers[reciverID]; exists {
+					if MsgReceiverStatusInactive == reciver.Status() {
 						log.Infof("inactive reciver, evicted reciver (%s).", reciverID)
-						delete(ib.recivers, reciverID)
+						delete(ib.receivers, reciverID)
 					} else {
 						_, err := reciver.OnMessage(msg)
 						if nil != err {
@@ -164,16 +164,16 @@ func (ib *inbox) evictedHead() {
 
 	headIdx := ib.headIdx
 	msg0 := ib.Buffer[headIdx]
-	reciverID := msg0.Headers[MsgReciverID]
+	reciverID := msg0.Headers[MsgReceiverID]
 
 	for i := 0; i < ib.size; i++ {
-		msg := ib.Buffer[headIdx%ib.capcity]
-		if msg.Headers[MsgReciverID] != reciverID {
+		msg := ib.Buffer[headIdx%ib.capacity]
+		if msg.Headers[MsgReceiverID] != reciverID {
 			break
 		}
 		headIdx++
 	}
 
 	ib.size = ib.size - ib.headIdx + headIdx
-	ib.headIdx = headIdx % ib.capcity
+	ib.headIdx = headIdx % ib.capacity
 }

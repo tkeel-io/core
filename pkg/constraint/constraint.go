@@ -7,7 +7,7 @@ import (
 var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
 	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")
-	ErrInvalidNodeType     = errors.New("undefine node type")
+	ErrInvalidNodeType     = errors.New("undefined node type")
 	ErrEmptyParam          = errors.New("empty params")
 	ErrPatchNotFound       = errors.New("patch not found")
 	ErrPatchPathInvalid    = errors.New("invalid patch path")
@@ -67,7 +67,7 @@ func genSearchIndex(prefix string, ct *Constraint) []string {
 }
 
 func NewConstraintsFrom(cfg Config) *Constraint {
-	// current latyer.
+	// current layer.
 	if !cfg.Enabled {
 		return nil
 	}
@@ -76,7 +76,7 @@ func NewConstraintsFrom(cfg Config) *Constraint {
 }
 
 func parseConstraintFrom(cfg Config) *Constraint {
-	// current latyer.
+	// current layer.
 	if !cfg.Enabled {
 		return nil
 	}
