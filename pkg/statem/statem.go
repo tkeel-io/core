@@ -400,7 +400,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 }
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	if !strings.Contains(propertyKey, ".") {
+	if !strings.Contains(propertyKey, ".[") {
 		return s.KValues[propertyKey], nil
 	}
 
@@ -410,7 +410,7 @@ func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey 
 	return res, errors.Wrap(err, "get patch failed")
 }
 
-func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, value constraint.Node) {
+func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, value constraint.Node) error {
 	var err error
 	var resultNode constraint.Node
 
@@ -425,24 +425,30 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 			}
 			if resultNode, err = constraint.Patch(s.KValues[propertyKey], value, "", op); nil != err {
 				log.Errorf("set property failed, err: %s", err.Error())
-				return
+				return errors.Wrap(err, "set property failed")
 			}
 			s.KValues[propertyKey] = resultNode
 		case constraint.PatchOpRemove:
 			delete(s.KValues, propertyKey)
+		default:
+			return constraint.ErrJSONPatchReservedOp
 		}
-		return
 	}
 
 	// patch property.
 	index := strings.IndexAny(propertyKey, ".[")
 	propertyID, patchPath := propertyKey[:index], propertyKey[index:]
+	if _, has := s.KValues[propertyID]; !has {
+		return constraint.ErrPatchNotFound
+	}
+
 	if resultNode, err = constraint.Patch(s.KValues[propertyID], value, patchPath, op); nil != err {
 		log.Errorf("set property failed, err: %s", err.Error())
-		return
+		return errors.Wrap(err, "set property failed")
 	}
 
 	s.KValues[propertyID] = resultNode
+	return nil
 }
 
 // invokeMapperMsg dispose mapper msg.
