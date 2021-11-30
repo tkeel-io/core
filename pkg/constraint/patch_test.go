@@ -9,7 +9,7 @@ import (
 
 func TestPatch(t *testing.T) {
 	var err error
-	dest := NewNode(`{"temp":20}`)
+	var dest Node = JSONNode(`{"temp":20}`)
 	dest, err = Patch(dest, NewNode(22), "temp", PatchOpReplace)
 	assert.Nil(t, err)
 	assert.Equal(t, `{"temp":22}`, dest.String())

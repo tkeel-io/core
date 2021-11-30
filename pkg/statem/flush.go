@@ -21,26 +21,23 @@ func (s *statem) flush() error {
 }
 
 func (s *statem) flushSearch() error {
-	var (
-		err       error
-		flushData map[string]interface{}
-	)
-
-	flushData = make(map[string]interface{})
+	var err error
+	var flushData = make(map[string]interface{})
 	for _, JSONPath := range s.searchConstraints {
-		if val := s.getValByJSONPath(JSONPath); nil != val {
-			var n constraint.Node
-			var ct *constraint.Constraint
-
-			if ct, err = s.getConstraint(JSONPath); nil != err {
-				log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
-			} else if n, err = constraint.ExecData(val, ct); nil != err {
-				log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
-				continue
-			}
-
-			flushData[JSONPath] = n.Value()
+		var val constraint.Node
+		var ct *constraint.Constraint
+		if val, err = s.getProperty(s.KValues, JSONPath); nil != err {
+			log.Errorf("patch.copy entity(%s) property(%s) failed, err: %s", s.ID, JSONPath, err.Error())
+			continue
+		} else if ct, err = s.getConstraint(JSONPath); nil != err {
+			log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
+			continue
+		} else if val, err = constraint.ExecData(val, ct); nil != err {
+			log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
+			continue
 		}
+
+		flushData[JSONPath] = val.Value()
 	}
 
 	// flush all.
@@ -94,9 +91,4 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 	}
 
 	return ct, nil
-}
-
-func (s *statem) getValByJSONPath(jsonPath string) constraint.Node {
-	// json patch.
-	return s.KValues[jsonPath]
 }

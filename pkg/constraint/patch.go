@@ -75,10 +75,9 @@ func IsValidPath(path string) bool {
 }
 
 func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) { //nolint
-	sVal := destNode.To(String)
-	if String == sVal.Type() {
-		s, _ := sVal.Value().(string)
-		collect := collectjs.New(s)
+	bytes := ToBytesWithWrapString(destNode)
+	if nil != bytes {
+		collect := collectjs.ByteNew(bytes)
 		switch op {
 		case PatchOpRemove:
 			collect.Del(path)
@@ -102,7 +101,7 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 			case PatchOpAdd:
 				collect.Append(path, ToBytesWithWrapString(srcNode))
 			}
-			return JSONNode(collect.GetRaw()), nil
+			return JSONNode(collect.GetRaw()), collect.GetError()
 		}
 
 		return destNode, ErrEmptyParam
