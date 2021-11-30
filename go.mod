@@ -18,7 +18,7 @@ require (
 	github.com/smartystreets/gunit v1.4.2
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
-	github.com/tkeel-io/collectjs v0.0.0-20211125080718-ef355460ac69
+	github.com/tkeel-io/collectjs v0.0.0-20211130035606-e8d64c4a2a39
 	github.com/tkeel-io/kit v0.0.0-20211122161648-31b3986683f2
 	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211122135618-1bef12bc8c9c
 	go.uber.org/atomic v1.9.0

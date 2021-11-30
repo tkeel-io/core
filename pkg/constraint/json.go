@@ -33,6 +33,8 @@ const (
 	Float
 	// String is a json string.
 	String
+	// Array is a json array.
+	Array
 	// JSON is a raw block of JSON.
 	JSON
 )
@@ -52,6 +54,8 @@ func (t Type) String() string {
 		return "Float"
 	case String:
 		return "String"
+	case Array:
+		return "Array"
 	case JSON:
 		return "JSON"
 	}
@@ -176,6 +180,33 @@ func (r NullNode) To(typ Type) Node {
 	switch typ {
 	case Null:
 		return r
+	case JSON:
+		return JSONNode("{}")
+	case Array:
+		return ArrayNode("[]")
+	default:
+		return UndefineResult
+	}
+}
+
+type ArrayNode []byte
+
+func (r ArrayNode) Type() Type     { return Array }
+func (r ArrayNode) String() string { return string(r) }
+func (r ArrayNode) Value() interface{} {
+	var data interface{}
+	_ = json.Unmarshal(r, &data)
+	return data
+}
+
+func (r ArrayNode) To(typ Type) Node {
+	switch typ {
+	case String:
+		return StringNode(r)
+	case Array:
+		return r
+	case JSON:
+		return JSONNode(r)
 	default:
 		return UndefineResult
 	}
@@ -223,10 +254,15 @@ func NewNode(v interface{}) Node { //nolint
 	case nil:
 		return NullNode{}
 	default:
-		if reflect.Ptr == reflect.TypeOf(val).Kind() {
+		valKind := reflect.TypeOf(val).Kind()
+		if reflect.Ptr == valKind {
 			// deference pointer.
 			return NewNode(reflect.ValueOf(val).Elem().Interface())
+		} else if reflect.Slice == valKind {
+			data, _ := json.Marshal(v)
+			return JSONNode(string(data))
 		}
+
 		return UndefineResult
 	}
 }
