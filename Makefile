@@ -170,7 +170,7 @@ else
 	@go test -v -cover -gcflags=all=-l -coverprofile=coverage.out ./...
 endif
 
-docker-build: build
+docker-build:
 	docker build -t tkeelio/core:0.2.0 .
 docker-push:
 	docker push tkeelio/core:0.2.0
