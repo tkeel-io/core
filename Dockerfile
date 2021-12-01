@@ -1,3 +1,10 @@
+############################################################ 
+# Dockerfile to build golang Installed Containers 
+ 
+# Based on alpine
+ 
+############################################################
+
 FROM golang:1.16 AS builder
 
 COPY . /src
