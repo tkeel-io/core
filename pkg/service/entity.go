@@ -149,6 +149,10 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	return out, nil
 }
 
+func (s *EntityService) PatchEntityZ(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
+	return s.PatchEntity(ctx, req)
+}
+
 func checkPatchData(patchData *pb.PatchData) error {
 	if constraint.IsReversedOp(patchData.Operator) {
 		return constraint.ErrJSONPatchReservedOp

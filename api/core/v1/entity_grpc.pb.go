@@ -21,6 +21,7 @@ type EntityClient interface {
 	CreateEntity(ctx context.Context, in *CreateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	UpdateEntity(ctx context.Context, in *UpdateEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	PatchEntity(ctx context.Context, in *PatchEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	PatchEntityZ(ctx context.Context, in *PatchEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteEntityResponse, error)
 	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
@@ -57,6 +58,15 @@ func (c *entityClient) UpdateEntity(ctx context.Context, in *UpdateEntityRequest
 func (c *entityClient) PatchEntity(ctx context.Context, in *PatchEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
 	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/PatchEntity", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) PatchEntityZ(ctx context.Context, in *PatchEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/PatchEntityZ", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +125,7 @@ type EntityServer interface {
 	CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 	PatchEntity(context.Context, *PatchEntityRequest) (*EntityResponse, error)
+	PatchEntityZ(context.Context, *PatchEntityRequest) (*EntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
@@ -135,6 +146,9 @@ func (UnimplementedEntityServer) UpdateEntity(context.Context, *UpdateEntityRequ
 }
 func (UnimplementedEntityServer) PatchEntity(context.Context, *PatchEntityRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PatchEntity not implemented")
+}
+func (UnimplementedEntityServer) PatchEntityZ(context.Context, *PatchEntityRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PatchEntityZ not implemented")
 }
 func (UnimplementedEntityServer) DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntity not implemented")
@@ -214,6 +228,24 @@ func _Entity_PatchEntity_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EntityServer).PatchEntity(ctx, req.(*PatchEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_PatchEntityZ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).PatchEntityZ(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/PatchEntityZ",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).PatchEntityZ(ctx, req.(*PatchEntityRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -326,6 +358,10 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PatchEntity",
 			Handler:    _Entity_PatchEntity_Handler,
+		},
+		{
+			MethodName: "PatchEntityZ",
+			Handler:    _Entity_PatchEntityZ_Handler,
 		},
 		{
 			MethodName: "DeleteEntity",

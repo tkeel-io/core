@@ -32,6 +32,12 @@ service Entity {
             body: "properties"
         };
     };
+    rpc PatchEntityZ (PatchEntityRequest) returns (EntityResponse) {
+        option (google.api.http) = {
+            put: "/plugins/{plugin}/entities/{id}/patch"
+            body: "properties"
+        };
+    };
 	rpc DeleteEntity (DeleteEntityRequest) returns (DeleteEntityResponse) {
 		option (google.api.http) = {
 			delete : "/plugins/{plugin}/entities/{id}"
