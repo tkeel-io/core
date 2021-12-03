@@ -4,6 +4,7 @@ syntax = "proto3";
 package api.core.v1;
 
 import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 option java_multiple_files = true;
@@ -15,93 +16,148 @@ service Subscription {
 			post : "/plugins/{plugin}/subscriptions"
 			body : "subscription"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Create subscription";
+            operation_id: "CreateSubscription";
+            tags: "Subscription";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 	rpc UpdateSubscription (UpdateSubscriptionRequest) returns (SubscriptionResponse) {
 		option (google.api.http) = {
 			put : "/plugins/{plugin}/subscriptions/{id}"
 			body : "subscription"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Update subscription";
+            operation_id: "UpdateSubscription";
+            tags: "Subscription";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 	rpc DeleteSubscription (DeleteSubscriptionRequest) returns (DeleteSubscriptionResponse) {
 		option (google.api.http) = {
 			delete : "/plugins/{plugin}/subscriptions/{id}"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Delete subscription";
+            operation_id: "DeleteSubscription";
+            tags: "Subscription";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 	rpc GetSubscription (GetSubscriptionRequest) returns (SubscriptionResponse) {
 		option (google.api.http) = {
 			get : "/plugins/{plugin}/subscriptions/{id}"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Get subscription";
+            operation_id: "GetSubscription";
+            tags: "Subscription";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 	rpc ListSubscription (ListSubscriptionRequest) returns (ListSubscriptionResponse) {
 		option (google.api.http) = {
 			get : "/plugins/{plugin}/subscriptions"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "List subscriptions";
+            operation_id: "ListScription";
+            tags: "Subscription";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 }
 
 message SubscriptionObject {
-    string mode = 1;
-    string source = 2;
-    string filter = 3;
-    string target = 4;
-    string topic = 5;
-    string pubsub_name = 6;
+    string mode = 1  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "suscription mode"}];
+    string source = 2  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string filter = 3  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "filter"}];
+    string target = 4  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "target id"}];
+    string topic = 5  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "topic name"}];
+    string pubsub_name = 6  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "pubsub name"}];
 }
 
 
 
 message SubscriptionResponse {
-    string id = 1;
-    string plugin = 2;
-    string source = 3;
-    string owner = 4;
-    SubscriptionObject subscription = 5;
+    string id = 1  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string plugin = 2  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 3  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    SubscriptionObject subscription = 5  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription object"}];
 }
 
 message CreateSubscriptionRequest {
-    string id = 1;
-    string plugin = 2;
-    string source = 3;
-    string owner = 4;
-    SubscriptionObject subscription = 5;
+    string id = 1  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string plugin = 2  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 3  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    SubscriptionObject subscription = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription object"}];
 }
 
 
 message UpdateSubscriptionRequest {
-    string id = 1;
-    string plugin = 2;
-    string source = 3;
-    string owner = 4;
-    SubscriptionObject subscription = 5;
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string plugin = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    SubscriptionObject subscription = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription object"}];
 }
 
 
 message DeleteSubscriptionRequest {
-    string id = 1;
-    string plugin = 2;
-    string source = 3;
-    string owner = 4;
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string plugin = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
 }
 message DeleteSubscriptionResponse {
-    string id = 1;
-    string status = 2;
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string status = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "status"}];
 }
 
 message GetSubscriptionRequest {
-    string id = 1;
-    string plugin = 2;
-    string source = 3;
-    string owner = 4;
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription id"}];
+    string plugin = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
 }
 
 message ListSubscriptionRequest {
-    string plugin = 1;
-    string source = 2;
-    string owner = 3;
+    string plugin = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "plugin id"}];
+    string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
 }
 
 message ListSubscriptionResponse {
-    int32 count = 1;
-    repeated SubscriptionResponse items = 2;
+    int32 count = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "count of the subscriptions"}];
+    repeated SubscriptionResponse items = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription items"}];
 }
 
