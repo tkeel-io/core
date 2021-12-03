@@ -352,9 +352,15 @@ func parseHeaderFrom(ctx context.Context, en *statem.Base) {
 	if header := ctx.Value(struct{}{}); nil != header {
 		switch h := header.(type) {
 		case http.Header:
-			en.Type = h.Get(HeaderType)
-			en.Owner = h.Get(HeaderOwner)
-			en.Source = h.Get(HeaderSource)
+			if en.Type == "" {
+				en.Type = h.Get(HeaderType)
+			}
+			if en.Owner == "" {
+				en.Owner = h.Get(HeaderOwner)
+			}
+			if en.Source == "" {
+				en.Source = h.Get(HeaderSource)
+			}
 		default:
 			panic("invalid HEADERS")
 		}
