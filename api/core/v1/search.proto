@@ -6,6 +6,7 @@ package api.core.v1;
 import "google/api/annotations.proto";
 import "google/protobuf/struct.proto";
 import "api/core/v1/list.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 option java_multiple_files = true;
@@ -17,12 +18,34 @@ service Search {
 			post : "/index"
 			body : "obj"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Index a object";
+            operation_id: "IndexObject";
+            tags: "Search";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 	rpc Search (SearchRequest) returns (SearchResponse) {
 		option (google.api.http) = {
 			post : "/search"
 			body: "*"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Search objects by keyword";
+            operation_id: "SearchObjects";
+            tags: "Search";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
 	};
 }
 
@@ -35,21 +58,21 @@ message IndexResponse {
 }
 
 message SearchCondition {
-    string field = 1;
-    string operator = 2;
-    google.protobuf.Value value = 3;
+    string field = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property key"}];
+    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator $gt $gte $eq $lt $lte "}];
+    google.protobuf.Value value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "value of the key"}];
 }
 
 message SearchRequest {
-    string query = 1;
-    Pager page = 2;
-    repeated SearchCondition condition = 3;
+    string query = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "search keyword"}];
+    Pager page = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "page"}];
+    repeated SearchCondition condition = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "conditions list"}];
 }
 
 message SearchResponse {
-    int64 total = 1;
-    int64 page = 2;
-    int64 limit = 3;
-    int64 offset = 4;
-    repeated google.protobuf.Value items = 5;
+    int64 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "count of the results"}];
+    int64 page = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "page number"}];
+    int64 limit = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "limit"}];
+    int64 offset = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "offset"}];
+    repeated google.protobuf.Value items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "items of the results"}];
 }

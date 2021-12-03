@@ -5,6 +5,7 @@ package api.core.v1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/struct.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
@@ -17,6 +18,17 @@ service Topic {
 			post : "/topic"
 			body : "*"
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "TopicEvent handler";
+            operation_id: "topicEventHandler";
+            tags: "TopicEvent";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
     }
 }
 
