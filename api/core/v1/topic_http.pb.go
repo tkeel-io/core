@@ -34,6 +34,7 @@ func newTopicHTTPHandler(s TopicHTTPServer) *TopicHTTPHandler {
 
 func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_restful.Response) {
 	in := TopicEventRequest{}
+	req.Request.Header.Set(go_restful.HEADER_ContentType, go_restful.MIME_JSON)
 	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
