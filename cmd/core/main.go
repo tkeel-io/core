@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
-	openapi "github.com/tkeel-io/core/api/openapi/v1"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
@@ -90,10 +89,6 @@ func main() {
 		SearchSrv := service.NewSearchService(searchClient)
 		Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 		Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
-
-		OpenapiSrv := service.NewOpenapiService()
-		openapi.RegisterOpenapiHTTPServer(httpSrv.Container, OpenapiSrv)
-		openapi.RegisterOpenapiServer(grpcSrv.GetServe(), OpenapiSrv)
 	}
 
 	// run.
