@@ -36,8 +36,9 @@ type Config struct {
 }
 
 type LogConfig struct {
-	Level      string `yaml:"level"`
-	OutputJSON bool   `yaml:"output_json"`
+	Dev    bool     `yaml:"dev"`
+	Level  string   `yaml:"level"`
+	Output []string `yaml:"output"`
 }
 
 func defaultConfig() Config {

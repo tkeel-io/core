@@ -27,4 +27,5 @@ api_config:
     state_name: core-state
     binding_name: entity
 logger:
-  output_json: true
+  dev: true
+  level: DEBUG

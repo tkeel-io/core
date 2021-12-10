@@ -25,6 +25,7 @@ import (
 	"syscall"
 
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
@@ -37,14 +38,14 @@ import (
 )
 
 var (
-	Name          string
+	cfgFile       string
 	HTTPAddr      string
 	GRPCAddr      string
 	SearchBrokers string
 )
 
 func init() {
-	flag.StringVar(&Name, "name", "core", "app name.")
+	flag.StringVar(&cfgFile, "conf", "config.yml", "config file path.")
 	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
 	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
@@ -52,16 +53,17 @@ func init() {
 
 func main() {
 	flag.Parse()
-
+	config.InitConfig(cfgFile)
 	httpSrv := server.NewHTTPServer(HTTPAddr)
 	grpcSrv := server.NewGRPCServer(GRPCAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
-	coreApp := app.New(Name,
+	coreApp := app.New(config.GetConfig().Server.AppID,
 		&log.Conf{
-			App:   Name,
-			Level: "debug",
-			Dev:   true,
+			App:    config.GetConfig().Server.AppID,
+			Level:  config.GetConfig().Logger.Level,
+			Dev:    config.GetConfig().Logger.Dev,
+			Output: config.GetConfig().Logger.Output,
 		},
 		serverList...,
 	)
