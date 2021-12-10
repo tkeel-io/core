@@ -76,6 +76,8 @@ func InitConfig(cfgFile string) {
 		}
 	}
 
+	print.InfoStatusEvent(os.Stdout, "loading configuration...")
+
 	// default.
 	viper.SetDefault("server.app_port", 6789)
 	viper.SetDefault("server.app_id", "core")
@@ -89,7 +91,6 @@ func InitConfig(cfgFile string) {
 	// set callback.
 	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
-	print.InfoStatusEvent(os.Stdout, "watching config...")
 }
 
 func onConfigChanged(in fsnotify.Event) {

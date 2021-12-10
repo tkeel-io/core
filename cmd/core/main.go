@@ -27,6 +27,7 @@ import (
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
@@ -53,7 +54,10 @@ func init() {
 
 func main() {
 	flag.Parse()
+	// load configuration.
 	config.InitConfig(cfgFile)
+
+	// new servers.
 	httpSrv := server.NewHTTPServer(HTTPAddr)
 	grpcSrv := server.NewGRPCServer(GRPCAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
@@ -68,7 +72,7 @@ func main() {
 		serverList...,
 	)
 
-	coroutinePool, err := ants.NewPool(100)
+	coroutinePool, err := ants.NewPool(5000)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -81,35 +85,36 @@ func main() {
 
 	{
 		// User service
-		// create coroutine pool.
-
-		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
-		if nil != err {
+		if EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
-		Core_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
-
-		SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), entityManager)
-		if nil != err {
+		} else if SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), entityManager); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
-		Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
-
-		TopicSrv, err := service.NewTopicService(context.Background(), entityManager)
-		if nil != err {
+		} else if TopicSrv, err := service.NewTopicService(context.Background(), entityManager); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
-		Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+		} else {
+			// register entity service.
+			Core_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
+			Core_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
 
-		SearchSrv := service.NewSearchService(searchClient)
-		Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
-		Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+			// register topic service.
+			Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
+			Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+
+			// register subscription service.
+			Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
+			Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
+
+			// register search service.
+
+			SearchSrv := service.NewSearchService(searchClient)
+			Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
+			Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+			print.SuccessStatusEvent(os.Stdout, "all seavice registed.")
+		}
 	}
 
-	// run.
+	// running...
+	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
 	if err := entityManager.Start(); nil != err {
 		panic(err)
 	} else if err = coreApp.Run(context.TODO()); err != nil {
