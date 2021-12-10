@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 
@@ -90,14 +89,11 @@ func InitConfig(cfgFile string) {
 	// set callback.
 	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
-	print.PendingStatusEvent(os.Stdout, "watch config file.....")
+	print.InfoStatusEvent(os.Stdout, "watching config...")
 }
 
 func onConfigChanged(in fsnotify.Event) {
-	print.PendingStatusEvent(os.Stdout, "watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
 	_ = viper.Unmarshal(&config)
-	bytes, _ := json.MarshalIndent(config, "	", "	")
-	print.InfoStatusEvent(os.Stdout, string(bytes))
 }
 
 func writeDefault(cfgFile string) {
