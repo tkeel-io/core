@@ -109,7 +109,7 @@ func main() {
 			SearchSrv := service.NewSearchService(searchClient)
 			Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 			Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
-			print.SuccessStatusEvent(os.Stdout, "all seavice registed.")
+			print.SuccessStatusEvent(os.Stdout, "all seavice registered.")
 		}
 	}
 
