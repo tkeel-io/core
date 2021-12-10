@@ -25,14 +25,11 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/olivere/elastic/v7"
 	"google.golang.org/protobuf/types/known/structpb"
 )
-
-var log = logger.NewLogger("core.search.es")
 
 const EntityIndex = "entity"
 

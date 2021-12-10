@@ -24,7 +24,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -140,11 +143,11 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 			watchKeys = s.invokeChanged(msg)
 		default:
 			// invalid subscription mode.
-			log.Errorf("undefine subscription mode, mode: %s", s.Mode)
+			log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode))
 		}
 	default:
 		// invalid msg typs.
-		log.Errorf("undefine message type, msg: %s", msg)
+		log.Error("undefine message type.", logger.MessageInst(msg))
 	}
 
 	return watchKeys
@@ -155,7 +158,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Realtime 直接转发就OK了.
 	bytes, _ := json.Marshal(msg.Properties)
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
-		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
 	return nil
@@ -166,7 +169,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Period 直接查询快照.
 	bytes, _ := json.Marshal(msg.Properties)
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
-		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
 	return nil
@@ -177,7 +180,7 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Changed 直接转发就OK了.
 	bytes, _ := json.Marshal(msg.Properties)
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
-		log.Errorf("invoke realtime subscription failed, msg: %v, %s", msg, err.Error())
+		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
 	return nil

@@ -16,8 +16,6 @@ limitations under the License.
 
 package inbox
 
-import "github.com/tkeel-io/core/pkg/logger"
-
 const (
 	defaultNonBlockNum = 10
 	defaultExpiredTime = 300 // ms.
@@ -26,8 +24,6 @@ const (
 	MsgReciverStatusActive   = "m-active"
 	MsgReciverStatusInactive = "m-inactive"
 )
-
-var log = logger.NewLogger("core.inbox")
 
 type MessageHandler = func(msg MessageCtx) (int, error)
 

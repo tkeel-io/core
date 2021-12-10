@@ -22,7 +22,6 @@ import (
 	"sort"
 
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
 
@@ -42,8 +41,6 @@ const (
 )
 
 var (
-	log = logger.NewLogger("core.state-marchine")
-
 	errInvalidMapperOp = errors.New("invalid mapper operator")
 	errInvalidJSONPath = errors.New("invalid JSONPath")
 )

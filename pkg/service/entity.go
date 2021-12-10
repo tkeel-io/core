@@ -25,7 +25,10 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -55,9 +58,6 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		entity.ID = req.Id
 	}
 
-	wrapErrMsg := "create entity failed"
-	defer ErrorIf(&err, "error: %v, request: %v", err, req)
-
 	entity.Owner = req.Owner
 	entity.Type = req.Type
 	entity.Source = req.Plugin
@@ -69,23 +69,29 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 			entity.KValues[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Warn("create entity, but empty params")
+		log.Warn("create entity, but empty params", logger.EntityID(req.Id))
 	default:
+		log.Error("create entity, but invalid params",
+			logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
 		return out, ErrEntityInvalidParams
 	}
 
 	// check properties.
 	if _, has := entity.KValues[""]; has {
+		log.Error("create entity, but invalid params",
+			logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
 	}
 
 	// set properties.
 	if _, err = s.entityManager.SetProperties(ctx, entity); nil != err {
-		return out, errors.Wrap(err, wrapErrMsg)
+		log.Error("create entity failed",
+			logger.EntityID(req.Id), zap.Error(err))
+		return out, errors.Wrap(err, "create entity failed")
 	}
 
 	out = s.entity2EntityResponse(entity)
-	return out, errors.Wrap(err, wrapErrMsg)
+	return out, errors.Wrap(err, "create entity failed")
 }
 
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
@@ -101,22 +107,22 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			entity.KValues[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Errorf("update entity failed, err: %v", ErrEntityEmptyRequest)
+		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Errorf("update entity failed, err: %v", ErrEntityInvalidParams)
+		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityInvalidParams
 	}
 
 	// check properties.
 	if _, has := entity.KValues[""]; has {
-		log.Errorf("update entity failed, err: %v", ErrEntityPropertyIDEmpty)
+		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
 	}
 
 	// set properties.
 	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
-		log.Errorf("update entity failed, err: %v", err)
+		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
 
@@ -137,27 +143,27 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 		patchData := make([]*pb.PatchData, 0)
 		data, _ := json.Marshal(kv)
 		if err = json.Unmarshal(data, &patchData); nil != err {
-			log.Errorf("patch entity failed, err: %v", ErrEntityInvalidParams)
+			log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
 			return nil, ErrEntityInvalidParams
 		}
 
 		// check path data.
 		for _, pd := range patchData {
 			if err = checkPatchData(pd); nil != err {
-				log.Errorf("patch entity failed, err: %v", err)
+				log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(err))
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
 		}
 
 		if entity, err = s.entityManager.PatchEntity(ctx, entity, patchData); nil != err {
-			log.Errorf("patch entity failed, err: %v", err)
+			log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
 	case nil:
-		log.Errorf("patch entity failed, err: %v", ErrEntityEmptyRequest)
+		log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Errorf("patch entity failed, err: %v", ErrEntityInvalidParams)
+		log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityInvalidParams
 	}
 
@@ -206,7 +212,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Errorf("get entity failed, %s", err.Error())
+		log.Error("get entity failed.", logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity failed")
 	}
 
@@ -222,7 +228,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	var resp *pb.SearchResponse
 	if resp, err = s.searchClient.Search(ctx, searchReq); err != nil {
-		log.Errorf("list entities failed, err: %s", err.Error())
+		log.Error("list entities failed.", zap.Error(err))
 		return out, errors.Wrap(err, "list entity failed")
 	}
 
@@ -246,7 +252,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		}
 	}
 	if err != nil {
-		log.Errorf("list entities failed, err: %s", err.Error())
+		log.Error("list entities failed", zap.Error(err))
 		return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil
@@ -270,9 +276,9 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	json.Unmarshal(bytes, &configs)
 
 	if out.Properties, err = structpb.NewValue(kv); nil != err {
-		log.Errorf("convert entity failed, err: %s", err)
+		log.Error("convert entity failed", zap.Error(err))
 	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
-		log.Errorf("convert entity failed, err: %s", err)
+		log.Error("convert entity failed.", zap.Error(err))
 	}
 
 	out.Mappers = make([]*pb.MapperDesc, 0)
@@ -301,7 +307,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		mapperDesc.TQLString = req.Mapper.Tql
 		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	} else {
-		log.Errorf("append mapper failed, %v", ErrEntityMapperNil)
+		log.Error("append mapper failed.", logger.EntityID(req.Id), zap.Error(err))
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
 
@@ -324,14 +330,14 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 
 	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
 	if nil != err {
-		log.Errorf("set entity config failed, %s", err.Error())
+		log.Error("set entity config failed.", logger.EntityID(req.Id), zap.Error(err))
 		return out, err
 	}
 
 	// set properties.
 	entity, err = s.entityManager.SetConfigs(ctx, entity)
 	if nil != err {
-		log.Errorf("set entity config failed, %s", err.Error())
+		log.Error("set entity config failed.", logger.EntityID(req.Id), zap.Error(err))
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -355,10 +361,10 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]cons
 			return out, ErrEntityConfigInvalid
 		}
 	case nil:
-		log.Errorf("set entity configs failed, err: %v", ErrEntityEmptyRequest)
+		log.Error("set entity configs failed.", zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Errorf("set entity configs failed, err: %v", ErrEntityInvalidParams)
+		log.Error("set entity configs failed.", zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityConfigInvalid
 	}
 	return out, errors.Wrap(err, "parse entity config failed")
