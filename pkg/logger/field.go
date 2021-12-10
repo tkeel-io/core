@@ -37,3 +37,7 @@ func Operator(op string) zap.Field {
 func Type(t string) zap.Field {
 	return zap.String("type", t)
 }
+
+func Status(status string) zap.Field {
+	return zap.String("status", status)
+}
