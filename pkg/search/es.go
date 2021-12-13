@@ -72,9 +72,9 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	return out, errors.Wrap(err, "es index failed")
 }
 
-func (es *ESClient) DeleteByID(ctx context.Context, id string) error {
-	_, err := es.client.Delete().Index(EntityIndex).Id(id).Do(ctx)
-	return errors.Wrap(err, "elasticsearch delete by id")
+func (es *ESClient) DeleteByID(ctx context.Context, req *pb.DeleteByIDRequest) (out *pb.DeleteByIDResponse, err error) {
+	_, err = es.client.Delete().Index(EntityIndex).Id(req.Id).Do(ctx)
+	return out, errors.Wrap(err, "elasticsearch delete by id")
 }
 
 func (es *ESClient) DeleteByQuery(ctx context.Context, query map[string]interface{}) error {

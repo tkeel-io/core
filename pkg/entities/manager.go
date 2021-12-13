@@ -88,7 +88,11 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 	if nil != err {
 		return nil, errors.Wrap(err, "delete entity from runtime")
 	}
+
 	// 2. delete from elasticsearch.
+	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
+		return nil, errors.Wrap(err, "delete entity from es state")
+	}
 
 	// 3. delete from state.
 	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {

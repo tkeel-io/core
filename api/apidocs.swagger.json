@@ -1,21 +1,21 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "api/core/v1/subscription.proto",
+    "title": "api/core/v1/entity.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "Subscription"
-    },
-    {
-      "name": "Search"
+      "name": "Entity"
     },
     {
       "name": "Topic"
     },
     {
-      "name": "Entity"
+      "name": "Subscription"
+    },
+    {
+      "name": "Search"
     }
   ],
   "consumes": [
@@ -882,6 +882,35 @@
       }
     },
     "/search": {
+      "delete": {
+        "summary": "Delete objects by id",
+        "operationId": "SearchObjects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteByIDResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      },
       "post": {
         "summary": "Search objects by keyword",
         "operationId": "SearchObjects",
@@ -983,6 +1012,9 @@
           }
         }
       }
+    },
+    "v1DeleteByIDResponse": {
+      "type": "object"
     },
     "v1DeleteEntityResponse": {
       "type": "object",

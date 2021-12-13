@@ -21,6 +21,7 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // import package.context.http.reflect.go_restful.json.errors.emptypb.
 
 type SearchHTTPServer interface {
+	DeleteByID(context.Context, *DeleteByIDRequest) (*DeleteByIDResponse, error)
 	Index(context.Context, *IndexObject) (*IndexResponse, error)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
 }
@@ -31,6 +32,38 @@ type SearchHTTPHandler struct {
 
 func newSearchHTTPHandler(s SearchHTTPServer) *SearchHTTPHandler {
 	return &SearchHTTPHandler{srv: s}
+}
+
+func (h *SearchHTTPHandler) DeleteByID(req *go_restful.Request, resp *go_restful.Response) {
+	in := DeleteByIDRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.DeleteByID(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
 }
 
 func (h *SearchHTTPHandler) Index(req *go_restful.Request, resp *go_restful.Response) {
@@ -121,4 +154,6 @@ func RegisterSearchHTTPServer(container *go_restful.Container, srv SearchHTTPSer
 		To(handler.Index))
 	ws.Route(ws.POST("/search").
 		To(handler.Search))
+	ws.Route(ws.DELETE("/search").
+		To(handler.DeleteByID))
 }
