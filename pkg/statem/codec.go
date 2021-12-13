@@ -9,7 +9,8 @@ import (
 )
 
 func EncodeBase(base *Base) ([]byte, error) {
-	return json.Marshal(base)
+	bytes, err := json.Marshal(base)
+	return bytes, errors.Wrap(err, "encode Base")
 }
 
 func DecodeBase(data []byte) (*Base, error) {
