@@ -30,7 +30,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -208,7 +211,7 @@ func (s *statem) OnMessage(msg Message) bool {
 		attaching = false
 	)
 
-	log.Infof("statem.OnMessage called, entityId: %s, requestId: %s, msg", s.ID, reqID)
+	log.Debug("statem.OnMessage", logger.EntityID(s.ID), logger.RequestID(reqID))
 
 	for {
 		// 如果只有一条投递线程，那么会导致Dispatcher上的所有Entity都依赖于Message Queue中的消息的均匀性.
@@ -221,7 +224,7 @@ func (s *statem) OnMessage(msg Message) bool {
 
 	if atomic.CompareAndSwapInt32(&s.attached, StateDetached, StateAttached) {
 		attaching = true
-		log.Infof("attatched statem, id: %s.", s.ID)
+		log.Info("attatched statem.", logger.EntityID(s.ID))
 	}
 
 	return attaching
@@ -245,14 +248,14 @@ func (s *statem) HandleLoop() { //nolint
 
 			// detach this statem.
 			if !atomic.CompareAndSwapInt32(&s.attached, StateAttached, StateDetached) {
-				log.Errorf("exception occurred, mismatched statem runtime status: %s.",
-					stateRuntimeStatusString(atomic.LoadInt32(&s.attached)))
+				log.Error("exception occurred, mismatched statem runtime status.",
+					logger.Status(stateRuntimeStatusString(atomic.LoadInt32(&s.attached))))
 			}
 
 			// flush properties.
 			if err := s.flush(); nil != err {
-				log.Errorf("flush state status failed, entity: %s, err: %s",
-					s.ID, err.Error())
+				log.Error("flush state properties failed",
+					logger.EntityID(s.ID), zap.Error(err))
 			}
 			// detach coroutins.
 			break
@@ -261,7 +264,7 @@ func (s *statem) HandleLoop() { //nolint
 		if s.nextFlushNum == 0 {
 			// flush properties.
 			if err := s.flush(); nil != err {
-				log.Errorf("flush state status failed, entity: %s, err: %s", s.ID, err.Error())
+				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
 			}
 		}
 
@@ -278,14 +281,13 @@ func (s *statem) HandleLoop() { //nolint
 		}
 
 		message.Promised(nil)
-		log.Infof("disposed message: %v", message)
 
 		// reset be surs.
 		Ensure = 3
 		s.nextFlushNum = (s.nextFlushNum + StateFlushPeried - 1) % StateFlushPeried
 	}
 
-	log.Infof("detached statem, id: %s.", s.ID)
+	log.Info("detached statem.", logger.EntityID(s.ID))
 }
 
 // InvokeMsg dispose statem input messages.
@@ -295,7 +297,7 @@ func (s *statem) internelMessageHandler(message Message) []WatchKey {
 		return s.invokePropertyMsg(msg)
 	default:
 		// invalid msg typs.
-		log.Errorf("undefine message type, msg: %s", msg)
+		log.Error("undefine message type", logger.EntityID(s.ID), logger.MessageInst(msg))
 	}
 
 	return nil
@@ -317,7 +319,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 	for key, value := range msg.Properties {
 		if s.ID == msg.StateID {
 			if err := s.setProperty(constraint.NewPatchOperator(msg.Operator), key, value); nil != err {
-				log.Errorf("set entity(%s) property(%s) failed, err: %v", s.ID, key, err)
+				log.Error("set entity property failed ", logger.EntityID(s.ID), logger.PropertyKey(key), zap.Error(err))
 			}
 		} else {
 			stateProps[key] = value
@@ -359,7 +361,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 					messages[targetID][active.PropertyKey] = thisStateProps[active.PropertyKey]
 				} else {
 					// undefined tentacle typs.
-					log.Warnf("undefined tentacle type, %v", tentacle)
+					log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
 				}
 			}
 		} else { //nolint
@@ -393,7 +395,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 			for _, item := range tentacle.Items() {
 				val, err := s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
 				if nil != err {
-					log.Errorf("get property(%s) failed, err: %v", item.PropertyKey, err)
+					log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
 					continue
 				}
 				input[item.String()] = val
@@ -403,15 +405,16 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		// excute mapper.
 		properties, err := s.mappers[mapperID].Exec(input)
 		if nil != err {
-			log.Errorf("exec statem mapper failed ", err)
+			log.Error("exec statem mapper failed ", zap.Error(err))
 		}
 
-		log.Infof("exec mapper: %s, output: %v", mapperID, properties)
+		log.Debug("exec mapper", logger.MapperID(mapperID), logger.MessageInst(properties))
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
 				if err = s.setProperty(constraint.PatchOpReplace, propertyKey, value); nil != err {
-					log.Errorf("set entity(%s) property(%s) failed, err: %v", s.ID, propertyKey, err)
+					log.Error("get property failed",
+						logger.EntityID(s.ID), zap.String("property_key", propertyKey), zap.Error(err))
 				}
 				s.LastTime = time.Now().UnixNano() / 1e6
 			}
@@ -445,7 +448,7 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 				val = constraint.JSONNode(`[]`)
 			}
 			if resultNode, err = constraint.Patch(val, value, "", op); nil != err {
-				log.Errorf("set property failed, err: %s", err.Error())
+				log.Error("set property failed", logger.EntityID(s.ID), zap.Error(err))
 				return errors.Wrap(err, "set property failed")
 			}
 			s.KValues[propertyKey] = resultNode
@@ -465,7 +468,7 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 	}
 
 	if resultNode, err = constraint.Patch(s.KValues[propertyID], value, patchPath, op); nil != err {
-		log.Errorf("set property failed, err: %s", err.Error())
+		log.Error("set property failed", logger.EntityID(s.ID), zap.Error(err))
 		return errors.Wrap(err, "set property failed")
 	}
 
@@ -478,15 +481,25 @@ func (s *statem) invokeMapperMsg(msg MapperMessage) {
 	var err error
 	switch msg.Operator {
 	case MapperOperatorAppend:
-		s.appendMapper(msg.Mapper)
+		err = s.appendMapper(msg.Mapper)
 	case MapperOperatorRemove:
-		s.removeMapper(msg.Mapper)
+		err = s.removeMapper(msg.Mapper)
 	default:
 		err = errInvalidMapperOp
 	}
 
-	log.Infof("invoke mapper, mapperId: %s, stateId: %s, tql: %s, error: %v",
-		s.ID+"#"+msg.Mapper.Name, s.ID, msg.Mapper.TQLString, err)
+	if nil != err {
+		log.Error("invoke mapper",
+			zap.Error(err),
+			logger.EntityID(s.ID),
+			logger.TQLString(msg.Mapper.TQLString),
+			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+	} else {
+		log.Debug("invoke mapper",
+			logger.EntityID(s.ID),
+			logger.TQLString(msg.Mapper.TQLString),
+			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+	}
 }
 
 // SetMapper set mapper into entity.
@@ -496,8 +509,8 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 	// checked befors.
 	m, _ := mapper.NewMapper(s.ID+"#"+desc.Name, desc.TQLString)
 
-	log.Infof("append mapper, stateID: %s, requestId: %s, mapperId: %s, mapper: %s.",
-		s.ID, reqID, m.ID, m.String())
+	log.Info("append mapper",
+		logger.EntityID(s.ID), logger.RequestID(reqID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
 
 	position, length := 0, len(s.Mappers)
 	for ; position < length; position++ {
@@ -568,6 +581,9 @@ func (s *statem) removeMapper(desc MapperDesc) error {
 
 	m := s.mappers[s.ID+"#"+s.Mappers[position].Name]
 
+	log.Info("remove mapper",
+		logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
+
 	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
 	// 如果是动态生成的，那么前后两次生成可能不一致.
 	// 且这里使用了两个锁，存在死锁风险.
@@ -612,9 +628,12 @@ func (s *statem) invokeTentacleMsg(msg TentacleMsg) {
 	case TentacleOperatorRemove:
 		delete(s.indexTentacles, msg.StateID)
 	default:
-		log.Errorf("invalid tentacle operator: %s, %v", msg.Operator, msg)
+		log.Error("invalid tentacle operator",
+			logger.Operator(msg.Operator), logger.MessageInst(msg))
 	}
-	log.Infof("catch tentacle event, op: %s, target: %s, msg: %v.", msg.Operator, msg.StateID, msg)
+
+	log.Debug("catch tentacle event.",
+		logger.Operator(msg.Operator), logger.EntityID(msg.StateID), logger.MessageInst(msg))
 
 	// generate tentacles again.
 	s.generateTentacles()
@@ -625,7 +644,8 @@ func (s *statem) generateTentacles() {
 	for _, tentacles := range s.indexTentacles {
 		for _, tentacle := range tentacles {
 			if mapper.TentacleTypeMapper == tentacle.Type() || tentacle.IsRemote() {
-				log.Infof("%s set up tentacle, type: %s, target: %s.", s.ID, tentacle.Type(), tentacle.TargetID())
+				log.Info("setup tentacle",
+					logger.EntityID(s.ID), logger.Type(tentacle.Type()), logger.Target(tentacle.TargetID()))
 				for _, item := range tentacle.Items() {
 					s.tentacles[item.String()] = append(s.tentacles[item.String()], tentacle)
 				}

@@ -17,7 +17,6 @@ limitations under the License.
 package config
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 
@@ -36,8 +35,9 @@ type Config struct {
 }
 
 type LogConfig struct {
-	Level      string `yaml:"level"`
-	OutputJSON bool   `yaml:"output_json"`
+	Dev    bool     `yaml:"dev"`
+	Level  string   `yaml:"level"`
+	Output []string `yaml:"output"`
 }
 
 func defaultConfig() Config {
@@ -76,6 +76,8 @@ func InitConfig(cfgFile string) {
 		}
 	}
 
+	print.InfoStatusEvent(os.Stdout, "loading configuration...")
+
 	// default.
 	viper.SetDefault("server.app_port", 6789)
 	viper.SetDefault("server.app_id", "core")
@@ -89,14 +91,10 @@ func InitConfig(cfgFile string) {
 	// set callback.
 	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
-	print.PendingStatusEvent(os.Stdout, "watch config file.....")
 }
 
 func onConfigChanged(in fsnotify.Event) {
-	print.PendingStatusEvent(os.Stdout, "watch config event: name(%s), operator(%s).", in.Name, in.Op.String())
 	_ = viper.Unmarshal(&config)
-	bytes, _ := json.MarshalIndent(config, "	", "	")
-	print.InfoStatusEvent(os.Stdout, string(bytes))
 }
 
 func writeDefault(cfgFile string) {

@@ -20,6 +20,10 @@ import (
 	"context"
 	"runtime"
 	"time"
+
+	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 type MessageHeader = map[string]string
@@ -105,7 +109,7 @@ func (ib *inbox) Start() { // nolint
 				reciverID := msg.Headers[MsgReciverID]
 				if reciver, exists := ib.recivers[reciverID]; exists {
 					if MsgReciverStatusInactive == reciver.Status() {
-						log.Infof("inactive reciver, evicted reciver (%s).", reciverID)
+						log.Info("inactive reciver, evicted reciver.", zap.String("reciver_id", reciverID))
 						delete(ib.recivers, reciverID)
 					} else {
 						_, err := reciver.OnMessage(msg)
@@ -117,9 +121,8 @@ func (ib *inbox) Start() { // nolint
 					}
 				}
 
-				log.Infof("handle msg: %v.", msg)
-
 				ib.blockNum--
+				log.Info("handle msg.", logger.MessageInst(msg))
 			}
 
 			// commit.
@@ -162,7 +165,7 @@ func (ib *inbox) commit() bool {
 		}
 
 		if err := offset.Commit(); nil != err {
-			log.Errorf("commit failed, %s.", err.Error())
+			log.Error("commit failed.", zap.Error(err))
 			return false
 		}
 

@@ -17,8 +17,16 @@ limitations under the License.
 package tql
 
 import (
+	"os"
 	"testing"
+
+	"github.com/tkeel-io/kit/log"
 )
+
+func TestMain(m *testing.M) {
+	log.InitLogger("core", "debug", true)
+	os.Exit(m.Run())
+}
 
 func TestParserAndComputing(t *testing.T) {
 	tql := `insert into entity3 select
@@ -26,33 +34,33 @@ func TestParserAndComputing(t *testing.T) {
 		entity.property2.name as property2,
 		entity1.property1 + entity.property3 as property3`
 
-	log.Info("parse tql: ", tql)
+	t.Log("parse tql: ", tql)
 	l := Parse(tql)
 	cfg := l.GetParseConfigs()
-	log.Info("========\n ", cfg)
+	t.Log("parse tql, result: ", cfg)
 
 	in := make(map[string][]byte)
 	in["entity1.property1"] = []byte("1")
 	in["entity.property2.name"] = []byte("2")
 	in["entity.property3"] = []byte("3")
-	log.Info("========\n in: ", in)
+	t.Log("in: ", in)
 	out := l.GetComputeResults(in)
-	log.Info(" out: ", out)
+	t.Log(" out: ", out)
 
 	// out2
 	in["entity1.property1"] = []byte("4")
 	in["entity.property2.name"] = []byte("7")
 	in["entity.property3"] = []byte("6")
-	log.Info("========\n in: ", in)
+	t.Log("in: ", in)
 	out2 := l.GetComputeResults(in)
-	log.Info(" out2: ", out2)
+	t.Log(" out2: ", out2)
 }
 
 func TestParser(t *testing.T) {
 	tql := `insert into target_entity select *`
 
-	log.Info("parse tql: ", tql)
+	t.Log("parse tql: ", tql)
 	l := Parse(tql)
 	cfg := l.GetParseConfigs()
-	log.Info("========\n ", cfg)
+	t.Log("parse tql, result: ", cfg)
 }

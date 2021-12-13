@@ -20,17 +20,16 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/olivere/elastic/v7"
 	"google.golang.org/protobuf/types/known/structpb"
 )
-
-var log = logger.NewLogger("core.search.es")
 
 const EntityIndex = "entity"
 
@@ -154,13 +153,12 @@ func NewESClient(url ...string) pb.SearchHTTPServer {
 		panic(err)
 	}
 
-	// ping.
-	info, code, err := client.Ping(url[0]).Do(context.Background())
+	// ping connection.
+	info, _, err := client.Ping(url[0]).Do(context.Background())
 	if nil != err {
 		panic(err)
 	}
 
-	log.Infof("Elasticsearch returned with code<%d>, version<%s>\n", code, info.Version.Number)
-
+	print.InfoStatusEvent(os.Stdout, "use Elasticsearch version<%s>", info.Version.Number)
 	return &ESClient{client: client}
 }
