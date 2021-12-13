@@ -127,6 +127,10 @@ func (m *Manager) Shutdown() {
 	m.shutdown <- struct{}{}
 }
 
+func (m *Manager) GetDaprClient() dapr.Client {
+	return m.daprClient
+}
+
 func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) {
 	if cid == "" {
 		cid = "default"
@@ -206,6 +210,9 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 			Properties: en.KValues,
 			MessageBase: statem.MessageBase{
 				PromiseHandler: func(v interface{}) {
+					if flusher, ok := v.(statem.Flusher); ok {
+						flusher.FlushState()
+					}
 					wg.Done()
 				},
 			},

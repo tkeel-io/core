@@ -21,6 +21,7 @@ import (
 	"errors"
 	"sort"
 
+	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
@@ -50,6 +51,7 @@ var (
 type StateManager interface {
 	Start() error
 	SendMsg(msgCtx MessageContext)
+	GetDaprClient() dapr.Client
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
@@ -74,6 +76,12 @@ type StateMarchiner interface {
 	HandleLoop()
 	// StateManager returns state manager.
 	GetManager() StateManager
+}
+
+type Flusher interface {
+	FlushState() error
+	FlushSearch() error
+	FlushTimeSeries() error
 }
 
 type MessageHandler = func(Message) []WatchKey

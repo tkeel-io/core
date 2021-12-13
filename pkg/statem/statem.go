@@ -263,7 +263,7 @@ func (s *statem) HandleLoop() { //nolint
 			}
 
 			// flush properties.
-			if err := s.flush(); nil != err {
+			if err := s.flush(s.ctx); nil != err {
 				log.Error("flush state properties failed",
 					logger.EntityID(s.ID), zap.Error(err))
 			}
@@ -273,7 +273,7 @@ func (s *statem) HandleLoop() { //nolint
 
 		if s.nextFlushNum == 0 {
 			// flush properties.
-			if err := s.flush(); nil != err {
+			if err := s.flush(s.ctx); nil != err {
 				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
 			}
 		}
@@ -290,7 +290,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.activeTentacle(watchKeys)
 		}
 
-		message.Promised(nil)
+		message.Promised(s)
 
 		// reset be surs.
 		Ensure = 3

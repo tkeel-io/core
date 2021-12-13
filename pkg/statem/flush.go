@@ -27,19 +27,42 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *statem) Flush() error {
-	return s.flush()
+func (s *statem) Flush(ctx context.Context) error {
+	return s.flush(ctx)
 }
 
-func (s *statem) flush() error {
+func (s *statem) FlushState() error {
+	return errors.Wrap(s.flushState(s.ctx), "flush state-marchine state")
+}
+
+func (s *statem) FlushSearch() error {
+	return errors.Wrap(s.flushSeatch(s.ctx), "flush state-marchine state")
+}
+
+func (s *statem) FlushTimeSeries() error {
+	panic("not implement")
+}
+
+func (s *statem) flush(ctx context.Context) error {
 	var err error
-	if err = s.flushSeatch(); nil == err {
+	// flush state properties to es.
+	if err = s.flushSeatch(ctx); nil == err {
 		log.Debug("entity flush Search completed", logger.EntityID(s.ID))
+	}
+	// flush state properties to state.
+	if err = s.flushState(ctx); nil == err {
+		log.Debug("entity flush State completed", logger.EntityID(s.ID))
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
 
-func (s *statem) flushSeatch() error {
+func (s *statem) flushState(ctx context.Context) error {
+	bytes, _ := EncodeBase(&s.Base)
+	s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
+	return nil
+}
+
+func (s *statem) flushSeatch(ctx context.Context) error {
 	var err error
 	var flushData = make(map[string]interface{})
 	for _, JSONPath := range s.searchConstraints {
@@ -66,7 +89,7 @@ func (s *statem) flushSeatch() error {
 	flushData["source"] = s.Source
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
-	if err = s.stateManager.SearchFlush(context.Background(), flushData); nil != err {
+	if err = s.stateManager.SearchFlush(ctx, flushData); nil != err {
 		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
