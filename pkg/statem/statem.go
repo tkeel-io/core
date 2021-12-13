@@ -72,15 +72,15 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id"`
-	Type     string                       `json:"type"`
-	Owner    string                       `json:"owner"`
-	Source   string                       `json:"source"`
-	Version  int64                        `json:"version"`
-	LastTime int64                        `json:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties"` //nolint
-	Configs  map[string]constraint.Config `json:"configs"`
+	ID       string                       `json:"id" mapstructure:"id"`
+	Type     string                       `json:"type" mapstructure:"type"`
+	Owner    string                       `json:"owner" mapstructure:"owner"`
+	Source   string                       `json:"source" mapstructure:"source"`
+	Version  int64                        `json:"version" mapstructure:"version"`
+	LastTime int64                        `json:"last_time" mapstructure:"last_time"`
+	Mappers  []MapperDesc                 `json:"mappers" mapstructure:"mappers"`
+	KValues  map[string]constraint.Node   `json:"properties" mapstructure:"-"` //nolint
+	Configs  map[string]constraint.Config `json:"configs" mapstructure:"configs"`
 }
 
 func (b *Base) Copy() Base {

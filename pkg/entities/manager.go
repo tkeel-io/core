@@ -108,19 +108,20 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 // GetProperties returns statem.Base.
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	base, err := m.getEntityFromState(ctx, en)
-	return base, errors.Wrap(err, "get entity properties")
+	return base, errors.Wrap(err, "entity GetProperties")
 }
 
 func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	var base statem.Base
+	var base *statem.Base
 	data, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
 	if nil != err {
 		return nil, errors.Wrap(err, "get entity properties")
-	} else if err = json.Unmarshal(data.Value, &base); nil != err {
+	} else if base, err = statem.DecodeBase(data.Value); nil != err {
+		log.Error("get entity from state failed", logger.EntityID(en.ID), zap.String("value", string(data.Value)))
 		return nil, errors.Wrap(err, "get entity properties")
 	}
 
-	return &base, nil
+	return base, nil
 }
 
 // SetProperties set properties into entity.

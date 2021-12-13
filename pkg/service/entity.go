@@ -84,7 +84,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	}
 
 	// set properties.
-	if _, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+	if _, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create entity failed",
 			logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
@@ -311,7 +311,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
+	entity, err = s.entityManager.AppendMapper(ctx, entity)
 	if nil != err {
 		return
 	}
