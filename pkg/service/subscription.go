@@ -22,6 +22,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/runtime"
 )
 
 type SubscriptionService struct {
@@ -63,12 +64,12 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Subscription = &pb.SubscriptionObject{}
-	out.Subscription.Source = interface2string(entity.KValues[entities.SubscriptionFieldSource])
-	out.Subscription.Filter = interface2string(entity.KValues[entities.SubscriptionFieldFilter])
-	out.Subscription.Target = interface2string(entity.KValues[entities.SubscriptionFieldTarget])
-	out.Subscription.Topic = interface2string(entity.KValues[entities.SubscriptionFieldTopic])
-	out.Subscription.Mode = interface2string(entity.KValues[entities.SubscriptionFieldMode])
-	out.Subscription.PubsubName = interface2string(entity.KValues[entities.SubscriptionFieldPubsubName])
+	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
+	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
+	out.Subscription.Target = interface2string(entity.KValues[runtime.SubscriptionFieldTarget])
+	out.Subscription.Topic = interface2string(entity.KValues[runtime.SubscriptionFieldTopic])
+	out.Subscription.Mode = interface2string(entity.KValues[runtime.SubscriptionFieldMode])
+	out.Subscription.PubsubName = interface2string(entity.KValues[runtime.SubscriptionFieldPubsubName])
 	return out
 }
 
@@ -80,15 +81,15 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
-	entity.Type = entities.EntityTypeSubscription
+	entity.Type = runtime.StateMarchineTypeSubscription
 
 	entity.KValues = map[string]constraint.Node{
-		entities.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
-		entities.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		entities.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
-		entities.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		entities.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		entities.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
+		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
+		runtime.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
+		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
+		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
 	// set properties.
@@ -108,15 +109,15 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Plugin
-	entity.Type = entities.EntityTypeSubscription
+	entity.Type = runtime.StateMarchineTypeSubscription
 
 	entity.KValues = map[string]constraint.Node{
-		entities.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
-		entities.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		entities.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
-		entities.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		entities.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		entities.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
+		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
+		runtime.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
+		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
+		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
 	// set properties.

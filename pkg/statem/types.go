@@ -29,10 +29,12 @@ const (
 	StateFlushPeried = 10
 
 	MessageCtxHeaderOwner     = "x-owner"
+	MessageCtxHeaderType      = "x-type"
 	MessageCtxHeaderSourceID  = "x-source"
 	MessageCtxHeaderTargetID  = "x-target"
 	MessageCtxHeaderStateType = "x-state-type"
-	MessageCtxHeaderRequestID = "x-reqsuest_id"
+	MessageCtxHeaderRequestID = "x-reqsuest-id"
+	MessageCtxHeaderChannelID = "x-channel-id"
 
 	MapperOperatorAppend   = "append"
 	MapperOperatorRemove   = "remove"
@@ -60,6 +62,10 @@ type StateMarchiner interface {
 	GetBase() *Base
 	// Setup state marchine setup.
 	Setup() error
+	// SetStatus set state-marchine status.
+	SetStatus(Status)
+	// GetStatus returns state-marchine status.
+	GetStatus() Status
 	// SetConfig set configs.
 	SetConfig(map[string]constraint.Config) error
 	// OnMessage recv message from pubsub.
@@ -153,3 +159,11 @@ func Unique(slice sort.StringSlice) sort.StringSlice {
 	}
 	return newSlice
 }
+
+type Status string
+
+const (
+	SMStatusActive   Status = "active"
+	SMStatusInactive Status = "inactive"
+	SMStatusDeleted  Status = "deleted"
+)

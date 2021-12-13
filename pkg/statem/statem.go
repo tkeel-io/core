@@ -118,6 +118,8 @@ type statem struct {
 	stateManager StateManager
 	msgHandler   MessageHandler
 
+	status Status
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -179,6 +181,14 @@ func (s *statem) GetID() string {
 
 func (s *statem) GetBase() *Base {
 	return &s.Base
+}
+
+func (s *statem) GetStatus() Status {
+	return s.status
+}
+
+func (s *statem) SetStatus(status Status) {
+	s.status = status
 }
 
 func (s *statem) GetManager() StateManager {

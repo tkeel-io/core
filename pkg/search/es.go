@@ -17,8 +17,10 @@ limitations under the License.
 package search
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"net/http"
 	"os"
 	"reflect"
@@ -68,6 +70,22 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 	objBytes, _ := req.Obj.MarshalJSON()
 	_, err = es.client.Index().Index(EntityIndex).Id(indexID).BodyString(string(objBytes)).Do(context.Background())
 	return out, errors.Wrap(err, "es index failed")
+}
+
+func (es *ESClient) DeleteByID(ctx context.Context, id string) error {
+	_, err := es.client.Delete().Index(EntityIndex).Id(id).Do(ctx)
+	return errors.Wrap(err, "elasticsearch delete by id")
+}
+
+func (es *ESClient) DeleteByQuery(ctx context.Context, query map[string]interface{}) error {
+	var bytes bytes.Buffer
+	if err := json.NewEncoder(&bytes).Encode(query); err != nil {
+		return errors.Wrap(err, "json encoding query")
+	} else if _, err = es.client.DeleteByQuery(EntityIndex, bytes.String()).DoAsync(ctx); err != nil {
+		return errors.Wrap(err, "elasticsearch deleye by query")
+	}
+
+	return nil
 }
 
 // reference: https://www.tutorialspoint.com/elasticsearch/elasticsearch_query_dsl.htm#:~:text=In%20Elasticsearch%2C%20searching%20is%20carried%20out%20by%20using,look%20for%20a%20specific%20value%20in%20specific%20field.
