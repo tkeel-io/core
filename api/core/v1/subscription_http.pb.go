@@ -46,10 +46,6 @@ func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, re
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
@@ -154,10 +150,6 @@ func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
@@ -240,14 +232,14 @@ func RegisterSubscriptionHTTPServer(container *go_restful.Container, srv Subscri
 	}
 
 	handler := newSubscriptionHTTPHandler(srv)
-	ws.Route(ws.POST("/plugins/{plugin}/subscriptions").
+	ws.Route(ws.POST("/subscriptions").
 		To(handler.CreateSubscription))
-	ws.Route(ws.PUT("/plugins/{plugin}/subscriptions/{id}").
+	ws.Route(ws.PUT("/subscriptions/{id}").
 		To(handler.UpdateSubscription))
-	ws.Route(ws.DELETE("/plugins/{plugin}/subscriptions/{id}").
+	ws.Route(ws.DELETE("/subscriptions/{id}").
 		To(handler.DeleteSubscription))
-	ws.Route(ws.GET("/plugins/{plugin}/subscriptions/{id}").
+	ws.Route(ws.GET("/subscriptions/{id}").
 		To(handler.GetSubscription))
-	ws.Route(ws.GET("/plugins/{plugin}/subscriptions").
+	ws.Route(ws.GET("/subscriptions").
 		To(handler.ListSubscription))
 }

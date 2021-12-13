@@ -90,10 +90,6 @@ func (h *EntityHTTPHandler) CreateEntity(req *go_restful.Request, resp *go_restf
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
@@ -195,10 +191,6 @@ func (h *EntityHTTPHandler) GetEntity(req *go_restful.Request, resp *go_restful.
 func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := ListEntityRequest{}
 	if err := transportHTTP.GetBody(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -404,22 +396,22 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 	}
 
 	handler := newEntityHTTPHandler(srv)
-	ws.Route(ws.POST("/plugins/{plugin}/entities").
+	ws.Route(ws.POST("/entities").
 		To(handler.CreateEntity))
-	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}").
+	ws.Route(ws.PUT("/entities/{id}").
 		To(handler.UpdateEntity))
-	ws.Route(ws.PATCH("/plugins/{plugin}/entities/{id}").
+	ws.Route(ws.PATCH("/entities/{id}").
 		To(handler.PatchEntity))
-	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}/patch").
+	ws.Route(ws.PUT("/entities/{id}/patch").
 		To(handler.PatchEntityZ))
-	ws.Route(ws.DELETE("/plugins/{plugin}/entities/{id}").
+	ws.Route(ws.DELETE("/entities/{id}").
 		To(handler.DeleteEntity))
-	ws.Route(ws.GET("/plugins/{plugin}/entities/{id}").
+	ws.Route(ws.GET("/entities/{id}").
 		To(handler.GetEntity))
-	ws.Route(ws.POST("/plugins/{plugin}/entities/search").
+	ws.Route(ws.POST("/entities/search").
 		To(handler.ListEntity))
-	ws.Route(ws.POST("/plugins/{plugin}/entities/{id}/mappers").
+	ws.Route(ws.POST("/entities/{id}/mappers").
 		To(handler.AppendMapper))
-	ws.Route(ws.PUT("/plugins/{plugin}/entities/{id}/configs").
+	ws.Route(ws.PUT("/entities/{id}/configs").
 		To(handler.SetEntityConfigs))
 }

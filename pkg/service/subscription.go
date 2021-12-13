@@ -60,7 +60,6 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Plugin = entity.Source
 	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Subscription = &pb.SubscriptionObject{}
@@ -80,7 +79,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		entity.ID = req.Id
 	}
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
 
 	entity.KValues = map[string]constraint.Node{
@@ -108,7 +107,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
 
 	entity.KValues = map[string]constraint.Node{
@@ -136,7 +135,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	// delete entity.
 	_, err = s.entityManager.DeleteEntity(ctx, entity)
 	if nil != err {
@@ -152,7 +151,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	// delete entity.
 	entity, err = s.entityManager.GetProperties(ctx, entity)
 	if nil != err {

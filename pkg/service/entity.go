@@ -60,7 +60,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 
 	entity.Owner = req.Owner
 	entity.Type = req.Type
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -98,7 +98,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -134,7 +134,7 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 
@@ -188,7 +188,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
 	// delete entity.
@@ -207,7 +207,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
 	// get entity from entity manager.
@@ -241,7 +241,6 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			properties, _ := structpb.NewValue(kv)
 			entityItem := &pb.EntityResponse{
 				Id:         interface2string(kv["id"]),
-				Plugin:     req.Plugin,
 				Source:     req.Source,
 				Owner:      req.Owner,
 				Type:       "",
@@ -298,7 +297,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
 	mapperDesc := statem.MapperDesc{}
@@ -325,7 +324,7 @@ func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityC
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Owner = req.Owner
-	entity.Source = req.Plugin
+	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
 	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
