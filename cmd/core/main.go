@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -9,7 +25,9 @@ import (
 	"syscall"
 
 	Core_v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
@@ -21,14 +39,14 @@ import (
 )
 
 var (
-	Name          string
+	cfgFile       string
 	HTTPAddr      string
 	GRPCAddr      string
 	SearchBrokers string
 )
 
 func init() {
-	flag.StringVar(&Name, "name", "core", "app name.")
+	flag.StringVar(&cfgFile, "conf", "config.yml", "config file path.")
 	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
 	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
@@ -36,21 +54,25 @@ func init() {
 
 func main() {
 	flag.Parse()
+	// load configuration.
+	config.InitConfig(cfgFile)
 
+	// new servers.
 	httpSrv := server.NewHTTPServer(HTTPAddr)
 	grpcSrv := server.NewGRPCServer(GRPCAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
-	coreApp := app.New(Name,
+	coreApp := app.New(config.GetConfig().Server.AppID,
 		&log.Conf{
-			App:   Name,
-			Level: "debug",
-			Dev:   true,
+			App:    config.GetConfig().Server.AppID,
+			Level:  config.GetConfig().Logger.Level,
+			Dev:    config.GetConfig().Logger.Dev,
+			Output: config.GetConfig().Logger.Output,
 		},
 		serverList...,
 	)
 
-	coroutinePool, err := ants.NewPool(100)
+	coroutinePool, err := ants.NewPool(5000)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -63,35 +85,36 @@ func main() {
 
 	{
 		// User service
-		// create coroutine pool.
-
-		EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient)
-		if nil != err {
+		if EntitySrv, err := service.NewEntityService(context.Background(), entityManager, searchClient); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
-		Core_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
-
-		SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), entityManager)
-		if nil != err {
+		} else if SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), entityManager); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
-		Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
-
-		TopicSrv, err := service.NewTopicService(context.Background(), entityManager)
-		if nil != err {
+		} else if TopicSrv, err := service.NewTopicService(context.Background(), entityManager); nil != err {
 			log.Fatal(err)
-		}
-		Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
-		Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+		} else {
+			// register entity service.
+			Core_v1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
+			Core_v1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
 
-		SearchSrv := service.NewSearchService(searchClient)
-		Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
-		Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+			// register topic service.
+			Core_v1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
+			Core_v1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+
+			// register subscription service.
+			Core_v1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
+			Core_v1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
+
+			// register search service.
+
+			SearchSrv := service.NewSearchService(searchClient)
+			Core_v1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
+			Core_v1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+			print.SuccessStatusEvent(os.Stdout, "all seavice registered.")
+		}
 	}
 
-	// run.
+	// running...
+	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
 	if err := entityManager.Start(); nil != err {
 		panic(err)
 	} else if err = coreApp.Run(context.TODO()); err != nil {

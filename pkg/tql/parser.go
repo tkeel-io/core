@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package tql
 
 import (
@@ -6,11 +22,10 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/tql/parser"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
-
-var log = logger.NewLogger("core.entities")
 
 type Listener struct {
 	*parser.BaseTQLListener
@@ -54,7 +69,6 @@ func (l *Listener) pushS(entity string) {
 }
 
 func (l *Listener) AddTentacle(k string, v string) {
-	log.Infof("AddTentacle %v, %v", k, v)
 	if _, err := l.tentacles[k]; !err {
 		var vv []string
 		vv = append(vv, v)
@@ -75,7 +89,6 @@ func (l *Listener) AddTentacle(k string, v string) {
 
 // ExitSourceEntity is called when production entity is exited.
 func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
-	log.Infof("ExitSourceEntity %v", c.GetText())
 	text := c.GetText()
 	if strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
@@ -94,7 +107,6 @@ func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
 	}
 	var ne Exec
 	ne.SourceEntities = append(ne.SourceEntities, text)
-	log.Infof("add SourceEntities: %v", ne)
 	l.execs = append(l.execs, &ne)
 }
 
@@ -111,12 +123,10 @@ func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
 
 // ExitTargeProperty is called when production entity is exited.
 func (l *Listener) ExitTargetProperty(c *parser.TargetPropertyContext) {
-	log.Info("TargetPropertyContext", c.GetText())
 	tp := c.GetText()
 	// record TargetProperty
 	e := l.execs[len(l.execs)-1]
 	e.TargetProperty = tp
-	log.Info("add TargetProperty:", e)
 }
 
 // ExitExpression is called when production Expression is exited.
@@ -131,7 +141,6 @@ func (l *Listener) ExitRoot(c *parser.RootContext) {
 
 // ExitFields is called when production fields is exited.
 func (l *Listener) ExitFields(c *parser.FieldsContext) {
-	log.Info("ExitFields", c.GetText())
 	// record Field
 	fields := c.GetText()
 	fieldArr := strings.Split(fields, ",")
@@ -139,13 +148,11 @@ func (l *Listener) ExitFields(c *parser.FieldsContext) {
 		field := strings.Split(f, "as")[0]
 		e := l.execs[ind]
 		e.Field = field
-		log.Info("====add field:", field)
 	}
 }
 
 // ExitCompareValue is called when production CompareValue is exited.
 func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
-	log.Info("ExitCompareValue", c.GetText())
 }
 
 func (l *Listener) GetExpression(index int, in map[string][]byte) string {
@@ -190,7 +197,6 @@ func (l *Listener) ExitNumber(c *parser.NumberContext) {
 
 // ExitMulDiv is called when exiting the MulDiv production.
 func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
-	log.Info("ExitMulDiv", c.GetText())
 	right, left := l.pop(), l.pop()
 
 	switch c.GetOp().GetTokenType() {
@@ -205,7 +211,6 @@ func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 
 // ExitAddSub is called when exiting the AddSub production.
 func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
-	log.Info("ExitAddSub", c.GetText())
 	right, left := l.pop(), l.pop()
 
 	switch c.GetOp().GetTokenType() {
@@ -233,7 +238,6 @@ func computing(input string) string {
 	// Finally parse the expression (by walking the tree)
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
-	// log.Info("========results: \n", listener.pop())
 	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
@@ -258,17 +262,14 @@ func (l *Listener) GetParseConfigs() TQLConfig {
 			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
 	}
 
+	log.Info("parse tql", zap.Any("result", tqlConfig))
 	return tqlConfig
 }
 
 func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
-	//
-	// log.Info("get Expression:", l.GetExpression(0, in))
-
 	out := make(map[string][]byte)
 	for ind, e := range l.execs {
 		numExpr := l.GetExpression(ind, in)
-		log.Infof("get number expression %s", numExpr)
 		out[e.TargetProperty] = []byte(computing(numExpr))
 	}
 	return out

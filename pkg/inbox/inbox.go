@@ -1,9 +1,29 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package inbox
 
 import (
 	"context"
 	"runtime"
 	"time"
+
+	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 type MessageHeader = map[string]string
@@ -89,7 +109,7 @@ func (ib *inbox) Start() { // nolint
 				reciverID := msg.Headers[MsgReciverID]
 				if reciver, exists := ib.recivers[reciverID]; exists {
 					if MsgReciverStatusInactive == reciver.Status() {
-						log.Infof("inactive reciver, evicted reciver (%s).", reciverID)
+						log.Info("inactive reciver, evicted reciver.", zap.String("reciver_id", reciverID))
 						delete(ib.recivers, reciverID)
 					} else {
 						_, err := reciver.OnMessage(msg)
@@ -101,9 +121,8 @@ func (ib *inbox) Start() { // nolint
 					}
 				}
 
-				log.Infof("handle msg: %v.", msg)
-
 				ib.blockNum--
+				log.Info("handle msg.", logger.MessageInst(msg))
 			}
 
 			// commit.
@@ -146,7 +165,7 @@ func (ib *inbox) commit() bool {
 		}
 
 		if err := offset.Commit(); nil != err {
-			log.Errorf("commit failed, %s.", err.Error())
+			log.Error("commit failed.", zap.Error(err))
 			return false
 		}
 

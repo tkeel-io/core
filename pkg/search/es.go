@@ -1,20 +1,35 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package search
 
 import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/olivere/elastic/v7"
 	"google.golang.org/protobuf/types/known/structpb"
 )
-
-var log = logger.NewLogger("core.search.es")
 
 const EntityIndex = "entity"
 
@@ -138,13 +153,12 @@ func NewESClient(url ...string) pb.SearchHTTPServer {
 		panic(err)
 	}
 
-	// ping.
-	info, code, err := client.Ping(url[0]).Do(context.Background())
+	// ping connection.
+	info, _, err := client.Ping(url[0]).Do(context.Background())
 	if nil != err {
 		panic(err)
 	}
 
-	log.Infof("Elasticsearch returned with code<%d>, version<%s>\n", code, info.Version.Number)
-
+	print.InfoStatusEvent(os.Stdout, "use Elasticsearch version<%s>", info.Version.Number)
 	return &ESClient{client: client}
 }

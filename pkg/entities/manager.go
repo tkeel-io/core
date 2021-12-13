@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package entities
 
 import (
@@ -11,7 +27,10 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -60,18 +79,15 @@ func (m *EntityManager) Start() error {
 		for {
 			select {
 			case <-m.ctx.Done():
-				log.Info("entity EntityManager exited.")
+				log.Info("entity manager exited.")
 				return
 			case msgCtx := <-m.msgCh:
 				// dispatch message. 将消息分发到不同的节点。
 				m.disposeCh <- msgCtx
 
 			case msgCtx := <-m.disposeCh:
-				// invoke msg.
-				// 实际上reactor模式有一个致命的问题就是消息乱序, 引入mailbox可以有效规避乱序问题.
-				// 消费的消息统一来自Inbox，不存在无entityID的情况.
-				// 如果entity在当前节点不存在就将entity调度到当前节点.
-				log.Infof("dispose message, entity: %s, message: %v", msgCtx.Headers.GetTargetID(), msgCtx)
+				log.Info("dispose message",
+					logger.EntityID(msgCtx.Headers.GetTargetID()), logger.MessageInst(msgCtx))
 				eid := msgCtx.Headers.GetTargetID()
 				_, has := m.entities[eid]
 				if !has {
@@ -84,11 +100,11 @@ func (m *EntityManager) Start() error {
 					}
 
 					if err := m.rebalanceEntity(context.Background(), en); nil != err {
-						log.Errorf("dispose message failed, err: %s", err.Error())
+						log.Error("dispose message failed", zap.Error(err))
 						continue
 					}
 
-					log.Infof("rebalance entity(%s)", eid)
+					log.Info("rebalance entity.", logger.EntityID(eid))
 				}
 
 				enInst := m.entities[eid]
@@ -150,7 +166,7 @@ func (m *EntityManager) EscapedEntities(expression string) []string {
 // DeleteEntity delete an entity from manager.
 func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("DeleteEntity failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		log.Error("DeleteEntity failed.", logger.EntityID(en.ID), zap.Error(errEntityNotFound))
 		return nil, errEntityNotFound
 	}
 
@@ -166,7 +182,7 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		log.Error("GetProperties failed.", logger.EntityID(en.ID), zap.Error(errEntityNotFound))
 		return nil, errEntityNotFound
 	}
 
@@ -209,7 +225,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("GetProperties failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		log.Error("GetProperties failed.", logger.EntityID(en.ID), zap.Error(errEntityNotFound))
 		return nil, errEntityNotFound
 	}
 
@@ -220,7 +236,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*st
 func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
 	// just for standalone.
 	if _, has := m.entities[en.ID]; !has {
-		log.Errorf("PatchEntity failed, entity(%s), err: %s", en.ID, errEntityNotFound.Error())
+		log.Error("PatchEntity failed.", logger.EntityID(en.ID), zap.Error(errEntityNotFound))
 		return nil, errEntityNotFound
 	}
 
@@ -314,7 +330,7 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 // AppendMapper append a mapper into entity.
 func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	if len(en.Mappers) == 0 {
-		log.Errorf("append mapper into entity failed, %s", errEmptyEntityMapper)
+		log.Error("append mapper into entity failed.", logger.EntityID(en.ID), zap.Error(errEmptyEntityMapper))
 		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
 	}
 
@@ -341,8 +357,8 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 // DeleteMapper delete mapper from entity.
 func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	if len(en.Mappers) == 0 {
-		log.Errorf("append mapper into entity failed, %s", errEmptyEntityMapper)
-		return nil, errors.Wrap(errEmptyEntityMapper, "append entity mapper failed")
+		log.Error("remove mapper failed.", logger.EntityID(en.ID), zap.Error(errEmptyEntityMapper))
+		return nil, errors.Wrap(errEmptyEntityMapper, "remove entity mapper failed")
 	}
 
 	wg := &sync.WaitGroup{}
@@ -369,9 +385,9 @@ func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]inter
 	var err error
 	var val *structpb.Value
 	if val, err = structpb.NewValue(values); nil != err {
-		log.Errorf("search index failed, %s", err.Error())
+		log.Error("search index failed.", zap.Error(err))
 	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
-		log.Errorf("search index failed, %s", err.Error())
+		log.Error("search index failed.", zap.Error(err))
 	}
 	return errors.Wrap(err, "SearchFlushfailed")
 }

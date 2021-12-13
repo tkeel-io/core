@@ -1,3 +1,19 @@
+/*
+Copyright 2021 The tKeel Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package statem
 
 import (
@@ -6,6 +22,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 func (s *statem) Flush() error {
@@ -15,7 +34,7 @@ func (s *statem) Flush() error {
 func (s *statem) flush() error {
 	var err error
 	if err = s.flushSeatch(); nil == err {
-		log.Debugf("entity(%s) flush Search completed", s.ID)
+		log.Debug("entity flush Search completed", logger.EntityID(s.ID))
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
@@ -27,17 +46,12 @@ func (s *statem) flushSeatch() error {
 		var val constraint.Node
 		var ct *constraint.Constraint
 		if val, err = s.getProperty(s.KValues, JSONPath); nil != err {
-			log.Errorf("patch.copy entity(%s) property(%s) failed, err: %s", s.ID, JSONPath, err.Error())
-			continue
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
-			log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
-			continue
 		} else if val, err = constraint.ExecData(val, ct); nil != err {
-			log.Errorf("load constraint failed, JSONPath: %s, err: %s", JSONPath, err.Error())
-			continue
+		} else {
+			flushData[JSONPath] = val.Value()
 		}
-
-		flushData[JSONPath] = val.Value()
+		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	// flush all.
@@ -52,9 +66,11 @@ func (s *statem) flushSeatch() error {
 	flushData["source"] = s.Source
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
-	err = s.stateManager.SearchFlush(context.Background(), flushData)
+	if err = s.stateManager.SearchFlush(context.Background(), flushData); nil != err {
+		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+	}
 
-	log.Infof("flush state Search, data: %v, err: %v", flushData, err)
+	log.Debug("flush state Search.", zap.Any("data", flushData))
 	return errors.Wrap(err, "Search flush failed")
 }
 

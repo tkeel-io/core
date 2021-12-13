@@ -1,24 +1,17 @@
 /*
- * Copyright (C) 2019 Yunify, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this work except in compliance with the License.
- * You may obtain a copy of the License in the LICENSE file, or at:
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+Copyright 2021 The tKeel Authors.
 
-/**
-SinkBatch
-1. 线程池，限定最大并发数
-2. 累计 message, 定时提交
-3. 可以 Flush，手动触发提交
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package batchqueue
@@ -29,10 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
-
-var log = logger.NewLogger("core.batch-queue")
 
 type sinkBatchState int
 
@@ -267,7 +259,7 @@ func (p *batchSink) internalClose(req *closeRequest) {
 }
 
 func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
-	log.Debugf("Response receipt:%d", item.sequenceID)
+	log.Debug("Response receipt", zap.Uint64("sequence_id", item.sequenceID))
 	item.status = processIdle
 	item.err = err
 	p.sendCnt -= int64(len(item.batchData))
@@ -279,9 +271,9 @@ func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
 			break
 		}
 		if pi.status == processInProgress {
-			// p.log.Bg().Debug("Response receipt unexpected",
-			//	logf.Any("pendingSequenceId", pi.sequenceID),
-			//	logf.Any("responseSequenceId", item.sequenceID))
+			log.Debug("Response receipt unexpected",
+				zap.Any("pendingSequenceId", pi.sequenceID),
+				zap.Any("responseSequenceId", item.sequenceID))
 			break
 		}
 
