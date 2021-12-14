@@ -1,21 +1,21 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "api/core/v1/subscription.proto",
+    "title": "api/core/v1/entity.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "Subscription"
-    },
-    {
-      "name": "Search"
+      "name": "Entity"
     },
     {
       "name": "Topic"
     },
     {
-      "name": "Entity"
+      "name": "Subscription"
+    },
+    {
+      "name": "Search"
     }
   ],
   "consumes": [
@@ -25,40 +25,7 @@
     "application/json"
   ],
   "paths": {
-    "/index": {
-      "post": {
-        "summary": "Index a object",
-        "operationId": "IndexObject",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1IndexResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
-        ]
-      }
-    },
-    "/plugins/{plugin}/entities": {
+    "/entities": {
       "post": {
         "summary": "Create a entity",
         "operationId": "CreateEntity",
@@ -77,13 +44,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "body",
             "description": "entity properties, optional",
@@ -128,7 +88,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/entities/search": {
+    "/entities/search": {
       "post": {
         "summary": "List entities",
         "operationId": "ListEntity",
@@ -148,45 +108,11 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "source": {
-                  "type": "string",
-                  "description": "source id"
-                },
-                "owner": {
-                  "type": "string",
-                  "description": "owner id"
-                },
-                "query": {
-                  "type": "string",
-                  "description": "search keyword"
-                },
-                "page": {
-                  "$ref": "#/definitions/v1Pager",
-                  "description": "page"
-                },
-                "condition": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/v1SearchCondition"
-                  },
-                  "description": "search conditions"
-                }
-              },
-              "description": "List Entities Request",
-              "title": "ListEntities"
+              "$ref": "#/definitions/v1ListEntityRequest"
             }
           }
         ],
@@ -195,7 +121,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/entities/{id}": {
+    "/entities/{id}": {
       "get": {
         "summary": "Get a entity",
         "operationId": "GetEntity",
@@ -214,13 +140,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "entity id",
@@ -266,13 +185,6 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "id",
             "description": "entity id",
             "in": "path",
@@ -316,13 +228,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "entity id",
@@ -378,13 +283,6 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "id",
             "description": "entity id",
             "in": "path",
@@ -421,7 +319,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/entities/{id}/configs": {
+    "/entities/{id}/configs": {
       "put": {
         "summary": "Config entity",
         "operationId": "ConfigEntity",
@@ -440,13 +338,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "entity id",
@@ -484,7 +375,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/entities/{id}/mappers": {
+    "/entities/{id}/mappers": {
       "post": {
         "summary": "Append entity mapper",
         "operationId": "AppendMapper",
@@ -503,13 +394,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "entity id",
@@ -547,7 +431,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/entities/{id}/patch": {
+    "/entities/{id}/patch": {
       "put": {
         "operationId": "Entity_PatchEntityZ",
         "responses": {
@@ -565,13 +449,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "entity id",
@@ -609,7 +486,117 @@
         ]
       }
     },
-    "/plugins/{plugin}/subscriptions": {
+    "/index": {
+      "post": {
+        "summary": "Index a object",
+        "operationId": "IndexObject",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1IndexResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/search": {
+      "delete": {
+        "summary": "Delete objects by id",
+        "operationId": "SearchObjects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteByIDResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      },
+      "post": {
+        "summary": "Search objects by keyword",
+        "operationId": "SearchObjects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1SearchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SearchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/subscriptions": {
       "get": {
         "summary": "List subscriptions",
         "operationId": "ListScription",
@@ -628,13 +615,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "source",
             "description": "source id",
@@ -673,13 +653,6 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
             "description": "subscription object",
             "in": "body",
@@ -716,7 +689,7 @@
         ]
       }
     },
-    "/plugins/{plugin}/subscriptions/{id}": {
+    "/subscriptions/{id}": {
       "get": {
         "summary": "Get subscription",
         "operationId": "GetSubscription",
@@ -735,13 +708,6 @@
           }
         },
         "parameters": [
-          {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
           {
             "name": "id",
             "description": "subscription id",
@@ -787,13 +753,6 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "id",
             "description": "subscription id",
             "in": "path",
@@ -838,13 +797,6 @@
         },
         "parameters": [
           {
-            "name": "plugin",
-            "description": "plugin id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "id",
             "description": "subscription id",
             "in": "path",
@@ -878,39 +830,6 @@
         ],
         "tags": [
           "Subscription"
-        ]
-      }
-    },
-    "/search": {
-      "post": {
-        "summary": "Search objects by keyword",
-        "operationId": "SearchObjects",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1SearchResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1SearchRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
         ]
       }
     },
@@ -984,6 +903,9 @@
         }
       }
     },
+    "v1DeleteByIDResponse": {
+      "type": "object"
+    },
     "v1DeleteEntityResponse": {
       "type": "object",
       "properties": {
@@ -1016,10 +938,6 @@
         "id": {
           "type": "string",
           "description": "entity id"
-        },
-        "plugin": {
-          "type": "string",
-          "description": "plugin id"
         },
         "source": {
           "type": "string",
@@ -1057,6 +975,36 @@
           "type": "string"
         }
       }
+    },
+    "v1ListEntityRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "query": {
+          "type": "string",
+          "description": "search keyword"
+        },
+        "page": {
+          "$ref": "#/definitions/v1Pager",
+          "description": "page"
+        },
+        "condition": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1SearchCondition"
+          },
+          "description": "search conditions"
+        }
+      },
+      "description": "List Entities Request",
+      "title": "ListEntities"
     },
     "v1ListEntityResponse": {
       "type": "object",
@@ -1159,6 +1107,14 @@
     "v1SearchRequest": {
       "type": "object",
       "properties": {
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
         "query": {
           "type": "string",
           "description": "search keyword"
@@ -1243,10 +1199,6 @@
         "id": {
           "type": "string",
           "description": "subscription id"
-        },
-        "plugin": {
-          "type": "string",
-          "description": "plugin id"
         },
         "source": {
           "type": "string",

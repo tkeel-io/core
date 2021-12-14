@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package entities
+package runtime
 
 import (
 	"context"
@@ -64,7 +64,7 @@ type subscription struct {
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *EntityManager, in *statem.Base) (statem.StateMarchiner, error) {
+func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem.StateMarchiner, error) {
 	subsc := subscription{
 		SubscriptionBase: SubscriptionBase{
 			Mode: SubscriptionModeUndefine,
@@ -110,6 +110,14 @@ func (s *subscription) GetMode() string {
 
 func (s *subscription) GetBase() *statem.Base {
 	return s.stateMarchine.GetBase()
+}
+
+func (s *subscription) SetStatus(status statem.Status) {
+	s.stateMarchine.SetStatus(status)
+}
+
+func (s *subscription) GetStatus() statem.Status {
+	return s.stateMarchine.GetStatus()
 }
 
 func (s *subscription) GetManager() statem.StateManager {
@@ -190,7 +198,7 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 func (s *subscription) checkSubscription() error {
 	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
 		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
-		return errSubscriptionInvalid
+		return ErrSubscriptionInvalid
 	}
 
 	return nil

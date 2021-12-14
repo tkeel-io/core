@@ -125,6 +125,10 @@ api:
  	       --openapiv2_opt=json_names_for_fields=false \
 	       $(API_PROTO_FILES)
 
+	@echo "---------------------------------------------------------"
+	@echo "----- 请注意 core/api/core/v1/topic_http.pb.go 的变更 -----"
+	@echo "---------------------------------------------------------"
+
 
 build:
 	@echo "---------------------------"

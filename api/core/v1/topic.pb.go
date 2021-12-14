@@ -7,11 +7,11 @@
 package v1
 
 import (
+	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 )
@@ -28,16 +28,16 @@ type TopicEventRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id              string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Specversion     string          `protobuf:"bytes,2,opt,name=specversion,proto3" json:"specversion,omitempty"`
-	Type            string          `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	Source          string          `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	Datacontenttype string          `protobuf:"bytes,5,opt,name=datacontenttype,proto3" json:"datacontenttype,omitempty"`
-	Data            *structpb.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
-	DataBase64      string          `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"`
-	Subject         string          `protobuf:"bytes,8,opt,name=subject,proto3" json:"subject,omitempty"`
-	Topic           string          `protobuf:"bytes,9,opt,name=topic,proto3" json:"topic,omitempty"`
-	Pubsubname      string          `protobuf:"bytes,10,opt,name=pubsubname,proto3" json:"pubsubname,omitempty"`
+	Id              string         `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Specversion     string         `protobuf:"bytes,2,opt,name=specversion,proto3" json:"specversion,omitempty"`
+	Type            string         `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Source          string         `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	Datacontenttype string         `protobuf:"bytes,5,opt,name=datacontenttype,proto3" json:"datacontenttype,omitempty"`
+	Data            *_struct.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
+	DataBase64      string         `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"`
+	Subject         string         `protobuf:"bytes,8,opt,name=subject,proto3" json:"subject,omitempty"`
+	Topic           string         `protobuf:"bytes,9,opt,name=topic,proto3" json:"topic,omitempty"`
+	Pubsubname      string         `protobuf:"bytes,10,opt,name=pubsubname,proto3" json:"pubsubname,omitempty"`
 }
 
 func (x *TopicEventRequest) Reset() {
@@ -107,7 +107,7 @@ func (x *TopicEventRequest) GetDatacontenttype() string {
 	return ""
 }
 
-func (x *TopicEventRequest) GetData() *structpb.Value {
+func (x *TopicEventRequest) GetData() *_struct.Value {
 	if x != nil {
 		return x.Data
 	}
@@ -258,7 +258,7 @@ var file_api_core_v1_topic_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_api_core_v1_topic_proto_goTypes = []interface{}{
 	(*TopicEventRequest)(nil),  // 0: api.core.v1.TopicEventRequest
 	(*TopicEventResponse)(nil), // 1: api.core.v1.TopicEventResponse
-	(*structpb.Value)(nil),     // 2: google.protobuf.Value
+	(*_struct.Value)(nil),      // 2: google.protobuf.Value
 }
 var file_api_core_v1_topic_proto_depIdxs = []int32{
 	2, // 0: api.core.v1.TopicEventRequest.data:type_name -> google.protobuf.Value

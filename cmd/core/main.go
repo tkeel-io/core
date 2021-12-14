@@ -28,6 +28,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
+	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
@@ -72,14 +73,15 @@ func main() {
 		serverList...,
 	)
 
-	coroutinePool, err := ants.NewPool(5000)
-	if nil != err {
-		log.Fatal(err)
-	}
-
+	var entityManager *entities.EntityManager
 	searchClient := search.NewESClient(strings.Split(SearchBrokers, ",")...)
-	entityManager, err := entities.NewEntityManager(context.Background(), coroutinePool, searchClient)
-	if nil != err {
+
+	// create coroutine pool.
+	if coroutinePool, err := ants.NewPool(5000); nil != err {
+		log.Fatal(err)
+	} else if stateManager, err := runtime.NewManager(context.Background(), coroutinePool, searchClient); nil != err {
+		log.Fatal(err)
+	} else if entityManager, err = entities.NewEntityManager(context.Background(), stateManager, searchClient); nil != err {
 		log.Fatal(err)
 	}
 
