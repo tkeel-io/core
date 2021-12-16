@@ -84,6 +84,10 @@ func (m *EntityManager) Start() error {
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
 }
 
+func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
+	m.stateManager.SendMsg(msgCtx)
+}
+
 // ------------------------------------APIs-----------------------------.
 
 // CreateEntity create a entity.

@@ -213,15 +213,14 @@ func (m *Manager) Start() error {
 				m.disposeCh <- msgCtx
 
 			case msgCtx := <-m.disposeCh:
-				log.Info("dispose message",
-					logger.EntityID(msgCtx.Headers.GetTargetID()), logger.MessageInst(msgCtx))
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
+				log.Info("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
 				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
 				if nil == stateMarchine {
 					var err error
 					en := &statem.Base{
-						ID:     msgCtx.Headers.GetTargetID(),
+						ID:     eid,
 						Owner:  msgCtx.Headers.GetOwner(),
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
@@ -298,7 +297,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 	default:
 		// default base entity type.
 		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			return nil, errors.Wrap(err, "load state")
+			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
 		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
 			base = en
 		} else {
