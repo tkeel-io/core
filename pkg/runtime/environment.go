@@ -16,7 +16,16 @@ limitations under the License.
 
 package runtime
 
-import "github.com/tkeel-io/core/pkg/statem"
+import (
+	"github.com/tkeel-io/kit/log"
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	"go.uber.org/zap"
+)
+
+type EtcdPair struct {
+	Key   string
+	Value []byte
+}
 
 type Environment struct {
 }
@@ -25,10 +34,19 @@ func NewEnv() *Environment {
 	return &Environment{}
 }
 
-func (env *Environment) LoadMapper(descs []*statem.MapperDesc) error {
+func (env *Environment) LoadMapper(descs []EtcdPair) error {
 	return nil
 }
 
-func (env *Environment) OnMapperChanged(op string, desc *statem.MapperDesc) error {
+func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) error {
+	switch op {
+	case mvccpb.PUT:
+		log.Info("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+	case mvccpb.DELETE:
+		log.Info("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+	default:
+		log.Error("invalid etcd operator type", zap.Any("operator", op),
+			zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+	}
 	return nil
 }
