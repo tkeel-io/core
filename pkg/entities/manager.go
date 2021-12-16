@@ -19,7 +19,6 @@ package entities
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -39,6 +38,7 @@ import (
 
 const EntityStateName = "core-state"
 const SubscriptionPrefix = "core.subsc."
+const TQLEtcdPrefix = "core.tql."
 
 type EntityManager struct {
 	daprClient   dapr.Client
@@ -92,8 +92,14 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		base.ID = uuid()
 	}
 
-	bytes, _ := json.Marshal(base)
-	m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes)
+	if bytes, err := statem.EncodeBase(base); nil != err {
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	} else if err = m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes); nil != err {
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	}
+
 	return base, nil
 }
 
@@ -171,7 +177,22 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*state
 
 // AppendMapper append a mapper into entity.
 func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.AppendMapper(ctx, en); nil != err {
+	// 1. 判断实体是否存在.
+	_, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
+	if nil != err {
+		return nil, errors.Wrap(err, "get state")
+	}
+
+	// 2. 将 mapper 推到 etcd.
+	for _, mm := range en.Mappers {
+		if _, err = m.etcdClient.Put(ctx, TQLEtcdPrefix+en.ID+mm.Name, mm.TQLString); nil != err {
+			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return nil, errors.Wrap(err, "append mapper")
+		}
+		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
+	}
+
+	if err = m.stateManager.AppendMapper(ctx, en); nil != err {
 		return nil, errors.Wrap(err, "append mapper")
 	}
 
@@ -181,7 +202,22 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 
 // DeleteMapper delete mapper from entity.
 func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.RemoveMapper(ctx, en); nil != err {
+	// 1. 判断实体是否存在.
+	_, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
+	if nil != err {
+		return nil, errors.Wrap(err, "get state")
+	}
+
+	// 2. 将 mapper 推到 etcd.
+	for _, mm := range en.Mappers {
+		if _, err = m.etcdClient.Delete(ctx, TQLEtcdPrefix+en.ID+mm.Name); nil != err {
+			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return nil, errors.Wrap(err, "append mapper")
+		}
+		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
+	}
+
+	if err = m.stateManager.RemoveMapper(ctx, en); nil != err {
 		return nil, errors.Wrap(err, "remove mapper")
 	}
 

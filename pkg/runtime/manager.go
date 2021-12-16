@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +45,7 @@ type Manager struct {
 	msgCh         chan statem.MessageContext
 	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
+	actorEnv      *Environment
 
 	daprClient   dapr.Client
 	etcdClient   *clientv3.Client
@@ -76,6 +78,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
+		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
@@ -98,14 +101,18 @@ func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
 
 func (m *Manager) init() error {
 	// load all subcriptions.
-	res, err := m.etcdClient.Get(m.ctx, SubscriptionPrefix, clientv3.WithPrefix())
+	ctx1, cancel1 := context.WithTimeout(m.ctx, 30*time.Second)
+	defer cancel1()
+
+	log.Info("initialize actor manager, subscription loadding...")
+	res, err := m.etcdClient.Get(ctx1, SubscriptionPrefix, clientv3.WithPrefix())
 	if nil != err {
 		return errors.Wrap(err, "load all subcription")
 	}
 
 	for _, kv := range res.Kvs {
-		log.Info("load subcription", zap.String("subscription", string(kv.Value)))
-		if en, err := statem.DecodeBase(kv.Value); nil != err {
+		log.Info("load subcription", zap.String("key", string(kv.Key)), zap.String("subscription", string(kv.Value)))
+		if en, err := statem.DecodeBase(kv.Value); nil != err { //nolint
 			log.Error("decode subscription", zap.Error(err),
 				zap.String("etcd-key", string(kv.Key)), zap.String("subscription", string(kv.Value)))
 		} else if subsc, err := newSubscription(m.ctx, m, en); nil != err {
@@ -117,30 +124,70 @@ func (m *Manager) init() error {
 		}
 	}
 
+	// load all tqls.
+	ctx2, cancel2 := context.WithTimeout(m.ctx, 30*time.Second)
+	defer cancel2()
+
+	log.Info("initialize actor manager, tql loadding...")
+	if res, err = m.etcdClient.Get(ctx2, TQLEtcdPrefix, clientv3.WithPrefix()); nil != err {
+		return errors.Wrap(err, "load all tql")
+	}
+
+	descs := make([]*statem.MapperDesc, len(res.Kvs))
+	for index, kv := range res.Kvs {
+		descs[index] = &statem.MapperDesc{
+			TQLString: string(kv.Value),
+			Name:      strings.TrimPrefix(string(kv.Key), TQLEtcdPrefix),
+		}
+		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
+	}
+
+	m.actorEnv.LoadMapper(descs)
+
 	return nil
 }
 
-func (m *Manager) watchResource() error {
-	// watch subscription.
+func (m *Manager) watchResource() error { //nolint
+	// watch subscriptions.
 	subscWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
 	if nil != err {
-		return errors.Wrap(err, "create watcher failed")
+		return errors.Wrap(err, "create subscription watcher failed")
 	}
 
 	subscWatcher.Watch(SubscriptionPrefix, true, func(ev *clientv3.Event) {
 		switch ev.Type {
 		case mvccpb.PUT:
 			log.Info("subcription changed", zap.String("subscription", string(ev.Kv.Value)))
-			if en, err := statem.DecodeBase(ev.Kv.Value); nil != err {
+			if en, err := statem.DecodeBase(ev.Kv.Value); nil != err { //nolint
 				log.Error("decode subscription", zap.Any("subscription", ev), zap.Error(err))
 			} else if subsc, err := newSubscription(m.ctx, m, en); nil != err {
 				log.Error("create subscription", zap.Any("subscription", ev), zap.Error(err))
 			} else if err = subsc.Setup(); nil != err {
 				log.Error("setup subscription", zap.Any("subscription", ev), zap.Error(err))
 			}
-
 		case mvccpb.DELETE:
 			log.Info("subcription deleted", zap.String("subscription", string(ev.Kv.Value)))
+		default:
+			log.Error("invalid etcd operator type", zap.Any("operator", ev))
+		}
+	})
+
+	// watch tqls.
+	tqlWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
+	if nil != err {
+		return errors.Wrap(err, "create tql watcher failed")
+	}
+
+	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
+		switch ev.Type {
+		case mvccpb.PUT:
+			log.Info("tql changed", zap.String("key", string(ev.Kv.Key)), zap.String("tql", string(ev.Kv.Value)))
+			m.actorEnv.OnMapperChanged(statem.MapperOperatorAppend, &statem.MapperDesc{
+				TQLString: string(ev.Kv.Value),
+				Name:      strings.TrimPrefix(string(ev.Kv.Key), TQLEtcdPrefix),
+			})
+		case mvccpb.DELETE:
+			log.Info("tql deleted", zap.String("key", string(ev.Kv.Key)), zap.String("tql", string(ev.Kv.Value)))
 		default:
 			log.Error("invalid etcd operator type", zap.Any("operator", ev))
 		}
@@ -413,7 +460,6 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 		return errors.Wrap(ErrInvalidParams, "append entity mapper failed")
 	}
 
-	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -425,10 +471,7 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
-	wg.Add(1)
 	m.SendMsg(msgCtx)
-
-	wg.Wait()
 
 	return nil
 }
