@@ -85,6 +85,7 @@ func (m *EntityManager) Start() error {
 }
 
 func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
+	// 接受来自 pubsub 的消息，这些消息将触发 实体 运行时.
 	m.stateManager.SendMsg(msgCtx)
 }
 
@@ -127,26 +128,27 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 }
 
 // DeleteEntity delete an entity from manager.
-func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	// 1. delete from runtime.
-	base, err := m.stateManager.DeleteStateMarchin(ctx, en)
-	if nil != err {
-		return nil, errors.Wrap(err, "delete entity from runtime")
-	}
-
-	// 2. delete from elasticsearch.
+func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from es state")
 	}
 
-	// 3. delete from state.
+	// 2. delete from state.
 	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from state")
 	}
 
+	// 3. delete from runtime.
+	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "delete entity from runtime")
+	}
+
 	// 4. delete tql from etcd.
-	_, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix())
-	if nil != err {
+	if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix()); nil != err {
 		log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
 		return nil, errors.Wrap(err, "delete entity")
 	}
@@ -158,62 +160,63 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 }
 
 // GetProperties returns statem.Base.
-func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	base, err := m.getEntityFromState(ctx, en)
-	if nil != err {
-		log.Error("GetProperties", zap.Error(err), logger.EntityID(en.ID))
+func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if base, err = m.getEntityFromState(ctx, en); nil != err {
+		log.Error("get entity", zap.Error(err), logger.EntityID(en.ID))
 	}
 	return base, errors.Wrap(err, "entity GetProperties")
 }
 
-func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	var base *statem.Base
-	data, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
-	if nil != err {
-		return nil, errors.Wrap(err, "get entity properties")
-	} else if nil == data || len(data.Value) == 0 {
+func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	var item *dapr.StateItem
+	if item, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
+		return
+	} else if nil == item || len(item.Value) == 0 {
 		return nil, ErrEntityNotFound
-	} else if base, err = statem.DecodeBase(data.Value); nil != err {
-		return nil, errors.Wrap(err, "get entity properties")
 	}
 
-	return base, nil
+	base, err = statem.DecodeBase(item.Value)
+
+	return
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.SetProperties(ctx, en); nil != err {
+func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// TODO：这里的调用其实是可能通过entity-manager的proxy的同步调用，这个可以设置可选项.
+	if err = m.stateManager.SetProperties(ctx, en); nil != err {
+		log.Error("set entity properties", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "set entity properties")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "set entity properties")
 }
 
-func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
-	if err := m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
+func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error) {
+	if err = m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
+		log.Error("patch entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "patch entity properties")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "patch entity properties")
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.SetConfigs(ctx, en); nil != err {
-		return nil, errors.Wrap(err, "set entity configs")
+func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if err = m.stateManager.SetConfigs(ctx, en); nil != err {
+		log.Error("set entity configurations", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "set entity configurations")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "set entity configs")
 }
 
 // AppendMapper append a mapper into entity.
-func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. 判断实体是否存在.
-	_, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
-	if nil != err {
+	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
 		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "get state")
 	}
@@ -227,36 +230,38 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
 	}
 
+	// 有两种方式来对mapper进行变更，有了etcd的watch，这里的调用考虑异步.
 	if err = m.stateManager.AppendMapper(ctx, en); nil != err {
+		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "append mapper")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "append mapper")
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. 判断实体是否存在.
-	_, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
-	if nil != err {
-		return nil, errors.Wrap(err, "get state")
+	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "remove mapper")
 	}
 
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
 		if _, err = m.etcdClient.Delete(ctx, TQLEtcdPrefix+en.ID+mm.Name); nil != err {
-			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
-			return nil, errors.Wrap(err, "append mapper")
+			log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return nil, errors.Wrap(err, "remove mapper")
 		}
-		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
+		log.Info("remove mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
 	}
 
 	if err = m.stateManager.RemoveMapper(ctx, en); nil != err {
 		return nil, errors.Wrap(err, "remove mapper")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
 }
 
