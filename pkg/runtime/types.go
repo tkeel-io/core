@@ -24,6 +24,9 @@ import (
 	"github.com/tkeel-io/core/pkg/statem"
 )
 
+const EntityStateName = "core-state"
+const SubscriptionPrefix = "core.subsc."
+
 type WatchKey = mapper.WatchKey
 
 const (

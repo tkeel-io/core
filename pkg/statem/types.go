@@ -76,6 +76,8 @@ type StateMarchiner interface {
 	HandleLoop()
 	// StateManager returns state manager.
 	GetManager() StateManager
+	// Flush flush entity data.
+	Flush(ctx context.Context) error
 }
 
 type Flusher interface {

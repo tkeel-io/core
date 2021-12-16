@@ -21,15 +21,20 @@ import (
 	"crypto/rand"
 	"fmt"
 	"sync"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -41,6 +46,7 @@ type Manager struct {
 	coroutinePool *ants.Pool
 
 	daprClient   dapr.Client
+	etcdClient   *clientv3.Client
 	searchClient pb.SearchHTTPServer
 
 	shutdown chan struct{}
@@ -50,24 +56,39 @@ type Manager struct {
 }
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
-	daprClient, err := dapr.NewClient()
-	if nil != err {
+	var (
+		err        error
+		daprClient dapr.Client
+		etcdClient *clientv3.Client
+	)
+
+	if daprClient, err = dapr.NewClient(); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
+	} else if etcdClient, err = clientv3.New(clientv3.Config{
+		Endpoints:   config.GetConfig().Etcd.Address,
+		DialTimeout: 3 * time.Second,
+	}); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &Manager{
+	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
 		daprClient:    daprClient,
+		etcdClient:    etcdClient,
 		searchClient:  searchClient,
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
 		disposeCh:     make(chan statem.MessageContext, 10),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
-	}, nil
+	}
+
+	// set default container.
+	mgr.containers["default"] = NewContainer()
+	return mgr, nil
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
@@ -75,7 +96,65 @@ func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
 	m.msgCh <- msgCtx
 }
 
+func (m *Manager) init() error {
+	// load all subcriptions.
+	res, err := m.etcdClient.Get(m.ctx, SubscriptionPrefix, clientv3.WithPrefix())
+	if nil != err {
+		return errors.Wrap(err, "load all subcription")
+	}
+
+	for _, kv := range res.Kvs {
+		log.Info("load subcription", zap.String("subscription", string(kv.Value)))
+		if en, err := statem.DecodeBase(kv.Value); nil != err {
+			log.Error("decode subscription", zap.Error(err),
+				zap.String("etcd-key", string(kv.Key)), zap.String("subscription", string(kv.Value)))
+		} else if subsc, err := newSubscription(m.ctx, m, en); nil != err {
+			log.Error("create subscription", zap.Error(err),
+				zap.String("etcd-key", string(kv.Key)), zap.String("subscription", string(kv.Value)))
+		} else if err = subsc.Setup(); nil != err {
+			log.Error("setup subscription", zap.Error(err),
+				zap.String("etcd-key", string(kv.Key)), zap.String("subscription", string(kv.Value)))
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) watchResource() error {
+	// watch subscription.
+	subscWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
+	if nil != err {
+		return errors.Wrap(err, "create watcher failed")
+	}
+
+	subscWatcher.Watch(SubscriptionPrefix, true, func(ev *clientv3.Event) {
+		switch ev.Type {
+		case mvccpb.PUT:
+			log.Info("subcription changed", zap.String("subscription", string(ev.Kv.Value)))
+			if en, err := statem.DecodeBase(ev.Kv.Value); nil != err {
+				log.Error("decode subscription", zap.Any("subscription", ev), zap.Error(err))
+			} else if subsc, err := newSubscription(m.ctx, m, en); nil != err {
+				log.Error("create subscription", zap.Any("subscription", ev), zap.Error(err))
+			} else if err = subsc.Setup(); nil != err {
+				log.Error("setup subscription", zap.Any("subscription", ev), zap.Error(err))
+			}
+
+		case mvccpb.DELETE:
+			log.Info("subcription deleted", zap.String("subscription", string(ev.Kv.Value)))
+		default:
+			log.Error("invalid etcd operator type", zap.Any("operator", ev))
+		}
+	})
+
+	return nil
+}
+
 func (m *Manager) Start() error {
+	// init: load some resource.
+	m.init()
+	// watch resource.
+	m.watchResource()
+
 	go func() {
 		for {
 			select {
@@ -102,7 +181,7 @@ func (m *Manager) Start() error {
 					}
 					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en)
 					if nil != err {
-						log.Error("dispatching message",
+						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
 						continue
 					}
@@ -137,12 +216,21 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	}
 
 	if container, ok := m.containers[cid]; ok {
-		return cid, container.states[eid]
+		if sm := container.Get(eid); nil != sm {
+			return cid, sm
+		}
 	}
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
-			return channelID, sm
+			if channelID == "default" && cid != channelID {
+				container.Remove(sm.GetID())
+				if _, ok := m.containers[cid]; !ok {
+					m.containers[cid] = NewContainer()
+				}
+				m.containers[cid].Add(sm)
+			}
+			return cid, sm
 		}
 	}
 
@@ -150,16 +238,26 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
-	// load state-marchine from state store.
-
-	// create from base.
-	// 临时创建
+	var res *dapr.StateItem
 	switch base.Type {
 	case StateMarchineTypeSubscription:
-		// subscription entity type.
+		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
+			// TODO: 订阅不存在，所以应该通知被订阅方取消订阅.
+			return nil, errors.Wrap(err, "load subscription")
+		} else if base, err = statem.DecodeBase(res.Value); nil != err {
+			return nil, errors.Wrap(err, "load subscription")
+		}
 		sm, err = newSubscription(ctx, m, base)
 	default:
 		// default base entity type.
+		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
+			return nil, errors.Wrap(err, "load state")
+		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
+			base = en
+		} else {
+			log.Error("load or create state",
+				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(err))
+		}
 		sm, err = statem.NewState(ctx, m, base, nil)
 	}
 
@@ -359,6 +457,16 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (m *Manager) CreateSubscription(ctx context.Context, en *statem.Base) error {
+	subsc, err := newSubscription(ctx, m, en)
+	if nil != err {
+		return errors.Wrap(err, "runtime.create.subscription")
+	}
+
+	m.containers["default"].Add(subsc)
+	return errors.Wrap(subsc.Flush(ctx), "create subscription")
 }
 
 func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}) error {

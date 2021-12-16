@@ -22,22 +22,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/kit/log"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const EntityStateName = "core-state"
+const SubscriptionPrefix = "core.subsc."
 
 type EntityManager struct {
 	daprClient   dapr.Client
+	etcdClient   *clientv3.Client
 	searchClient pb.SearchHTTPServer
 	stateManager *runtime.Manager
 
@@ -47,9 +52,19 @@ type EntityManager struct {
 }
 
 func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb.SearchHTTPServer) (*EntityManager, error) {
-	daprClient, err := dapr.NewClient()
-	if nil != err {
-		return nil, errors.Wrap(err, "create entity manager failed")
+	var (
+		err        error
+		daprClient dapr.Client
+		etcdClient *clientv3.Client
+	)
+
+	if daprClient, err = dapr.NewClient(); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
+	} else if etcdClient, err = clientv3.New(clientv3.Config{
+		Endpoints:   config.GetConfig().Etcd.Address,
+		DialTimeout: 3 * time.Second,
+	}); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -59,6 +74,7 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 		cancel:       cancel,
 		stateManager: mgr,
 		daprClient:   daprClient,
+		etcdClient:   etcdClient,
 		searchClient: searchClient,
 		lock:         sync.RWMutex{},
 	}, nil
@@ -117,7 +133,7 @@ func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base)
 	if nil != err {
 		return nil, errors.Wrap(err, "get entity properties")
 	} else if base, err = statem.DecodeBase(data.Value); nil != err {
-		log.Error("get entity from state failed", logger.EntityID(en.ID), zap.String("value", string(data.Value)))
+		log.Error("get entity from state failed", logger.EntityID(en.ID), zap.Error(err))
 		return nil, errors.Wrap(err, "get entity properties")
 	}
 
@@ -171,6 +187,24 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 
 	base, err := m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
+}
+
+func (m *EntityManager) CreateSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
+	// insert subscription into etcd.
+	if bytes, err := statem.EncodeBase(en); nil != err {
+		log.Error("create subscription failed", zap.Any("subscription", en), zap.Error(err))
+		return nil, errors.Wrap(err, "create subscription")
+	} else if _, err := m.etcdClient.Put(ctx, SubscriptionPrefix+en.ID, string(bytes)); nil != err {
+		log.Error("create subscription failed", zap.Any("subscription", string(bytes)), zap.Error(err))
+		return nil, errors.Wrap(err, "create subscription")
+	}
+
+	if err := m.stateManager.CreateSubscription(ctx, en); nil != err {
+		return nil, errors.Wrap(err, "create subscription")
+	}
+
+	base, err := m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "create subscription")
 }
 
 func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {

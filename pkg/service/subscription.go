@@ -47,6 +47,8 @@ func interface2string(in interface{}) (out string) {
 	switch inString := in.(type) {
 	case string:
 		out = inString
+	case constraint.Node:
+		out = inString.String()
 	default:
 		out = ""
 	}
@@ -60,8 +62,8 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Owner = entity.Owner
 	out.Id = entity.ID
+	out.Owner = entity.Owner
 	out.Subscription = &pb.SubscriptionObject{}
 	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
 	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
@@ -78,6 +80,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	if req.Id != "" {
 		entity.ID = req.Id
 	}
+
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
@@ -92,8 +95,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.CreateSubscription(ctx, entity); nil != err {
 		return
 	}
 
