@@ -19,10 +19,15 @@ package service
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
+	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 type SubscriptionService struct {
@@ -84,7 +89,6 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
-
 	entity.KValues = map[string]constraint.Node{
 		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
 		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -95,13 +99,25 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set properties.
-	if entity, err = s.entityManager.CreateSubscription(ctx, entity); nil != err {
+	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(entity.ID))
+		return
+	}
+
+	// set mapper.
+	entity.Mappers = []statem.MapperDesc{{
+		Name:      "subscription",
+		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
+	}}
+
+	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(entity.ID))
 		return
 	}
 
 	out = s.entity2SubscriptionResponse(entity)
 
-	return
+	return out, errors.Wrap(err, "create subscription")
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
@@ -127,9 +143,20 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return
 	}
 
+	// set mapper.
+	entity.Mappers = []statem.MapperDesc{{
+		Name:      "subscription",
+		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
+	}}
+
+	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+		log.Error("update subscription", zap.Error(err), logger.EntityID(entity.ID))
+		return
+	}
+
 	out = s.entity2SubscriptionResponse(entity)
 
-	return
+	return out, errors.Wrap(err, "update subscription")
 }
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {

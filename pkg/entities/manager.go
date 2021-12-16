@@ -30,10 +30,10 @@ import (
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const EntityStateName = "core-state"
@@ -92,6 +92,16 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		base.ID = uuid()
 	}
 
+	// 1. 检查 实体 是否已经存在.
+	if _, err := m.getEntityFromState(ctx, base); errors.Is(err, ErrEntityNotFound) {
+		if nil == err {
+			err = ErrEntityAreadyExisted
+		}
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, err
+	}
+
+	// 2. 创建 实体.
 	if bytes, err := statem.EncodeBase(base); nil != err {
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
@@ -99,6 +109,15 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
+
+	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
+	m.stateManager.SendMsg(statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:  base.ID,
+			Operator: "replace",
+		},
+	})
 
 	return base, nil
 }
@@ -121,7 +140,14 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 		return nil, errors.Wrap(err, "delete entity from state")
 	}
 
-	// 4. log record.
+	// 4. delete tql from etcd.
+	_, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix())
+	if nil != err {
+		log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
+		return nil, errors.Wrap(err, "delete entity")
+	}
+
+	// 5. log record.
 	log.Info("delete entity", logger.EntityID(en.ID), zap.Any("entity", base))
 
 	return base, nil
@@ -130,6 +156,9 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*sta
 // GetProperties returns statem.Base.
 func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
 	base, err := m.getEntityFromState(ctx, en)
+	if nil != err {
+		log.Error("GetProperties", zap.Error(err), logger.EntityID(en.ID))
+	}
 	return base, errors.Wrap(err, "entity GetProperties")
 }
 
@@ -138,8 +167,9 @@ func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base)
 	data, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
 	if nil != err {
 		return nil, errors.Wrap(err, "get entity properties")
+	} else if nil == data || len(data.Value) == 0 {
+		return nil, ErrEntityNotFound
 	} else if base, err = statem.DecodeBase(data.Value); nil != err {
-		log.Error("get entity from state failed", logger.EntityID(en.ID), zap.Error(err))
 		return nil, errors.Wrap(err, "get entity properties")
 	}
 
@@ -180,6 +210,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*sta
 	// 1. 判断实体是否存在.
 	_, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
 	if nil != err {
+		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "get state")
 	}
 
@@ -223,35 +254,6 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*sta
 
 	base, err := m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
-}
-
-func (m *EntityManager) CreateSubscription(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	// insert subscription into etcd.
-	if bytes, err := statem.EncodeBase(en); nil != err {
-		log.Error("create subscription failed", zap.Any("subscription", en), zap.Error(err))
-		return nil, errors.Wrap(err, "create subscription")
-	} else if _, err := m.etcdClient.Put(ctx, SubscriptionPrefix+en.ID, string(bytes)); nil != err {
-		log.Error("create subscription failed", zap.Any("subscription", string(bytes)), zap.Error(err))
-		return nil, errors.Wrap(err, "create subscription")
-	}
-
-	if err := m.stateManager.CreateSubscription(ctx, en); nil != err {
-		return nil, errors.Wrap(err, "create subscription")
-	}
-
-	base, err := m.getEntityFromState(ctx, en)
-	return base, errors.Wrap(err, "create subscription")
-}
-
-func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
-	var err error
-	var val *structpb.Value
-	if val, err = structpb.NewValue(values); nil != err {
-		log.Error("search index failed.", zap.Error(err))
-	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
-		log.Error("search index failed.", zap.Error(err))
-	}
-	return errors.Wrap(err, "SearchFlushfailed")
 }
 
 // uuid generate an uuid.

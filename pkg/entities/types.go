@@ -15,3 +15,10 @@ limitations under the License.
 */
 
 package entities
+
+import "errors"
+
+var (
+	ErrEntityNotFound      = errors.New("not found")
+	ErrEntityAreadyExisted = errors.New("entity already existed")
+)

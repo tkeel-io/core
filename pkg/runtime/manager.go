@@ -343,9 +343,6 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 		en.ID = uuid()
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
 	// set properties.
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
@@ -353,14 +350,6 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 			StateID:    en.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: en.KValues,
-			MessageBase: statem.MessageBase{
-				PromiseHandler: func(v interface{}) {
-					if flusher, ok := v.(statem.Flusher); ok {
-						flusher.FlushState()
-					}
-					wg.Done()
-				},
-			},
 		},
 	}
 	msgCtx.Headers.SetOwner(en.Owner)
@@ -370,13 +359,10 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 
 	m.SendMsg(msgCtx)
 
-	wg.Wait()
-
 	return nil
 }
 
 func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) error {
-	wg := &sync.WaitGroup{}
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
@@ -389,18 +375,12 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 		}
 
 		if len(kvs) > 0 {
-			wg.Add(1)
 			msgCtx := statem.MessageContext{
 				Headers: statem.Header{},
 				Message: statem.PropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
-					MessageBase: statem.MessageBase{
-						PromiseHandler: func(v interface{}) {
-							wg.Done()
-						},
-					},
 				},
 			}
 
@@ -411,8 +391,6 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 			m.SendMsg(msgCtx)
 		}
 	}
-
-	wg.Wait()
 
 	return nil
 }
@@ -500,16 +478,6 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 
 	wg.Wait()
 	return nil
-}
-
-func (m *Manager) CreateSubscription(ctx context.Context, en *statem.Base) error {
-	subsc, err := newSubscription(ctx, m, en)
-	if nil != err {
-		return errors.Wrap(err, "runtime.create.subscription")
-	}
-
-	m.containers["default"].Add(subsc)
-	return errors.Wrap(subsc.Flush(ctx), "create subscription")
 }
 
 func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
