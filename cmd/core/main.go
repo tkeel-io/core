@@ -34,6 +34,8 @@ import (
 	"github.com/tkeel-io/core/pkg/service"
 
 	"github.com/panjf2000/ants/v2"
+	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
+	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/kit/transport"

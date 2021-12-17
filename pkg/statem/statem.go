@@ -107,8 +107,9 @@ type statem struct {
 	cacheProps     map[string]map[string]constraint.Node // cache other property.
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
-	constraints       map[string]*constraint.Constraint
-	searchConstraints sort.StringSlice
+	constraints        map[string]*constraint.Constraint
+	searchConstraints  sort.StringSlice
+	tseriesConstraints sort.StringSlice
 
 	// mailbox & state runtime status.
 	mailBox      *mailbox
@@ -200,10 +201,17 @@ func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 		s.Configs[k] = c
 		if ct := constraint.NewConstraintsFrom(c); nil != ct {
 			s.constraints[ct.ID] = ct
-			searchIndexes := ct.GenSearchIndex()
+			// generate search indexes.
+			searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch)
 			if len(searchIndexes) > 0 {
 				s.searchConstraints =
 					SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries)
+			if len(tseriesIndexes) > 0 {
+				s.tseriesConstraints =
+					SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
 		}
 	}

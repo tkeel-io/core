@@ -16,12 +16,6 @@ limitations under the License.
 
 package constraint
 
-const (
-	EnabledFlagSelf = 1 << iota
-	EnabledFlagSearch
-	EnabledFlagTimeSeries
-)
-
 type BitBucket struct {
 	lenth  int
 	bucket []uint8

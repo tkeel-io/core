@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -40,7 +41,7 @@ func (s *statem) FlushSearch() error {
 }
 
 func (s *statem) FlushTimeSeries() error {
-	panic("not implement")
+	return errors.Wrap(s.flushTimeSeries(s.ctx), "flush state-marchine time-series")
 }
 
 func (s *statem) flush(ctx context.Context) error {
@@ -90,6 +91,35 @@ func (s *statem) flushSeatch(ctx context.Context) error {
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
 	if err = s.stateManager.SearchFlush(ctx, flushData); nil != err {
+		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+	}
+
+	log.Debug("flush state Search.", zap.Any("data", flushData))
+	return errors.Wrap(err, "Search flush failed")
+}
+
+func (s *statem) flushTimeSeries(ctx context.Context) error {
+	var err error
+	var flushData []tseries.TSeriesData
+	for _, JSONPath := range s.tseriesConstraints {
+		var val constraint.Node
+		var ct *constraint.Constraint
+		if val, err = s.getProperty(s.KValues, JSONPath); nil != err || val == nil {
+		} else if ct, err = s.getConstraint(JSONPath); nil != err {
+		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
+		} else {
+			point := tseries.TSeriesData{
+				Measurement: "core-default",
+				Tags:        map[string]string{"app": "core"},
+				Fields:      map[string]string{},
+				Value:       val.String(),
+			}
+			flushData = append(flushData, point)
+		}
+		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+	}
+
+	if err = s.stateManager.TimeSeriesFlush(ctx, flushData); nil != err {
 		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 

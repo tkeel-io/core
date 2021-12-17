@@ -30,6 +30,8 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -45,9 +47,10 @@ type Manager struct {
 	coroutinePool *ants.Pool
 	actorEnv      *Environment
 
-	daprClient   dapr.Client
-	etcdClient   *clientv3.Client
-	searchClient pb.SearchHTTPServer
+	daprClient    dapr.Client
+	etcdClient    *clientv3.Client
+	searchClient  pb.SearchHTTPServer
+	tseriesClient tseries.TimeSerier
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -57,17 +60,19 @@ type Manager struct {
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
 	var (
-		err        error
-		daprClient dapr.Client
-		etcdClient *clientv3.Client
+		err           error
+		daprClient    dapr.Client
+		etcdClient    *clientv3.Client
+		tseriesClient = tseries.NewTimeSerier(config.GetConfig().TimeSeries.Name)
 	)
 
+	outDura := 3 * time.Second
+	etcdAddr := config.GetConfig().Etcd.Address
 	if daprClient, err = dapr.NewClient(); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
-	} else if etcdClient, err = clientv3.New(clientv3.Config{
-		Endpoints:   config.GetConfig().Etcd.Address,
-		DialTimeout: 3 * time.Second,
-	}); nil != err {
+	} else if err = tseriesClient.Init(resource.ParseFrom(&config.GetConfig().TimeSeries)); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
+	} else if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: outDura}); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
 	}
 
@@ -80,6 +85,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
+		tseriesClient: tseriesClient,
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
 		disposeCh:     make(chan statem.MessageContext, 10),
@@ -424,6 +430,26 @@ func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}
 		log.Error("search index failed.", zap.Error(err))
 	}
 	return errors.Wrap(err, "SearchFlushfailed")
+}
+
+func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []tseries.TSeriesData) error {
+	var err error
+	for _, data := range tds {
+		data.Fields["value"] = data.Value
+		line := fmt.Sprintf("%s,%s %s", data.Measurement, util.ExtractMap(data.Tags), util.ExtractMap(data.Fields))
+
+		_, err = m.tseriesClient.Write(ctx, &tseries.TSeriesRequest{
+			Data:     []string{line},
+			Metadata: map[string]string{},
+		})
+
+		if nil != err {
+			// 这里其实是有问题的, 如果没写成功，怎么处理，和MQ的ack相关，考虑放到batch_queue处理.
+			log.Error("flush time series data failed", zap.Error(err), zap.Any("data", data))
+		}
+	}
+
+	return errors.Wrap(err, "TimeSeriesFlush")
 }
 
 // uuid generate an uuid.
