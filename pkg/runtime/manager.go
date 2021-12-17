@@ -399,7 +399,6 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 		return errors.Wrap(ErrInvalidParams, "remove entity mapper failed")
 	}
 
-	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -411,10 +410,8 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
-	wg.Add(1)
 	m.SendMsg(msgCtx)
 
-	wg.Wait()
 	return nil
 }
 
