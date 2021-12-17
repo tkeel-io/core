@@ -21,6 +21,7 @@ import (
 	"errors"
 	"sort"
 
+	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 )
@@ -29,10 +30,12 @@ const (
 	StateFlushPeried = 10
 
 	MessageCtxHeaderOwner     = "x-owner"
+	MessageCtxHeaderType      = "x-type"
 	MessageCtxHeaderSourceID  = "x-source"
 	MessageCtxHeaderTargetID  = "x-target"
 	MessageCtxHeaderStateType = "x-state-type"
-	MessageCtxHeaderRequestID = "x-reqsuest_id"
+	MessageCtxHeaderRequestID = "x-reqsuest-id"
+	MessageCtxHeaderChannelID = "x-channel-id"
 
 	MapperOperatorAppend   = "append"
 	MapperOperatorRemove   = "remove"
@@ -48,6 +51,7 @@ var (
 type StateManager interface {
 	Start() error
 	SendMsg(msgCtx MessageContext)
+	GetDaprClient() dapr.Client
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
@@ -60,6 +64,10 @@ type StateMarchiner interface {
 	GetBase() *Base
 	// Setup state marchine setup.
 	Setup() error
+	// SetStatus set state-marchine status.
+	SetStatus(Status)
+	// GetStatus returns state-marchine status.
+	GetStatus() Status
 	// SetConfig set configs.
 	SetConfig(map[string]constraint.Config) error
 	// OnMessage recv message from pubsub.
@@ -68,6 +76,12 @@ type StateMarchiner interface {
 	HandleLoop()
 	// StateManager returns state manager.
 	GetManager() StateManager
+}
+
+type Flusher interface {
+	FlushState() error
+	FlushSearch() error
+	FlushTimeSeries() error
 }
 
 type MessageHandler = func(Message) []WatchKey
@@ -153,3 +167,11 @@ func Unique(slice sort.StringSlice) sort.StringSlice {
 	}
 	return newSlice
 }
+
+type Status string
+
+const (
+	SMStatusActive   Status = "active"
+	SMStatusInactive Status = "inactive"
+	SMStatusDeleted  Status = "deleted"
+)

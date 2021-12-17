@@ -17,23 +17,36 @@ limitations under the License.
 package runtime
 
 import (
-	"context"
-	"errors"
+	"sync"
 
-	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/statem"
 )
 
-type WatchKey = mapper.WatchKey
+type Container struct {
+	lock   sync.RWMutex
+	states map[string]statem.StateMarchiner
+}
 
-const (
-	StateMarchineTypeBasic        = "BASIC"
-	StateMarchineTypeSubscription = "SUBSCRIPTION"
-)
+func NewContainer() *Container {
+	return &Container{
+		states: make(map[string]statem.StateMarchiner),
+	}
+}
 
-var (
-	ErrInvalidParams       = errors.New("invalid params")
-	ErrSubscriptionInvalid = errors.New("invalid subscription")
-)
+func (c *Container) Add(s statem.StateMarchiner) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.states[s.GetID()] = s
+}
 
-type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMarchiner, error)
+func (c *Container) Remove(id string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	delete(c.states, id)
+}
+
+func (c *Container) Get(id string) statem.StateMarchiner {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.states[id]
+}

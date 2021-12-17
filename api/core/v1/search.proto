@@ -47,6 +47,22 @@ service Search {
             }
           };
 	};
+  rpc DeleteByID(DeleteByIDRequest) returns (DeleteByIDResponse) {
+		option (google.api.http) = {
+			delete : "/search"
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Delete objects by id";
+            operation_id: "SearchObjects";
+            tags: "Search";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
+  }
 }
 
 message IndexObject {
@@ -64,9 +80,11 @@ message SearchCondition {
 }
 
 message SearchRequest {
-    string query = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "search keyword"}];
-    Pager page = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "page"}];
-    repeated SearchCondition condition = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "conditions list"}];
+    string source = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string query = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "search keyword"}];
+    Pager page = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "page"}];
+    repeated SearchCondition condition = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "conditions list"}];
 }
 
 message SearchResponse {
@@ -76,3 +94,13 @@ message SearchResponse {
     int64 offset = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "offset"}];
     repeated google.protobuf.Value items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "items of the results"}];
 }
+
+
+
+message DeleteByIDRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+}
+
+message DeleteByIDResponse {}

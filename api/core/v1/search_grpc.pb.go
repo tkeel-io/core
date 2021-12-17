@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type SearchClient interface {
 	Index(ctx context.Context, in *IndexObject, opts ...grpc.CallOption) (*IndexResponse, error)
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
+	DeleteByID(ctx context.Context, in *DeleteByIDRequest, opts ...grpc.CallOption) (*DeleteByIDResponse, error)
 }
 
 type searchClient struct {
@@ -48,12 +49,22 @@ func (c *searchClient) Search(ctx context.Context, in *SearchRequest, opts ...gr
 	return out, nil
 }
 
+func (c *searchClient) DeleteByID(ctx context.Context, in *DeleteByIDRequest, opts ...grpc.CallOption) (*DeleteByIDResponse, error) {
+	out := new(DeleteByIDResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Search/DeleteByID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SearchServer is the server API for Search service.
 // All implementations must embed UnimplementedSearchServer
 // for forward compatibility
 type SearchServer interface {
 	Index(context.Context, *IndexObject) (*IndexResponse, error)
 	Search(context.Context, *SearchRequest) (*SearchResponse, error)
+	DeleteByID(context.Context, *DeleteByIDRequest) (*DeleteByIDResponse, error)
 	mustEmbedUnimplementedSearchServer()
 }
 
@@ -66,6 +77,9 @@ func (UnimplementedSearchServer) Index(context.Context, *IndexObject) (*IndexRes
 }
 func (UnimplementedSearchServer) Search(context.Context, *SearchRequest) (*SearchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
+func (UnimplementedSearchServer) DeleteByID(context.Context, *DeleteByIDRequest) (*DeleteByIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteByID not implemented")
 }
 func (UnimplementedSearchServer) mustEmbedUnimplementedSearchServer() {}
 
@@ -116,6 +130,24 @@ func _Search_Search_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Search_DeleteByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteByIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SearchServer).DeleteByID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Search/DeleteByID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SearchServer).DeleteByID(ctx, req.(*DeleteByIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Search_ServiceDesc is the grpc.ServiceDesc for Search service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,6 +162,10 @@ var Search_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Search",
 			Handler:    _Search_Search_Handler,
+		},
+		{
+			MethodName: "DeleteByID",
+			Handler:    _Search_DeleteByID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

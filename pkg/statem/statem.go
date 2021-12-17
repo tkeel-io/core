@@ -72,15 +72,15 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id"`
-	Type     string                       `json:"type"`
-	Owner    string                       `json:"owner"`
-	Source   string                       `json:"source"`
-	Version  int64                        `json:"version"`
-	LastTime int64                        `json:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties"` //nolint
-	Configs  map[string]constraint.Config `json:"configs"`
+	ID       string                       `json:"id" mapstructure:"id"`
+	Type     string                       `json:"type" mapstructure:"type"`
+	Owner    string                       `json:"owner" mapstructure:"owner"`
+	Source   string                       `json:"source" mapstructure:"source"`
+	Version  int64                        `json:"version" mapstructure:"version"`
+	LastTime int64                        `json:"last_time" mapstructure:"last_time"`
+	Mappers  []MapperDesc                 `json:"mappers" mapstructure:"mappers"`
+	KValues  map[string]constraint.Node   `json:"properties" mapstructure:"-"` //nolint
+	Configs  map[string]constraint.Config `json:"configs" mapstructure:"configs"`
 }
 
 func (b *Base) Copy() Base {
@@ -117,6 +117,8 @@ type statem struct {
 	nextFlushNum int32
 	stateManager StateManager
 	msgHandler   MessageHandler
+
+	status Status
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -179,6 +181,14 @@ func (s *statem) GetID() string {
 
 func (s *statem) GetBase() *Base {
 	return &s.Base
+}
+
+func (s *statem) GetStatus() Status {
+	return s.status
+}
+
+func (s *statem) SetStatus(status Status) {
+	s.status = status
 }
 
 func (s *statem) GetManager() StateManager {
@@ -253,7 +263,7 @@ func (s *statem) HandleLoop() { //nolint
 			}
 
 			// flush properties.
-			if err := s.flush(); nil != err {
+			if err := s.flush(s.ctx); nil != err {
 				log.Error("flush state properties failed",
 					logger.EntityID(s.ID), zap.Error(err))
 			}
@@ -263,7 +273,7 @@ func (s *statem) HandleLoop() { //nolint
 
 		if s.nextFlushNum == 0 {
 			// flush properties.
-			if err := s.flush(); nil != err {
+			if err := s.flush(s.ctx); nil != err {
 				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
 			}
 		}
@@ -280,7 +290,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.activeTentacle(watchKeys)
 		}
 
-		message.Promised(nil)
+		message.Promised(s)
 
 		// reset be surs.
 		Ensure = 3
