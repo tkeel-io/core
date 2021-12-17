@@ -74,14 +74,19 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 	stateM, err := statem.NewState(ctx, mgr, in, subsc.HandleMessage)
 	if nil != err {
 		return nil, errors.Wrap(err, "create subscription failed")
-	} else if err = subsc.checkSubscription(); nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
 	} else if err = mapstructure.Decode(in.KValues, &subsc); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	} else if err = subsc.checkSubscription(); nil != err {
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
 	subsc.stateMarchine = stateM
-	return &subsc, errors.Wrap(err, "create subscription failed")
+	subsc.GetBase().KValues = in.KValues
+	return &subsc, nil
+}
+
+func (s *subscription) Flush(ctx context.Context) error {
+	return errors.Wrap(s.stateMarchine.Flush(ctx), "flush subscription")
 }
 
 // Setup setup filter.
@@ -197,7 +202,7 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 // checkSubscription returns subscription status.
 func (s *subscription) checkSubscription() error {
 	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
-		s.Target == "" || s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
+		s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
 		return ErrSubscriptionInvalid
 	}
 

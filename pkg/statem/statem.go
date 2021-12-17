@@ -386,7 +386,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 				MessageCtxHeaderSourceID: s.ID,
 				MessageCtxHeaderTargetID: stateID,
 			},
-			Message: &PropertyMessage{
+			Message: PropertyMessage{
 				StateID:    s.ID,
 				Properties: msg,
 			},
@@ -398,27 +398,39 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
+func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
+	if len(actives) == 0 {
+		return
+	}
+
+	var err error
 	for mapperID := range actives {
 		input := make(map[string]constraint.Node)
 		for _, tentacle := range s.indexTentacles[mapperID] {
 			for _, item := range tentacle.Items() {
-				val, err := s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey)
-				if nil != err {
+				var val constraint.Node
+				if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
 					log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
 					continue
+				} else if nil != val {
+					input[item.String()] = val
 				}
-				input[item.String()] = val
 			}
 		}
 
+		if len(input) == 0 {
+			log.Debug("obtain mapper input, empty params", logger.MapperID(mapperID))
+			continue
+		}
+
+		var properties map[string]constraint.Node
+
 		// excute mapper.
-		properties, err := s.mappers[mapperID].Exec(input)
-		if nil != err {
+		if properties, err = s.mappers[mapperID].Exec(input); nil != err {
 			log.Error("exec statem mapper failed ", zap.Error(err))
 		}
 
-		log.Debug("exec mapper", logger.MapperID(mapperID), logger.MessageInst(properties))
+		log.Debug("exec mapper", logger.MapperID(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
@@ -510,6 +522,7 @@ func (s *statem) invokeMapperMsg(msg MapperMessage) {
 			logger.TQLString(msg.Mapper.TQLString),
 			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
 	}
+	log.Info("recv mapper message", logger.EntityID(s.GetID()), zap.Any("mapper", msg.Mapper))
 }
 
 // SetMapper set mapper into entity.
@@ -555,9 +568,10 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 			s.stateManager.EscapedEntities(expr)...)
 	}
 
+	log.Info("source entities", zap.Any("entities", sourceEntities))
 	for _, entityID := range sourceEntities {
 		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-
+		log.Info("record tentacle", logger.EntityID(s.ID), zap.String("target", entityID), zap.Any("tentacle", tentacle))
 		if nil != tentacle {
 			// send tentacle msg.
 			s.stateManager.SendMsg(MessageContext{
@@ -565,7 +579,7 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 					MessageCtxHeaderSourceID: s.ID,
 					MessageCtxHeaderTargetID: entityID,
 				},
-				Message: &TentacleMsg{
+				Message: TentacleMsg{
 					StateID:  s.ID,
 					Operator: TentacleOperatorAppend,
 					Items:    tentacle.Copy().Items(),

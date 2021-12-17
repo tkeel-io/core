@@ -19,25 +19,30 @@ package entities
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const EntityStateName = "core-state"
+const SubscriptionPrefix = "core.subsc."
+const TQLEtcdPrefix = "core.tql."
 
 type EntityManager struct {
 	daprClient   dapr.Client
+	etcdClient   *clientv3.Client
 	searchClient pb.SearchHTTPServer
 	stateManager *runtime.Manager
 
@@ -47,9 +52,19 @@ type EntityManager struct {
 }
 
 func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb.SearchHTTPServer) (*EntityManager, error) {
-	daprClient, err := dapr.NewClient()
-	if nil != err {
-		return nil, errors.Wrap(err, "create entity manager failed")
+	var (
+		err        error
+		daprClient dapr.Client
+		etcdClient *clientv3.Client
+	)
+
+	if daprClient, err = dapr.NewClient(); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
+	} else if etcdClient, err = clientv3.New(clientv3.Config{
+		Endpoints:   config.GetConfig().Etcd.Address,
+		DialTimeout: 3 * time.Second,
+	}); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -59,6 +74,7 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 		cancel:       cancel,
 		stateManager: mgr,
 		daprClient:   daprClient,
+		etcdClient:   etcdClient,
 		searchClient: searchClient,
 		lock:         sync.RWMutex{},
 	}, nil
@@ -66,6 +82,11 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 
 func (m *EntityManager) Start() error {
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
+}
+
+func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
+	// 接受来自 pubsub 的消息，这些消息将触发 实体 运行时.
+	m.stateManager.SendMsg(msgCtx)
 }
 
 // ------------------------------------APIs-----------------------------.
@@ -76,112 +97,178 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		base.ID = uuid()
 	}
 
-	bytes, _ := json.Marshal(base)
-	m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes)
+	// 1. 检查 实体 是否已经存在.
+	if _, err := m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
+		if nil == err {
+			err = ErrEntityAreadyExisted
+		}
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, err
+	}
+
+	// 2. 创建 实体.
+	if bytes, err := statem.EncodeBase(base); nil != err {
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	} else if err = m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes); nil != err {
+		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	}
+
+	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:  base.ID,
+			Operator: "replace",
+		},
+	}
+
+	msgCtx.Headers.SetOwner(base.Owner)
+	msgCtx.Headers.SetTargetID(base.ID)
+	msgCtx.Headers.SetSource(base.Source)
+	msgCtx.Headers.Set(statem.MessageCtxHeaderType, base.Type)
+	m.stateManager.SendMsg(msgCtx)
+
 	return base, nil
 }
 
 // DeleteEntity delete an entity from manager.
-func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	// 1. delete from runtime.
-	base, err := m.stateManager.DeleteStateMarchin(ctx, en)
-	if nil != err {
-		return nil, errors.Wrap(err, "delete entity from runtime")
-	}
-
-	// 2. delete from elasticsearch.
+func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from es state")
 	}
 
-	// 3. delete from state.
+	// 2. delete from state.
 	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from state")
 	}
 
-	// 4. log record.
+	// 3. delete from runtime.
+	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "delete entity from runtime")
+	}
+
+	// 4. delete tql from etcd.
+	if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix()); nil != err {
+		log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
+		return nil, errors.Wrap(err, "delete entity")
+	}
+
+	// 5. log record.
 	log.Info("delete entity", logger.EntityID(en.ID), zap.Any("entity", base))
 
 	return base, nil
 }
 
 // GetProperties returns statem.Base.
-func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	base, err := m.getEntityFromState(ctx, en)
+func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if base, err = m.getEntityFromState(ctx, en); nil != err {
+		log.Error("get entity", zap.Error(err), logger.EntityID(en.ID))
+	}
 	return base, errors.Wrap(err, "entity GetProperties")
 }
 
-func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	var base *statem.Base
-	data, err := m.daprClient.GetState(ctx, EntityStateName, en.ID)
-	if nil != err {
-		return nil, errors.Wrap(err, "get entity properties")
-	} else if base, err = statem.DecodeBase(data.Value); nil != err {
-		log.Error("get entity from state failed", logger.EntityID(en.ID), zap.String("value", string(data.Value)))
-		return nil, errors.Wrap(err, "get entity properties")
+func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	var item *dapr.StateItem
+	if item, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
+		return
+	} else if nil == item || len(item.Value) == 0 {
+		return nil, ErrEntityNotFound
 	}
 
-	return base, nil
+	base, err = statem.DecodeBase(item.Value)
+
+	return
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.SetProperties(ctx, en); nil != err {
+func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// TODO：这里的调用其实是可能通过entity-manager的proxy的同步调用，这个可以设置可选项.
+	if err = m.stateManager.SetProperties(ctx, en); nil != err {
+		log.Error("set entity properties", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "set entity properties")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "set entity properties")
 }
 
-func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (*statem.Base, error) {
-	if err := m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
+func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error) {
+	if err = m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
+		log.Error("patch entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "patch entity properties")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "patch entity properties")
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.SetConfigs(ctx, en); nil != err {
-		return nil, errors.Wrap(err, "set entity configs")
+func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if err = m.stateManager.SetConfigs(ctx, en); nil != err {
+		log.Error("set entity configurations", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "set entity configurations")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "set entity configs")
 }
 
 // AppendMapper append a mapper into entity.
-func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.AppendMapper(ctx, en); nil != err {
+func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// 1. 判断实体是否存在.
+	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "get state")
+	}
+
+	// 2. 将 mapper 推到 etcd.
+	for _, mm := range en.Mappers {
+		if _, err = m.etcdClient.Put(ctx, TQLEtcdPrefix+en.ID+mm.Name, mm.TQLString); nil != err {
+			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return nil, errors.Wrap(err, "append mapper")
+		}
+		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
+	}
+
+	// 有两种方式来对mapper进行变更，有了etcd的watch，这里的调用考虑异步.
+	if err = m.stateManager.AppendMapper(ctx, en); nil != err {
+		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "append mapper")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
+	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "append mapper")
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	if err := m.stateManager.RemoveMapper(ctx, en); nil != err {
+func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	// 1. 判断实体是否存在.
+	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "remove mapper")
 	}
 
-	base, err := m.getEntityFromState(ctx, en)
-	return base, errors.Wrap(err, "remove mapper")
-}
-
-func (m *EntityManager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
-	var err error
-	var val *structpb.Value
-	if val, err = structpb.NewValue(values); nil != err {
-		log.Error("search index failed.", zap.Error(err))
-	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
-		log.Error("search index failed.", zap.Error(err))
+	// 2. 将 mapper 推到 etcd.
+	for _, mm := range en.Mappers {
+		if _, err = m.etcdClient.Delete(ctx, TQLEtcdPrefix+en.ID+mm.Name); nil != err {
+			log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return nil, errors.Wrap(err, "remove mapper")
+		}
+		log.Info("remove mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
 	}
-	return errors.Wrap(err, "SearchFlushfailed")
+
+	if err = m.stateManager.RemoveMapper(ctx, en); nil != err {
+		return nil, errors.Wrap(err, "remove mapper")
+	}
+
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "remove mapper")
 }
 
 // uuid generate an uuid.
