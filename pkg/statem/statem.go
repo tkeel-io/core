@@ -398,7 +398,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
+func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 	if len(actives) == 0 {
 		return
 	}
@@ -424,7 +424,6 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		}
 
 		var properties map[string]constraint.Node
-		log.Debug("exec mapper", logger.MapperID(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
 		// excute mapper.
 		if properties, err = s.mappers[mapperID].Exec(input); nil != err {
