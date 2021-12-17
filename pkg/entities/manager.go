@@ -98,7 +98,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 	}
 
 	// 1. 检查 实体 是否已经存在.
-	if _, err := m.getEntityFromState(ctx, base); errors.Is(err, ErrEntityNotFound) {
+	if _, err := m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
 		if nil == err {
 			err = ErrEntityAreadyExisted
 		}
@@ -116,13 +116,19 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 	}
 
 	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
-	m.stateManager.SendMsg(statem.MessageContext{
+	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:  base.ID,
 			Operator: "replace",
 		},
-	})
+	}
+
+	msgCtx.Headers.SetOwner(base.Owner)
+	msgCtx.Headers.SetTargetID(base.ID)
+	msgCtx.Headers.SetSource(base.Source)
+	msgCtx.Headers.Set(statem.MessageCtxHeaderType, base.Type)
+	m.stateManager.SendMsg(msgCtx)
 
 	return base, nil
 }

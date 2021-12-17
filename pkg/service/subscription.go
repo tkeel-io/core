@@ -100,7 +100,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	// set properties.
 	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(entity.ID))
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -111,7 +111,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(entity.ID))
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -138,8 +138,8 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -150,7 +150,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("update subscription", zap.Error(err), logger.EntityID(entity.ID))
+		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -166,8 +166,8 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	// delete entity.
-	_, err = s.entityManager.DeleteEntity(ctx, entity)
-	if nil != err {
+	if _, err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
+		log.Error("delete subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -182,8 +182,8 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	// delete entity.
-	entity, err = s.entityManager.GetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+		log.Error("get subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 	out = s.entity2SubscriptionResponse(entity)

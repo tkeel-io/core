@@ -257,6 +257,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 		m.containers[channelID] = NewContainer()
 	}
 
+	sm.Setup()
 	m.containers[channelID].Add(sm)
 	return sm, nil
 }
@@ -269,7 +270,7 @@ func (m *Manager) HandleMsg(ctx context.Context, msg statem.MessageContext) {
 // Tools.
 
 func (m *Manager) EscapedEntities(expression string) []string {
-	return nil
+	return []string{expression}
 }
 
 // ------------------------------------APIs-----------------------------.
