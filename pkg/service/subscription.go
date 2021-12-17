@@ -19,10 +19,15 @@ package service
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
+	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 type SubscriptionService struct {
@@ -47,6 +52,8 @@ func interface2string(in interface{}) (out string) {
 	switch inString := in.(type) {
 	case string:
 		out = inString
+	case constraint.Node:
+		out = inString.String()
 	default:
 		out = ""
 	}
@@ -60,8 +67,8 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Owner = entity.Owner
 	out.Id = entity.ID
+	out.Owner = entity.Owner
 	out.Subscription = &pb.SubscriptionObject{}
 	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
 	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
@@ -78,10 +85,10 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	if req.Id != "" {
 		entity.ID = req.Id
 	}
+
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
-
 	entity.KValues = map[string]constraint.Node{
 		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
 		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -92,14 +99,25 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+		return
+	}
+
+	// set mapper.
+	entity.Mappers = []statem.MapperDesc{{
+		Name:      "subscription",
+		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
+	}}
+
+	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
 	out = s.entity2SubscriptionResponse(entity)
 
-	return
+	return out, errors.Wrap(err, "create subscription")
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
@@ -120,14 +138,25 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set properties.
-	entity, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
+		return
+	}
+
+	// set mapper.
+	entity.Mappers = []statem.MapperDesc{{
+		Name:      "subscription",
+		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
+	}}
+
+	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
 	out = s.entity2SubscriptionResponse(entity)
 
-	return
+	return out, errors.Wrap(err, "update subscription")
 }
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {
@@ -137,8 +166,8 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	// delete entity.
-	_, err = s.entityManager.DeleteEntity(ctx, entity)
-	if nil != err {
+	if _, err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
+		log.Error("delete subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 
@@ -153,8 +182,8 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	// delete entity.
-	entity, err = s.entityManager.GetProperties(ctx, entity)
-	if nil != err {
+	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+		log.Error("get subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
 	}
 	out = s.entity2SubscriptionResponse(entity)

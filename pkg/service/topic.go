@@ -22,6 +22,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/statem"
 )
 
 type TopicService struct {
@@ -51,32 +52,43 @@ func NewTopicService(ctx context.Context, mgr *entities.EntityManager) (*TopicSe
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	var entity = new(Entity)
-
-	entity.KValues = make(map[string]constraint.Node)
+	var values map[string]interface{}
+	var properties map[string]constraint.Node
 	switch kv := req.Data.AsInterface().(type) {
 	case map[string]interface{}:
-		entity.ID = interface2string(kv["id"])
-		entity.Owner = interface2string(kv["owner"])
-
-		switch kvv := kv["data"].(type) {
-		case map[string]interface{}:
-			for k, v := range kvv {
-				entity.KValues[k] = constraint.NewNode(v)
-			}
-		default:
-			return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
-		}
+		values = kv
 
 	default:
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
 
-	// set properties.
-	_, err = s.entityManager.SetProperties(ctx, entity)
-	if nil != err {
-		return
+	// parse data.
+	switch data := values["data"].(type) {
+	case map[string]interface{}:
+		if len(data) > 0 {
+			properties = make(map[string]constraint.Node)
+			for key, val := range data {
+				properties[key] = constraint.NewNode(val)
+			}
+		}
+	default:
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
 
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:    interface2string(values["id"]),
+			Operator:   constraint.PatchOpReplace.String(),
+			Properties: properties,
+		},
+	}
+
+	msgCtx.Headers.SetTargetID(interface2string(values["id"]))
+	msgCtx.Headers.SetOwner(interface2string(values["owner"]))
+	msgCtx.Headers.SetOwner(interface2string(values["type"]))
+	msgCtx.Headers.SetOwner(interface2string(values["source"]))
+
+	s.entityManager.OnMessage(ctx, msgCtx)
 	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
 }

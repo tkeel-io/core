@@ -30,8 +30,13 @@ import (
 var config = defaultConfig()
 
 type Config struct {
-	Server Server    `mapstructure:"server"`
-	Logger LogConfig `mapstructure:"logger"`
+	Server Server     `mapstructure:"server"`
+	Logger LogConfig  `mapstructure:"logger"`
+	Etcd   EtcdConfig `mapstructure:"etcd"`
+}
+
+type EtcdConfig struct {
+	Address []string
 }
 
 type LogConfig struct {
@@ -84,6 +89,7 @@ func InitConfig(cfgFile string) {
 	viper.SetDefault("server.coroutine_pool_size", 500)
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.output_json", false)
+	viper.SetDefault("etcd.address", []string{"http://localhost:2379"})
 
 	// unmarshal
 	onConfigChanged(fsnotify.Event{Name: "init", Op: fsnotify.Chmod})

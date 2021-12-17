@@ -21,15 +21,19 @@ import (
 	"crypto/rand"
 	"fmt"
 	"sync"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -39,8 +43,10 @@ type Manager struct {
 	msgCh         chan statem.MessageContext
 	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
+	actorEnv      *Environment
 
 	daprClient   dapr.Client
+	etcdClient   *clientv3.Client
 	searchClient pb.SearchHTTPServer
 
 	shutdown chan struct{}
@@ -50,24 +56,40 @@ type Manager struct {
 }
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
-	daprClient, err := dapr.NewClient()
-	if nil != err {
+	var (
+		err        error
+		daprClient dapr.Client
+		etcdClient *clientv3.Client
+	)
+
+	if daprClient, err = dapr.NewClient(); nil != err {
+		return nil, errors.Wrap(err, "create manager failed")
+	} else if etcdClient, err = clientv3.New(clientv3.Config{
+		Endpoints:   config.GetConfig().Etcd.Address,
+		DialTimeout: 3 * time.Second,
+	}); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &Manager{
+	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
+		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
+		etcdClient:    etcdClient,
 		searchClient:  searchClient,
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
 		disposeCh:     make(chan statem.MessageContext, 10),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
-	}, nil
+	}
+
+	// set default container.
+	mgr.containers["default"] = NewContainer()
+	return mgr, nil
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
@@ -75,7 +97,49 @@ func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
 	m.msgCh <- msgCtx
 }
 
+func (m *Manager) init() error {
+	// load all subcriptions.
+	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
+	defer cancel()
+
+	log.Info("initialize actor manager, tql loadding...")
+	res, err := m.etcdClient.Get(ctx, TQLEtcdPrefix, clientv3.WithPrefix())
+	if nil != err {
+		return errors.Wrap(err, "load all tql")
+	}
+
+	descs := make([]EtcdPair, len(res.Kvs))
+	for index, kv := range res.Kvs {
+		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
+		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
+	}
+
+	m.actorEnv.LoadMapper(descs)
+
+	return nil
+}
+
+func (m *Manager) watchResource() error {
+	// watch tqls.
+	tqlWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
+	if nil != err {
+		return errors.Wrap(err, "create tql watcher failed")
+	}
+
+	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
+		// on changed.
+		m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+	})
+
+	return nil
+}
+
 func (m *Manager) Start() error {
+	// init: load some resource.
+	m.init()
+	// watch resource.
+	m.watchResource()
+
 	go func() {
 		for {
 			select {
@@ -87,22 +151,21 @@ func (m *Manager) Start() error {
 				m.disposeCh <- msgCtx
 
 			case msgCtx := <-m.disposeCh:
-				log.Info("dispose message",
-					logger.EntityID(msgCtx.Headers.GetTargetID()), logger.MessageInst(msgCtx))
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
+				log.Info("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
 				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
 				if nil == stateMarchine {
 					var err error
 					en := &statem.Base{
-						ID:     msgCtx.Headers.GetTargetID(),
+						ID:     eid,
 						Owner:  msgCtx.Headers.GetOwner(),
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
 					}
 					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en)
 					if nil != err {
-						log.Error("dispatching message",
+						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
 						continue
 					}
@@ -137,12 +200,21 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	}
 
 	if container, ok := m.containers[cid]; ok {
-		return cid, container.states[eid]
+		if sm := container.Get(eid); nil != sm {
+			return cid, sm
+		}
 	}
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
-			return channelID, sm
+			if channelID == "default" && cid != channelID {
+				container.Remove(sm.GetID())
+				if _, ok := m.containers[cid]; !ok {
+					m.containers[cid] = NewContainer()
+				}
+				m.containers[cid].Add(sm)
+			}
+			return cid, sm
 		}
 	}
 
@@ -150,16 +222,26 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
-	// load state-marchine from state store.
-
-	// create from base.
-	// 临时创建
+	var res *dapr.StateItem
 	switch base.Type {
 	case StateMarchineTypeSubscription:
-		// subscription entity type.
+		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
+			// TODO: 订阅不存在，所以应该通知被订阅方取消订阅.
+			return nil, errors.Wrap(err, "load subscription")
+		} else if base, err = statem.DecodeBase(res.Value); nil != err {
+			return nil, errors.Wrap(err, "load subscription")
+		}
 		sm, err = newSubscription(ctx, m, base)
 	default:
 		// default base entity type.
+		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
+			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
+		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
+			base = en
+		} else {
+			log.Error("load or create state",
+				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(err))
+		}
 		sm, err = statem.NewState(ctx, m, base, nil)
 	}
 
@@ -175,6 +257,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 		m.containers[channelID] = NewContainer()
 	}
 
+	sm.Setup()
 	m.containers[channelID].Add(sm)
 	return sm, nil
 }
@@ -187,7 +270,7 @@ func (m *Manager) HandleMsg(ctx context.Context, msg statem.MessageContext) {
 // Tools.
 
 func (m *Manager) EscapedEntities(expression string) []string {
-	return nil
+	return []string{expression}
 }
 
 // ------------------------------------APIs-----------------------------.
@@ -198,9 +281,6 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 		en.ID = uuid()
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
 	// set properties.
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
@@ -208,14 +288,6 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 			StateID:    en.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: en.KValues,
-			MessageBase: statem.MessageBase{
-				PromiseHandler: func(v interface{}) {
-					if flusher, ok := v.(statem.Flusher); ok {
-						flusher.FlushState()
-					}
-					wg.Done()
-				},
-			},
 		},
 	}
 	msgCtx.Headers.SetOwner(en.Owner)
@@ -225,13 +297,10 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 
 	m.SendMsg(msgCtx)
 
-	wg.Wait()
-
 	return nil
 }
 
 func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) error {
-	wg := &sync.WaitGroup{}
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
@@ -244,18 +313,12 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 		}
 
 		if len(kvs) > 0 {
-			wg.Add(1)
 			msgCtx := statem.MessageContext{
 				Headers: statem.Header{},
 				Message: statem.PropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
-					MessageBase: statem.MessageBase{
-						PromiseHandler: func(v interface{}) {
-							wg.Done()
-						},
-					},
 				},
 			}
 
@@ -266,8 +329,6 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 			m.SendMsg(msgCtx)
 		}
 	}
-
-	wg.Wait()
 
 	return nil
 }
@@ -315,7 +376,6 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 		return errors.Wrap(ErrInvalidParams, "append entity mapper failed")
 	}
 
-	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -327,10 +387,7 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
-	wg.Add(1)
 	m.SendMsg(msgCtx)
-
-	wg.Wait()
 
 	return nil
 }
@@ -342,7 +399,6 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 		return errors.Wrap(ErrInvalidParams, "remove entity mapper failed")
 	}
 
-	wg := &sync.WaitGroup{}
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
 		Message: statem.MapperMessage{
@@ -354,10 +410,8 @@ func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
 
-	wg.Add(1)
 	m.SendMsg(msgCtx)
 
-	wg.Wait()
 	return nil
 }
 
