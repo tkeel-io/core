@@ -30,11 +30,10 @@ type EtcdPair struct {
 }
 
 type Environment struct {
-	stateManager *Manager
 }
 
-func NewEnv(mgr *Manager) *Environment {
-	return &Environment{stateManager: mgr}
+func NewEnv() *Environment {
+	return &Environment{}
 }
 
 func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {

@@ -76,6 +76,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
+		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
@@ -86,7 +87,6 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 		lock:          sync.RWMutex{},
 	}
 
-	mgr.actorEnv = NewEnv(mgr)
 	// set default container.
 	mgr.containers["default"] = NewContainer()
 	return mgr, nil

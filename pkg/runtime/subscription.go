@@ -83,6 +83,8 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 	daprClient, err := dapr.NewClient()
 	if nil != err {
 		return nil, errors.Wrap(err, "create subscription failed")
+	} else if err = subsc.checkSubscription(); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
 	subsc.daprClient = daprClient
