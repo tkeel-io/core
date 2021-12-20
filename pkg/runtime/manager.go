@@ -76,7 +76,6 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
-		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
@@ -87,6 +86,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 		lock:          sync.RWMutex{},
 	}
 
+	mgr.actorEnv = NewEnv(mgr)
 	// set default container.
 	mgr.containers["default"] = NewContainer()
 	return mgr, nil
@@ -219,6 +219,14 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	}
 
 	return cid, nil
+}
+
+func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
+	_, err := m.loadOrCreate(ctx, "", &statem.Base{
+		ID:   id,
+		Type: typ,
+	})
+	return errors.Wrap(err, "load entity")
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {

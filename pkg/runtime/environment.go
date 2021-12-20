@@ -17,6 +17,10 @@ limitations under the License.
 package runtime
 
 import (
+	"context"
+	"strings"
+
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
@@ -28,14 +32,46 @@ type EtcdPair struct {
 }
 
 type Environment struct {
+	stateManager *Manager
 }
 
-func NewEnv() *Environment {
-	return &Environment{}
+func NewEnv(mgr *Manager) *Environment {
+	return &Environment{stateManager: mgr}
 }
 
-func (env *Environment) LoadMapper(descs []EtcdPair) error {
+func (env *Environment) LoadMapper(pairs []EtcdPair) error {
+	var err error
+	var info KeyInfo
+	for _, pair := range pairs {
+		log.Info("load mapper & actor", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+		if info, err = parseTQLKey(pair.Key); nil != err {
+			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+			continue
+		}
+		if StateMarchineTypeSubscription == info.Type {
+			log.Info("load subscription", logger.EntityID(info.EntityID), zap.String("mapper-name", info.Name))
+			if err = env.stateManager.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
+				log.Error("load Actor", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+			}
+		}
+	}
+
 	return nil
+}
+
+type KeyInfo struct {
+	Type     string
+	Name     string
+	EntityID string
+}
+
+func parseTQLKey(key string) (KeyInfo, error) {
+	arr := strings.Split(key, ".")
+	if len(arr) != 5 {
+		return KeyInfo{}, ErrInvalidTQLKey
+	}
+
+	return KeyInfo{Type: arr[2], Name: arr[4], EntityID: arr[3]}, nil
 }
 
 func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) error {

@@ -37,6 +37,7 @@ const (
 
 var (
 	ErrInvalidParams       = errors.New("invalid params")
+	ErrInvalidTQLKey       = errors.New("invalid TQL key")
 	ErrSubscriptionInvalid = errors.New("invalid subscription")
 )
 
