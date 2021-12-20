@@ -17,10 +17,8 @@ limitations under the License.
 package runtime
 
 import (
-	"context"
 	"strings"
 
-	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
@@ -39,9 +37,10 @@ func NewEnv(mgr *Manager) *Environment {
 	return &Environment{stateManager: mgr}
 }
 
-func (env *Environment) LoadMapper(pairs []EtcdPair) error {
+func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 	var err error
 	var info KeyInfo
+	var loadEntities []KeyInfo
 	for _, pair := range pairs {
 		log.Info("load mapper & actor", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
@@ -49,14 +48,11 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) error {
 			continue
 		}
 		if StateMarchineTypeSubscription == info.Type {
-			log.Info("load subscription", logger.EntityID(info.EntityID), zap.String("mapper-name", info.Name))
-			if err = env.stateManager.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-				log.Error("load Actor", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
-			}
+			loadEntities = append(loadEntities, info)
 		}
 	}
 
-	return nil
+	return loadEntities
 }
 
 type KeyInfo struct {
