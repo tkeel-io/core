@@ -89,6 +89,13 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 	subsc.daprClient = daprClient
 	subsc.stateMarchine = stateM
 	subsc.GetBase().KValues = in.KValues
+
+	// set mapper.
+	subsc.stateMarchine.GetBase().Mappers =
+		[]statem.MapperDesc{{
+			Name:      "subscription",
+			TQLString: subsc.Filter,
+		}}
 	return &subsc, nil
 }
 
@@ -98,16 +105,7 @@ func (s *subscription) Flush(ctx context.Context) error {
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
-	// set mapper.
-	s.stateMarchine.GetBase().Mappers =
-		[]statem.MapperDesc{
-			{
-				Name:      "subscription",
-				TQLString: s.Filter,
-			},
-		}
-
-	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup failed")
+	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup")
 }
 
 // GetID return state marchine id.
