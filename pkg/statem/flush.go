@@ -54,6 +54,10 @@ func (s *statem) flush(ctx context.Context) error {
 	if err = s.flushState(ctx); nil == err {
 		log.Debug("entity flush State completed", logger.EntityID(s.ID))
 	}
+	// flush state properties to TSDB.
+	if err = s.flushTimeSeries(ctx); nil == err {
+		log.Debug("entity flush TimeSeries completed", logger.EntityID(s.ID))
+	}
 	return errors.Wrap(err, "entity flush data failed")
 }
 

@@ -34,8 +34,7 @@ type TimeSerier interface {
 type TSGenerator func() TimeSerier
 
 func NewTimeSerier(name string) TimeSerier {
-	generator, has := registeredTS[name]
-	if has {
+	if generator, has := registeredTS[name]; has {
 		return generator()
 	}
 	return registeredTS["noop"]()

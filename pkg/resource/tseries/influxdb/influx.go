@@ -56,7 +56,7 @@ func (i *Influx) Init(metadata resource.Metadata) error {
 		return ErrInfluxRequiredBucket
 	}
 
-	log.Info("initialize timeseries.Noop", zap.String("url", i.cfg.URL))
+	log.Info("initialize timeseries.Influxdb", zap.String("url", i.cfg.URL))
 
 	client := influxdb2.NewClient(i.cfg.URL, i.cfg.Token)
 	i.client = client
