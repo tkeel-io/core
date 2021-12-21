@@ -1,11 +1,11 @@
 ############################################################ 
 # Dockerfile to build golang Installed Containers 
- 
+
 # Based on alpine
- 
+
 ############################################################
 
-FROM golang:1.16 AS builder
+FROM golang:1.17 AS builder
 
 COPY . /src
 WORKDIR /src
@@ -16,6 +16,8 @@ FROM alpine:3.13
 
 RUN mkdir /keel
 COPY --from=builder /src/dist/linux_amd64/release/core /keel
+COPY --from=builder /src/config.yml /keel
+
 
 EXPOSE 6789
 WORKDIR /keel
