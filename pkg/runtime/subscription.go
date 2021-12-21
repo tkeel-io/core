@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
@@ -169,8 +168,7 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Realtime 直接转发就OK了.
-	bytes, _ := json.Marshal(msg.Properties)
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -180,8 +178,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 // invokePeriod.
 func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Period 直接查询快照.
-	bytes, _ := json.Marshal(msg.Properties)
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
 		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -191,8 +188,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 // invokeChanged.
 func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Changed 直接转发就OK了.
-	bytes, _ := json.Marshal(msg.Properties)
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, bytes); nil != err {
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
 		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
