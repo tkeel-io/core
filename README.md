@@ -6,6 +6,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tkeel-io/core)
 ![GitHub](https://img.shields.io/github/license/tkeel-io/core?style=plastic)
 [![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
+[![codecov](https://codecov.io/gh/tkeel-io/core/branch/main/graph/badge.svg?token=0B4K2CAKO2)](https://codecov.io/gh/tkeel-io/core)
 </div>
 
 🌰 Core is the data centre of the tKeel IoT Open Platform, a high-performance, scalable and lightweight next-generation digital data engine.
