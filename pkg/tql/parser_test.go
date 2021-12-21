@@ -35,8 +35,8 @@ func TestParserAndComputing(t *testing.T) {
 		entity1.property1 + entity.property3 as property3`
 
 	t.Log("parse tql: ", tql)
-	l := Parse(tql)
-	cfg := l.GetParseConfigs()
+	l, _ := Parse(tql)
+	cfg, _ := l.GetParseConfigs()
 	t.Log("parse tql, result: ", cfg)
 
 	in := make(map[string][]byte)
@@ -60,7 +60,7 @@ func TestParser(t *testing.T) {
 	tql := `insert into target_entity select *`
 
 	t.Log("parse tql: ", tql)
-	l := Parse(tql)
-	cfg := l.GetParseConfigs()
+	l, _ := Parse(tql)
+	cfg, _ := l.GetParseConfigs()
 	t.Log("parse tql, result: ", cfg)
 }

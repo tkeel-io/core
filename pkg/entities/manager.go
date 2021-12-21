@@ -28,9 +28,11 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/tql"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -228,6 +230,11 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 		return nil, errors.Wrap(err, "get state")
 	}
 
+	// check TQLs.
+	if err = checkTQLs(en); nil != err {
+		return nil, errors.Wrap(err, "check subscription")
+	}
+
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
 		if _, err = m.etcdClient.Put(ctx, strings.Join([]string{TQLEtcdPrefix, en.Type, en.ID, mm.Name}, "."), mm.TQLString); nil != err {
@@ -270,6 +277,58 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base
 
 	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
+}
+
+func (m *EntityManager) CheckSubscription(ctx context.Context, en *statem.Base) (err error) {
+	// check TQLs.
+	if err = checkTQLs(en); nil != err {
+		return errors.Wrap(err, "check subscription")
+	}
+
+	// check request.
+	mode := getString(en.KValues[runtime.SubscriptionFieldMode])
+	topic := getString(en.KValues[runtime.SubscriptionFieldTopic])
+	filter := getString(en.KValues[runtime.SubscriptionFieldFilter])
+	pubsubName := getString(en.KValues[runtime.SubscriptionFieldPubsubName])
+	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
+	if mode == runtime.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
+		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
+		return runtime.ErrSubscriptionInvalid
+	}
+
+	return nil
+}
+
+func checkTQLs(en *statem.Base) error {
+	// check TQL.
+	var err error
+	defer func() {
+		defer func() {
+			switch recover() {
+			case nil:
+			default:
+				err = ErrMapperTQLInvalid
+			}
+		}()
+	}()
+	for _, mm := range en.Mappers {
+		var tqlInst tql.TQL
+		if tqlInst, err = tql.NewTQL(mm.TQLString); nil != err {
+			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
+			return errors.Wrap(err, "check TQL")
+		} else if tqlInst.Target() != en.ID {
+			log.Error("mismatched subscription id & mapper target id.", logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return errors.Wrap(err, "subscription ID mismatched")
+		}
+	}
+	return errors.Wrap(err, "check TQL")
+}
+
+func getString(node constraint.Node) string {
+	if nil != node {
+		return node.String()
+	}
+	return ""
 }
 
 // uuid generate an uuid.
