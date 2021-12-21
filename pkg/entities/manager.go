@@ -31,6 +31,7 @@ import (
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/tql"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -226,6 +227,19 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
 		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "get state")
+	}
+
+	// 2. 检查tql是否合法.
+	defer func() {
+		recover()
+		err = ErrMapperTQLInvalid
+	}()
+	for _, mm := range en.Mappers {
+		if tqlInst, err0 := tql.NewTQL(mm.TQLString); nil != err {
+			log.Error("append mapper", zap.Error(err0), logger.EntityID(en.ID))
+		} else if tqlInst.Target() != en.ID {
+			log.Error("mismatched subscription id & mapper target id.", zap.Error(err0), logger.EntityID(en.ID), zap.Any("mapper", mm))
+		}
 	}
 
 	// 2. 将 mapper 推到 etcd.

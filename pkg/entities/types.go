@@ -19,6 +19,7 @@ package entities
 import "errors"
 
 var (
+	ErrMapperTQLInvalid    = errors.New("invalid TQL")
 	ErrEntityNotFound      = errors.New("not found")
 	ErrEntityAreadyExisted = errors.New("entity already existed")
 )

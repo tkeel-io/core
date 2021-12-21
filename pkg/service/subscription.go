@@ -111,7 +111,10 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+		if _, err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
+			log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+			return
+		}
 		return
 	}
 
