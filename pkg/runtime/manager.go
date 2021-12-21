@@ -114,7 +114,13 @@ func (m *Manager) init() error {
 		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
 	}
 
-	m.actorEnv.LoadMapper(descs)
+	loadEntities := m.actorEnv.LoadMapper(descs)
+	for _, info := range loadEntities {
+		log.Info("load entity", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
+			log.Error("load entity", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		}
+	}
 
 	return nil
 }
@@ -219,6 +225,14 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	}
 
 	return cid, nil
+}
+
+func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
+	_, err := m.loadOrCreate(ctx, "", &statem.Base{
+		ID:   id,
+		Type: typ,
+	})
+	return errors.Wrap(err, "load entity")
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {

@@ -285,7 +285,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.invokeTentacleMsg(msg)
 		default:
 			// dispose message.
-			watchKeys := s.internelMessageHandler(message)
+			watchKeys := s.msgHandler(message)
 			// active tentacles.
 			s.activeTentacle(watchKeys)
 		}

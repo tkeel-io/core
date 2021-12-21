@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,7 +39,7 @@ import (
 
 const EntityStateName = "core-state"
 const SubscriptionPrefix = "core.subsc."
-const TQLEtcdPrefix = "core.tql."
+const TQLEtcdPrefix = "core.tql"
 
 type EntityManager struct {
 	daprClient   dapr.Client
@@ -229,7 +230,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Put(ctx, TQLEtcdPrefix+en.ID+mm.Name, mm.TQLString); nil != err {
+		if _, err = m.etcdClient.Put(ctx, strings.Join([]string{TQLEtcdPrefix, en.Type, en.ID, mm.Name}, "."), mm.TQLString); nil != err {
 			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
 			return nil, errors.Wrap(err, "append mapper")
 		}

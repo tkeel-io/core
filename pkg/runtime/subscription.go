@@ -80,6 +80,14 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
+	daprClient, err := dapr.NewClient()
+	if nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	} else if err = subsc.checkSubscription(); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	}
+
+	subsc.daprClient = daprClient
 	subsc.stateMarchine = stateM
 	subsc.GetBase().KValues = in.KValues
 	return &subsc, nil
@@ -144,6 +152,7 @@ func (s *subscription) HandleLoop() {
 }
 
 func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
+	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.MessageInst(message))
 	var watchKeys []WatchKey
 	switch msg := message.(type) {
 	case statem.PropertyMessage:
