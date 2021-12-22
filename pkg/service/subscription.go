@@ -98,6 +98,12 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
+	parseHeaderFrom(ctx, entity)
+	if err = s.entityManager.CheckSubscription(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+		return
+	}
+
 	// set properties.
 	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
@@ -112,6 +118,9 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+		if _, err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
+			log.Error("destroy subscription", zap.Error(err0), logger.EntityID(req.Id))
+		}
 		return
 	}
 

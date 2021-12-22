@@ -58,6 +58,12 @@ jobs:
       - name: run tests
         if: matrix.target_os != 'windows'
         run: go test -v -cover -gcflags=all=-l -coverprofile=coverage.out ./...
+      - name: Upload coverage to Codecov
+        if: matrix.target_os == 'linux'
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: coverage.out
 
   E2ETest:
     name: E2E Test

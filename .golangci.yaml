@@ -262,6 +262,7 @@ linters:
     - exhaustivestruct
     - paralleltest
     - gofumpt
+    - gomoddirectives
 issues:
   exclude:
     # staticcheck

@@ -241,7 +241,7 @@ func computing(input string) string {
 	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
-func (l *Listener) GetParseConfigs() TQLConfig {
+func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 	tqlConfig := TQLConfig{
 		SourceEntities: l.sourceEntity,
 	}
@@ -263,7 +263,7 @@ func (l *Listener) GetParseConfigs() TQLConfig {
 	}
 
 	log.Info("parse tql", zap.Any("result", tqlConfig))
-	return tqlConfig
+	return tqlConfig, nil
 }
 
 func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
@@ -276,7 +276,7 @@ func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
 }
 
 // Parse takes a tql string expression and returns a parsed dict.
-func Parse(input string) Listener {
+func Parse(input string) (Listener, error) {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -290,5 +290,5 @@ func Parse(input string) Listener {
 	// Finally parse the expression (by walking the tree)
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Root())
-	return listener
+	return listener, nil
 }

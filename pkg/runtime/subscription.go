@@ -79,8 +79,23 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 		return nil, errors.Wrap(err, "create subscription failed")
 	}
 
+	daprClient, err := dapr.NewClient()
+	if nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	} else if err = subsc.checkSubscription(); nil != err {
+		return nil, errors.Wrap(err, "create subscription failed")
+	}
+
+	subsc.daprClient = daprClient
 	subsc.stateMarchine = stateM
 	subsc.GetBase().KValues = in.KValues
+
+	// set mapper.
+	subsc.stateMarchine.GetBase().Mappers =
+		[]statem.MapperDesc{{
+			Name:      "subscription",
+			TQLString: subsc.Filter,
+		}}
 	return &subsc, nil
 }
 
@@ -90,16 +105,7 @@ func (s *subscription) Flush(ctx context.Context) error {
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
-	// set mapper.
-	s.stateMarchine.GetBase().Mappers =
-		[]statem.MapperDesc{
-			{
-				Name:      "subscription",
-				TQLString: s.Filter,
-			},
-		}
-
-	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup failed")
+	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup")
 }
 
 // GetID return state marchine id.
@@ -143,6 +149,7 @@ func (s *subscription) HandleLoop() {
 }
 
 func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
+	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.MessageInst(message))
 	var watchKeys []WatchKey
 	switch msg := message.(type) {
 	case statem.PropertyMessage:
@@ -168,7 +175,9 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Realtime 直接转发就OK了.
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
+	base := s.GetBase()
+	base.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -178,7 +187,9 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 // invokePeriod.
 func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Period 直接查询快照.
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
+	base := s.GetBase()
+	base.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -188,7 +199,9 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 // invokeChanged.
 func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Changed 直接转发就OK了.
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, msg.Properties); nil != err {
+	base := s.GetBase()
+	base.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
