@@ -72,29 +72,21 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id" mapstructure:"id"`
-	Type     string                       `json:"type" mapstructure:"type"`
-	Owner    string                       `json:"owner" mapstructure:"owner"`
-	Source   string                       `json:"source" mapstructure:"source"`
-	Version  int64                        `json:"version" mapstructure:"version"`
-	LastTime int64                        `json:"last_time" mapstructure:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers" mapstructure:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties" mapstructure:"-"` //nolint
-	Configs  map[string]constraint.Config `json:"configs" mapstructure:"configs"`
+	ID       string                       `json:"id" msgpack:"id" mapstructure:"id"`
+	Type     string                       `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner    string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source   string                       `json:"source" msgpack:"source" mapstructure:"source"`
+	Version  int64                        `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers  []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	KValues  map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
+	Configs  map[string]constraint.Config `json:"configs" msgpack:"configs" mapstructure:"configs"`
 }
 
 func (b *Base) Copy() Base {
-	return Base{
-		ID:       b.ID,
-		Type:     b.Type,
-		Owner:    b.Owner,
-		Source:   b.Source,
-		Version:  b.Version,
-		LastTime: b.LastTime,
-		Mappers:  b.Mappers,
-		KValues:  b.KValues,
-		Configs:  b.Configs,
-	}
+	bytes, _ := EncodeBase(b)
+	bb, _ := DecodeBase(bytes)
+	return *bb
 }
 
 // statem state marchins.
@@ -133,14 +125,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := &statem{
-		Base: Base{
-			ID:      in.ID,
-			Type:    in.Type,
-			Owner:   in.Owner,
-			Source:  in.Source,
-			KValues: make(map[string]constraint.Node),
-			Configs: make(map[string]constraint.Config),
-		},
+		Base: in.Copy(),
 
 		ctx:            ctx,
 		cancel:         cancel,
@@ -223,6 +208,10 @@ func (s *statem) OnMessage(msg Message) bool {
 
 	log.Debug("statem.OnMessage", logger.EntityID(s.ID), logger.RequestID(reqID))
 
+	if s.status == SMStatusDeleted {
+		return false
+	}
+
 	for {
 		// 如果只有一条投递线程，那么会导致Dispatcher上的所有Entity都依赖于Message Queue中的消息的均匀性.
 		if nil == s.mailBox.Put(msg) {
@@ -248,6 +237,13 @@ func (s *statem) HandleLoop() { //nolint
 	)
 
 	for {
+		if s.nextFlushNum == 0 {
+			// flush properties.
+			if err := s.flush(s.ctx); nil != err {
+				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
+			}
+		}
+
 		// consume message from mailbox.
 		if message = s.mailBox.Get(); nil == message {
 			if Ensure > 0 {
@@ -264,18 +260,10 @@ func (s *statem) HandleLoop() { //nolint
 
 			// flush properties.
 			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties failed",
-					logger.EntityID(s.ID), zap.Error(err))
+				log.Error("flush state properties failed", logger.EntityID(s.ID), zap.Error(err))
 			}
 			// detach coroutins.
 			break
-		}
-
-		if s.nextFlushNum == 0 {
-			// flush properties.
-			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
-			}
 		}
 
 		switch msg := message.(type) {
@@ -348,6 +336,10 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 
 // activeTentacle active tentacles.
 func (s *statem) activeTentacle(actives []mapper.WatchKey) {
+	if len(actives) == 0 {
+		return
+	}
+
 	var (
 		messages        = make(map[string]map[string]constraint.Node)
 		activeTentacles = make(map[string][]mapper.Tentacler)
@@ -445,11 +437,11 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 }
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	if !strings.Contains(propertyKey, ".[") {
+	if !strings.ContainsAny(propertyKey, ".[") {
 		return s.KValues[propertyKey], nil
 	}
 
-	arr := strings.Split(propertyKey, ".")
+	arr := strings.SplitN(propertyKey, ".", 2)
 	// patch property.
 	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
 	return res, errors.Wrap(err, "get patch failed")

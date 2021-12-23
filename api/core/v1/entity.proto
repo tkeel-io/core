@@ -156,10 +156,37 @@ service Entity {
             }
           };
     };
+    rpc GetEntityProps(GetEntityPropsRequest) returns (EntityResponse) {
+        	option (google.api.http) = {
+			get : "/entities/{id}/properties" 
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Get Entity Properties";
+            operation_id: "GetEntityProps";
+            tags: "Entity";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
+    };
 }
+
+
+
+message GetEntityPropsRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}, (google.api.field_behavior) = REQUIRED];
+    string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+    string pids = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property ids, eg: pids=1,2,3"}];
+ }
 
 message CreateEntityRequest {
     string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string from = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "template entity id"}];
     string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
     string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}, (google.api.field_behavior) = REQUIRED];
     string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];

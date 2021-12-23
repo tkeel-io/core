@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -83,8 +84,11 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		return out, ErrEntityPropertyIDEmpty
 	}
 
+	// set template entity id.
+	ctx = context.WithValue(ctx, entities.TemplateEntityID{}, req.From)
+
 	// set properties.
-	if _, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create entity failed",
 			logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
@@ -201,6 +205,50 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	out.Id = req.Id
 	out.Status = "ok"
 	return
+}
+
+func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	pids := strings.Split(strings.TrimSpace(in.Pids), ",")
+	if len(pids) == 0 {
+		log.Error("get entity properties, empty property ids.", logger.EntityID(in.Id))
+		return out, ErrEntityInvalidParams
+	}
+
+	// get entity from entity manager.
+	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+		log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
+		return
+	}
+
+	props := make(map[string]constraint.Node)
+	// patch copy.
+	for _, pid := range pids {
+		props[pid] = constraint.NewNode(nil)
+		if !strings.ContainsAny(pid, ".[") {
+			if val, exists := entity.KValues[pid]; exists {
+				props[pid] = val
+			}
+			continue
+		}
+
+		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
+		// patch property.
+		props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+		if nil != err {
+			log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
+			return
+		}
+	}
+
+	entity.KValues = props
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "get entity properties")
 }
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {

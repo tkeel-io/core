@@ -1,21 +1,21 @@
 package statem
 
 import (
-	"encoding/json"
-
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+
+	msgpack "github.com/shamaton/msgpack/v2"
 )
 
 func EncodeBase(base *Base) ([]byte, error) {
-	bytes, err := json.Marshal(base)
+	bytes, err := msgpack.Marshal(base)
 	return bytes, errors.Wrap(err, "encode Base")
 }
 
 func DecodeBase(data []byte) (*Base, error) {
 	var v = make(map[string]interface{})
-	if err := json.Unmarshal(data, &v); nil != err {
+	if err := msgpack.Unmarshal(data, &v); nil != err {
 		return nil, errors.Wrap(err, "decode Base-State json")
 	}
 
@@ -24,12 +24,20 @@ func DecodeBase(data []byte) (*Base, error) {
 		return nil, errors.Wrap(err, "decode Base-State struct")
 	}
 
-	if properties, ok := v["properties"].(map[string]interface{}); ok {
+	switch properties := v["properties"].(type) {
+	case nil:
+	case map[string]interface{}:
 		base.KValues = make(map[string]constraint.Node)
 		for key, val := range properties {
 			base.KValues[key] = constraint.NewNode(val)
 		}
+	case map[interface{}]interface{}:
+		base.KValues = make(map[string]constraint.Node)
+		for key, val := range properties {
+			base.KValues[key.(string)] = constraint.NewNode(val) //nolint
+		}
+	default:
+		return nil, ErrInvalidProperties
 	}
-
 	return &base, nil
 }

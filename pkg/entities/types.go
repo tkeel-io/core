@@ -18,6 +18,8 @@ package entities
 
 import "errors"
 
+type TemplateEntityID struct{}
+
 var (
 	ErrMapperTQLInvalid    = errors.New("invalid TQL")
 	ErrEntityNotFound      = errors.New("not found")

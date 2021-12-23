@@ -94,14 +94,27 @@ func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageCont
 
 // ------------------------------------APIs-----------------------------.
 
+func merge(dest, src *statem.Base) *statem.Base {
+	dest.ID = src.ID
+	dest.Type = src.Type
+	dest.Owner = src.Owner
+	dest.Source = src.Source
+
+	for key, val := range src.KValues {
+		dest.KValues[key] = val
+	}
+	return dest
+}
+
 // CreateEntity create a entity.
 func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*statem.Base, error) {
+	var err error
 	if base.ID == "" {
 		base.ID = uuid()
 	}
 
 	// 1. 检查 实体 是否已经存在.
-	if _, err := m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
+	if _, err = m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
 		if nil == err {
 			err = ErrEntityAreadyExisted
 		}
@@ -109,14 +122,30 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		return nil, err
 	}
 
+	// 2. check template id.
+	tid, _ := ctx.Value(TemplateEntityID{}).(string)
+	if tid != "" {
+		var tBase *statem.Base
+		tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid})
+		if nil != err {
+			log.Error("create entity, load template entity", zap.Error(err), logger.EntityID(base.ID))
+			return nil, errors.Wrap(err, "create entity, load template entity")
+		}
+		// merge base into tBase.
+		base = merge(tBase, base)
+	}
+
 	// 2. 创建 实体.
-	if bytes, err := statem.EncodeBase(base); nil != err {
+	var bytes []byte
+	if bytes, err = statem.EncodeBase(base); nil != err {
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	} else if err = m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes); nil != err {
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
+
+	log.Info("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
 
 	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
 	msgCtx := statem.MessageContext{
