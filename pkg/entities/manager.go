@@ -144,16 +144,16 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 		return nil, errors.Wrap(err, "delete entity from es state")
 	}
 
-	// 2. delete from state.
-	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
-		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from state")
-	}
-
-	// 3. delete from runtime.
+	// 2. delete from runtime.
 	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
 		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from runtime")
+	}
+
+	// 3. delete from state.
+	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "delete entity from state")
 	}
 
 	// 4. delete tql from etcd.

@@ -254,7 +254,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 			base = en
 		} else {
 			log.Error("load or create state",
-				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(err))
+				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
 		}
 		sm, err = statem.NewState(ctx, m, base, nil)
 	}
