@@ -6,6 +6,7 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/tkeel-io/core)
 ![GitHub](https://img.shields.io/github/license/tkeel-io/core?style=plastic)
 [![GoDoc](https://godoc.org/github.com/tkeel-io/core?status.png)](http://godoc.org/github.com/tkeel-io/core)
+[![codecov](https://codecov.io/gh/tkeel-io/core/branch/main/graph/badge.svg?token=0B4K2CAKO2)](https://codecov.io/gh/tkeel-io/core)
 </div>
 
 🌰 Core is the data centre of the tKeel IoT Open Platform, a high-performance, scalable and lightweight next-generation digital data engine.
@@ -16,7 +17,7 @@ The *entity* is the smallest unit of operation, providing read and write capabil
 
 ## 🚪 QuickStart
 
-Core is an important base component of tKeel, and it also has the ability to be deployed separately. Use the features of core to do great things, like those problems you're having trouble solving right now, and I think maybe core can help you.
+Core is an important base component of [tKeel](https://github.com/tkeel-io/tkeel), and it also has the ability to be deployed separately. Use the features of core to do great things, like those problems you're having trouble solving right now, and I think maybe core can help you.
 
 ### Requirement
 🔧 Make sure you are well-prepared before using Core.
@@ -25,7 +26,7 @@ Core is an important base component of tKeel, and it also has the ability to be 
 
 
 ### Installation via tKeel
-Core is the base component of tKeel and the API calls are made through the tKeel proxy. (See the [tKeel CLI installation documentation](https://github.com/tkeel-io/cli ) for details)
+Core is the base component of tKeel and the API calls are made through the tKeel proxy. (See the [tKeel CLI installation documentation](https://tkeel-io.github.io/docs/cli ) for details)
 
 ### Independent Deployment
 Clone this repo.
@@ -119,122 +120,18 @@ iothub: iothub-pubsub
 - **Change Subscription**: The subscription sends entity property data to the subscriber when the subscriber's subscribed entity properties change and the change conditions are met.
 - **Periodic Subscription**: Subscriptions periodically send entity property data to subscribers.
 
+### Quick Start
+Once we have deployed the Core application, we can call the API directly to implement the corresponding functionality, here is a well-written [Getting Started document](https://tkeel-io.github.io/docs/developer_cookbook/core/getting_started)
 
-### Run as a *tKeel* component
-#### Example 
+You can start experimenting with Core's features by referring to the demo in the documentation.
 
-After the tKeel-related components have been installed, [Python example](examples/iot-paas.py) shows the ability to generate a `token` for use with MQTT, then create an entity, report properties, get a snapshot, subscribe to the entity's properties, etc.
 
-For illustration purposes, here is our code using external traffic to access Keel, and Python as the example language. We need the service ports of keel and mqtt broker for the demonstration.
+### How to use in tKeel
+We have a [hello-core](https://github.com/tkeel-io/quickstarts/tree/main/hello-core), Example demo project, for illustration purposes we have used external traffic to access **tKeel**, and Python as the code for the example language.
 
-##### Get Service Port
-1. tKeel Service Port
-```bash
-KEEL_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services keel)
-```
-2. MQTT Server service port
-```bash
-MQTT_PORT=$(kubectl get -o jsonpath="{.spec.ports[0].nodePort}" services emqx)
-```
+You can refer to this project for a quick overview，A [tKeel Plugin](https://tkeel-io.github.io/docs/internal_concepts/plugin) how to use in tKeel
 
-tKeel OpenAPI service address is the NodePort exposed by k8s ip:keel.
-```python
-# Source: examples/iot-paas.py
-keel_url = "http://{host}:{port}/v0.1.0"
-```
-
-##### Create token
-```python
-# Source: examples/iot-paas.py
-def create_entity_token(entity_id, entity_type, user_id):
-    data = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id)
-    token_create = "/auth/token/create"
-    res = requests.post(keel_url + token_create, json=data)
-    return res.json()["data"]["entity_token"]
-```
-
-##### Create Entity
-```python
-# Source: examples/iot-paas.py
-def create_entity(entity_id, entity_type, user_id, plugin_id, token):
-    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id)
-    entity_create = "/core/plugins/{plugin_id}/entities?id={entity_id}&type={entity_type}&owner={user_id}&source={source}".format(
-        **query)
-    data = dict(token=token)
-    res = requests.post(keel_url + entity_create, json=data)
-    print(res.json())
-```
-
-##### Upward Transfer
-```python
-# Source: examples/iot-paas.py
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
-        print("Connected to MQTT Broker!")
-    else:
-        print("Failed to connect, return code %d\n", rc)
-
-client = mqtt_client.Client(entity_id)
-client.username_pw_set(username=user_id, password=token)
-client.on_connect = on_connect
-client.connect(host=broker, port=port)
-client.loop_start()
-time.sleep(1)
-payload = json.dumps(dict(p1=dict(value=random.randint(1, 100), time=int(time.time()))))
-client.publish("system/test", payload=payload)
-```
-
-##### Get Entity Snapshot
-```python
-# Source: examples/iot-paas.py
-def get_entity(entity_id, entity_type, user_id, plugin_id):
-    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, plugin_id=plugin_id)
-    entity_create = "/core/plugins/{plugin_id}/entities/{entity_id}?type={entity_type}&owner={user_id}&source={plugin_id}".format(
-        **query)
-    res = requests.get(keel_url + entity_create)
-    print(res.json()["properties"])
-
-```
-
-##### Subscribe Entity
-```python
-# Source: examples/iot-paas.py
-def create_subscription(entity_id, entity_type, user_id, plugin_id, subscription_id):
-    query = dict(entity_id=entity_id, entity_type=entity_type, user_id=user_id, source="abc", plugin_id=plugin_id, subscription_id=subscription_id)
-    entity_create = "/core/plugins/{plugin_id}/subscriptions?id={subscription_id}&type={entity_type}&owner={user_id}&source={source}".format(
-        **query)
-    data = dict(mode="realtime", source="ignore", filter="insert into abc select " + entity_id + ".p1", target="ignore", topic="abc", pubsub_name="client-pubsub")
-    print(data)
-    res = requests.post(keel_url + entity_create, json=data)
-    print(res.json())
-```
-
-##### Consume Topic
-The consumer app consumes the relevant topic data as a standalone app and displays it [sample consumption](examples/subclient)
-```python
-# Source: examples/subclient/app.py
-import flask
-from flask import request, jsonify
-from flask_cors import CORS
-import json
-import sys
-
-app = flask.Flask(__name__)
-CORS(app)
-
-@app.route('/dapr/subscribe', methods=['GET'])
-def subscribe():
-    subscriptions = [{'pubsubname': 'client-pubsub',
-                      'topic': 'abc',
-                      'route': 'data'}]
-    return jsonify(subscriptions)
-
-@app.route('/data', methods=['POST'])
-def ds_subscriber():
-    print(request.json, flush=True)
-    return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
-app.run()
-```
+In this _[hello-core](https://github.com/tkeel-io/quickstarts/tree/main/hello-core)_ we show the generation of a `token` for use by MQTT，There are also functions such as **create entity**, **report properties**, **get snapshot**, **subscribe properties of entity**, etc.
 
 ### Entity Example
 As the current Dapr SDK cannot handle the *header in HTTP requests*, the parameters are passed by way of *path* and *query*.
@@ -304,7 +201,7 @@ The functions in this [examples](examples/entity) , create entities, update enti
 
 
 ## ⚙️ API
-For more details on Core's functional API, please see the [ API documentation ](docs/api/index.md).
+For more details on Core's functional API, please see the [ API documentation ](https://tkeel-io.github.io/docs/api/Core/tag ).
 
 ## 💬 Shall We Talk
 If you have any suggestions or ideas, you are welcome to file an Issue at any time, we'll look forward to sharing them together to make the world a better place.
@@ -315,7 +212,7 @@ Thank you very much for your feedback and suggestions!
 
 ### 🙌 Contributing
 
-[开发指南](docs/development/developing-tkeel.md) explains how to configure your development environment.
+[How to Develop](docs/development/developing-tkeel.md) explains how to configure your development environment.
 
 We have this [Code of Conduct](docs/community/code-of-conduct.md) that we expect project participants to follow. Please read it in full so that you know what will and will not be tolerated.
 

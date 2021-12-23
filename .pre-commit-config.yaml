@@ -30,17 +30,9 @@ repos:
       #
       -   id: go-vet-mod
       #
-      # StaticCheck
-      #
-      -   id: go-staticcheck-mod
-      #
       # Formatters
       #
       -   id: go-fmt
-      #
-      # Style Checkers
-      #
-      -   id: go-lint
       #
       # GolangCI-Lint
       # - Fast Multi-Linter
