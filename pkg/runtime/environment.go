@@ -19,6 +19,8 @@ package runtime
 import (
 	"strings"
 
+	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
@@ -30,10 +32,15 @@ type EtcdPair struct {
 }
 
 type Environment struct {
+	mappers   map[string][]mapper.Tentacler
+	tentacles map[string][]mapper.Tentacler
 }
 
 func NewEnv() *Environment {
-	return &Environment{}
+	return &Environment{
+		mappers:   make(map[string][]mapper.Tentacler),
+		tentacles: make(map[string][]mapper.Tentacler),
+	}
 }
 
 func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
@@ -46,6 +53,17 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			continue
 		}
+
+		// TODO: 这里处理所有的pair.Value.
+		mapperInstence, err := mapper.NewMapper("", string(pair.Value))
+		if nil != err {
+			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+			continue
+		}
+
+		tentacles := mapperInstence.Tentacles()
+		env.mappers[pair.Key] = append(env.mappers[pair.Key], tentacles...)
+
 		if StateMarchineTypeSubscription == info.Type {
 			loadEntities = append(loadEntities, info)
 		}
@@ -73,6 +91,14 @@ func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair
 	switch op {
 	case mvccpb.PUT:
 		log.Info("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		mapperInstence, err := mapper.NewMapper("", string(pair.Value))
+		if nil != err {
+			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+			return errors.Wrap(err, "mapper changed")
+		}
+
+		tentacles := mapperInstence.Tentacles()
+		env.mappers[pair.Key] = append(env.mappers[pair.Key], tentacles...)
 	case mvccpb.DELETE:
 		log.Info("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
 	default:
