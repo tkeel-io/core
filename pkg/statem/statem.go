@@ -140,6 +140,16 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		constraints:    make(map[string]*constraint.Constraint),
 	}
 
+	// initialize KValues.
+	if nil == state.Base.KValues {
+		state.KValues = make(map[string]constraint.Node)
+	}
+
+	// initialize Configs.
+	if nil == state.Configs {
+		state.Configs = make(map[string]constraint.Config)
+	}
+
 	// set KValues into cacheProps.
 	state.cacheProps[in.ID] = state.KValues
 
