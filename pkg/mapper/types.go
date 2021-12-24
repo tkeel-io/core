@@ -46,6 +46,8 @@ type Mapper interface {
 type TentacleType = string
 
 type Tentacler interface {
+	// ID return id.
+	ID() string
 	// Type returns tentacle type.
 	Type() TentacleType
 	// TargetID returns target id.

@@ -111,14 +111,13 @@ func (m *Manager) init() error {
 	descs := make([]EtcdPair, len(res.Kvs))
 	for index, kv := range res.Kvs {
 		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
-		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
 	}
 
 	loadEntities := m.actorEnv.LoadMapper(descs)
 	for _, info := range loadEntities {
-		log.Info("load entity", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load entity", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
 	}
 
@@ -134,9 +133,16 @@ func (m *Manager) watchResource() error {
 
 	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
 		// on changed.
-		m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		for _, stateID := range effects {
+			m.reloadActor(stateID)
+		}
 	})
 
+	return nil
+}
+
+func (m *Manager) reloadActor(stateID string) error {
 	return nil
 }
 

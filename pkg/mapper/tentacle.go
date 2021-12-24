@@ -42,6 +42,10 @@ func NewRemoteTentacle(tp TentacleType, targetID string, items []WatchKey) Tenta
 	}
 }
 
+func (t *tentacle) ID() string {
+	return ""
+}
+
 // Type returns tentacle type.
 func (t *tentacle) Type() TentacleType {
 	return t.tp
