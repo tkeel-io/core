@@ -177,6 +177,8 @@ func (m *Manager) Start() error {
 					}
 				}
 
+				log.Info("show actor", logger.EntityID(stateMarchine.GetID()), zap.Any("properties", stateMarchine.GetBase().KValues))
+
 				if stateMarchine.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
 					m.coroutinePool.Submit(stateMarchine.HandleLoop)
@@ -200,19 +202,28 @@ func (m *Manager) GetDaprClient() dapr.Client {
 	return m.daprClient
 }
 
-func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) {
+func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) { //nolint
 	if cid == "" {
 		cid = "default"
 	}
 
 	if container, ok := m.containers[cid]; ok {
 		if sm := container.Get(eid); nil != sm {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
 			return cid, sm
 		}
 	}
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
+
 			if channelID == "default" && cid != channelID {
 				container.Remove(sm.GetID())
 				if _, ok := m.containers[cid]; !ok {
@@ -252,6 +263,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
 		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
 			base = en
+			log.Info("load actor", logger.EntityID(base.ID), zap.String("state", string(res.Value)))
 		} else {
 			log.Error("load or create state",
 				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))

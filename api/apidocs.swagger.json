@@ -62,6 +62,13 @@
             "type": "string"
           },
           {
+            "name": "from",
+            "description": "template entity id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "source",
             "description": "source id",
             "in": "query",
@@ -476,6 +483,66 @@
           {
             "name": "owner",
             "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/entities/{id}/properties": {
+      "get": {
+        "summary": "Get Entity Properties",
+        "operationId": "GetEntityProps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pids",
+            "description": "entity property ids, eg: pids=1,2,3",
             "in": "query",
             "required": false,
             "type": "string"
