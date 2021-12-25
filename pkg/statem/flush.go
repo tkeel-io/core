@@ -36,7 +36,7 @@ func (s *statem) FlushState() error {
 }
 
 func (s *statem) FlushSearch() error {
-	return errors.Wrap(s.flushSeatch(s.ctx), "flush state-marchine state")
+	return errors.Wrap(s.flushSearch(s.ctx), "flush state-marchine state")
 }
 
 func (s *statem) FlushTimeSeries() error {
@@ -46,7 +46,7 @@ func (s *statem) FlushTimeSeries() error {
 func (s *statem) flush(ctx context.Context) error {
 	var err error
 	// flush state properties to es.
-	if err = s.flushSeatch(ctx); nil == err {
+	if err = s.flushSearch(ctx); nil == err {
 		log.Debug("entity flush Search completed", logger.EntityID(s.ID))
 	}
 	// flush state properties to state.
@@ -64,7 +64,7 @@ func (s *statem) flushState(ctx context.Context) error {
 	return nil
 }
 
-func (s *statem) flushSeatch(ctx context.Context) error {
+func (s *statem) flushSearch(ctx context.Context) error {
 	var err error
 	var flushData = make(map[string]interface{})
 	for _, JSONPath := range s.searchConstraints {
