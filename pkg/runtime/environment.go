@@ -124,6 +124,7 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 	var err error
 	var info KeyInfo
 	var loadEntities []KeyInfo
+
 	for _, pair := range pairs {
 		log.Info("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
@@ -158,7 +159,7 @@ func parseTQLKey(key string) (KeyInfo, error) {
 		return KeyInfo{}, ErrInvalidTQLKey
 	}
 
-	return KeyInfo{Type: arr[2], Name: arr[4], EntityID: arr[3]}, nil
+	return KeyInfo{Type: arr[1], Name: arr[4], EntityID: arr[3]}, nil
 }
 
 func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) ([]string, error) {
