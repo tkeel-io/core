@@ -21,4 +21,4 @@ COPY --from=builder /src/config.yml /keel
 
 EXPOSE 6789
 WORKDIR /keel
-CMD ["/keel/core", "--search_brokers", "http://elasticsearch-master:9200"]
+CMD ["/keel/core", "--search_brokers", "http://elasticsearch-master:9200", "--etcd_brokers", "http://etcd:2379"]
