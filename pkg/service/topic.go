@@ -23,6 +23,8 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 type TopicService struct {
@@ -59,6 +61,7 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 		values = kv
 
 	default:
+		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
 
@@ -72,6 +75,7 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 			}
 		}
 	default:
+		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
 

@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -186,15 +185,16 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 	}
 
 	// 4. delete tql from etcd.
-	if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix()); nil != err {
-		log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
-		return nil, errors.Wrap(err, "delete entity")
+	for _, mm := range base.Mappers {
+		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(base.Type, base.ID, mm.Name), clientv3.WithPrefix()); nil != err {
+			log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
+		}
 	}
 
 	// 5. log record.
 	log.Info("delete entity", logger.EntityID(en.ID), zap.Any("entity", base))
 
-	return base, nil
+	return base, errors.Wrap(err, "delete entity")
 }
 
 // GetProperties returns statem.Base.
@@ -266,7 +266,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Put(ctx, strings.Join([]string{TQLEtcdPrefix, en.Type, en.ID, mm.Name}, "."), mm.TQLString); nil != err {
+		if _, err = m.etcdClient.Put(ctx, util.FormatMapper(en.Type, en.ID, mm.Name), mm.TQLString); nil != err {
 			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
 			return nil, errors.Wrap(err, "append mapper")
 		}
@@ -293,7 +293,7 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base
 
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Delete(ctx, TQLEtcdPrefix+en.ID+mm.Name); nil != err {
+		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, mm.Name)); nil != err {
 			log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
 			return nil, errors.Wrap(err, "remove mapper")
 		}

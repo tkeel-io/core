@@ -34,7 +34,8 @@ func DecodeBase(data []byte) (*Base, error) {
 	case map[interface{}]interface{}:
 		base.KValues = make(map[string]constraint.Node)
 		for key, val := range properties {
-			base.KValues[key.(string)] = constraint.NewNode(val)
+			keyString, _ := key.(string)
+			base.KValues[keyString] = constraint.NewNode(val)
 		}
 	default:
 		return nil, ErrInvalidProperties

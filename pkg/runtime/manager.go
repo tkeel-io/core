@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -93,6 +94,9 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
+	bytes, _ := json.Marshal(msgCtx)
+	log.Debug("actor send message", zap.String("msg", string(bytes)))
+
 	// 解耦actor之间的直接调用
 	m.msgCh <- msgCtx
 }
@@ -111,14 +115,13 @@ func (m *Manager) init() error {
 	descs := make([]EtcdPair, len(res.Kvs))
 	for index, kv := range res.Kvs {
 		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
-		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
 	}
 
 	loadEntities := m.actorEnv.LoadMapper(descs)
 	for _, info := range loadEntities {
-		log.Info("load entity", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load entity", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
 	}
 
@@ -134,9 +137,16 @@ func (m *Manager) watchResource() error {
 
 	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
 		// on changed.
-		m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		for _, stateID := range effects {
+			m.reloadActor(stateID)
+		}
 	})
 
+	return nil
+}
+
+func (m *Manager) reloadActor(stateID string) error {
 	return nil
 }
 
@@ -176,8 +186,6 @@ func (m *Manager) Start() error {
 						continue
 					}
 				}
-
-				log.Info("show actor", logger.EntityID(stateMarchine.GetID()), zap.Any("properties", stateMarchine.GetBase().KValues))
 
 				if stateMarchine.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
