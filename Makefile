@@ -130,6 +130,13 @@ api:
 	@echo "---------------------------------------------------------"
 
 
+.PHONY: api-docs
+# generate api docs
+api-docs:
+	artisan markdown -f api/apidocs.swagger.json  -t third_party/markdown-templates/ -o docs/APIs/Core -m all
+
+
+
 build:
 	@echo "---------------------------"
 	@echo "-        build...         -"
