@@ -145,9 +145,10 @@ func (l *Listener) ExitFields(c *parser.FieldsContext) {
 	fields := c.GetText()
 	fieldArr := strings.Split(fields, ",")
 	for ind, f := range fieldArr {
-		field := strings.Split(f, "as")[0]
-		e := l.execs[ind]
-		e.Field = field
+		if arr := strings.Split(f, "as"); len(arr) > 1 {
+			e := l.execs[ind]
+			e.Field = arr[0]
+		}
 	}
 }
 
