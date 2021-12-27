@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -93,6 +94,9 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
+	bytes, _ := json.Marshal(msgCtx)
+	log.Debug("actor send message", zap.String("msg", string(bytes)))
+
 	// 解耦actor之间的直接调用
 	m.msgCh <- msgCtx
 }

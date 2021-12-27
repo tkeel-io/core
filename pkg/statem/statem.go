@@ -345,7 +345,7 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 }
 
 // activeTentacle active tentacles.
-func (s *statem) activeTentacle(actives []mapper.WatchKey) {
+func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	if len(actives) == 0 {
 		return
 	}
@@ -357,6 +357,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 
 	thisStateProps := s.cacheProps[s.ID]
 	for _, active := range actives {
+		// full match.
 		if tentacles, exists := s.tentacles[active.String()]; exists {
 			for _, tentacle := range tentacles {
 				targetID := tentacle.TargetID()
@@ -376,9 +377,35 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 					log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
 				}
 			}
-		} else { //nolint
+		} else {
 			// TODO...
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
+			log.Debug("match end of \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+			// match entityID.*   .
+			for watchKey, tentacles := range s.tentacles {
+				arr := strings.Split(watchKey, ".")
+				if len(arr) == 2 && arr[1] == "*" && arr[0] == active.EntityId {
+					for _, tentacle := range tentacles {
+						targetID := tentacle.TargetID()
+						if mapper.TentacleTypeMapper == tentacle.Type() {
+							activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
+						} else if mapper.TentacleTypeEntity == tentacle.Type() {
+							// make if not exists.
+							if _, exists := messages[targetID]; !exists {
+								messages[targetID] = make(map[string]constraint.Node)
+							}
+
+							segments := strings.Split(active.PropertyKey, ".")
+							// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
+							// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
+							messages[targetID][segments[0]] = thisStateProps[segments[0]]
+						} else {
+							// undefined tentacle typs.
+							log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
+						}
+					}
+				}
+			}
 		}
 	}
 
