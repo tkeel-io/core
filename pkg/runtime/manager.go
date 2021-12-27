@@ -187,8 +187,6 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				log.Info("show actor", logger.EntityID(stateMarchine.GetID()), zap.Any("properties", stateMarchine.GetBase().KValues))
-
 				if stateMarchine.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
 					m.coroutinePool.Submit(stateMarchine.HandleLoop)
