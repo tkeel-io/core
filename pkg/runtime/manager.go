@@ -61,20 +61,22 @@ type Manager struct {
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
 	var (
-		err           error
-		daprClient    dapr.Client
-		etcdClient    *clientv3.Client
-		tseriesClient = tseries.NewTimeSerier(config.GetConfig().TimeSeries.Name)
+		err        error
+		daprClient dapr.Client
+		etcdClient *clientv3.Client
 	)
 
-	outDura := 3 * time.Second
+	expireTime := 3 * time.Second
 	etcdAddr := config.GetConfig().Etcd.Address
+	tseriesClient := tseries.NewTimeSerier(config.GetConfig().TimeSeries.Name)
+	returnErr := func(err error) error { return errors.Wrap(err, "create manager failed") }
+
 	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
+		return nil, returnErr(err)
 	} else if err = tseriesClient.Init(resource.ParseFrom(&config.GetConfig().TimeSeries)); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
-	} else if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: outDura}); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
+		return nil, returnErr(err)
+	} else if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
+		return nil, returnErr(err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

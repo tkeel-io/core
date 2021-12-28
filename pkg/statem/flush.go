@@ -76,10 +76,14 @@ func (s *statem) flushSearch(ctx context.Context) error {
 		var val constraint.Node
 		var ct *constraint.Constraint
 		if val, err = s.getProperty(s.KValues, JSONPath); nil != err {
+			// TODO: 终止本次写入.
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
+			// TODO: 终止本次写入.
 		} else if val, err = constraint.ExecData(val, ct); nil != err {
+			// TODO: 终止本次写入.
 		} else {
 			flushData[JSONPath] = val.Value()
+			continue
 		}
 		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
