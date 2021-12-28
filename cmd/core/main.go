@@ -45,6 +45,7 @@ var (
 	cfgFile       string
 	HTTPAddr      string
 	GRPCAddr      string
+	EtcdBrokers   string
 	SearchBrokers string
 )
 
@@ -52,6 +53,7 @@ func init() {
 	flag.StringVar(&cfgFile, "conf", "config.yml", "config file path.")
 	flag.StringVar(&HTTPAddr, "http_addr", ":6789", "http listen address.")
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
+	flag.StringVar(&EtcdBrokers, "etcd_brokers", "http://localhost:2379", "etcd brokers address.")
 	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
 }
 
@@ -59,6 +61,7 @@ func main() {
 	flag.Parse()
 	// load configuration.
 	config.InitConfig(cfgFile)
+	config.GetConfig().Etcd.Address = strings.Split(EtcdBrokers, ",")
 
 	// new servers.
 	httpSrv := server.NewHTTPServer(HTTPAddr)

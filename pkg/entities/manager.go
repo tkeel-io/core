@@ -27,9 +27,11 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/tql"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -38,7 +40,7 @@ import (
 
 const EntityStateName = "core-state"
 const SubscriptionPrefix = "core.subsc."
-const TQLEtcdPrefix = "core.tql."
+const TQLEtcdPrefix = "core.tql"
 
 type EntityManager struct {
 	daprClient   dapr.Client
@@ -91,14 +93,27 @@ func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageCont
 
 // ------------------------------------APIs-----------------------------.
 
+func merge(dest, src *statem.Base) *statem.Base {
+	dest.ID = src.ID
+	dest.Type = src.Type
+	dest.Owner = src.Owner
+	dest.Source = src.Source
+
+	for key, val := range src.KValues {
+		dest.KValues[key] = val
+	}
+	return dest
+}
+
 // CreateEntity create a entity.
 func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*statem.Base, error) {
+	var err error
 	if base.ID == "" {
 		base.ID = uuid()
 	}
 
 	// 1. 检查 实体 是否已经存在.
-	if _, err := m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
+	if _, err = m.getEntityFromState(ctx, base); !errors.Is(err, ErrEntityNotFound) {
 		if nil == err {
 			err = ErrEntityAreadyExisted
 		}
@@ -106,14 +121,30 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		return nil, err
 	}
 
+	// 2. check template id.
+	tid, _ := ctx.Value(TemplateEntityID{}).(string)
+	if tid != "" {
+		var tBase *statem.Base
+		tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid})
+		if nil != err {
+			log.Error("create entity, load template entity", zap.Error(err), logger.EntityID(base.ID))
+			return nil, errors.Wrap(err, "create entity, load template entity")
+		}
+		// merge base into tBase.
+		base = merge(tBase, base)
+	}
+
 	// 2. 创建 实体.
-	if bytes, err := statem.EncodeBase(base); nil != err {
+	var bytes []byte
+	if bytes, err = statem.EncodeBase(base); nil != err {
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	} else if err = m.daprClient.SaveState(ctx, EntityStateName, base.ID, bytes); nil != err {
 		log.Error("create entity", zap.Error(err), logger.EntityID(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
+
+	log.Info("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
 
 	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
 	msgCtx := statem.MessageContext{
@@ -141,28 +172,29 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 		return nil, errors.Wrap(err, "delete entity from es state")
 	}
 
-	// 2. delete from state.
-	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
-		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from state")
-	}
-
-	// 3. delete from runtime.
+	// 2. delete from runtime.
 	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
 		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "delete entity from runtime")
 	}
 
+	// 3. delete from state.
+	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
+		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "delete entity from state")
+	}
+
 	// 4. delete tql from etcd.
-	if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, "subscription"), clientv3.WithPrefix()); nil != err {
-		log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
-		return nil, errors.Wrap(err, "delete entity")
+	for _, mm := range base.Mappers {
+		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(base.Type, base.ID, mm.Name), clientv3.WithPrefix()); nil != err {
+			log.Error("delete entity mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", base.Mappers))
+		}
 	}
 
 	// 5. log record.
 	log.Info("delete entity", logger.EntityID(en.ID), zap.Any("entity", base))
 
-	return base, nil
+	return base, errors.Wrap(err, "delete entity")
 }
 
 // GetProperties returns statem.Base.
@@ -227,9 +259,14 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 		return nil, errors.Wrap(err, "get state")
 	}
 
+	// check TQLs.
+	if err = checkTQLs(en); nil != err {
+		return nil, errors.Wrap(err, "check subscription")
+	}
+
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Put(ctx, TQLEtcdPrefix+en.ID+mm.Name, mm.TQLString); nil != err {
+		if _, err = m.etcdClient.Put(ctx, util.FormatMapper(en.Type, en.ID, mm.Name), mm.TQLString); nil != err {
 			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
 			return nil, errors.Wrap(err, "append mapper")
 		}
@@ -256,7 +293,7 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base
 
 	// 2. 将 mapper 推到 etcd.
 	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Delete(ctx, TQLEtcdPrefix+en.ID+mm.Name); nil != err {
+		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, mm.Name)); nil != err {
 			log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID), zap.Any("mapper", mm))
 			return nil, errors.Wrap(err, "remove mapper")
 		}
@@ -269,6 +306,58 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base
 
 	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
+}
+
+func (m *EntityManager) CheckSubscription(ctx context.Context, en *statem.Base) (err error) {
+	// check TQLs.
+	if err = checkTQLs(en); nil != err {
+		return errors.Wrap(err, "check subscription")
+	}
+
+	// check request.
+	mode := getString(en.KValues[runtime.SubscriptionFieldMode])
+	topic := getString(en.KValues[runtime.SubscriptionFieldTopic])
+	filter := getString(en.KValues[runtime.SubscriptionFieldFilter])
+	pubsubName := getString(en.KValues[runtime.SubscriptionFieldPubsubName])
+	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
+	if mode == runtime.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
+		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
+		return runtime.ErrSubscriptionInvalid
+	}
+
+	return nil
+}
+
+func checkTQLs(en *statem.Base) error {
+	// check TQL.
+	var err error
+	defer func() {
+		defer func() {
+			switch recover() {
+			case nil:
+			default:
+				err = ErrMapperTQLInvalid
+			}
+		}()
+	}()
+	for _, mm := range en.Mappers {
+		var tqlInst tql.TQL
+		if tqlInst, err = tql.NewTQL(mm.TQLString); nil != err {
+			log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
+			return errors.Wrap(err, "check TQL")
+		} else if tqlInst.Target() != en.ID {
+			log.Error("mismatched subscription id & mapper target id.", logger.EntityID(en.ID), zap.Any("mapper", mm))
+			return errors.Wrap(err, "subscription ID mismatched")
+		}
+	}
+	return errors.Wrap(err, "check TQL")
+}
+
+func getString(node constraint.Node) string {
+	if nil != node {
+		return node.String()
+	}
+	return ""
 }
 
 // uuid generate an uuid.

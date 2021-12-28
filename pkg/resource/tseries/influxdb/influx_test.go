@@ -3,7 +3,6 @@ package influxdb
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"testing"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 )
 
 func Test_Write(t *testing.T) {
-
 	outer := newInflux()
 	outer.Init(resource.Metadata{
 		Name: "influxdb",
@@ -24,17 +22,14 @@ func Test_Write(t *testing.T) {
 		},
 	})
 
-	num := int(rand.Int31n(10000))
+	num := 10000
 	t.Log("write som data, N=", num)
 	for i := 0; i < num; i++ {
 		_, err := outer.Write(context.Background(), &tseries.TSeriesRequest{
-			Data: []string{
-				fmt.Sprintf("mem,host=host1 used_percent=%f %d", rand.Float64(), time.Now().Unix()),
-			},
+			Data: []string{fmt.Sprintf("mem,host=host1 used_percent=%f %d", 40.0, time.Now().Unix())},
 		})
 		if nil != err {
 			t.Log("write influx failed", err)
 		}
 	}
-
 }

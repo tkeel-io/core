@@ -29,10 +29,14 @@ type mapper struct {
 }
 
 func NewMapper(id, tqlText string) (Mapper, error) {
+	tqlInst, err := tql.NewTQL(tqlText)
+	if nil != err {
+		return nil, errors.Wrap(err, "construct mapper")
+	}
 	return &mapper{
 		id:      id,
 		tqlText: tqlText,
-		tqlInst: tql.NewTQL(tqlText),
+		tqlInst: tqlInst,
 	}, nil
 }
 

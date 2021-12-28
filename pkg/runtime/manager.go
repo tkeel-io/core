@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -99,6 +100,9 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
+	bytes, _ := json.Marshal(msgCtx)
+	log.Debug("actor send message", zap.String("msg", string(bytes)))
+
 	// 解耦actor之间的直接调用
 	m.msgCh <- msgCtx
 }
@@ -117,10 +121,15 @@ func (m *Manager) init() error {
 	descs := make([]EtcdPair, len(res.Kvs))
 	for index, kv := range res.Kvs {
 		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
-		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
 	}
 
-	m.actorEnv.LoadMapper(descs)
+	loadEntities := m.actorEnv.LoadMapper(descs)
+	for _, info := range loadEntities {
+		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
+			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		}
+	}
 
 	return nil
 }
@@ -134,9 +143,16 @@ func (m *Manager) watchResource() error {
 
 	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
 		// on changed.
-		m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+		for _, stateID := range effects {
+			m.reloadActor(stateID)
+		}
 	})
 
+	return nil
+}
+
+func (m *Manager) reloadActor(stateID string) error {
 	return nil
 }
 
@@ -200,19 +216,28 @@ func (m *Manager) GetDaprClient() dapr.Client {
 	return m.daprClient
 }
 
-func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) {
+func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) { //nolint
 	if cid == "" {
 		cid = "default"
 	}
 
 	if container, ok := m.containers[cid]; ok {
 		if sm := container.Get(eid); nil != sm {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
 			return cid, sm
 		}
 	}
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
+
 			if channelID == "default" && cid != channelID {
 				container.Remove(sm.GetID())
 				if _, ok := m.containers[cid]; !ok {
@@ -225,6 +250,14 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	}
 
 	return cid, nil
+}
+
+func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
+	_, err := m.loadOrCreate(ctx, "", &statem.Base{
+		ID:   id,
+		Type: typ,
+	})
+	return errors.Wrap(err, "load entity")
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
@@ -244,9 +277,10 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
 		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
 			base = en
+			log.Info("load actor", logger.EntityID(base.ID), zap.String("state", string(res.Value)))
 		} else {
 			log.Error("load or create state",
-				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(err))
+				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
 		}
 		sm, err = statem.NewState(ctx, m, base, nil)
 	}

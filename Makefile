@@ -106,8 +106,8 @@ init:
 	go install  github.com/tkeel-io/tkeel-interface/tool/cmd/artisan@latest
 	go install  google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
 	go install  google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
-	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-http@latest
-	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-errors@latest
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-http@v0.0.0-20211201125403-d4d4343c7730
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-errors@v0.0.0-20211201125403-d4d4343c7730
 	go install  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.7.0
 
 .PHONY: api
@@ -128,6 +128,13 @@ api:
 	@echo "---------------------------------------------------------"
 	@echo "----- 请注意 core/api/core/v1/topic_http.pb.go 的变更 -----"
 	@echo "---------------------------------------------------------"
+
+
+.PHONY: api-docs
+# generate api docs
+api-docs:
+	artisan markdown -f api/apidocs.swagger.json  -t third_party/markdown-templates/ -o docs/APIs/Core -m all
+
 
 
 build:
