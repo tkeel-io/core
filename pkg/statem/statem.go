@@ -32,6 +32,7 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -185,6 +186,16 @@ func (s *statem) GetStatus() Status {
 
 func (s *statem) SetStatus(status Status) {
 	s.status = status
+}
+
+func (s *statem) LoadEnvironments(env EnvDescription) {
+	log.Info("load environments", logger.EntityID(s.ID))
+	for _, m := range env.Mappers {
+		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
+	}
+	for _, t := range env.Tentacles {
+		log.Info("load environments", logger.EntityID(s.ID), zap.String("id", t.ID()))
+	}
 }
 
 func (s *statem) GetManager() StateManager {
@@ -552,12 +563,12 @@ func (s *statem) invokeMapperMsg(msg MapperMessage) {
 			zap.Error(err),
 			logger.EntityID(s.ID),
 			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
 	} else {
 		log.Debug("invoke mapper",
 			logger.EntityID(s.ID),
 			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
 	}
 	log.Info("recv mapper message", logger.EntityID(s.GetID()), zap.Any("mapper", msg.Mapper))
 }
@@ -567,10 +578,13 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 	reqID := uuid()
 
 	// checked befors.
-	m, _ := mapper.NewMapper(s.ID+"#"+desc.Name, desc.TQLString)
+	m, _ := mapper.NewMapper(util.FormatMapper(s.Type, s.ID, desc.Name), desc.TQLString)
 
-	log.Info("append mapper",
-		logger.EntityID(s.ID), logger.RequestID(reqID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
+	log.Debug("append mapper",
+		logger.EntityID(s.ID),
+		logger.RequestID(reqID),
+		logger.MapperID(m.ID()),
+		logger.TQLString(m.String()))
 
 	position, length := 0, len(s.Mappers)
 	for ; position < length; position++ {
@@ -605,10 +619,8 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 			s.stateManager.EscapedEntities(expr)...)
 	}
 
-	log.Info("source entities", zap.Any("entities", sourceEntities))
 	for _, entityID := range sourceEntities {
 		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-		log.Info("record tentacle", logger.EntityID(s.ID), zap.String("target", entityID), zap.Any("tentacle", tentacle))
 		if nil != tentacle {
 			// send tentacle msg.
 			s.stateManager.SendMsg(MessageContext{
@@ -640,10 +652,8 @@ func (s *statem) removeMapper(desc MapperDesc) error {
 		return nil
 	}
 
-	m := s.mappers[s.ID+"#"+s.Mappers[position].Name]
-
-	log.Info("remove mapper",
-		logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
+	m := s.mappers[util.FormatMapper(s.Type, s.ID, s.Mappers[position].Name)]
+	log.Info("remove mapper", logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
 
 	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
 	// 如果是动态生成的，那么前后两次生成可能不一致.
@@ -705,8 +715,10 @@ func (s *statem) generateTentacles() {
 	for _, tentacles := range s.indexTentacles {
 		for _, tentacle := range tentacles {
 			if mapper.TentacleTypeMapper == tentacle.Type() || tentacle.IsRemote() {
-				log.Info("setup tentacle",
-					logger.EntityID(s.ID), logger.Type(tentacle.Type()), logger.Target(tentacle.TargetID()))
+				log.Debug("setup tentacle",
+					logger.EntityID(s.ID),
+					logger.Type(tentacle.Type()),
+					logger.Target(tentacle.TargetID()))
 				for _, item := range tentacle.Items() {
 					s.tentacles[item.String()] = append(s.tentacles[item.String()], tentacle)
 				}

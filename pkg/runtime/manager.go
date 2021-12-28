@@ -131,6 +131,7 @@ func (m *Manager) init() error {
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
 			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
+		m.reloadActor([]string{info.EntityID})
 	}
 
 	return nil
@@ -143,12 +144,11 @@ func (m *Manager) watchResource() error {
 		return errors.Wrap(err, "create tql watcher failed")
 	}
 
+	log.Info("watch resource")
 	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
 		// on changed.
 		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
-		for _, stateID := range effects {
-			m.reloadActor(stateID)
-		}
+		m.reloadActor(effects)
 	})
 
 	return nil
@@ -158,11 +158,14 @@ func (m *Manager) isThisNode() bool {
 	return true
 }
 
-func (m *Manager) reloadActor(stateID string) error {
+func (m *Manager) reloadActor(stateIDs []string) error {
 	// 判断 actor 是否在当前节点.
 	if m.isThisNode() {
-		// TODO: 将 actor 在此节点重载.
-		return nil
+		for _, stateID := range stateIDs {
+			if _, stateMarchine := m.getStateMarchine("", stateID); nil != stateMarchine {
+				stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+			}
+		}
 	}
 	return nil
 }
@@ -186,7 +189,7 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
-				log.Info("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
+				log.Debug("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
 				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
 				if nil == stateMarchine {
 					var err error
@@ -269,6 +272,12 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
+	log.Debug("load or create state marchiner",
+		logger.EntityID(base.ID),
+		zap.String("type", base.Type),
+		zap.String("owner", base.Owner),
+		zap.String("source", base.Source))
+
 	var res *dapr.StateItem
 	switch base.Type {
 	case StateMarchineTypeSubscription:

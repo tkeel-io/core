@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
@@ -33,8 +34,6 @@ type EtcdPair struct {
 	Key   string
 	Value []byte
 }
-
-// core.type.mapper.entityID.name
 
 // cache for state marchine.
 type MapperCache struct {
@@ -78,6 +77,19 @@ func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleI
 		}
 		return targets
 	}
+}
+
+func (env *Environment) GetEnvBy(stateID string) statem.EnvDescription {
+	var envDesc statem.EnvDescription
+	if mCache, has := env.mapperCaches[stateID]; has {
+		for _, m := range mCache.mappers {
+			envDesc.Mappers = append(envDesc.Mappers, m.Copy())
+		}
+		for _, tentacle := range mCache.tentacles {
+			envDesc.Tentacles = append(envDesc.Tentacles, tentacle.Copy())
+		}
+	}
+	return envDesc
 }
 
 func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
@@ -179,7 +191,8 @@ func parseTQLKey(key string) (KeyInfo, error) {
 		return KeyInfo{}, ErrInvalidTQLKey
 	}
 
-	return KeyInfo{Type: arr[1], Name: arr[4], EntityID: arr[3]}, nil
+	// core.mapper.{type}.{entityID}.{name}
+	return KeyInfo{Type: arr[2], Name: arr[4], EntityID: arr[3]}, nil
 }
 
 func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) ([]string, error) {
@@ -191,7 +204,7 @@ func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair
 	switch op {
 	case mvccpb.PUT:
 		var mapperInstence mapper.Mapper
-		log.Info("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		log.Debug("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
 		mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value))
 		if nil != err {
 			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
@@ -200,7 +213,7 @@ func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair
 
 		effects = env.addMapper(mapperInstence)
 	case mvccpb.DELETE:
-		log.Info("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		log.Debug("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
 			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			return effects, errors.Wrap(err, "mapper changed")

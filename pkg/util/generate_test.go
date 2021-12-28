@@ -7,5 +7,5 @@ import (
 )
 
 func Test_FormatMapper(t *testing.T) {
-	assert.Equal(t, "core.BASIC.mapper.device123.mapper123", FormatMapper("BASIC", "device123", "mapper123"))
+	assert.Equal(t, "core.mapper.BASIC.device123.mapper123", FormatMapper("BASIC", "device123", "mapper123"))
 }

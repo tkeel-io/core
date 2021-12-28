@@ -20,7 +20,6 @@ import (
 	"context"
 
 	dapr "github.com/dapr/go-sdk/client"
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
@@ -43,6 +42,11 @@ const (
 	SubscriptionFieldFilter     = "filter"
 	SubscriptionFieldTopic      = "topic"
 	SubscriptionFieldPubsubName = "pubsub_name"
+
+	// state marchine required fileds.
+	StateMarchineFieldType   = "type"
+	StateMarchineFieldOwner  = "owner"
+	StateMarchineFieldSource = "source"
 )
 
 // SubscriptionBase subscription basic information.
@@ -50,7 +54,6 @@ type SubscriptionBase struct {
 	Mode       string `json:"mode" mapstructure:"mode"`
 	Source     string `json:"source" mapstructure:"source"`
 	Filter     string `json:"filter" mapstructure:"filter"`
-	Target     string `json:"target" mapstructure:"target"`
 	Topic      string `json:"topic" mapstructure:"topic"`
 	PubsubName string `json:"pubsub_name" mapstructure:"pubsub_name"`
 }
@@ -62,28 +65,49 @@ type subscription struct {
 	stateMarchine    statem.StateMarchiner `mapstructure:"-"`
 }
 
+func decode2Subscription(kvalues map[string]constraint.Node, subsc *SubscriptionBase) {
+	// parse Mode.
+	if node, has := kvalues[SubscriptionFieldMode]; has {
+		subsc.Mode = node.String()
+	}
+	// parse Source.
+	if node, has := kvalues[SubscriptionFieldSource]; has {
+		subsc.Source = node.String()
+	}
+	// parse Filter.
+	if node, has := kvalues[SubscriptionFieldFilter]; has {
+		subsc.Filter = node.String()
+	}
+	// parse Topic.
+	if node, has := kvalues[SubscriptionFieldTopic]; has {
+		subsc.Topic = node.String()
+	}
+	// parse PubsubName.
+	if node, has := kvalues[SubscriptionFieldPubsubName]; has {
+		subsc.PubsubName = node.String()
+	}
+}
+
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem.StateMarchiner, error) {
-	subsc := subscription{
-		SubscriptionBase: SubscriptionBase{
-			Mode: SubscriptionModeUndefine,
-		},
+func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM statem.StateMarchiner, err error) {
+	subsc := subscription{SubscriptionBase: SubscriptionBase{
+		Mode: SubscriptionModeUndefine,
+	}}
+
+	errFunc := func(err error) error { return errors.Wrap(err, "create subscription failed") }
+	if stateM, err = statem.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
+		return nil, errFunc(err)
 	}
 
-	stateM, err := statem.NewState(ctx, mgr, in, subsc.HandleMessage)
-	if nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
-	} else if err = mapstructure.Decode(in.KValues, &subsc); nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
-	} else if err = subsc.checkSubscription(); nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
+	// decode in.KValues into subsc.
+	decode2Subscription(in.KValues, &subsc.SubscriptionBase)
+	if err = subsc.checkSubscription(); nil != err {
+		return nil, errFunc(err)
 	}
 
-	daprClient, err := dapr.NewClient()
-	if nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
-	} else if err = subsc.checkSubscription(); nil != err {
-		return nil, errors.Wrap(err, "create subscription failed")
+	var daprClient dapr.Client
+	if daprClient, err = dapr.NewClient(); nil != err {
+		return nil, errFunc(err)
 	}
 
 	subsc.daprClient = daprClient
@@ -91,11 +115,10 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (statem
 	subsc.GetBase().KValues = in.KValues
 
 	// set mapper.
-	subsc.stateMarchine.GetBase().Mappers =
-		[]statem.MapperDesc{{
-			Name:      "subscription",
-			TQLString: subsc.Filter,
-		}}
+	subsc.stateMarchine.GetBase().Mappers = []statem.MapperDesc{{
+		Name:      "subscription",
+		TQLString: subsc.Filter,
+	}}
 	return &subsc, nil
 }
 
@@ -128,6 +151,10 @@ func (s *subscription) SetStatus(status statem.Status) {
 
 func (s *subscription) GetStatus() statem.Status {
 	return s.stateMarchine.GetStatus()
+}
+
+func (s *subscription) LoadEnvironments(env statem.EnvDescription) {
+	s.stateMarchine.LoadEnvironments(env)
 }
 
 func (s *subscription) GetManager() statem.StateManager {
