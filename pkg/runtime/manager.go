@@ -154,7 +154,16 @@ func (m *Manager) watchResource() error {
 	return nil
 }
 
+func (m *Manager) isThisNode() bool {
+	return true
+}
+
 func (m *Manager) reloadActor(stateID string) error {
+	// 判断 actor 是否在当前节点.
+	if m.isThisNode() {
+		// TODO: 将 actor 在此节点重载.
+		return nil
+	}
 	return nil
 }
 
@@ -255,10 +264,7 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 }
 
 func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
-	_, err := m.loadOrCreate(ctx, "", &statem.Base{
-		ID:   id,
-		Type: typ,
-	})
+	_, err := m.loadOrCreate(ctx, "", &statem.Base{ID: id, Type: typ})
 	return errors.Wrap(err, "load entity")
 }
 

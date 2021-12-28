@@ -38,14 +38,15 @@ type EtcdPair struct {
 
 // cache for state marchine.
 type MapperCache struct {
-	mappers       map[string]mapper.Mapper // map[mapperID]Mapper.
-	tentacles     []mapper.Tentacler       // tentacle set.
-	cleanHandlers map[string]CleanHandler  // map[mapperID]Handler.
+	mappers       map[string]mapper.Mapper    // map[mapperID]Mapper.
+	tentacles     map[string]mapper.Tentacler // tentacle set.
+	cleanHandlers map[string]CleanHandler     // map[mapperID]Handler.
 }
 
 func newMapperCache() *MapperCache {
 	return &MapperCache{
 		mappers:       make(map[string]mapper.Mapper),
+		tentacles:     make(map[string]mapper.Tentacler),
 		cleanHandlers: make(map[string]CleanHandler),
 	}
 }
@@ -62,7 +63,20 @@ func NewEnv() *Environment {
 
 func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleIDs []string) CleanHandler {
 	return func() []string {
-		return []string{}
+		var targets []string
+		mCache, ok := env.mapperCaches[stateID]
+		if !ok {
+			return []string{}
+		}
+
+		delete(mCache.mappers, mapperID)
+		for _, id := range tentacleIDs {
+			if tentacle, ok := mCache.tentacles[id]; ok {
+				targets = append(targets, tentacle.TargetID())
+				delete(mCache.tentacles, id)
+			}
+		}
+		return targets
 	}
 }
 
@@ -73,6 +87,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		env.mapperCaches[targetID] = newMapperCache()
 	}
 
+	tentacleIDs := make([]string, 0)
 	mCache := env.mapperCaches[targetID]
 	// check mapper exists in cache.
 	if _, exists := mCache.mappers[m.ID()]; exists {
@@ -84,16 +99,18 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		switch tentacle.Type() {
 		case mapper.TentacleTypeEntity:
 			effects = append(effects, tentacle.TargetID())
-			env.addTentacle(tentacle.TargetID(), mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items()))
+			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
+			env.addTentacle(tentacle.TargetID(), tentacle)
 		case mapper.TentacleTypeMapper:
 			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMarchine.
-			mCache.tentacles = append(mCache.tentacles, tentacle)
+			mCache.tentacles[tentacle.ID()] = tentacle
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
 		}
+		tentacleIDs = append(tentacleIDs, tentacle.ID())
 	}
 
-	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), []string{})
+	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
 
 	return effects
 }
@@ -106,8 +123,11 @@ func (env *Environment) removeMapper(stateID, mapperID string) []string {
 	}
 
 	// clean mapper.
-	mCache := env.mapperCaches[stateID]
-	delete(mCache.mappers, mapperID)
+	mCache, ok := env.mapperCaches[stateID]
+	if !ok {
+		return []string{}
+	}
+
 	return mCache.cleanHandlers[mapperID]()
 }
 
@@ -117,7 +137,7 @@ func (env *Environment) addTentacle(stateID string, tentacle mapper.Tentacler) {
 	}
 
 	mCache := env.mapperCaches[stateID]
-	mCache.tentacles = append(mCache.tentacles, tentacle)
+	mCache.tentacles[tentacle.ID()] = tentacle
 }
 
 func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
