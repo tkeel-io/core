@@ -24,6 +24,7 @@ import (
 	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
+	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
@@ -169,13 +170,18 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
 		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from es state")
+		if elastic.IsNotFound(err) {
+			return nil, errors.Wrap(err, "delete entity from es state")
+		}
 	}
 
 	// 2. delete from runtime.
 	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
-		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from runtime")
+		log.Error("delete entity runtime", zap.Error(err), logger.EntityID(en.ID))
+		if base, err = m.getEntityFromState(ctx, en); nil != err {
+			log.Error("get entity", zap.Error(err), logger.EntityID(en.ID))
+			return nil, errors.Wrap(err, "delete entity from runtime")
+		}
 	}
 
 	// 3. delete from state.

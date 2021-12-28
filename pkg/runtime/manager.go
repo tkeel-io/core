@@ -271,7 +271,7 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
 	log.Debug("load or create state marchiner",
 		logger.EntityID(base.ID),
 		zap.String("type", base.Type),
@@ -287,7 +287,9 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 		} else if base, err = statem.DecodeBase(res.Value); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
-		sm, err = newSubscription(ctx, m, base)
+		if sm, err = newSubscription(ctx, m, base); nil == err {
+			log.Info("load or create", zap.Any("kvales", sm.GetBase().KValues))
+		}
 	default:
 		// default base entity type.
 		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {

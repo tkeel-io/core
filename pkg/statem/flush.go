@@ -63,7 +63,7 @@ func (s *statem) flush(ctx context.Context) error {
 
 func (s *statem) flushState(ctx context.Context) error {
 	bytes, _ := EncodeBase(&s.Base)
-	log.Debug("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
+	log.Info("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
 	s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
 	return nil
 }

@@ -2,7 +2,7 @@ server:
   app_port: 6789
 logger:
   dev: true
-  level: DEBUG
+  level: INFO
 
 time_series:
   name: influxdb
