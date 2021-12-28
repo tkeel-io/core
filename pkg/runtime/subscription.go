@@ -195,14 +195,13 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 		// invalid msg typs.
 		log.Error("undefine message type.", logger.MessageInst(msg))
 	}
-
 	return watchKeys
 }
 
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Realtime 直接转发就OK了.
-	base := s.GetBase()
+	base := s.GetBase().DuplicateExpectValue()
 	base.KValues = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
@@ -214,7 +213,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 // invokePeriod.
 func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Period 直接查询快照.
-	base := s.GetBase()
+	base := s.GetBase().DuplicateExpectValue()
 	base.KValues = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
@@ -226,7 +225,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 // invokeChanged.
 func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
 	// 对于 Changed 直接转发就OK了.
-	base := s.GetBase()
+	base := s.GetBase().DuplicateExpectValue()
 	base.KValues = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
 		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))

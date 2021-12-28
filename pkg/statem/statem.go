@@ -90,6 +90,19 @@ func (b *Base) Copy() Base {
 	return *bb
 }
 
+func (b *Base) DuplicateExpectValue() Base {
+	cp := Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+	}
+	cp.Mappers = append(cp.Mappers, b.Mappers...)
+	return cp
+}
+
 // statem state marchins.
 type statem struct {
 	Base

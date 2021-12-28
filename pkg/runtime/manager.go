@@ -282,13 +282,12 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 	switch base.Type {
 	case StateMarchineTypeSubscription:
 		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			// TODO: 订阅不存在，所以应该通知被订阅方取消订阅.
 			return nil, errors.Wrap(err, "load subscription")
 		} else if base, err = statem.DecodeBase(res.Value); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
-		if sm, err = newSubscription(ctx, m, base); nil == err {
-			log.Info("load or create", zap.Any("kvales", sm.GetBase().KValues))
+		if sm, err = newSubscription(ctx, m, base); nil != err {
+			log.Error("load or create", logger.EntityID(base.ID), zap.Error(err))
 		}
 	default:
 		// default base entity type.
