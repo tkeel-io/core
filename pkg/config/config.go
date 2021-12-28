@@ -30,9 +30,20 @@ import (
 var config = defaultConfig()
 
 type Config struct {
-	Server Server     `mapstructure:"server"`
-	Logger LogConfig  `mapstructure:"logger"`
-	Etcd   EtcdConfig `mapstructure:"etcd"`
+	Server     Server     `mapstructure:"server"`
+	Logger     LogConfig  `mapstructure:"logger"`
+	Etcd       EtcdConfig `mapstructure:"etcd"`
+	TimeSeries Metadata   `mapstructure:"time_series"`
+}
+
+type Pair struct {
+	Key   string `yaml:"key"`
+	Value string `yaml:"value"`
+}
+
+type Metadata struct {
+	Name       string `yaml:"name"`
+	Properties []Pair `yaml:"properties"`
 }
 
 type EtcdConfig struct {

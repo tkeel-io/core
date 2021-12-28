@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -40,7 +41,7 @@ func (s *statem) FlushSearch() error {
 }
 
 func (s *statem) FlushTimeSeries() error {
-	panic("not implement")
+	return errors.Wrap(s.flushTimeSeries(s.ctx), "flush state-marchine time-series")
 }
 
 func (s *statem) flush(ctx context.Context) error {
@@ -52,6 +53,10 @@ func (s *statem) flush(ctx context.Context) error {
 	// flush state properties to state.
 	if err = s.flushState(ctx); nil == err {
 		log.Debug("entity flush State completed", logger.EntityID(s.ID))
+	}
+	// flush state properties to TSDB.
+	if err = s.flushTimeSeries(ctx); nil == err {
+		log.Debug("entity flush TimeSeries completed", logger.EntityID(s.ID))
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
@@ -71,10 +76,14 @@ func (s *statem) flushSearch(ctx context.Context) error {
 		var val constraint.Node
 		var ct *constraint.Constraint
 		if val, err = s.getProperty(s.KValues, JSONPath); nil != err {
+			// TODO: 终止本次写入.
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
+			// TODO: 终止本次写入.
 		} else if val, err = constraint.ExecData(val, ct); nil != err {
+			// TODO: 终止本次写入.
 		} else {
 			flushData[JSONPath] = val.Value()
+			continue
 		}
 		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
@@ -97,6 +106,46 @@ func (s *statem) flushSearch(ctx context.Context) error {
 
 	log.Debug("flush state Search.", zap.Any("data", flushData))
 	return errors.Wrap(err, "Search flush failed")
+}
+
+func (s *statem) flushTimeSeries(ctx context.Context) error {
+	var err error
+	var flushData []tseries.TSeriesData
+	for _, JSONPath := range s.tseriesConstraints {
+		var val constraint.Node
+		var ct *constraint.Constraint
+		if val, err = s.getProperty(s.KValues, JSONPath); nil != err || val == nil {
+		} else if ct, err = s.getConstraint(JSONPath); nil != err {
+		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
+		} else {
+			point := tseries.TSeriesData{
+				Measurement: "core-default",
+				Tags:        s.generateTags(),
+				Fields:      map[string]string{},
+				Value:       val.String(),
+			}
+			flushData = append(flushData, point)
+		}
+		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+	}
+
+	if err = s.stateManager.TimeSeriesFlush(ctx, flushData); nil != err {
+		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+	}
+
+	log.Debug("flush state Search.", zap.Any("data", flushData))
+	return errors.Wrap(err, "Search flush failed")
+}
+
+// generateTags generate entity tags.
+func (s *statem) generateTags() map[string]string {
+	return map[string]string{
+		"app":    "core",
+		"id":     s.ID,
+		"type":   s.Type,
+		"owner":  s.Owner,
+		"source": s.Source,
+	}
 }
 
 func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) {

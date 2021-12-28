@@ -24,6 +24,7 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
 
 const (
@@ -56,6 +57,7 @@ type StateManager interface {
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
+	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
 }
 
 type StateMarchiner interface {

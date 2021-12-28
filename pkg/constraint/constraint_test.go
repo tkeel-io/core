@@ -46,7 +46,7 @@ func TestContraint1(t *testing.T) {
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSelf), true)
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSearch), true)
 	assert.Equal(t, ct.Operators, []Operator{{Callback: "max", Condition: 200}})
-	assert.Equal(t, ct.GenSearchIndex(), []string{"property1"})
+	assert.Equal(t, ct.GenEnabledIndexes(EnabledFlagSearch), []string{"property1"})
 }
 
 func TestContraint2(t *testing.T) {
@@ -99,5 +99,5 @@ func TestContraint2(t *testing.T) {
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSelf), true)
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSearch), true)
 	assert.Equal(t, len(ct.ChildNodes), 2)
-	assert.Equal(t, ct.GenSearchIndex(), []string{"property2", "property2.property2.1", "property2.property2.2"})
+	assert.Equal(t, ct.GenEnabledIndexes(EnabledFlagSearch), []string{"property2", "property2.property2.1", "property2.property2.2"})
 }

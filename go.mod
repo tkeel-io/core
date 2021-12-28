@@ -10,6 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0
+	github.com/influxdata/influxdb-client-go v1.4.0
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/olivere/elastic/v7 v7.0.29
 	github.com/panjf2000/ants/v2 v2.4.6
