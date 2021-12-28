@@ -116,7 +116,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 		} else {
 			point := tseries.TSeriesData{
 				Measurement: "core-default",
-				Tags:        map[string]string{"app": "core"},
+				Tags:        s.generateTags(),
 				Fields:      map[string]string{},
 				Value:       val.String(),
 			}
@@ -131,6 +131,17 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 
 	log.Debug("flush state Search.", zap.Any("data", flushData))
 	return errors.Wrap(err, "Search flush failed")
+}
+
+// generateTags generate entity tags.
+func (s *statem) generateTags() map[string]string {
+	return map[string]string{
+		"app":    "core",
+		"id":     s.ID,
+		"type":   s.Type,
+		"owner":  s.Owner,
+		"source": s.Source,
+	}
 }
 
 func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) {
