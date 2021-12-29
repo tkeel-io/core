@@ -1,11 +1,11 @@
 <mxfile host="65bd71144e">
     <diagram id="zLo-goX1pcKXRP1L5zoE" name="Page-1">
-        <mxGraphModel dx="1168" dy="634" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="1">
+        <mxGraphModel dx="1168" dy="476" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="1">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="19" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;" vertex="1" parent="1">
-                    <mxGeometry x="629" y="327" width="650" height="618" as="geometry"/>
+                    <mxGeometry x="622" y="327" width="664" height="618" as="geometry"/>
                 </mxCell>
                 <mxCell id="2" value="&lt;pre&gt;&lt;b&gt;&lt;font style=&quot;font-size: 15px&quot; color=&quot;#000000&quot; face=&quot;Verdana&quot;&gt;Environments&lt;/font&gt;&lt;/b&gt;&lt;/pre&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#F0F0F0;strokeColor=#000000;dashed=1;" vertex="1" parent="1">
                     <mxGeometry x="719" y="385" width="470" height="470" as="geometry"/>
@@ -46,17 +46,17 @@
                 <mxCell id="28" value="&lt;font color=&quot;#000000&quot;&gt;Actors&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;dashed=1;rotation=-110;" vertex="1" parent="25">
                     <mxGeometry x="2" y="59" width="50" height="21" as="geometry"/>
                 </mxCell>
-                <mxCell id="29" value="" style="group;rotation=115;" vertex="1" connectable="0" parent="1">
-                    <mxGeometry x="689" y="465" width="110" height="119" as="geometry"/>
+                <mxCell id="30" value="&lt;font color=&quot;#000000&quot; size=&quot;1&quot;&gt;&lt;b style=&quot;font-size: 15px&quot;&gt;Core&lt;/b&gt;&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;strokeColor=#000000;fillColor=#FFFFFF;rotation=115;" vertex="1" parent="1">
+                    <mxGeometry x="692" y="465" width="110" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="30" value="&lt;font color=&quot;#000000&quot; size=&quot;1&quot;&gt;&lt;b style=&quot;font-size: 15px&quot;&gt;Core&lt;/b&gt;&lt;/font&gt;" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;strokeColor=#000000;fillColor=#FFFFFF;rotation=115;" vertex="1" parent="29">
-                    <mxGeometry x="3" width="110" height="110" as="geometry"/>
+                <mxCell id="91" value="" style="group" vertex="1" connectable="0" parent="1">
+                    <mxGeometry x="669.6561697777349" y="444.60681710053086" width="120.42551852966733" height="119.98836932366271" as="geometry"/>
                 </mxCell>
-                <mxCell id="31" value="&lt;span style=&quot;color: rgb(0 , 0 , 0) ; background-color: rgb(255 , 255 , 255)&quot;&gt;proxy&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;rotation=115;" vertex="1" parent="29">
-                    <mxGeometry x="-39" y="26" width="108.25" height="30" as="geometry"/>
+                <mxCell id="31" value="&lt;span style=&quot;color: rgb(0 , 0 , 0) ; background-color: rgb(255 , 255 , 255)&quot;&gt;proxy&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;rotation=115;" vertex="1" parent="91">
+                    <mxGeometry x="-17.65616977773493" y="40.39318289946914" width="108.25" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="32" value="&lt;font color=&quot;#000000&quot;&gt;Actors&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;dashed=1;rotation=115;" vertex="1" parent="29">
-                    <mxGeometry x="56" y="62" width="50" height="21" as="geometry"/>
+                <mxCell id="32" value="&lt;font color=&quot;#000000&quot;&gt;Actors&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#000000;fillColor=#FFFFFF;dashed=1;rotation=115;" vertex="1" parent="91">
+                    <mxGeometry x="75.34383022226507" y="82.39318289946914" width="50" height="21" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

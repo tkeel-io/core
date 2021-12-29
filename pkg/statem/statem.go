@@ -202,12 +202,12 @@ func (s *statem) SetStatus(status Status) {
 }
 
 func (s *statem) LoadEnvironments(env EnvDescription) {
-	log.Info("load environments", logger.EntityID(s.ID))
+	log.Info("load environments=====", logger.EntityID(s.ID))
 	for _, m := range env.Mappers {
 		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
 	for _, t := range env.Tentacles {
-		log.Info("load environments", logger.EntityID(s.ID), zap.String("id", t.ID()))
+		log.Info("load environments", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
 }
 

@@ -125,15 +125,16 @@ func (m *Manager) init() error {
 		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
 	}
 
+	stateIDs := make([]string, 0)
 	loadEntities := m.actorEnv.LoadMapper(descs)
 	for _, info := range loadEntities {
 		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
 			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
-		m.reloadActor([]string{info.EntityID})
+		stateIDs = append(stateIDs, info.EntityID)
 	}
-
+	m.reloadActor(stateIDs)
 	return nil
 }
 
@@ -162,9 +163,12 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 	// 判断 actor 是否在当前节点.
 	if m.isThisNode() {
 		for _, stateID := range stateIDs {
-			if _, stateMarchine := m.getStateMarchine("", stateID); nil != stateMarchine {
-				stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+			var stateMarchine statem.StateMarchiner
+			if _, stateMarchine = m.getStateMarchine("", stateID); nil == stateMarchine {
+				log.Warn("")
+				continue
 			}
+			stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
 		}
 	}
 	return nil
@@ -199,7 +203,7 @@ func (m *Manager) Start() error {
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
 					}
-					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en)
+					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
@@ -267,11 +271,11 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 }
 
 func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
-	_, err := m.loadOrCreate(ctx, "", &statem.Base{ID: id, Type: typ})
+	_, err := m.loadOrCreate(ctx, "", false, &statem.Base{ID: id, Type: typ})
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
 	log.Debug("load or create state marchiner",
 		logger.EntityID(base.ID),
 		zap.String("type", base.Type),
@@ -287,23 +291,22 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 			return nil, errors.Wrap(err, "load subscription")
 		}
 		if sm, err = newSubscription(ctx, m, base); nil != err {
-			log.Error("load or create", logger.EntityID(base.ID), zap.Error(err))
+			return nil, errors.Wrap(err, "load subscription")
 		}
 	default:
 		// default base entity type.
+		var en *statem.Base
 		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
 			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
-		} else if en, errr := statem.DecodeBase(res.Value); nil != errr {
-			log.Error("load or create state", zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
-		} else {
+		} else if en, err = statem.DecodeBase(res.Value); nil == err {
 			base = en
-			log.Info("load actor", logger.EntityID(base.ID), zap.String("state", string(res.Value)))
+		} else if !flagCreate {
+			return nil, errors.Wrap(err, "load state marchine, state not found")
 		}
-		sm, err = statem.NewState(ctx, m, base, nil)
-	}
 
-	if nil != err {
-		return nil, errors.Wrap(err, "create state runtime")
+		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
+			return nil, errors.Wrap(err, "load state marchine")
+		}
 	}
 
 	if channelID == "" {
@@ -400,7 +403,7 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 	var channelID string
 	var stateMarchine statem.StateMarchiner
 	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en); nil != err {
+		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, en); nil != err {
 			log.Error("dispatching message", logger.EntityID(en.ID), zap.String("channel", channelID), zap.Any("entity", en))
 			return errors.Wrap(err, "runtime.setconfigs")
 		}
@@ -412,7 +415,7 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 }
 
 func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
-	sm, err := m.loadOrCreate(ctx, "", base)
+	sm, err := m.loadOrCreate(ctx, "", true, base)
 	if nil != err {
 		return nil, errors.Wrap(err, "runtime.delete state marchine")
 	}

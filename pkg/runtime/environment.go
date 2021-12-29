@@ -122,6 +122,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		tentacleIDs = append(tentacleIDs, tentacle.ID())
 	}
 
+	mCache.mappers[m.ID()] = m
 	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
 
 	return effects
@@ -158,14 +159,14 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 	var loadEntities []KeyInfo
 
 	for _, pair := range pairs {
-		log.Info("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+		log.Debug("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
 			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			continue
 		}
 
-		mapperInstence, err := mapper.NewMapper(pair.Key, string(pair.Value))
-		if nil != err {
+		var mapperInstence mapper.Mapper
+		if mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value)); nil != err {
 			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			continue
 		}
