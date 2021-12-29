@@ -396,16 +396,18 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 		en.ID = uuid()
 	}
 
-	channelID, stateMarchine := m.getStateMarchine("", en.ID)
-	if nil == stateMarchine {
-		var err error
+	var err error
+	var channelID string
+	var stateMarchine statem.StateMarchiner
+	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
 		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en); nil != err {
 			log.Error("dispatching message", logger.EntityID(en.ID), zap.String("channel", channelID), zap.Any("entity", en))
 			return errors.Wrap(err, "runtime.setconfigs")
 		}
 	}
 
-	err := stateMarchine.SetConfig(en.Configs)
+	err = stateMarchine.SetConfig(en.Configs)
+	stateMarchine.Flush(ctx)
 	return errors.Wrap(err, "runtime.setconfigs")
 }
 
