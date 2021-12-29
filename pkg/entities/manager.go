@@ -126,8 +126,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 	tid, _ := ctx.Value(TemplateEntityID{}).(string)
 	if tid != "" {
 		var tBase *statem.Base
-		tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid})
-		if nil != err {
+		if tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid}); nil != err {
 			log.Error("create entity, load template entity", zap.Error(err), logger.EntityID(base.ID))
 			return nil, errors.Wrap(err, "create entity, load template entity")
 		}
@@ -145,7 +144,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	log.Info("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
+	log.Debug("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
 
 	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
 	msgCtx := statem.MessageContext{

@@ -293,12 +293,11 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 		// default base entity type.
 		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
 			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
-		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
+		} else if en, errr := statem.DecodeBase(res.Value); nil != errr {
+			log.Error("load or create state", zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
+		} else {
 			base = en
 			log.Info("load actor", logger.EntityID(base.ID), zap.String("state", string(res.Value)))
-		} else {
-			log.Error("load or create state",
-				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
 		}
 		sm, err = statem.NewState(ctx, m, base, nil)
 	}
