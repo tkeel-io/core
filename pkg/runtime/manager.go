@@ -162,13 +162,18 @@ func (m *Manager) isThisNode() bool {
 func (m *Manager) reloadActor(stateIDs []string) error {
 	// 判断 actor 是否在当前节点.
 	if m.isThisNode() {
+		var err error
 		for _, stateID := range stateIDs {
 			var stateMarchine statem.StateMarchiner
-			if _, stateMarchine = m.getStateMarchine("", stateID); nil == stateMarchine {
-				log.Warn("")
+			base := &statem.Base{ID: stateID, Type: StateMarchineTypeBasic}
+			if _, stateMarchine = m.getStateMarchine("", stateID); nil != stateMarchine {
+				log.Debug("load state marchine @ runtime.", logger.EntityID(stateID))
+			} else if stateMarchine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
 				continue
 			}
-			stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+
+			log.Info("load actor", logger.EntityID(stateID))
 		}
 	}
 	return nil
@@ -276,34 +281,31 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
+	var en *statem.Base
+	var res *dapr.StateItem
+	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)
+
+	if nil != err && !flagCreate {
+		return nil, errors.Wrap(err, "load state marchine")
+	} else if en, err = statem.DecodeBase(res.Value); nil == err {
+		base = en // decode value to statem.Base.
+	} else if !flagCreate {
+		return nil, errors.Wrap(err, "load state marchine, state not found")
+	}
+
 	log.Debug("load or create state marchiner",
 		logger.EntityID(base.ID),
 		zap.String("type", base.Type),
 		zap.String("owner", base.Owner),
 		zap.String("source", base.Source))
 
-	var res *dapr.StateItem
 	switch base.Type {
 	case StateMarchineTypeSubscription:
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			return nil, errors.Wrap(err, "load subscription")
-		} else if base, err = statem.DecodeBase(res.Value); nil != err {
-			return nil, errors.Wrap(err, "load subscription")
-		}
 		if sm, err = newSubscription(ctx, m, base); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
 	default:
 		// default base entity type.
-		var en *statem.Base
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
-		} else if en, err = statem.DecodeBase(res.Value); nil == err {
-			base = en
-		} else if !flagCreate {
-			return nil, errors.Wrap(err, "load state marchine, state not found")
-		}
-
 		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
 			return nil, errors.Wrap(err, "load state marchine")
 		}
