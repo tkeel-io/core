@@ -48,6 +48,7 @@ var (
 	errInvalidMapperOp   = errors.New("invalid mapper operator")
 	errInvalidJSONPath   = errors.New("invalid JSONPath")
 	ErrInvalidProperties = errors.New("statem invalid properties")
+	ErrPropertyNotFound  = errors.New("property not found")
 )
 
 type StateManager interface {

@@ -408,6 +408,11 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 		log.Error("query entity configs", logger.EntityID(in.Id), zap.Error(err))
 	}
 
+	configs := make(map[string]constraint.Config)
+	for key, cfg := range entity.Configs {
+		configs[key] = cfg
+	}
+
 	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "query entity configs")
 }

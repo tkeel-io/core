@@ -353,7 +353,11 @@ func (m *EntityManager) RemoveConfigs(ctx context.Context, en *statem.Base, prop
 // QueryConfigs query entity configs.
 func (m *EntityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
 	base, err = m.getEntityFromState(ctx, en)
-	return base, errors.Wrap(err, "remove entity configs")
+	baseEntity := base.Duplicate()
+	for _, propertyID := range propertyIDs {
+		baseEntity.Configs[propertyID] = base.Configs[propertyID]
+	}
+	return &baseEntity, errors.Wrap(err, "remove entity configs")
 }
 
 func checkTQLs(en *statem.Base) error {

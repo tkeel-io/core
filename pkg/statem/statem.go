@@ -89,6 +89,22 @@ func (b *Base) Copy() Base {
 	return *bb
 }
 
+func (b *Base) Duplicate() Base {
+	bb := Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
+	}
+
+	bb.Mappers = append(bb.Mappers, b.Mappers...)
+	return bb
+}
+
 // statem state marchins.
 type statem struct {
 	Base
@@ -531,11 +547,14 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
 	if !strings.ContainsAny(propertyKey, ".[") {
+		if _, has := s.KValues[propertyKey]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
 		return s.KValues[propertyKey], nil
 	}
 
-	arr := strings.SplitN(propertyKey, ".", 2)
 	// patch property.
+	arr := strings.SplitN(propertyKey, ".", 2)
 	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
 	return res, errors.Wrap(err, "get patch failed")
 }

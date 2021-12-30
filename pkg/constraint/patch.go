@@ -119,7 +119,6 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 			}
 			return JSONNode(collect.GetRaw()), collect.GetError()
 		}
-
 		return destNode, ErrEmptyParam
 	}
 	return destNode, ErrInvalidNodeType
