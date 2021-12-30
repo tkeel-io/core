@@ -48,6 +48,7 @@ var (
 	errInvalidMapperOp   = errors.New("invalid mapper operator")
 	errInvalidJSONPath   = errors.New("invalid JSONPath")
 	ErrInvalidProperties = errors.New("statem invalid properties")
+	ErrPropertyNotFound  = errors.New("property not found")
 )
 
 type StateManager interface {
@@ -58,6 +59,9 @@ type StateManager interface {
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
 	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
+	SetConfigs(context.Context, *Base) error
+	AppendConfigs(context.Context, *Base) error
+	RemoveConfigs(context.Context, *Base, []string) error
 }
 
 type StateMarchiner interface {
@@ -71,10 +75,14 @@ type StateMarchiner interface {
 	SetStatus(Status)
 	// GetStatus returns state-marchine status.
 	GetStatus() Status
-	// SetConfig set configs.
-	SetConfig(map[string]constraint.Config) error
-	// load actor environments.
-	LoadEnvironments(env EnvDescription)
+	// SetConfig set entity configs.
+	SetConfigs(map[string]constraint.Config) error
+	// AppendConfig append entity property config.
+	AppendConfigs(map[string]constraint.Config) error
+	// RemoveConfig remove entity property configs.
+	RemoveConfigs(propertyIDs []string) error
+	// LoadEnvironments load environments.
+	LoadEnvironments(EnvDescription)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.

@@ -80,7 +80,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 			// TODO: 终止本次写入.
 		} else if val, err = constraint.ExecData(val, ct); nil != err {
 			// TODO: 终止本次写入.
-		} else {
+		} else if nil == val {
 			flushData[JSONPath] = val.Value()
 			continue
 		}

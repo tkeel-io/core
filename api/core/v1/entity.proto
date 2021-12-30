@@ -139,14 +139,63 @@ service Entity {
             }
           };
 	};
-    rpc SetEntityConfigs(SetEntityConfigRequest) returns (EntityResponse) {
+    rpc SetConfigs(SetConfigsRequest) returns (EntityResponse) {
+        	option (google.api.http) = {
+			post : "/entities/{id}/configs"
+			body: "configs"
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "set entity configs.";
+            operation_id: "SetConfigs";
+            tags: "Entity";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+        };
+    };
+    rpc AppendConfigs(AppendConfigsRequest) returns (EntityResponse) {
         	option (google.api.http) = {
 			put : "/entities/{id}/configs"
 			body: "configs"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "Config entity";
-            operation_id: "ConfigEntity";
+            summary: "append entity configs";
+            operation_id: "AppendConfigs";
+            tags: "Entity";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
+    };
+    rpc RemoveConfigs(RemoveConfigsRequest) returns (EntityResponse) {
+        	option (google.api.http) = {
+			delete : "/entities/{id}/configs"
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "remove entity configs";
+            operation_id: "RemoveConfigs";
+            tags: "Entity";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
+    };
+    rpc QueryConfigs(QueryConfigsRequest) returns (EntityResponse) {
+        	option (google.api.http) = {
+			get : "/entities/{id}/configs"
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "query entity configs";
+            operation_id: "QueryConfigs";
             tags: "Entity";
             responses: {
               key: "200"
@@ -158,7 +207,7 @@ service Entity {
     };
     rpc GetEntityProps(GetEntityPropsRequest) returns (EntityResponse) {
         	option (google.api.http) = {
-			get : "/entities/{id}/properties" 
+			get : "/entities/{id}/properties"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "Get Entity Properties";
@@ -282,9 +331,36 @@ message ListEntityResponse {
 
 message PropertyConfig {}
 
-message SetEntityConfigRequest {
+message SetConfigsRequest {
     string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "configs"}];
+}
+
+
+
+message AppendConfigsRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "property configs"}];
+}
+
+message RemoveConfigsRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string property_ids = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property ids"}];
+}
+
+message QueryConfigsRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+    string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
     string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
     string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-    google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "configs"}];
+    string property_ids = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property ids"}];
 }

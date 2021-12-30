@@ -98,7 +98,10 @@ func (b *Base) DuplicateExpectValue() Base {
 		Source:   b.Source,
 		Version:  b.Version,
 		LastTime: b.LastTime,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
 	}
+
 	cp.Mappers = append(cp.Mappers, b.Mappers...)
 	return cp
 }
@@ -202,7 +205,6 @@ func (s *statem) SetStatus(status Status) {
 }
 
 func (s *statem) LoadEnvironments(env EnvDescription) {
-	log.Info("load environments=====", logger.EntityID(s.ID))
 	for _, m := range env.Mappers {
 		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
@@ -215,23 +217,71 @@ func (s *statem) GetManager() StateManager {
 	return s.stateManager
 }
 
-func (s *statem) SetConfig(configs map[string]constraint.Config) error {
-	for k, c := range configs {
-		s.Configs[k] = c
-		if ct := constraint.NewConstraintsFrom(c); nil != ct {
+// SetConfigs set entity configs.
+func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
+	// reset state marchine configs.
+	s.Configs = make(map[string]constraint.Config)
+	s.constraints = make(map[string]*constraint.Constraint)
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
 			s.constraints[ct.ID] = ct
 			// generate search indexes.
-			searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch)
-			if len(searchIndexes) > 0 {
-				s.searchConstraints =
-					SliceAppend(s.searchConstraints, searchIndexes)
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
 			}
 			// generate time-series indexes.
-			tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries)
-			if len(tseriesIndexes) > 0 {
-				s.tseriesConstraints =
-					SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
+		}
+	}
+	return nil
+}
+
+// AppendConfigs append entity configs.
+func (s *statem) AppendConfigs(configs map[string]constraint.Config) error {
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+	return nil
+}
+
+// RemoveConfigs remove entity property config.
+func (s *statem) RemoveConfigs(propertyIDs []string) error {
+	// delete property config.
+	for _, propertyID := range propertyIDs {
+		delete(s.Configs, propertyID)
+		delete(s.constraints, propertyID)
+	}
+
+	// reset indexes.
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	// reparse property configs.
+	for _, ct := range s.constraints {
+		// generate search indexes.
+		if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+			s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+		}
+		// generate time-series indexes.
+		if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+			s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
 		}
 	}
 	return nil
@@ -507,11 +557,14 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
 	if !strings.ContainsAny(propertyKey, ".[") {
+		if _, has := s.KValues[propertyKey]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
 		return s.KValues[propertyKey], nil
 	}
 
-	arr := strings.SplitN(propertyKey, ".", 2)
 	// patch property.
+	arr := strings.SplitN(propertyKey, ".", 2)
 	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
 	return res, errors.Wrap(err, "get patch failed")
 }

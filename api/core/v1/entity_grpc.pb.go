@@ -26,7 +26,10 @@ type EntityClient interface {
 	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
 	AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error)
-	SetEntityConfigs(ctx context.Context, in *SetEntityConfigRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	SetConfigs(ctx context.Context, in *SetConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	AppendConfigs(ctx context.Context, in *AppendConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	RemoveConfigs(ctx context.Context, in *RemoveConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	QueryConfigs(ctx context.Context, in *QueryConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	GetEntityProps(ctx context.Context, in *GetEntityPropsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 }
 
@@ -110,9 +113,36 @@ func (c *entityClient) AppendMapper(ctx context.Context, in *AppendMapperRequest
 	return out, nil
 }
 
-func (c *entityClient) SetEntityConfigs(ctx context.Context, in *SetEntityConfigRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+func (c *entityClient) SetConfigs(ctx context.Context, in *SetConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
 	out := new(EntityResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/SetEntityConfigs", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/SetConfigs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) AppendConfigs(ctx context.Context, in *AppendConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/AppendConfigs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) RemoveConfigs(ctx context.Context, in *RemoveConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/RemoveConfigs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) QueryConfigs(ctx context.Context, in *QueryConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/QueryConfigs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +170,10 @@ type EntityServer interface {
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
 	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
-	SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error)
+	SetConfigs(context.Context, *SetConfigsRequest) (*EntityResponse, error)
+	AppendConfigs(context.Context, *AppendConfigsRequest) (*EntityResponse, error)
+	RemoveConfigs(context.Context, *RemoveConfigsRequest) (*EntityResponse, error)
+	QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error)
 	GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
 }
@@ -173,8 +206,17 @@ func (UnimplementedEntityServer) ListEntity(context.Context, *ListEntityRequest)
 func (UnimplementedEntityServer) AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppendMapper not implemented")
 }
-func (UnimplementedEntityServer) SetEntityConfigs(context.Context, *SetEntityConfigRequest) (*EntityResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetEntityConfigs not implemented")
+func (UnimplementedEntityServer) SetConfigs(context.Context, *SetConfigsRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetConfigs not implemented")
+}
+func (UnimplementedEntityServer) AppendConfigs(context.Context, *AppendConfigsRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendConfigs not implemented")
+}
+func (UnimplementedEntityServer) RemoveConfigs(context.Context, *RemoveConfigsRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveConfigs not implemented")
+}
+func (UnimplementedEntityServer) QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryConfigs not implemented")
 }
 func (UnimplementedEntityServer) GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntityProps not implemented")
@@ -336,20 +378,74 @@ func _Entity_AppendMapper_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Entity_SetEntityConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetEntityConfigRequest)
+func _Entity_SetConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetConfigsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(EntityServer).SetEntityConfigs(ctx, in)
+		return srv.(EntityServer).SetConfigs(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.core.v1.Entity/SetEntityConfigs",
+		FullMethod: "/api.core.v1.Entity/SetConfigs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EntityServer).SetEntityConfigs(ctx, req.(*SetEntityConfigRequest))
+		return srv.(EntityServer).SetConfigs(ctx, req.(*SetConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_AppendConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).AppendConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/AppendConfigs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).AppendConfigs(ctx, req.(*AppendConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_RemoveConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).RemoveConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/RemoveConfigs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).RemoveConfigs(ctx, req.(*RemoveConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_QueryConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).QueryConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/QueryConfigs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).QueryConfigs(ctx, req.(*QueryConfigsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -412,8 +508,20 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Entity_AppendMapper_Handler,
 		},
 		{
-			MethodName: "SetEntityConfigs",
-			Handler:    _Entity_SetEntityConfigs_Handler,
+			MethodName: "SetConfigs",
+			Handler:    _Entity_SetConfigs_Handler,
+		},
+		{
+			MethodName: "AppendConfigs",
+			Handler:    _Entity_AppendConfigs_Handler,
+		},
+		{
+			MethodName: "RemoveConfigs",
+			Handler:    _Entity_RemoveConfigs_Handler,
+		},
+		{
+			MethodName: "QueryConfigs",
+			Handler:    _Entity_QueryConfigs_Handler,
 		},
 		{
 			MethodName: "GetEntityProps",
