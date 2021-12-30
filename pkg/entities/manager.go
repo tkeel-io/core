@@ -352,7 +352,8 @@ func (m *EntityManager) RemoveConfigs(ctx context.Context, en *statem.Base, prop
 
 // QueryConfigs query entity configs.
 func (m *EntityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
-	panic("unimplement me")
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "remove entity configs")
 }
 
 func checkTQLs(en *statem.Base) error {
