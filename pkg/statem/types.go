@@ -71,8 +71,12 @@ type StateMarchiner interface {
 	SetStatus(Status)
 	// GetStatus returns state-marchine status.
 	GetStatus() Status
-	// SetConfig set configs.
-	SetConfig(map[string]constraint.Config) error
+	// SetConfig set entity configs.
+	SetConfigs(map[string]constraint.Config) error
+	// AppendConfig append entity property config.
+	AppendConfigs(map[string]constraint.Config) error
+	// RemoveConfig remove entity property configs.
+	RemoveConfigs(propertyIDs []string) error
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.

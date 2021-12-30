@@ -240,17 +240,6 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 	return base, errors.Wrap(err, "patch entity properties")
 }
 
-// SetProperties set properties into entity.
-func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	if err = m.stateManager.SetConfigs(ctx, en); nil != err {
-		log.Error("set entity configurations", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "set entity configurations")
-	}
-
-	base, err = m.getEntityFromState(ctx, en)
-	return base, errors.Wrap(err, "set entity configs")
-}
-
 // AppendMapper append a mapper into entity.
 func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. 判断实体是否存在.
@@ -326,6 +315,44 @@ func (m *EntityManager) CheckSubscription(ctx context.Context, en *statem.Base) 
 	}
 
 	return nil
+}
+
+// SetProperties set properties into entity.
+func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if err = m.stateManager.SetConfigs(ctx, en); nil != err {
+		log.Error("set entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "set entity configs")
+	}
+
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "set entity configs")
+}
+
+// AppendConfigs append entity configs.
+func (m *EntityManager) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+	if err = m.stateManager.AppendConfigs(ctx, en); nil != err {
+		log.Error("append entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "append entity configs")
+	}
+
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "append entity configs")
+}
+
+// RemoveConfigs remove entity configs.
+func (m *EntityManager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
+	if err = m.stateManager.RemoveConfigs(ctx, en, propertyIDs); nil != err {
+		log.Error("remove entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "remove entity configs")
+	}
+
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "remove entity configs")
+}
+
+// QueryConfigs query entity configs.
+func (m *EntityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
+	panic("unimplement me")
 }
 
 func checkTQLs(en *statem.Base) error {

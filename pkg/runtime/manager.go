@@ -375,34 +375,78 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 	return nil
 }
 
-// SetProperties set properties into entity.
+// SetConfigs set entity configs.
 func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
-	if en.ID == "" {
-		en.ID = uuid()
-	}
-
 	channelID, stateMarchine := m.getStateMarchine("", en.ID)
 	if nil == stateMarchine {
 		var err error
-		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en); nil != err {
-			log.Error("dispatching message", logger.EntityID(en.ID), zap.String("channel", channelID), zap.Any("entity", en))
-			return errors.Wrap(err, "runtime.setconfigs")
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+			log.Error("set configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "set entity configs")
 		}
 	}
 
-	err := stateMarchine.SetConfig(en.Configs)
-	return errors.Wrap(err, "runtime.setconfigs")
+	err := stateMarchine.SetConfigs(en.Configs)
+	return errors.Wrap(err, "set entity configs")
 }
 
-func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
-	sm, err := m.loadOrCreate(ctx, "", base)
-	if nil != err {
-		return nil, errors.Wrap(err, "runtime.delete state marchine")
+// AppendConfigs append entity configs.
+func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
+	channelID, stateMarchine := m.getStateMarchine("", en.ID)
+	if nil == stateMarchine {
+		var err error
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+			log.Error("append configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "append entity configs")
+		}
 	}
-	sm.SetStatus(statem.SMStatusDeleted)
-	return sm.GetBase(), nil
+
+	err := stateMarchine.SetConfigs(en.Configs)
+	return errors.Wrap(err, "append entity configs")
 }
 
+// RemoveConfigs remove entity configs.
+func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) error {
+	channelID, stateMarchine := m.getStateMarchine("", en.ID)
+	if nil == stateMarchine {
+		var err error
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+			log.Error("remove configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "remove entity configs")
+		}
+	}
+
+	err := stateMarchine.RemoveConfigs(propertyIDs)
+	return errors.Wrap(err, "remove entity configs")
+}
+
+// DeleteStateMarchin delete runtime.Entity.
+func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
+	var err error
+	channelID, stateMarchine := m.getStateMarchine("", base.ID)
+	if nil == stateMarchine {
+		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, base); nil != err {
+			log.Error("remove configs",
+				logger.EntityID(base.ID),
+				zap.Any("entity", base),
+				zap.String("channel", channelID))
+			return nil, errors.Wrap(err, "remove entity configs")
+		}
+	}
+	stateMarchine.SetStatus(statem.SMStatusDeleted)
+	return stateMarchine.GetBase(), nil
+}
+
+// CleanEntity clean entity.
 func (m *Manager) CleanEntity(ctx context.Context, id string) error {
 	channelID, sm := m.getStateMarchine("", id)
 	if nil != sm {

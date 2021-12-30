@@ -191,10 +191,11 @@ func (s *statem) GetManager() StateManager {
 	return s.stateManager
 }
 
-func (s *statem) SetConfig(configs map[string]constraint.Config) error {
-	for k, c := range configs {
-		s.Configs[k] = c
-		if ct := constraint.NewConstraintsFrom(c); nil != ct {
+// SetConfigs set entity configs.
+func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
 			s.constraints[ct.ID] = ct
 			// generate search indexes.
 			searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch)
@@ -209,6 +210,38 @@ func (s *statem) SetConfig(configs map[string]constraint.Config) error {
 					SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
 		}
+	}
+	return nil
+}
+
+// AppendConfigs append entity configs.
+func (s *statem) AppendConfigs(configs map[string]constraint.Config) error {
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch)
+			if len(searchIndexes) > 0 {
+				s.searchConstraints =
+					SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries)
+			if len(tseriesIndexes) > 0 {
+				s.tseriesConstraints =
+					SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+	return nil
+}
+
+// RemoveConfigs remove entity property config.
+func (s *statem) RemoveConfigs(propertyIDs []string) error {
+	for _, propertyID := range propertyIDs {
+		delete(s.Configs, propertyID)
+		// TODO: 删除解析后的.
 	}
 	return nil
 }

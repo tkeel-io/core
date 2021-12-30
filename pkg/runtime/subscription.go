@@ -134,8 +134,22 @@ func (s *subscription) GetManager() statem.StateManager {
 	return s.stateMarchine.GetManager()
 }
 
-func (s *subscription) SetConfig(configs map[string]constraint.Config) error {
-	return errors.Wrap(s.stateMarchine.SetConfig(configs), "subscription.SetConfig failed")
+// SetConfig set entity configs.
+func (s *subscription) SetConfigs(configs map[string]constraint.Config) error {
+	err := s.stateMarchine.SetConfigs(configs)
+	return errors.Wrap(err, "set subscription configs")
+}
+
+// AppendConfig append entity property config.
+func (s *subscription) AppendConfigs(configs map[string]constraint.Config) error {
+	err := s.stateMarchine.AppendConfigs(configs)
+	return errors.Wrap(err, "append subscription configs")
+}
+
+// RemoveConfig remove entity property configs.
+func (s *subscription) RemoveConfigs(propertyIDs []string) error {
+	err := s.stateMarchine.RemoveConfigs(propertyIDs)
+	return errors.Wrap(err, "remove subscription configs")
 }
 
 // OnMessage recv message from pubsub.
