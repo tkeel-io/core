@@ -11,11 +11,11 @@ func TestEnvironment(t *testing.T) {
 
 	infos := env.LoadMapper([]EtcdPair{
 		{
-			Key:   "core.BASIC.mapper.device123.mapper-from-device234",
+			Key:   "core.mappe.BASIC.device123.mapper-from-device234",
 			Value: []byte("insert into device123 select device234.temp as temp"),
 		},
 		{
-			Key:   "core.SUBSCRIPTION.mapper.sub123.mapper-from-device234",
+			Key:   "core.mapper.SUBSCRIPTION.sub123.mapper-from-device234",
 			Value: []byte("insert into sub123 select device234.temp"),
 		},
 	})

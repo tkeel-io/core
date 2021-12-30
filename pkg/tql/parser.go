@@ -112,7 +112,6 @@ func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
 
 // ExitTargetEntity is called when production entity is exited.
 func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
-	log.Info("ExitTargetEntity", c.GetText())
 	if text := c.GetText(); strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
 		l.pushT(arr[0])
@@ -263,7 +262,7 @@ func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
 	}
 
-	log.Info("parse tql", zap.Any("result", tqlConfig))
+	log.Debug("result of TQL", zap.Any("result", tqlConfig))
 	return tqlConfig, nil
 }
 

@@ -73,6 +73,8 @@ type StateMarchiner interface {
 	GetStatus() Status
 	// SetConfig set configs.
 	SetConfig(map[string]constraint.Config) error
+	// load actor environments.
+	LoadEnvironments(env EnvDescription)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.
@@ -81,6 +83,11 @@ type StateMarchiner interface {
 	GetManager() StateManager
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
+}
+
+type EnvDescription struct {
+	Mappers   []mapper.Mapper
+	Tentacles []mapper.Tentacler
 }
 
 type Flusher interface {

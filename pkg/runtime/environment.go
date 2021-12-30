@@ -21,6 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
@@ -34,18 +35,17 @@ type EtcdPair struct {
 	Value []byte
 }
 
-// core.type.mapper.entityID.name
-
 // cache for state marchine.
 type MapperCache struct {
-	mappers       map[string]mapper.Mapper // map[mapperID]Mapper.
-	tentacles     []mapper.Tentacler       // tentacle set.
-	cleanHandlers map[string]CleanHandler  // map[mapperID]Handler.
+	mappers       map[string]mapper.Mapper    // map[mapperID]Mapper.
+	tentacles     map[string]mapper.Tentacler // tentacle set.
+	cleanHandlers map[string]CleanHandler     // map[mapperID]Handler.
 }
 
 func newMapperCache() *MapperCache {
 	return &MapperCache{
 		mappers:       make(map[string]mapper.Mapper),
+		tentacles:     make(map[string]mapper.Tentacler),
 		cleanHandlers: make(map[string]CleanHandler),
 	}
 }
@@ -62,8 +62,34 @@ func NewEnv() *Environment {
 
 func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleIDs []string) CleanHandler {
 	return func() []string {
-		return []string{}
+		var targets []string
+		mCache, ok := env.mapperCaches[stateID]
+		if !ok {
+			return []string{}
+		}
+
+		delete(mCache.mappers, mapperID)
+		for _, id := range tentacleIDs {
+			if tentacle, ok := mCache.tentacles[id]; ok {
+				targets = append(targets, tentacle.TargetID())
+				delete(mCache.tentacles, id)
+			}
+		}
+		return targets
 	}
+}
+
+func (env *Environment) GetEnvBy(stateID string) statem.EnvDescription {
+	var envDesc statem.EnvDescription
+	if mCache, has := env.mapperCaches[stateID]; has {
+		for _, m := range mCache.mappers {
+			envDesc.Mappers = append(envDesc.Mappers, m.Copy())
+		}
+		for _, tentacle := range mCache.tentacles {
+			envDesc.Tentacles = append(envDesc.Tentacles, tentacle.Copy())
+		}
+	}
+	return envDesc
 }
 
 func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
@@ -73,6 +99,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		env.mapperCaches[targetID] = newMapperCache()
 	}
 
+	tentacleIDs := make([]string, 0)
 	mCache := env.mapperCaches[targetID]
 	// check mapper exists in cache.
 	if _, exists := mCache.mappers[m.ID()]; exists {
@@ -84,16 +111,19 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		switch tentacle.Type() {
 		case mapper.TentacleTypeEntity:
 			effects = append(effects, tentacle.TargetID())
-			env.addTentacle(tentacle.TargetID(), mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items()))
+			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
+			env.addTentacle(tentacle.TargetID(), tentacle)
 		case mapper.TentacleTypeMapper:
 			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMarchine.
-			mCache.tentacles = append(mCache.tentacles, tentacle)
+			mCache.tentacles[tentacle.ID()] = tentacle
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
 		}
+		tentacleIDs = append(tentacleIDs, tentacle.ID())
 	}
 
-	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), []string{})
+	mCache.mappers[m.ID()] = m
+	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
 
 	return effects
 }
@@ -106,8 +136,11 @@ func (env *Environment) removeMapper(stateID, mapperID string) []string {
 	}
 
 	// clean mapper.
-	mCache := env.mapperCaches[stateID]
-	delete(mCache.mappers, mapperID)
+	mCache, ok := env.mapperCaches[stateID]
+	if !ok {
+		return []string{}
+	}
+
 	return mCache.cleanHandlers[mapperID]()
 }
 
@@ -117,7 +150,7 @@ func (env *Environment) addTentacle(stateID string, tentacle mapper.Tentacler) {
 	}
 
 	mCache := env.mapperCaches[stateID]
-	mCache.tentacles = append(mCache.tentacles, tentacle)
+	mCache.tentacles[tentacle.ID()] = tentacle
 }
 
 func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
@@ -126,14 +159,14 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 	var loadEntities []KeyInfo
 
 	for _, pair := range pairs {
-		log.Info("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+		log.Debug("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
 			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			continue
 		}
 
-		mapperInstence, err := mapper.NewMapper(pair.Key, string(pair.Value))
-		if nil != err {
+		var mapperInstence mapper.Mapper
+		if mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value)); nil != err {
 			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			continue
 		}
@@ -159,7 +192,8 @@ func parseTQLKey(key string) (KeyInfo, error) {
 		return KeyInfo{}, ErrInvalidTQLKey
 	}
 
-	return KeyInfo{Type: arr[1], Name: arr[4], EntityID: arr[3]}, nil
+	// core.mapper.{type}.{entityID}.{name}
+	return KeyInfo{Type: arr[2], Name: arr[4], EntityID: arr[3]}, nil
 }
 
 func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) ([]string, error) {
@@ -171,7 +205,7 @@ func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair
 	switch op {
 	case mvccpb.PUT:
 		var mapperInstence mapper.Mapper
-		log.Info("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		log.Debug("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
 		mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value))
 		if nil != err {
 			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
@@ -180,7 +214,7 @@ func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair
 
 		effects = env.addMapper(mapperInstence)
 	case mvccpb.DELETE:
-		log.Info("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		log.Debug("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
 			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 			return effects, errors.Wrap(err, "mapper changed")

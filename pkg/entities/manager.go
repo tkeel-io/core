@@ -24,6 +24,7 @@ import (
 	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
+	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
@@ -125,8 +126,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 	tid, _ := ctx.Value(TemplateEntityID{}).(string)
 	if tid != "" {
 		var tBase *statem.Base
-		tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid})
-		if nil != err {
+		if tBase, err = m.getEntityFromState(ctx, &statem.Base{ID: tid}); nil != err {
 			log.Error("create entity, load template entity", zap.Error(err), logger.EntityID(base.ID))
 			return nil, errors.Wrap(err, "create entity, load template entity")
 		}
@@ -144,7 +144,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	log.Info("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
+	log.Debug("create entity state", logger.EntityID(base.ID), zap.String("template", tid), zap.String("state", string(bytes)))
 
 	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
 	msgCtx := statem.MessageContext{
@@ -169,13 +169,18 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
 		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from es state")
+		if elastic.IsNotFound(err) {
+			return nil, errors.Wrap(err, "delete entity from es state")
+		}
 	}
 
 	// 2. delete from runtime.
 	if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
-		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "delete entity from runtime")
+		log.Error("delete entity runtime", zap.Error(err), logger.EntityID(en.ID))
+		if base, err = m.getEntityFromState(ctx, en); nil != err {
+			log.Error("get entity", zap.Error(err), logger.EntityID(en.ID))
+			return nil, errors.Wrap(err, "delete entity from runtime")
+		}
 	}
 
 	// 3. delete from state.

@@ -40,5 +40,6 @@ func DecodeBase(data []byte) (*Base, error) {
 	default:
 		return nil, ErrInvalidProperties
 	}
+
 	return &base, nil
 }
