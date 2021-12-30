@@ -125,14 +125,16 @@ func (m *Manager) init() error {
 		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
 	}
 
+	stateIDs := make([]string, 0)
 	loadEntities := m.actorEnv.LoadMapper(descs)
 	for _, info := range loadEntities {
 		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
 			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
+		stateIDs = append(stateIDs, info.EntityID)
 	}
-
+	m.reloadActor(stateIDs)
 	return nil
 }
 
@@ -143,18 +145,35 @@ func (m *Manager) watchResource() error {
 		return errors.Wrap(err, "create tql watcher failed")
 	}
 
+	log.Info("watch resource")
 	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
 		// on changed.
 		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
-		for _, stateID := range effects {
-			m.reloadActor(stateID)
-		}
+		m.reloadActor(effects)
 	})
 
 	return nil
 }
 
-func (m *Manager) reloadActor(stateID string) error {
+func (m *Manager) isThisNode() bool {
+	return true
+}
+
+func (m *Manager) reloadActor(stateIDs []string) error {
+	// 判断 actor 是否在当前节点.
+	if m.isThisNode() {
+		var err error
+		for _, stateID := range stateIDs {
+			var stateMarchine statem.StateMarchiner
+			base := &statem.Base{ID: stateID, Type: StateMarchineTypeBasic}
+			if _, stateMarchine = m.getStateMarchine("", stateID); nil != stateMarchine {
+				log.Debug("load state marchine @ runtime.", logger.EntityID(stateID))
+			} else if stateMarchine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+				continue
+			}
+		}
+	}
 	return nil
 }
 
@@ -177,7 +196,7 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
-				log.Info("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
+				log.Debug("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
 				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
 				if nil == stateMarchine {
 					var err error
@@ -187,7 +206,7 @@ func (m *Manager) Start() error {
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
 					}
-					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en)
+					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
@@ -255,40 +274,39 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 }
 
 func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
-	_, err := m.loadOrCreate(ctx, "", &statem.Base{
-		ID:   id,
-		Type: typ,
-	})
+	_, err := m.loadOrCreate(ctx, "", false, &statem.Base{ID: id, Type: typ})
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
+	var en *statem.Base
 	var res *dapr.StateItem
-	switch base.Type {
-	case StateMarchineTypeSubscription:
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			// TODO: 订阅不存在，所以应该通知被订阅方取消订阅.
-			return nil, errors.Wrap(err, "load subscription")
-		} else if base, err = statem.DecodeBase(res.Value); nil != err {
-			return nil, errors.Wrap(err, "load subscription")
-		}
-		sm, err = newSubscription(ctx, m, base)
-	default:
-		// default base entity type.
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
-		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
-			base = en
-			log.Info("load actor", logger.EntityID(base.ID), zap.String("state", string(res.Value)))
-		} else {
-			log.Error("load or create state",
-				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(errr))
-		}
-		sm, err = statem.NewState(ctx, m, base, nil)
+	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)
+
+	if nil != err && !flagCreate {
+		return nil, errors.Wrap(err, "load state marchine")
+	} else if en, err = statem.DecodeBase(res.Value); nil == err {
+		base = en // decode value to statem.Base.
+	} else if !flagCreate {
+		return nil, errors.Wrap(err, "load state marchine, state not found")
 	}
 
-	if nil != err {
-		return nil, errors.Wrap(err, "create state runtime")
+	log.Debug("load or create state marchiner",
+		logger.EntityID(base.ID),
+		zap.String("type", base.Type),
+		zap.String("owner", base.Owner),
+		zap.String("source", base.Source))
+
+	switch base.Type {
+	case StateMarchineTypeSubscription:
+		if sm, err = newSubscription(ctx, m, base); nil != err {
+			return nil, errors.Wrap(err, "load subscription")
+		}
+	default:
+		// default base entity type.
+		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
+			return nil, errors.Wrap(err, "load state marchine")
+		}
 	}
 
 	if channelID == "" {
@@ -385,7 +403,7 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 
 	// load state marchine.
 	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("set configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -413,7 +431,7 @@ func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 
 	// load state marchine.
 	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("append configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -441,7 +459,7 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 
 	// load state marchine.
 	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, en); nil != err {
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("remove configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -464,7 +482,7 @@ func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*s
 	var err error
 	channelID, stateMarchine := m.getStateMarchine("", base.ID)
 	if nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, base); nil != err {
+		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
 			log.Error("remove configs",
 				logger.EntityID(base.ID),
 				zap.Any("entity", base),

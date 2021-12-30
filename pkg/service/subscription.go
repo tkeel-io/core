@@ -89,16 +89,17 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = map[string]constraint.Node{
-		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
-		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		runtime.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
-		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		runtime.StateMarchineFieldType:      constraint.StringNode(entity.Type),
+		runtime.StateMarchineFieldOwner:     constraint.StringNode(entity.Owner),
+		runtime.StateMarchineFieldSource:    constraint.StringNode(entity.Source),
 		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
+		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
+		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
 		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
-	parseHeaderFrom(ctx, entity)
 	if err = s.entityManager.CheckSubscription(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
@@ -136,7 +137,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.StateMarchineTypeSubscription
-
+	parseHeaderFrom(ctx, entity)
 	entity.KValues = map[string]constraint.Node{
 		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
 		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -174,7 +175,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	// delete entity.
+	parseHeaderFrom(ctx, entity)
 	if _, err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
 		log.Error("delete subscription", zap.Error(err), logger.EntityID(req.Id))
 		return
@@ -190,7 +191,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	// delete entity.
+	parseHeaderFrom(ctx, entity)
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
 		log.Error("get subscription", zap.Error(err), logger.EntityID(req.Id))
 		return

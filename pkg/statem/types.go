@@ -59,6 +59,9 @@ type StateManager interface {
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
 	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
+	SetConfigs(context.Context, *Base) error
+	AppendConfigs(context.Context, *Base) error
+	RemoveConfigs(context.Context, *Base, []string) error
 }
 
 type StateMarchiner interface {
@@ -78,6 +81,8 @@ type StateMarchiner interface {
 	AppendConfigs(map[string]constraint.Config) error
 	// RemoveConfig remove entity property configs.
 	RemoveConfigs(propertyIDs []string) error
+	// LoadEnvironments load environments.
+	LoadEnvironments(EnvDescription)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.
@@ -86,6 +91,11 @@ type StateMarchiner interface {
 	GetManager() StateManager
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
+}
+
+type EnvDescription struct {
+	Mappers   []mapper.Mapper
+	Tentacles []mapper.Tentacler
 }
 
 type Flusher interface {

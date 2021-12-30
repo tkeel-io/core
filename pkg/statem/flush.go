@@ -62,7 +62,6 @@ func (s *statem) flush(ctx context.Context) error {
 }
 
 func (s *statem) flushState(ctx context.Context) error {
-	log.Info("show actor", logger.EntityID(s.GetID()), zap.Any("properties", s.GetBase().KValues))
 	bytes, _ := EncodeBase(&s.Base)
 	log.Debug("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
 	s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
