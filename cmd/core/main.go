@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/panjf2000/ants/v2"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
@@ -47,6 +49,7 @@ var (
 	GRPCAddr      string
 	EtcdBrokers   string
 	SearchBrokers string
+	showVersion   bool
 )
 
 func init() {
@@ -55,10 +58,23 @@ func init() {
 	flag.StringVar(&GRPCAddr, "grpc_addr", ":31233", "grpc listen address.")
 	flag.StringVar(&EtcdBrokers, "etcd_brokers", "http://localhost:2379", "etcd brokers address.")
 	flag.StringVar(&SearchBrokers, "search_brokers", "http://localhost:9200", "search brokers address.")
+	flag.BoolVar(&showVersion, "version", false, "show core version")
 }
 
-func main() {
+func main() { //nolint
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("Version: %s\n", version.Version)        //nolint
+		fmt.Printf("Build Date: %s\n", version.BuildDate)   //nolint
+		fmt.Printf("Git Branch: %s\n", version.GitBranch)   //nolint
+		fmt.Printf("Git Commit: %s\n", version.GitCommit)   //nolint
+		fmt.Printf("Git Version: %s\n", version.GitVersion) //nolint
+		fmt.Printf("Go Version: %s\n", version.GoVersion)   //nolint
+		fmt.Printf("OS / Arch: %s\n", version.OsArch)       //nolint
+		return
+	}
+
 	// load configuration.
 	config.InitConfig(cfgFile)
 	config.GetConfig().Etcd.Address = strings.Split(EtcdBrokers, ",")
