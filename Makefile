@@ -2,27 +2,24 @@
 
 GOCMD = GO111MODULE=on go
 
-VERSION := $(shell grep "const Version " cmd/root.go | sed -E 's/.*"(.+)"$$/\1/')
-GIT_COMMIT=$(shell git rev-parse HEAD)
-GIT_DIRTY=$(shell test -n "`git status --porcelain`" && echo "+CHANGES" || true)
-BUILD_DATE=$(shell date '+%Y-%m-%d-%H:%M:%S')
-GORUN = $(GOCMD) run -ldflags "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
-GOBUILD = $(GOCMD) build -ldflags "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
+
 GOTEST = $(GOCMD) test
 BINNAME = core
 
 export GO111MODULE ?= on
 export GOPROXY ?= https://proxy.golang.org
 export GOSUMDB ?= sum.golang.org
-GIT_COMMIT  = $(shell git rev-list -1 HEAD)
 GIT_VERSION = $(shell git describe --always --abbrev=7 --dirty)
+GIT_COMMIT=$(shell git rev-parse HEAD)
+GIT_BRANCH=$(shell git name-rev --name-only HEAD)
+BUILD_DATE=$(shell date '+%Y-%m-%d-%H:%M:%S')
 CGO			?= 0
 CLI_BINARY  = core
 
 ifdef REL_VERSION
-	CLI_VERSION := $(REL_VERSION)
+	CORE_VERSION := $(REL_VERSION)
 else
-	CLI_VERSION := edge
+	CORE_VERSION := edge
 endif
 
 ifdef API_VERSION
@@ -77,7 +74,7 @@ run:
 	@echo "---------------------------"
 	@echo "-         Run             -"
 	@echo "---------------------------"
-	@$(GORUN) cmd/core/main.go serve
+	@$(GOCMD) run cmd/core/main.go serve
 
 drun:
 	dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run cmd/core/main.go
@@ -91,7 +88,7 @@ BASE_PACKAGE_NAME := github.com/tkeel-io/core
 OUT_DIR := ./dist
 
 BINS_OUT_DIR := $(OUT_DIR)/$(GOOS)_$(GOARCH)/$(BUILDTYPE_DIR)
-LDFLAGS := "-X github.com/tkeel-io/core/cmd.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/tkeel-io/core/cmd/cmd.BuildDate=${BUILD_DATE}"
+LDFLAGS :="-X $(BASE_PACKAGE_NAME)/pkg/version.GitCommit=$(GIT_COMMIT) -X $(BASE_PACKAGE_NAME)/pkg/version.GitBranch=$(GIT_BRANCH) -X $(BASE_PACKAGE_NAME)/pkg/version.GitVersion=$(GIT_VERSION) -X $(BASE_PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_DATE) -X $(BASE_PACKAGE_NAME)/pkg/version.Version=$(CORE_VERSION)"
 
 INTERNAL_PROTO_FILES=$(shell find internal -name *.proto)
 API_PROTO_FILES=$(shell find api -name *.proto)
@@ -145,6 +142,7 @@ build:
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
+	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 	@echo "-----------Done------------"
 
 show:
@@ -182,9 +180,9 @@ else
 endif
 
 docker-build:
-	docker build -t tkeelio/core:0.2.0 .
+	docker build -t tkeelio/core:${CORE_VERSION} .
 docker-push:
-	docker push tkeelio/core:0.2.0
+	docker push tkeelio/core:${CORE_VERSION}
 
 ################################################################################
 # Target: lint                                                                 #
