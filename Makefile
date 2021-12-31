@@ -142,7 +142,6 @@ build:
 	@echo "-    builds completed!    -"
 	@echo "---------------------------"
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
-	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 	@echo "-----------Done------------"
 
 show:
