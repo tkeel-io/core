@@ -303,7 +303,7 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 
 func (h *EntityHTTPHandler) PatchConfigs(req *go_restful.Request, resp *go_restful.Response) {
 	in := PatchConfigsRequest{}
-	if err := transportHTTP.GetBody(req, &in.Data); err != nil {
+	if err := transportHTTP.GetBody(req, &in.Configs); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}

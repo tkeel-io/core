@@ -598,7 +598,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1PatchDatas",
+              "type": "object",
               "description": "property configs"
             }
           },
@@ -1398,35 +1398,6 @@
         },
         "reverse": {
           "type": "boolean"
-        }
-      }
-    },
-    "v1PatchData": {
-      "type": "object",
-      "properties": {
-        "path": {
-          "type": "string",
-          "description": "entity property path"
-        },
-        "operator": {
-          "type": "string",
-          "description": "operator"
-        },
-        "value": {
-          "type": "object",
-          "description": "operator value"
-        }
-      }
-    },
-    "v1PatchDatas": {
-      "type": "object",
-      "properties": {
-        "properties": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1PatchData"
-          },
-          "description": "path datas"
         }
       }
     },

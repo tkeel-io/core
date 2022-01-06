@@ -208,7 +208,7 @@ service Entity {
     rpc PatchConfigs(PatchConfigsRequest) returns (EntityResponse) {
       option (google.api.http) = {
 			post : "/entities/{id}/configs/patch"
-      body: "data"
+      body: "configs"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "patch entity configs";
@@ -389,5 +389,5 @@ message PatchConfigsRequest {
     string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
     string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
     string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    PatchDatas data = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "property configs"}];
+    google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "property configs"}];
 }

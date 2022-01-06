@@ -138,6 +138,9 @@ func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
 		pcfg, err := rootCfg.GetConfig(segs[1:])
 		return *pcfg, errors.Wrap(err, "prev config not found")
 	} else if len(segs) == 1 {
+		if _, ok := b.Configs[segs[0]]; !ok {
+			return cfg, ErrPropertyNotFound
+		}
 		return b.Configs[segs[0]], nil
 	}
 	return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "copy config")
