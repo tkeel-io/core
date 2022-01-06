@@ -106,6 +106,43 @@ func (b *Base) DuplicateExpectValue() Base {
 	return cp
 }
 
+func (b *Base) GetProperty(path string) (constraint.Node, error) {
+	if !strings.ContainsAny(path, ".[") {
+		if _, has := b.KValues[path]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
+		return b.KValues[path], nil
+	}
+
+	// patch copy property.
+	arr := strings.SplitN(path, ".", 2)
+	res, err := constraint.Patch(b.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+	return res, errors.Wrap(err, "patch copy")
+}
+
+func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
+	segs := strings.Split(strings.TrimSpace(path), ".")
+	if len(segs) > 1 {
+		// check path.
+		for _, seg := range segs {
+			if strings.TrimSpace(seg) == "" {
+				return cfg, constraint.ErrPatchPathInvalid
+			}
+		}
+
+		rootCfg, ok := b.Configs[segs[0]]
+		if !ok {
+			return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
+		}
+
+		pcfg, err := rootCfg.GetConfig(segs[1:])
+		return *pcfg, errors.Wrap(err, "prev config not found")
+	} else if len(segs) == 1 {
+		return b.Configs[segs[0]], nil
+	}
+	return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "copy config")
+}
+
 // statem state marchins.
 type statem struct {
 	Base
@@ -276,12 +313,17 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				fallthrough
 			case constraint.PatchOpReplace:
 				cfg, _ := pd.Value.(constraint.Config)
-				preCfg.AppendField(cfg)
+				if err = preCfg.AppendField(cfg); nil != err {
+					return errors.Wrap(err, "upsert state marchine configs")
+				}
 			case constraint.PatchOpRemove:
-				preCfg.RemoveField(segs[len(segs)-1])
+				if err = preCfg.RemoveField(segs[len(segs)-1]); nil != err {
+					return errors.Wrap(err, "remove state marchine configs")
+				}
+			case constraint.PatchOpCopy:
+				// TODO: 在这里处理的时候，sync-actor-loop, 以消息的形式，返回值是难处理的.
 			}
 		} else if len(segs) == 1 {
-			util.DebugInfo("patch configs", patchData)
 			switch pd.Operator {
 			case constraint.PatchOpAdd:
 				fallthrough

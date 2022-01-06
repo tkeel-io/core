@@ -442,6 +442,8 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 			}
 			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator, Value: cfgRet})
 		case constraint.PatchOpRemove:
+			fallthrough
+		case constraint.PatchOpCopy:
 			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator})
 		case constraint.PatchOpUndef:
 			log.Error("patch entity configs", zap.Error(constraint.ErrJSONPatchReservedOp), zap.String("op", pd.Operator))

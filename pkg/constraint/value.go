@@ -85,7 +85,7 @@ func (cfg *Config) getConfig(segs []string) (*Config, error) {
 
 func (cfg *Config) AppendField(c Config) error {
 	if cfg.Type != PropertyTypeStruct {
-		return ErrPatchPathInvalid
+		return ErrInvalidNodeType
 	}
 	define := cfg.getStructDefine()
 	define.Fields[c.ID] = c
@@ -94,7 +94,7 @@ func (cfg *Config) AppendField(c Config) error {
 
 func (cfg *Config) RemoveField(id string) error {
 	if cfg.Type != PropertyTypeStruct {
-		return ErrPatchPathInvalid
+		return ErrInvalidNodeType
 	}
 	define := cfg.getStructDefine()
 	delete(define.Fields, id)
