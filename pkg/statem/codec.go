@@ -13,7 +13,7 @@ func EncodeBase(base *Base) ([]byte, error) {
 	return bytes, errors.Wrap(err, "encode Base")
 }
 
-func DecodeBase(data []byte) (*Base, error) {
+func DecodeBase(data []byte) (*Base, error) { //nolint
 	var v = make(map[string]interface{})
 	if err := msgpack.Unmarshal(data, &v); nil != err {
 		return nil, errors.Wrap(err, "decode Base-State json")
@@ -36,6 +36,32 @@ func DecodeBase(data []byte) (*Base, error) {
 		for key, val := range properties {
 			keyString, _ := key.(string)
 			base.KValues[keyString] = constraint.NewNode(val)
+		}
+	default:
+		return nil, ErrInvalidProperties
+	}
+
+	// configs.
+	switch configs := v["configs"].(type) {
+	case nil:
+	case map[string]interface{}:
+		base.Configs = make(map[string]constraint.Config)
+		for key, value := range configs {
+			cfg, err := constraint.ParseConfigsFrom(value)
+			if nil != err {
+				continue
+			}
+			base.Configs[key] = cfg
+		}
+	case map[interface{}]interface{}:
+		base.Configs = make(map[string]constraint.Config)
+		for key, value := range configs {
+			cfg, err := constraint.ParseConfigsFrom(value)
+			if nil != err {
+				continue
+			}
+			keyString, _ := key.(string)
+			base.Configs[keyString] = cfg
 		}
 	default:
 		return nil, ErrInvalidProperties

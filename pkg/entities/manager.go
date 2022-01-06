@@ -333,6 +333,17 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *
 	return base, errors.Wrap(err, "set entity configs")
 }
 
+// PatchConfigs patch properties into entity.
+func (m *EntityManager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error) {
+	if err = m.stateManager.PatchConfigs(ctx, en, patchData); nil != err {
+		log.Error("patch entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "patch entity configs")
+	}
+
+	base, err = m.getEntityFromState(ctx, en)
+	return base, errors.Wrap(err, "set entity configs")
+}
+
 // AppendConfigs append entity configs.
 func (m *EntityManager) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	if err = m.stateManager.AppendConfigs(ctx, en); nil != err {

@@ -28,6 +28,7 @@ type EntityHTTPServer interface {
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	PatchConfigs(context.Context, *PatchConfigsRequest) (*EntityResponse, error)
 	PatchEntity(context.Context, *PatchEntityRequest) (*EntityResponse, error)
 	PatchEntityZ(context.Context, *PatchEntityRequest) (*EntityResponse, error)
 	QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error)
@@ -278,6 +279,46 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
 	out, err := h.srv.ListEntity(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+func (h *EntityHTTPHandler) PatchConfigs(req *go_restful.Request, resp *go_restful.Response) {
+	in := PatchConfigsRequest{}
+	if err := transportHTTP.GetBody(req, &in.Data); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.PatchConfigs(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -572,6 +613,8 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.RemoveConfigs))
 	ws.Route(ws.GET("/entities/{id}/configs").
 		To(handler.QueryConfigs))
+	ws.Route(ws.POST("/entities/{id}/configs/patch").
+		To(handler.PatchConfigs))
 	ws.Route(ws.GET("/entities/{id}/properties").
 		To(handler.GetEntityProps))
 }

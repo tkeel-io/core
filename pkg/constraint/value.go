@@ -47,19 +47,66 @@ type Config struct {
 	LastTime          int64                  `json:"last_time" mapstructure:"last_time"`
 }
 
-func (cfg Config) getArrayDefine() DefineArray {
+func (cfg *Config) getArrayDefine() DefineArray {
 	length, _ := cfg.Define[DefineFieldArrayLength].(int)
 	etype, _ := cfg.Define[DefineFieldArrayElemCfg].(Config)
 	return DefineArray{Length: length, ElemType: etype}
 }
 
-func (cfg Config) getStructDefine() DefineStruct {
-	fields, _ := cfg.Define[DefineFieldStructFields].([]Config)
+func (cfg *Config) getStructDefine() DefineStruct {
+	fields, ok := cfg.Define[DefineFieldStructFields].(map[string]Config)
+	if !ok {
+		fields = make(map[string]Config)
+		cfg.Define[DefineFieldStructFields] = fields
+	}
 	return DefineStruct{Fields: fields}
 }
 
+func (cfg *Config) GetConfig(segs []string) (*Config, error) {
+	return cfg.getConfig(segs)
+}
+
+func (cfg *Config) getConfig(segs []string) (*Config, error) {
+	if len(segs) > 0 {
+		if cfg.Type != PropertyTypeStruct {
+			return cfg, ErrPatchPathInvalid
+		}
+		define := cfg.getStructDefine()
+		c, ok := define.Fields[segs[0]]
+		if !ok {
+			return cfg, ErrPatchPathInvalid
+		}
+
+		cc := &c
+		return cc.getConfig(segs[1:])
+	}
+	return cfg, nil
+}
+
+func (cfg *Config) AppendField(c Config) error {
+	if cfg.Type != PropertyTypeStruct {
+		return ErrPatchPathInvalid
+	}
+	define := cfg.getStructDefine()
+	define.Fields[c.ID] = c
+	return nil
+}
+
+func (cfg *Config) RemoveField(id string) error {
+	if cfg.Type != PropertyTypeStruct {
+		return ErrPatchPathInvalid
+	}
+	define := cfg.getStructDefine()
+	delete(define.Fields, id)
+	return nil
+}
+
 type DefineStruct struct {
-	Fields []Config `json:"fields"`
+	Fields map[string]Config `json:"fields"`
+}
+
+func newDefineStruct() DefineStruct {
+	return DefineStruct{Fields: make(map[string]Config)}
 }
 
 type DefineArray struct {
@@ -67,7 +114,7 @@ type DefineArray struct {
 	ElemType Config `json:"elem_type"`
 }
 
-func ParseConfigsFrom(data map[string]interface{}) (cfg Config, err error) {
+func ParseConfigsFrom(data interface{}) (cfg Config, err error) {
 	cfgRequest := Config{}
 	if err = mapstructure.Decode(data, &cfgRequest); nil != err {
 		return cfg, errors.Wrap(err, "parse property config failed")
@@ -95,7 +142,7 @@ func parseField(in Config) (out Config, err error) { //nolint
 		arrDefine.ElemType, err = parseField(arrDefine.ElemType)
 		in.Define["elem_type"] = arrDefine.ElemType
 	case PropertyTypeStruct:
-		jsonDefine, jsonDefine2 := DefineStruct{}, DefineStruct{}
+		jsonDefine, jsonDefine2 := newDefineStruct(), newDefineStruct()
 		if err = mapstructure.Decode(in.Define, &jsonDefine); nil != err {
 			return out, errors.Wrap(err, "parse property config failed")
 		}
@@ -105,7 +152,7 @@ func parseField(in Config) (out Config, err error) { //nolint
 			if cfg, err = parseField(field); nil != err {
 				return out, errors.Wrap(err, "parse property config failed")
 			}
-			jsonDefine2.Fields = append(jsonDefine2.Fields, cfg)
+			jsonDefine2.Fields[cfg.ID] = cfg
 		}
 
 		in.Define["fields"] = jsonDefine2.Fields

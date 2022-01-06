@@ -242,6 +242,83 @@ func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
 	return nil
 }
 
+func (s *statem) getParent(segs []string) (*constraint.Config, error) {
+	if len(segs) == 0 {
+		return nil, constraint.ErrPatchPathInvalid
+	}
+
+	for _, seg := range segs {
+		if strings.TrimSpace(seg) == "" {
+			return nil, constraint.ErrPatchPathInvalid
+		}
+	}
+
+	cfg, ok := s.Configs[segs[0]]
+	if !ok {
+		return nil, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
+	}
+
+	preCfg, err := cfg.GetConfig(segs[1:])
+	return preCfg, errors.Wrap(err, "prev config not found")
+}
+
+// PatchConfigs set entity configs.
+func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
+	for _, pd := range patchData {
+		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
+		if len(segs) > 1 {
+			preCfg, err := s.getParent(segs[:len(segs)-1])
+			if nil != err {
+				return errors.Wrap(err, "state marchine patch configs")
+			}
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				cfg, _ := pd.Value.(constraint.Config)
+				preCfg.AppendField(cfg)
+			case constraint.PatchOpRemove:
+				preCfg.RemoveField(segs[len(segs)-1])
+			}
+		} else if len(segs) == 1 {
+			util.DebugInfo("patch configs", patchData)
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				cfg, _ := pd.Value.(constraint.Config)
+				s.Configs[cfg.ID] = cfg
+			case constraint.PatchOpRemove:
+				delete(s.Configs, segs[0])
+			}
+		}
+		log.Debug("patch state marchine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
+	}
+
+	s.constraints = make(map[string]*constraint.Constraint)
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	for key, cfg := range s.Configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+
+	log.Debug("patch state marchine configs", zap.Any("value", patchData))
+
+	return nil
+}
+
 // AppendConfigs append entity configs.
 func (s *statem) AppendConfigs(configs map[string]constraint.Config) error {
 	for key, cfg := range configs {

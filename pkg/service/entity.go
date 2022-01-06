@@ -28,6 +28,7 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 
@@ -415,6 +416,45 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 
 	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "query entity configs")
+}
+
+func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+	entity.KValues = make(map[string]constraint.Node)
+
+	patchData := make([]*statem.PatchData, 0)
+	for _, pd := range in.Data.Properties {
+		operator := constraint.NewPatchOperator(pd.Operator)
+		switch operator {
+		case constraint.PatchOpAdd:
+			fallthrough
+		case constraint.PatchOpReplace:
+			var cfgRet constraint.Config
+			switch value := pd.Value.AsInterface().(type) {
+			case map[string]interface{}:
+				if cfgRet, err = constraint.ParseConfigsFrom(value); nil != err {
+					return out, errors.Wrap(err, "parse entity config failed")
+				}
+			}
+			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator, Value: cfgRet})
+		case constraint.PatchOpRemove:
+			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator})
+		case constraint.PatchOpUndef:
+			log.Error("patch entity configs", zap.Error(constraint.ErrJSONPatchReservedOp), zap.String("op", pd.Operator))
+			return out, constraint.ErrJSONPatchReservedOp
+		}
+	}
+
+	util.DebugInfo("PatchData", patchData)
+
+	entity, err = s.entityManager.PatchConfigs(ctx, entity, patchData)
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "patch entity configs")
 }
 
 // parseConfigFrom parse config.
