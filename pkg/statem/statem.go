@@ -30,6 +30,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/util"
@@ -204,7 +205,7 @@ func (s *statem) SetStatus(status Status) {
 	s.status = status
 }
 
-func (s *statem) LoadEnvironments(env EnvDescription) {
+func (s *statem) LoadEnvironments(env environment.ActorEnv) {
 	for _, m := range env.Mappers {
 		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
