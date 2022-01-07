@@ -66,11 +66,11 @@ func (env *Environment) GetActorEnv(stateID string) ActorEnv {
 
 func (env *Environment) StoreMappers(pairs []EtcdPair) []MaSummary {
 	var (
-		err    error
-		info   MaSummary
-		result []MaSummary
+		err  error
+		info MaSummary
 	)
 
+	result := make([]MaSummary, 0)
 	for _, pair := range pairs {
 		log.Debug("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
 		if info, err = parseTQLKey(pair.Key); nil != err {
@@ -168,12 +168,15 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 	for _, tentacle := range m.Tentacles() {
 		switch tentacle.Type() {
 		case mapper.TentacleTypeEntity:
+			remoteID := tentacle.TargetID()
 			effects = append(effects, tentacle.TargetID())
 			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
-			env.addTentacle(tentacle.TargetID(), tentacle)
+			env.addTentacle(remoteID, tentacle)
+			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		case mapper.TentacleTypeMapper:
 			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMarchine.
 			mCache.tentacles[tentacle.ID()] = tentacle
+			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
 		}

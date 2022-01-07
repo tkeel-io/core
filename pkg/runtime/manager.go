@@ -315,6 +315,9 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 		m.containers[channelID] = NewContainer()
 	}
 
+	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
+	sm.LoadEnvironments(thisActorEnv)
+
 	sm.Setup()
 	m.containers[channelID].Add(sm)
 	return sm, nil
@@ -475,7 +478,7 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 	return errors.Wrap(stateMarchine.Flush(ctx), "remove entity configs")
 }
 
-// DeleteStateMarchin delete runtime.Entity.
+// DeleteStateMarchine delete runtime.Entity.
 func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
 	var err error
 	channelID, stateMarchine := m.getStateMarchine("", base.ID)

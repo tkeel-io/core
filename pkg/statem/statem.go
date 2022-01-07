@@ -181,11 +181,6 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 }
 
 func (s *statem) Setup() error {
-	descs := s.Mappers
-	s.Mappers = make([]MapperDesc, 0)
-	for _, desc := range descs {
-		s.appendMapper(desc)
-	}
 	return nil
 }
 
@@ -206,11 +201,14 @@ func (s *statem) SetStatus(status Status) {
 }
 
 func (s *statem) LoadEnvironments(env environment.ActorEnv) {
+	// load actor mappers.
 	for _, m := range env.Mappers {
-		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
+		log.Info("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
+
+	// load actor tentacles.
 	for _, t := range env.Tentacles {
-		log.Info("load environments", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+		log.Info("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
 }
 
@@ -463,7 +461,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		} else {
 			// TODO...
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
-			log.Debug("match end of \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
 			// match entityID.*   .
 			for watchKey, tentacles := range s.tentacles {
 				arr := strings.Split(watchKey, ".")
