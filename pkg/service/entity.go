@@ -462,48 +462,6 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 	return out, nil
 }
 
-// func (s *EntityService) PatchConfigsx(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
-// 	var entity = new(Entity)
-// 	entity.ID = in.Id
-// 	entity.Owner = in.Owner
-// 	entity.Source = in.Source
-// 	parseHeaderFrom(ctx, entity)
-// 	entity.KValues = make(map[string]constraint.Node)
-
-// 	patchData := make([]*statem.PatchData, 0)
-
-// 	for _, pd := range in.Data.Properties {
-// 		operator := constraint.NewPatchOperator(pd.Operator)
-// 		switch operator {
-// 		case constraint.PatchOpAdd:
-// 			fallthrough
-// 		case constraint.PatchOpReplace:
-// 			var cfgRet constraint.Config
-// 			switch value := pd.Value.AsInterface().(type) {
-// 			case map[string]interface{}:
-// 				if cfgRet, err = constraint.ParseConfigsFrom(value); nil != err {
-// 					return out, errors.Wrap(err, "parse entity config failed")
-// 				}
-// 			}
-// 			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator, Value: cfgRet})
-// 		case constraint.PatchOpRemove:
-// 			fallthrough
-// 		case constraint.PatchOpCopy:
-// 			patchData = append(patchData, &statem.PatchData{Path: pd.Path, Operator: operator})
-// 		case constraint.PatchOpUndef:
-// 			log.Error("patch entity configs", zap.Error(constraint.ErrJSONPatchReservedOp), zap.String("op", pd.Operator))
-// 			return out, constraint.ErrJSONPatchReservedOp
-// 		}
-// 	}
-
-// 	util.DebugInfo("PatchData", patchData)
-
-// 	entity, err = s.entityManager.PatchConfigs(ctx, entity, patchData)
-
-// 	out = s.entity2EntityResponse(entity)
-// 	return out, errors.Wrap(err, "patch entity configs")
-// }
-
 // parseConfigFrom parse config.
 func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
 	// parse configs from.

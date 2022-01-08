@@ -335,12 +335,16 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 		cfg, _ := pd.Value.(constraint.Config)
 		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
 
+		// set values.
+		cfg.ID = segs[len(segs)-1]
+		cfg.LastTime = util.UnixMill()
+
 		if len(segs) > 1 {
 			segment = segs[len(segs)-1]
 			parentCfg, index, err := s.getParent(segs[:len(segs)-1])
 			if errors.Is(err, constraint.ErrPatchPathRoot) {
 				segment = segs[0]
-				if cfg, err = s.makePath(segs, &cfg); nil != err {
+				if cfg, err = s.makePath(segs[:len(segs)-1], &cfg); nil != err {
 					log.Error("make patch path",
 						zap.Error(err),
 						logger.EntityID(s.ID),
@@ -350,7 +354,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				}
 			} else if errors.Is(err, constraint.ErrPatchPathLack) {
 				segment = segs[index]
-				if cfg, err = s.makePath(segs[index:], &cfg); nil != err {
+				if cfg, err = s.makePath(segs[index:len(segs)-1], &cfg); nil != err {
 					log.Error("make patch path",
 						zap.Error(err),
 						logger.EntityID(s.ID),
