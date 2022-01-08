@@ -229,7 +229,7 @@ Core 的更多功能 API 详细请参见[ API 文档](https://tkeel-io.github.io
 | 仓库 | 描述 |
 |:-----|:------------|
 | [tKeel](https://github.com/tkeel-io/tkeel) | tKeel 开放物联网平台|
-| [Core](https://github.com/tkeel-io/core) | tKeel 的数据中心 |s
+| [Core](https://github.com/tkeel-io/core) | tKeel 的数据中心 |
 | [CLI](https://github.com/tkeel-io/cli) | tKeel CLI 是用于各种 tKeel 相关任务的主要工具 |
 | [Helm](https://github.com/tkeel-io/helm-charts) | tKeel 对应的 Helm charts |
 
