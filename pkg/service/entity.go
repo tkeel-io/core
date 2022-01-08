@@ -28,7 +28,6 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 
@@ -447,7 +446,6 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 			pds = append(pds, &statem.PatchData{Path: pd.Path, Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
 		}
 
-		util.DebugInfo("decode patchdata", pds)
 		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
 			log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")

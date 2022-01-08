@@ -353,7 +353,6 @@ func (m *EntityManager) PatchConfigs(ctx context.Context, en *statem.Base, patch
 	}
 
 	for _, pd := range patchData {
-		log.Error("patch copy config", zap.String("path", pd.Path), zap.String("op", pd.Operator.String()))
 		if pd.Operator == constraint.PatchOpCopy {
 			cfg, err0 := base.GetConfig(pd.Path)
 			if nil != err0 {

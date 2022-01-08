@@ -311,17 +311,18 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 		Enabled:           true,
 		EnabledSearch:     true,
 		EnabledTimeSeries: true,
+		Define:            make(map[string]interface{}),
 		LastTime:          util.UnixMill(),
 	}
 
 	if len(segs) > 1 {
 		if cc, err = s.makePath(segs[1:], cfg); nil != err {
-			return c, err
+			return c, errors.Wrap(err, "make patch")
 		} else if err = c.AppendField(cc); nil != err {
-			return c, err
+			return c, errors.Wrap(err, "make patch")
 		}
 	} else if err = c.AppendField(*cfg); nil != err {
-		return c, err
+		return c, errors.Wrap(err, "make patch")
 	}
 
 	return c, nil
@@ -331,10 +332,11 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 	for _, pd := range patchData {
 		var segment string
-		var cfg constraint.Config
+		cfg, _ := pd.Value.(constraint.Config)
 		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
+
 		if len(segs) > 1 {
-			cfg = pd.Value.(constraint.Config)
+			segment = segs[len(segs)-1]
 			parentCfg, index, err := s.getParent(segs[:len(segs)-1])
 			if errors.Is(err, constraint.ErrPatchPathRoot) {
 				segment = segs[0]
@@ -356,7 +358,6 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 						zap.String("path", pd.Path))
 					return errors.Wrap(err, "make patch path")
 				}
-				return errors.Wrap(err, "make patch path")
 			} else if nil != err {
 				log.Error("get parent config",
 					zap.Error(err),
@@ -366,15 +367,19 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				return errors.Wrap(err, "state marchine patch configs")
 			}
 
+			log.Debug("patch state marchine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
+
 			switch pd.Operator {
 			case constraint.PatchOpAdd:
 				fallthrough
 			case constraint.PatchOpReplace:
-				if err = parentCfg.AppendField(cfg); nil != err {
+				if index == 0 {
+					s.Configs[segment] = cfg
+				} else if err = parentCfg.AppendField(cfg); nil != err {
 					return errors.Wrap(err, "upsert state marchine configs")
 				}
 			case constraint.PatchOpRemove:
-				if index == len(segs)-1 {
+				if index == len(segs)-1 || nil != parentCfg {
 					if err = parentCfg.RemoveField(segment); nil != err {
 						return errors.Wrap(err, "remove state marchine configs")
 					}
@@ -387,7 +392,6 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 			case constraint.PatchOpAdd:
 				fallthrough
 			case constraint.PatchOpReplace:
-				cfg, _ := pd.Value.(constraint.Config)
 				s.Configs[cfg.ID] = cfg
 			case constraint.PatchOpRemove:
 				delete(s.Configs, segs[0])
