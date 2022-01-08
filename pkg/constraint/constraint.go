@@ -92,11 +92,6 @@ func genEnabledIndexes(prefix string, enabledFlag int, ct *Constraint) []string 
 }
 
 func NewConstraintsFrom(cfg Config) *Constraint {
-	// current latyer.
-	if !cfg.Enabled {
-		return nil
-	}
-
 	return parseConstraintFrom(cfg)
 }
 
