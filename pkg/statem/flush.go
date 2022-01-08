@@ -129,11 +129,11 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 	}
 
 	if err = s.stateManager.TimeSeriesFlush(ctx, flushData); nil != err {
-		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+		log.Error("flush timeseries Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
-	log.Debug("flush state Search.", zap.Any("data", flushData))
-	return errors.Wrap(err, "Search flush failed")
+	log.Debug("flush timeseries Search.", zap.Any("data", flushData))
+	return errors.Wrap(err, "timeseries flush failed")
 }
 
 // generateTags generate entity tags.

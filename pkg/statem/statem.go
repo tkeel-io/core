@@ -107,6 +107,46 @@ func (b *Base) DuplicateExpectValue() Base {
 	return cp
 }
 
+func (b *Base) GetProperty(path string) (constraint.Node, error) {
+	if !strings.ContainsAny(path, ".[") {
+		if _, has := b.KValues[path]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
+		return b.KValues[path], nil
+	}
+
+	// patch copy property.
+	arr := strings.SplitN(path, ".", 2)
+	res, err := constraint.Patch(b.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+	return res, errors.Wrap(err, "patch copy")
+}
+
+func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
+	segs := strings.Split(strings.TrimSpace(path), ".")
+	if len(segs) > 1 {
+		// check path.
+		for _, seg := range segs {
+			if strings.TrimSpace(seg) == "" {
+				return cfg, constraint.ErrPatchPathInvalid
+			}
+		}
+
+		rootCfg, ok := b.Configs[segs[0]]
+		if !ok {
+			return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
+		}
+
+		_, pcfg, err := rootCfg.GetConfig(segs, 1)
+		return *pcfg, errors.Wrap(err, "prev config not found")
+	} else if len(segs) == 1 {
+		if _, ok := b.Configs[segs[0]]; !ok {
+			return cfg, ErrPropertyNotFound
+		}
+		return b.Configs[segs[0]], nil
+	}
+	return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "copy config")
+}
+
 // statem state marchins.
 type statem struct {
 	Base
@@ -245,6 +285,152 @@ func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
 			}
 		}
 	}
+	return nil
+}
+
+func (s *statem) getParent(segs []string) (*constraint.Config, int, error) {
+	if len(segs) == 0 {
+		return nil, 0, constraint.ErrPatchPathInvalid
+	}
+
+	// check patch path.
+	for index, seg := range segs {
+		if strings.TrimSpace(seg) == "" {
+			return nil, index, constraint.ErrPatchPathInvalid
+		}
+	}
+
+	var ok bool
+	var cfg constraint.Config
+	if cfg, ok = s.Configs[segs[0]]; !ok {
+		return nil, 0, constraint.ErrPatchPathRoot
+	}
+
+	index, preCfg, err := cfg.GetConfig(segs, 1)
+	return preCfg, index, errors.Wrap(err, "prev config not found")
+}
+
+func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.Config, err error) {
+	c := constraint.Config{
+		ID:                segs[0],
+		Type:              constraint.PropertyTypeStruct,
+		Enabled:           true,
+		EnabledSearch:     true,
+		EnabledTimeSeries: true,
+		Define:            make(map[string]interface{}),
+		LastTime:          util.UnixMill(),
+	}
+
+	if len(segs) > 1 {
+		if cc, err = s.makePath(segs[1:], cfg); nil != err {
+			return c, errors.Wrap(err, "make patch")
+		} else if err = c.AppendField(cc); nil != err {
+			return c, errors.Wrap(err, "make patch")
+		}
+	} else if err = c.AppendField(*cfg); nil != err {
+		return c, errors.Wrap(err, "make patch")
+	}
+
+	return c, nil
+}
+
+// PatchConfigs set entity configs.
+func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
+	for _, pd := range patchData {
+		var segment string
+		cfg, _ := pd.Value.(constraint.Config)
+		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
+
+		// set values.
+		cfg.ID = segs[len(segs)-1]
+		cfg.LastTime = util.UnixMill()
+
+		if len(segs) > 1 {
+			segment = segs[len(segs)-1]
+			parentCfg, index, err := s.getParent(segs[:len(segs)-1])
+			if errors.Is(err, constraint.ErrPatchPathRoot) {
+				segment = segs[0]
+				if cfg, err = s.makePath(segs[:len(segs)-1], &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+			} else if errors.Is(err, constraint.ErrPatchPathLack) {
+				segment = segs[index]
+				if cfg, err = s.makePath(segs[index:len(segs)-1], &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+			} else if nil != err {
+				log.Error("get parent config",
+					zap.Error(err),
+					logger.EntityID(s.ID),
+					zap.Any("config", pd.Value),
+					zap.String("path", pd.Path))
+				return errors.Wrap(err, "state marchine patch configs")
+			}
+
+			log.Debug("patch state marchine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
+
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				if index == 0 {
+					s.Configs[segment] = cfg
+				} else if err = parentCfg.AppendField(cfg); nil != err {
+					return errors.Wrap(err, "upsert state marchine configs")
+				}
+			case constraint.PatchOpRemove:
+				if index == len(segs)-1 || nil != parentCfg {
+					if err = parentCfg.RemoveField(segment); nil != err {
+						return errors.Wrap(err, "remove state marchine configs")
+					}
+				}
+			case constraint.PatchOpCopy:
+				// TODO: 在这里处理的时候，sync-actor-loop, 以消息的形式，返回值是难处理的.
+			}
+		} else if len(segs) == 1 {
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				s.Configs[cfg.ID] = cfg
+			case constraint.PatchOpRemove:
+				delete(s.Configs, segs[0])
+			}
+		}
+		log.Debug("patch state marchine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
+	}
+
+	s.constraints = make(map[string]*constraint.Constraint)
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	for key, cfg := range s.Configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+
+	log.Debug("patch state marchine configs", zap.Any("value", patchData))
+
 	return nil
 }
 

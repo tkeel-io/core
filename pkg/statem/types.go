@@ -61,6 +61,7 @@ type StateManager interface {
 	SearchFlush(context.Context, map[string]interface{}) error
 	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
 	SetConfigs(context.Context, *Base) error
+	PatchConfigs(context.Context, *Base, []*PatchData) error
 	AppendConfigs(context.Context, *Base) error
 	RemoveConfigs(context.Context, *Base, []string) error
 }
@@ -78,6 +79,8 @@ type StateMarchiner interface {
 	GetStatus() Status
 	// SetConfig set entity configs.
 	SetConfigs(map[string]constraint.Config) error
+	// PatchConfigs patch configs.
+	PatchConfigs(patchDatas []*PatchData) error
 	// AppendConfig append entity property config.
 	AppendConfigs(map[string]constraint.Config) error
 	// RemoveConfig remove entity property configs.
@@ -191,3 +194,9 @@ const (
 	SMStatusInactive Status = "inactive"
 	SMStatusDeleted  Status = "deleted"
 )
+
+type PatchData struct {
+	Path     string
+	Operator constraint.PatchOperator
+	Value    interface{}
+}

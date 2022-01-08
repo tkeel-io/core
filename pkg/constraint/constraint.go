@@ -33,6 +33,9 @@ var (
 	ErrEmptyParam          = errors.New("empty params")
 	ErrPatchNotFound       = errors.New("patch not found")
 	ErrPatchPathInvalid    = errors.New("invalid patch path")
+	ErrPatchPathLack       = errors.New("patch path lack")
+	ErrPatchPathRoot       = errors.New("patch path lack root")
+	ErrPatchTypeInvalid    = errors.New("patch config type invalid")
 )
 
 var callbacks = map[string]func(op Operator, val Node) (Node, error){
@@ -89,11 +92,6 @@ func genEnabledIndexes(prefix string, enabledFlag int, ct *Constraint) []string 
 }
 
 func NewConstraintsFrom(cfg Config) *Constraint {
-	// current latyer.
-	if !cfg.Enabled {
-		return nil
-	}
-
 	return parseConstraintFrom(cfg)
 }
 

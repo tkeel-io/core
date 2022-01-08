@@ -151,7 +151,7 @@ iothub: iothub-pubsub
     }
 
     // create entity.
-    createUrl := "plugins/pluginA/entities?id=test1&owner=abc&source=abc&type=device"
+    createUrl := "/entities?id=test1&owner=abc&source=abc&type=device"
 
     result, err := client.InvokeMethodWithContent(context.Background(), "core", createUrl, "POST", &dapr.DataContent{
         ContentType: "application/json",
@@ -184,7 +184,7 @@ iothub: iothub-pubsub
 #### 获取实体属性
 ```go
     // Source: examples/entity/main.go
-    getUrl := "plugins/pluginA/entities/test1?owner=abc&source=abc&type=device"
+    getUrl := "/entities/test1?owner=abc&source=abc&type=device"
 
 	result, err = client.InvokeMethodWithContent(context.Background(),
 		"core",

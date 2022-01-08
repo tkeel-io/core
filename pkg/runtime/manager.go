@@ -422,6 +422,34 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 	return errors.Wrap(stateMarchine.Flush(ctx), "set entity configs")
 }
 
+// PatchConfigs patch entity configs.
+func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) error {
+	var (
+		err           error
+		channelID     string
+		stateMarchine statem.StateMarchiner
+	)
+
+	// load state marchine.
+	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
+		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+			log.Error("set configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "set entity configs")
+		}
+	}
+
+	// set entity configs.
+	if err = stateMarchine.PatchConfigs(patchData); nil != err {
+		return errors.Wrap(err, "set entity configs")
+	}
+
+	// flush entity configs.
+	return errors.Wrap(stateMarchine.Flush(ctx), "set entity configs")
+}
+
 // AppendConfigs append entity configs.
 func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 	var (

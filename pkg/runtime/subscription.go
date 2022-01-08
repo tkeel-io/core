@@ -168,6 +168,12 @@ func (s *subscription) SetConfigs(configs map[string]constraint.Config) error {
 	return errors.Wrap(err, "set subscription configs")
 }
 
+// PatchConfigs set entity configs.
+func (s *subscription) PatchConfigs(patchData []*statem.PatchData) error {
+	err := s.stateMarchine.PatchConfigs(patchData)
+	return errors.Wrap(err, "patch subscription configs")
+}
+
 // AppendConfig append entity property config.
 func (s *subscription) AppendConfigs(configs map[string]constraint.Config) error {
 	err := s.stateMarchine.AppendConfigs(configs)

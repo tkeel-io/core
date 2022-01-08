@@ -60,9 +60,9 @@ func TestContraint2(t *testing.T) {
 		Description:       "property instance.",
 		LastTime:          time.Now().UnixNano() / 1e6,
 		Define: map[string]interface{}{
-			"fields": []Config{
-				{
-					ID:                "property2.1",
+			"fields": map[string]Config{
+				"property2-1": {
+					ID:                "property2-1",
 					Type:              "int",
 					Weight:            20,
 					Enabled:           true,
@@ -74,8 +74,8 @@ func TestContraint2(t *testing.T) {
 						"max": 200,
 					},
 				},
-				{
-					ID:                "property2.2",
+				"property2-2": {
+					ID:                "property2-2",
 					Type:              "string",
 					Weight:            20,
 					Enabled:           true,
@@ -98,6 +98,6 @@ func TestContraint2(t *testing.T) {
 	assert.Equal(t, len(ct.Operators), 0)
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSelf), true)
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSearch), true)
-	assert.Equal(t, len(ct.ChildNodes), 2)
-	assert.Equal(t, ct.GenEnabledIndexes(EnabledFlagSearch), []string{"property2", "property2.property2.1", "property2.property2.2"})
+	assert.Equal(t, 2, len(ct.ChildNodes))
+	assert.Equal(t, ct.GenEnabledIndexes(EnabledFlagSearch), []string{"property2", "property2.property2-1", "property2.property2-2"})
 }
