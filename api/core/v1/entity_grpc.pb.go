@@ -30,6 +30,7 @@ type EntityClient interface {
 	AppendConfigs(ctx context.Context, in *AppendConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	RemoveConfigs(ctx context.Context, in *RemoveConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	QueryConfigs(ctx context.Context, in *QueryConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	PatchConfigs(ctx context.Context, in *PatchConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	GetEntityProps(ctx context.Context, in *GetEntityPropsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 }
 
@@ -149,6 +150,15 @@ func (c *entityClient) QueryConfigs(ctx context.Context, in *QueryConfigsRequest
 	return out, nil
 }
 
+func (c *entityClient) PatchConfigs(ctx context.Context, in *PatchConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/PatchConfigs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *entityClient) GetEntityProps(ctx context.Context, in *GetEntityPropsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
 	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/GetEntityProps", in, out, opts...)
@@ -174,6 +184,7 @@ type EntityServer interface {
 	AppendConfigs(context.Context, *AppendConfigsRequest) (*EntityResponse, error)
 	RemoveConfigs(context.Context, *RemoveConfigsRequest) (*EntityResponse, error)
 	QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error)
+	PatchConfigs(context.Context, *PatchConfigsRequest) (*EntityResponse, error)
 	GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
 }
@@ -217,6 +228,9 @@ func (UnimplementedEntityServer) RemoveConfigs(context.Context, *RemoveConfigsRe
 }
 func (UnimplementedEntityServer) QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryConfigs not implemented")
+}
+func (UnimplementedEntityServer) PatchConfigs(context.Context, *PatchConfigsRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PatchConfigs not implemented")
 }
 func (UnimplementedEntityServer) GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntityProps not implemented")
@@ -450,6 +464,24 @@ func _Entity_QueryConfigs_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_PatchConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PatchConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).PatchConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/PatchConfigs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).PatchConfigs(ctx, req.(*PatchConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Entity_GetEntityProps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetEntityPropsRequest)
 	if err := dec(in); err != nil {
@@ -522,6 +554,10 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryConfigs",
 			Handler:    _Entity_QueryConfigs_Handler,
+		},
+		{
+			MethodName: "PatchConfigs",
+			Handler:    _Entity_PatchConfigs_Handler,
 		},
 		{
 			MethodName: "GetEntityProps",

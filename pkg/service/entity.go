@@ -417,6 +417,51 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 	return out, errors.Wrap(err, "query entity configs")
 }
 
+func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+	entity.KValues = make(map[string]constraint.Node)
+
+	switch kv := in.Configs.AsInterface().(type) {
+	case []interface{}:
+		patchData := make([]*pb.PatchData, 0)
+		data, _ := json.Marshal(kv)
+		if err = json.Unmarshal(data, &patchData); nil != err {
+			log.Error("patch entity  configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+			return nil, ErrEntityInvalidParams
+		}
+
+		var pds []*statem.PatchData
+		for _, pd := range patchData {
+			var cfg constraint.Config
+			switch value := pd.Value.AsInterface().(type) {
+			case map[string]interface{}:
+				if cfg, err = constraint.ParseConfigsFrom(value); nil != err {
+					return out, errors.Wrap(err, "parse entity configs")
+				}
+			}
+			pds = append(pds, &statem.PatchData{Path: pd.Path, Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
+		}
+
+		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+			log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(err))
+			return nil, errors.Wrap(err, "patch entity failed")
+		}
+	case nil:
+		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityEmptyRequest))
+		return nil, ErrEntityEmptyRequest
+	default:
+		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+		return nil, ErrEntityInvalidParams
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, nil
+}
+
 // parseConfigFrom parse config.
 func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
 	// parse configs from.

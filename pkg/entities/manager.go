@@ -242,6 +242,13 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 	}
 
 	base, err = m.getEntityFromState(ctx, en)
+	for _, pd := range patchData {
+		if pd.Operator == constraint.PatchOpCopy.String() {
+			if base.KValues[pd.Path], err = base.GetProperty(pd.Path); nil != err {
+				log.Error("patch copy config", zap.String("path", pd.Path), zap.String("op", pd.Operator))
+			}
+		}
+	}
 	return base, errors.Wrap(err, "patch entity properties")
 }
 
@@ -333,6 +340,31 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *
 	return base, errors.Wrap(err, "set entity configs")
 }
 
+// PatchConfigs patch properties into entity.
+func (m *EntityManager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error) {
+	if err = m.stateManager.PatchConfigs(ctx, en, patchData); nil != err {
+		log.Error("patch entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "patch entity configs")
+	}
+
+	if base, err = m.getEntityFromState(ctx, en); nil != err {
+		log.Error("patch entity configs", zap.Error(err), logger.EntityID(en.ID))
+		return nil, errors.Wrap(err, "patch entity configs")
+	}
+
+	for _, pd := range patchData {
+		if pd.Operator == constraint.PatchOpCopy {
+			cfg, err0 := base.GetConfig(pd.Path)
+			if nil != err0 {
+				log.Error("patch copy config", zap.String("path", pd.Path), zap.String("op", pd.Operator.String()))
+				continue
+			}
+			base.Configs[pd.Path] = cfg
+		}
+	}
+	return base, nil
+}
+
 // AppendConfigs append entity configs.
 func (m *EntityManager) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	if err = m.stateManager.AppendConfigs(ctx, en); nil != err {
@@ -360,7 +392,12 @@ func (m *EntityManager) QueryConfigs(ctx context.Context, en *statem.Base, prope
 	base, err = m.getEntityFromState(ctx, en)
 	baseEntity := base.DuplicateExpectValue()
 	for _, propertyID := range propertyIDs {
-		baseEntity.Configs[propertyID] = base.Configs[propertyID]
+		cfg, err0 := base.GetConfig(propertyID)
+		if nil != err0 {
+			log.Error("query configs", zap.Error(err0), logger.EntityID(en.ID), zap.String("property", propertyID))
+			continue
+		}
+		baseEntity.Configs[propertyID] = cfg
 	}
 	return &baseEntity, errors.Wrap(err, "remove entity configs")
 }
