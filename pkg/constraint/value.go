@@ -62,25 +62,26 @@ func (cfg *Config) getStructDefine() DefineStruct {
 	return DefineStruct{Fields: fields}
 }
 
-func (cfg *Config) GetConfig(segs []string) (*Config, error) {
-	return cfg.getConfig(segs)
+func (cfg *Config) GetConfig(segs []string, index int) (int, *Config, error) {
+	return cfg.getConfig(segs, index)
 }
 
-func (cfg *Config) getConfig(segs []string) (*Config, error) {
-	if len(segs) > 0 {
+func (cfg *Config) getConfig(segs []string, index int) (int, *Config, error) {
+	if len(segs) > index {
 		if cfg.Type != PropertyTypeStruct {
-			return cfg, ErrPatchPathInvalid
+			return index, cfg, ErrPatchTypeInvalid
 		}
+
 		define := cfg.getStructDefine()
-		c, ok := define.Fields[segs[0]]
+		c, ok := define.Fields[segs[index]]
 		if !ok {
-			return cfg, ErrPatchPathInvalid
+			return index, cfg, ErrPatchPathLack
 		}
 
 		cc := &c
-		return cc.getConfig(segs[1:])
+		return cc.getConfig(segs, index+1)
 	}
-	return cfg, nil
+	return index, cfg, nil
 }
 
 func (cfg *Config) AppendField(c Config) error {

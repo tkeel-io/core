@@ -135,7 +135,7 @@ func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
 			return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
 		}
 
-		pcfg, err := rootCfg.GetConfig(segs[1:])
+		_, pcfg, err := rootCfg.GetConfig(segs, 1)
 		return *pcfg, errors.Wrap(err, "prev config not found")
 	} else if len(segs) == 1 {
 		if _, ok := b.Configs[segs[0]]; !ok {
@@ -282,46 +282,102 @@ func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
 	return nil
 }
 
-func (s *statem) getParent(segs []string) (*constraint.Config, error) {
+func (s *statem) getParent(segs []string) (*constraint.Config, int, error) {
 	if len(segs) == 0 {
-		return nil, constraint.ErrPatchPathInvalid
+		return nil, 0, constraint.ErrPatchPathInvalid
 	}
 
-	for _, seg := range segs {
+	// check patch path.
+	for index, seg := range segs {
 		if strings.TrimSpace(seg) == "" {
-			return nil, constraint.ErrPatchPathInvalid
+			return nil, index, constraint.ErrPatchPathInvalid
 		}
 	}
 
-	cfg, ok := s.Configs[segs[0]]
-	if !ok {
-		return nil, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
+	var ok bool
+	var cfg constraint.Config
+	if cfg, ok = s.Configs[segs[0]]; !ok {
+		return nil, 0, constraint.ErrPatchPathRoot
 	}
 
-	preCfg, err := cfg.GetConfig(segs[1:])
-	return preCfg, errors.Wrap(err, "prev config not found")
+	index, preCfg, err := cfg.GetConfig(segs, 1)
+	return preCfg, index, errors.Wrap(err, "prev config not found")
+}
+
+func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.Config, err error) {
+	c := constraint.Config{
+		ID:                segs[0],
+		Type:              constraint.PropertyTypeStruct,
+		Enabled:           true,
+		EnabledSearch:     true,
+		EnabledTimeSeries: true,
+		LastTime:          util.UnixMill(),
+	}
+
+	if len(segs) > 1 {
+		if cc, err = s.makePath(segs[1:], cfg); nil != err {
+			return c, err
+		} else if err = c.AppendField(cc); nil != err {
+			return c, err
+		}
+	} else if err = c.AppendField(*cfg); nil != err {
+		return c, err
+	}
+
+	return c, nil
 }
 
 // PatchConfigs set entity configs.
 func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 	for _, pd := range patchData {
+		var segment string
+		var cfg constraint.Config
 		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
 		if len(segs) > 1 {
-			preCfg, err := s.getParent(segs[:len(segs)-1])
-			if nil != err {
+			cfg = pd.Value.(constraint.Config)
+			parentCfg, index, err := s.getParent(segs[:len(segs)-1])
+			if errors.Is(err, constraint.ErrPatchPathRoot) {
+				segment = segs[0]
+				if cfg, err = s.makePath(segs, &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+			} else if errors.Is(err, constraint.ErrPatchPathLack) {
+				segment = segs[index]
+				if cfg, err = s.makePath(segs[index:], &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+				return errors.Wrap(err, "make patch path")
+			} else if nil != err {
+				log.Error("get parent config",
+					zap.Error(err),
+					logger.EntityID(s.ID),
+					zap.Any("config", pd.Value),
+					zap.String("path", pd.Path))
 				return errors.Wrap(err, "state marchine patch configs")
 			}
+
 			switch pd.Operator {
 			case constraint.PatchOpAdd:
 				fallthrough
 			case constraint.PatchOpReplace:
-				cfg, _ := pd.Value.(constraint.Config)
-				if err = preCfg.AppendField(cfg); nil != err {
+				if err = parentCfg.AppendField(cfg); nil != err {
 					return errors.Wrap(err, "upsert state marchine configs")
 				}
 			case constraint.PatchOpRemove:
-				if err = preCfg.RemoveField(segs[len(segs)-1]); nil != err {
-					return errors.Wrap(err, "remove state marchine configs")
+				if index == len(segs)-1 {
+					if err = parentCfg.RemoveField(segment); nil != err {
+						return errors.Wrap(err, "remove state marchine configs")
+					}
 				}
 			case constraint.PatchOpCopy:
 				// TODO: 在这里处理的时候，sync-actor-loop, 以消息的形式，返回值是难处理的.
