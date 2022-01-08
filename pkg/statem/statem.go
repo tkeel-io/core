@@ -201,14 +201,21 @@ func (s *statem) SetStatus(status Status) {
 }
 
 func (s *statem) LoadEnvironments(env environment.ActorEnv) {
+	s.tentacles = make(map[string][]mapper.Tentacler)
+
 	// load actor mappers.
 	for _, m := range env.Mappers {
-		log.Info("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
+		s.mappers[m.ID()] = m
+		log.Debug("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
 
 	// load actor tentacles.
 	for _, t := range env.Tentacles {
-		log.Info("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+		for _, item := range t.Items() {
+			s.tentacles[item.String()] = append(s.tentacles[item.String()], t)
+			log.Debug("load environments, watching ", logger.EntityID(s.ID), zap.String("WatchKey", item.String()))
+		}
+		log.Debug("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
 }
 
