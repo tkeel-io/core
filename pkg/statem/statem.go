@@ -73,15 +73,16 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id" msgpack:"id" mapstructure:"id"`
-	Type     string                       `json:"type" msgpack:"type" mapstructure:"type"`
-	Owner    string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
-	Source   string                       `json:"source" msgpack:"source" mapstructure:"source"`
-	Version  int64                        `json:"version" msgpack:"version" mapstructure:"version"`
-	LastTime int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
-	Configs  map[string]constraint.Config `json:"configs" msgpack:"configs" mapstructure:"configs"`
+	ID           string                       `json:"id" msgpack:"id" mapstructure:"id"`
+	Type         string                       `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner        string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source       string                       `json:"source" msgpack:"source" mapstructure:"source"`
+	Version      int64                        `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime     int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers      []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	KValues      map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
+	Configs      map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
+	ConfigsBytes []byte                       `json:"-" msgpack:"configs_bytes" mapstructure:"-"`
 }
 
 func (b *Base) Copy() Base {

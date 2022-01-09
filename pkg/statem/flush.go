@@ -84,7 +84,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 			flushData[JSONPath] = val.Value()
 			continue
 		}
-		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	// flush all.
@@ -125,7 +125,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 			}
 			flushData = append(flushData, point)
 		}
-		log.Error("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	if err = s.stateManager.TimeSeriesFlush(ctx, flushData); nil != err {
