@@ -17,9 +17,33 @@ limitations under the License.
 package statem
 
 import (
+	"context"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/constraint"
 )
 
-func TestStatem(t *testing.T) {
+func TestNewStatem(t *testing.T) {
+	stateManager := NewStateManagerMock()
 
+	base := Base{
+		ID:           "device123",
+		Type:         "DEVICE",
+		Owner:        "admin",
+		Source:       "dm",
+		Version:      0,
+		LastTime:     time.Now().UnixMilli(),
+		Mappers:      []MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
+		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
+		ConfigsBytes: nil,
+	}
+
+	sm, err := NewState(context.Background(), stateManager, &base, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, "device123", sm.GetID())
+	assert.Equal(t, "DEVICE", sm.GetBase().Type)
+	assert.Equal(t, "admin", sm.GetBase().Owner)
+	assert.Equal(t, SMStatusActive, sm.GetStatus())
 }
