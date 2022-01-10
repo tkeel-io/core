@@ -35,6 +35,7 @@ func TestBaseCode(t *testing.T) {
 		KValues: map[string]constraint.Node{
 			"temp": constraint.NewNode(123.3),
 		},
+		Configs: make(map[string]constraint.Config),
 	}
 
 	bytes, _ := EncodeBase(base)
