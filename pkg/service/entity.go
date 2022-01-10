@@ -38,18 +38,18 @@ type EntityService struct {
 	pb.UnimplementedEntityServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 	searchClient  pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, mgr *entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
+func NewEntityService(ctx context.Context, entityManager entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
 		searchClient:  searchClient,
+		entityManager: entityManager,
 	}, nil
 }
 
@@ -89,8 +89,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 
 	// set properties.
 	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create entity failed",
-			logger.EntityID(req.Id), zap.Error(err))
+		log.Error("create entity failed", logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
@@ -537,10 +536,10 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}
 
-	out.Source = entity.Source
-	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
+	out.Owner = entity.Owner
+	out.Source = entity.Source
 
 	return out
 }

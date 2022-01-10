@@ -34,17 +34,17 @@ type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 }
 
 // NewSubscriptionService returns a new SubscriptionService.
-func NewSubscriptionService(ctx context.Context, mgr *entities.EntityManager) (*SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context, entityManager entities.EntityManager) (*SubscriptionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &SubscriptionService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
+		entityManager: entityManager,
 	}, nil
 }
 
