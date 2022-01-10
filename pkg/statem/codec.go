@@ -25,6 +25,9 @@ func EncodeBase(base *Base) ([]byte, error) {
 	// set base.ConfigsBytes
 	base.ConfigsBytes = bytes
 	bytes, err = msgpack.Marshal(base)
+
+	// reset base.ConfigsBytes .
+	base.ConfigsBytes = nil
 	return bytes, errors.Wrap(err, "encode Base")
 }
 
@@ -51,6 +54,9 @@ func DecodeBase(data []byte) (*Base, error) { //nolint
 		}
 		base.Configs[key] = cfg
 	}
+
+	// reset Base.ConfigsBytes.
+	base.ConfigsBytes = nil
 
 	// decode base.
 	if err := mapstructure.Decode(v, &base); nil != err {
