@@ -33,15 +33,15 @@ func (s *statem) Flush(ctx context.Context) error {
 }
 
 func (s *statem) FlushState() error {
-	return errors.Wrap(s.flushState(s.ctx), "flush state-marchine state")
+	return errors.Wrap(s.flushState(s.ctx), "flush state-machine state")
 }
 
 func (s *statem) FlushSearch() error {
-	return errors.Wrap(s.flushSearch(s.ctx), "flush state-marchine state")
+	return errors.Wrap(s.flushSearch(s.ctx), "flush state-machine state")
 }
 
 func (s *statem) FlushTimeSeries() error {
-	return errors.Wrap(s.flushTimeSeries(s.ctx), "flush state-marchine time-series")
+	return errors.Wrap(s.flushTimeSeries(s.ctx), "flush state-machine time-series")
 }
 
 func (s *statem) flush(ctx context.Context) error {
