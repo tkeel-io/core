@@ -41,3 +41,14 @@ var GoVersion = runtime.Version()
 
 // OsArch The system info.
 var OsArch = fmt.Sprintf("%s %s", runtime.GOOS, runtime.GOARCH)
+
+func Template() string {
+	template := `Version: %s
+Build Date: %s
+Git Branch: %s
+Git Commit: %s
+Git Version: %s
+Go Version: %s
+OS / Arch: %s`
+	return fmt.Sprintf(template, Version, BuildDate, GitBranch, GitCommit, GitVersion, GoVersion, OsArch)
+}

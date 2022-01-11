@@ -7,7 +7,7 @@ import (
 )
 
 func Test_LoadConfig(t *testing.T) {
-	InitConfig("../../config.yml")
-	cfg := GetConfig()
+	InitConfig("../../Config.yml")
+	cfg := Get()
 	assert.Equal(t, "core", cfg.Server.AppID)
 }

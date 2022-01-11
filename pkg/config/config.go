@@ -27,9 +27,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-var config = defaultConfig()
+var Config = defaultConfig()
 
-type Config struct {
+type Configuration struct {
 	Server     Server     `mapstructure:"server"`
 	Logger     LogConfig  `mapstructure:"logger"`
 	Etcd       EtcdConfig `mapstructure:"etcd"`
@@ -56,24 +56,24 @@ type LogConfig struct {
 	Output []string `yaml:"output"`
 }
 
-func defaultConfig() Config {
-	return Config{
+func defaultConfig() Configuration {
+	return Configuration{
 		Server: Server{
 			AppPort: 6789,
 		},
 	}
 }
 
-func GetConfig() *Config {
-	return &config
+func Get() Configuration {
+	return Config
 }
 
 func InitConfig(cfgFile string) {
 	if cfgFile != "" {
-		// Use config file from the flag.
+		// Use Config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search config in home directory with name ".cobra" (without extension).
+		// Search Config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath("./conf")
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("/etc/core")
@@ -85,7 +85,7 @@ func InitConfig(cfgFile string) {
 
 	if err := viper.ReadInConfig(); nil != err {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok { //nolint
-			// config file not found.
+			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
 			panic(errors.Unwrap(err))
@@ -111,12 +111,12 @@ func InitConfig(cfgFile string) {
 }
 
 func onConfigChanged(in fsnotify.Event) {
-	_ = viper.Unmarshal(&config)
+	_ = viper.Unmarshal(&Config)
 }
 
 func writeDefault(cfgFile string) {
 	if cfgFile == "" {
-		cfgFile = "config.yml"
+		cfgFile = "Config.yml"
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
