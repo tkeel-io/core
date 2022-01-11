@@ -138,6 +138,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -192,6 +193,7 @@ func checkPatchData(patchData *pb.PatchData) error {
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -211,6 +213,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -258,6 +261,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -359,6 +363,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -381,6 +386,7 @@ func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest
 func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -403,6 +409,7 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -421,6 +428,7 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -443,6 +451,7 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)

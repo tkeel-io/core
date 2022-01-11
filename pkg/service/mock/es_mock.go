@@ -14,11 +14,11 @@ func NewSearchMock() *SearchMock {
 }
 
 func (s *SearchMock) DeleteByID(context.Context, *pb.DeleteByIDRequest) (*pb.DeleteByIDResponse, error) {
-	return nil, nil
+	return &pb.DeleteByIDResponse{}, nil
 }
 
 func (s *SearchMock) Index(context.Context, *pb.IndexObject) (*pb.IndexResponse, error) {
-	return nil, nil
+	return &pb.IndexResponse{Status: ""}, nil
 }
 
 func (s *SearchMock) Search(context.Context, *pb.SearchRequest) (*pb.SearchResponse, error) {
