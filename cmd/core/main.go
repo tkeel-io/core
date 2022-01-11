@@ -24,6 +24,12 @@ import (
 
 	"github.com/panjf2000/ants/v2"
 	"github.com/spf13/cobra"
+	"github.com/tkeel-io/kit/app"
+	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/kit/transport"
+	"github.com/tkeel-io/kit/transport/grpc"
+	"github.com/tkeel-io/kit/transport/http"
+
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
@@ -35,11 +41,6 @@ import (
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/version"
-	"github.com/tkeel-io/kit/app"
-	"github.com/tkeel-io/kit/log"
-	"github.com/tkeel-io/kit/transport"
-	"github.com/tkeel-io/kit/transport/grpc"
-	"github.com/tkeel-io/kit/transport/http"
 )
 
 const _coreCmdExample = `you can use this like following:
