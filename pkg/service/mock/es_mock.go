@@ -22,5 +22,8 @@ func (s *SearchMock) Index(context.Context, *pb.IndexObject) (*pb.IndexResponse,
 }
 
 func (s *SearchMock) Search(context.Context, *pb.SearchRequest) (*pb.SearchResponse, error) {
-	return nil, nil
+	return &pb.SearchResponse{
+		Limit:  200,
+		Offset: 0,
+	}, nil
 }

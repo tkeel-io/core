@@ -2,8 +2,10 @@ package mock
 
 import (
 	"context"
+	"time"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/statem"
 )
@@ -33,7 +35,17 @@ func (m *EntityManagerMock) DeleteEntity(ctx context.Context, en *statem.Base) (
 
 // GetProperties returns entity properties.
 func (m *EntityManagerMock) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return nil, nil
+	return &statem.Base{
+		ID:           "device123",
+		Type:         "DEVICE",
+		Owner:        "admin",
+		Source:       "dm",
+		Version:      0,
+		LastTime:     time.Now().UnixMilli(),
+		Mappers:      []statem.MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
+		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
+		ConfigsBytes: nil,
+	}, nil
 }
 
 // SetProperties set entity properties.

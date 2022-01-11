@@ -100,8 +100,10 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
+
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -215,13 +217,13 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 
 	pids := strings.Split(strings.TrimSpace(in.Pids), ",")
 	if len(pids) == 0 {
-		log.Error("get entity properties, empty property ids.", logger.EntityID(in.Id))
+		log.Error("patch entity properties, empty property ids.", logger.EntityID(in.Id))
 		return out, ErrEntityInvalidParams
 	}
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("patch entity failed.", logger.EntityID(in.Id), zap.Error(err))
 		return
 	}
 
@@ -237,17 +239,20 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 		}
 
 		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
-		// patch property.
-		props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
-		if nil != err {
-			log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
-			return
+		if props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
+			if !errors.Is(err, constraint.ErrPatchNotFound) {
+				log.Error("patch entity", logger.EntityID(in.Id), zap.Error(err))
+				return out, errors.Wrap(err, "patch entity properties")
+			}
+			err = nil
+			props[pid] = constraint.NewNode(nil)
+			log.Warn("patch entity", logger.EntityID(in.Id), zap.Error(err))
 		}
 	}
 
 	entity.KValues = props
 	out = s.entity2EntityResponse(entity)
-	return out, errors.Wrap(err, "get entity properties")
+	return out, errors.Wrap(err, "patch entity properties")
 }
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
@@ -307,10 +312,11 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	parseHeaderFrom(ctx, entity)
 
+	parseHeaderFrom(ctx, entity)
 	mapperDesc := statem.MapperDesc{}
 	if req.Mapper != nil {
 		mapperDesc.Name = req.Mapper.Name
@@ -324,6 +330,24 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	// set properties.
 	entity, err = s.entityManager.AppendMapper(ctx, entity)
 	if nil != err {
+		return
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return
+}
+
+func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Type = req.Type
+	entity.Owner = req.Owner
+	entity.Source = req.Source
+	parseHeaderFrom(ctx, entity)
+
+	entity.Mappers = []statem.MapperDesc{{Name: req.MapperName}}
+	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
+		log.Error("remove mapper", logger.EntityID(req.Id), zap.Error(err))
 		return
 	}
 
