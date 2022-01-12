@@ -25,9 +25,18 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"github.com/tkeel-io/kit/log"
 )
 
-var Config = defaultConfig()
+const (
+	_defaultConfigFilename = "config.yml"
+	_corePrefix            = "CORE"
+
+	DefaultAppPort = 6789
+	DefaultAppID   = "core"
+)
+
+var config = defaultConfig()
 
 type Configuration struct {
 	Server     Server     `mapstructure:"server"`
@@ -65,7 +74,7 @@ func defaultConfig() Configuration {
 }
 
 func Get() Configuration {
-	return Config
+	return config
 }
 
 func InitConfig(cfgFile string) {
@@ -79,24 +88,22 @@ func InitConfig(cfgFile string) {
 		viper.AddConfigPath("/etc/core")
 	}
 
-	viper.SetEnvPrefix("CORE")
+	viper.SetEnvPrefix(_corePrefix)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); nil != err {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok { //nolint
+		if ok := errors.Is(err, viper.ConfigFileNotFoundError{}); ok {
 			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
-			panic(errors.Unwrap(err))
+			log.Fatal(err)
 		}
 	}
 
-	print.InfoStatusEvent(os.Stdout, "loading configuration...")
-
 	// default.
-	viper.SetDefault("server.app_port", 6789)
-	viper.SetDefault("server.app_id", "core")
+	viper.SetDefault("server.app_port", DefaultAppPort)
+	viper.SetDefault("server.app_id", DefaultAppID)
 	viper.SetDefault("server.coroutine_pool_size", 500)
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.output_json", false)
@@ -110,17 +117,21 @@ func InitConfig(cfgFile string) {
 	viper.WatchConfig()
 }
 
+func SetEtcdBrokers(brokers []string) {
+	config.Etcd.Address = brokers
+}
+
 func onConfigChanged(in fsnotify.Event) {
-	_ = viper.Unmarshal(&Config)
+	_ = viper.Unmarshal(&config)
 }
 
 func writeDefault(cfgFile string) {
 	if cfgFile == "" {
-		cfgFile = "Config.yml"
+		cfgFile = _defaultConfigFilename
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
-		// todo...
+		// TODO add write failed handler and remove print info in this package.
 		print.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }

@@ -78,20 +78,21 @@ func main() {
 		Short:   "Start a new core runtime",
 		Example: _coreCmdExample,
 		Run: func(cmd *cobra.Command, args []string) {
+			print.InfoStatusEvent(os.Stdout, "loading configuration...")
 			config.InitConfig(_cfgFile)
-			config.Config.Etcd.Address = _etcdBrokers
+			config.SetEtcdBrokers(_etcdBrokers)
 
 			// new servers.
 			httpSrv := server.NewHTTPServer(_httpAddr)
 			grpcSrv := server.NewGRPCServer(_grpcAddr)
 			serverList := []transport.Server{httpSrv, grpcSrv}
 
-			coreApp := app.New(config.Config.Server.AppID,
+			coreApp := app.New(config.Get().Server.AppID,
 				&log.Conf{
-					App:    config.Config.Server.AppID,
-					Level:  config.Config.Logger.Level,
-					Dev:    config.Config.Logger.Dev,
-					Output: config.Config.Logger.Output,
+					App:    config.Get().Server.AppID,
+					Level:  config.Get().Logger.Level,
+					Dev:    config.Get().Logger.Dev,
+					Output: config.Get().Logger.Output,
 				},
 				serverList...,
 			)
