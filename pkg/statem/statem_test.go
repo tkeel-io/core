@@ -19,10 +19,10 @@ package statem
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/util"
 )
 
 func TestNewStatem(t *testing.T) {
@@ -34,7 +34,7 @@ func TestNewStatem(t *testing.T) {
 		Owner:        "admin",
 		Source:       "dm",
 		Version:      0,
-		LastTime:     time.Now().UnixMilli(),
+		LastTime:     util.UnixMilli(),
 		Mappers:      []MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
 		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
 		ConfigsBytes: nil,

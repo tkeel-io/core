@@ -35,3 +35,7 @@ func (et ElapsedTime) ElapsedMicro() int64 {
 func (et ElapsedTime) ElapsedNano() int64 {
 	return time.Since(et.start).Nanoseconds()
 }
+
+func UnixMilli() int64 {
+	return time.Now().UnixNano() / 1e6
+}

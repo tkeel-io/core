@@ -314,7 +314,7 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 		EnabledSearch:     true,
 		EnabledTimeSeries: true,
 		Define:            make(map[string]interface{}),
-		LastTime:          time.Now().UnixMilli(),
+		LastTime:          util.UnixMilli(),
 	}
 
 	if len(segs) > 1 {
@@ -339,7 +339,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 
 		// set values.
 		cfg.ID = segs[len(segs)-1]
-		cfg.LastTime = time.Now().UnixMilli()
+		cfg.LastTime = util.UnixMilli()
 
 		if len(segs) > 1 {
 			segment = segs[len(segs)-1]
