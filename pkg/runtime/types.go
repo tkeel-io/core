@@ -25,8 +25,6 @@ import (
 )
 
 const EntityStateName = "core-state"
-const SubscriptionPrefix = "core.subsc."
-const EtcdMapperPrefix = "core.mapper."
 
 type WatchKey = mapper.WatchKey
 

@@ -31,10 +31,10 @@ import (
 
 const (
 	// subscription mode enum.
-	SubscriptionModeUndefine = "undefine"
 	SubscriptionModeRealtime = "realtime"
 	SubscriptionModePeriod   = "period"
 	SubscriptionModeChanged  = "changed"
+	SubscriptionModeUndefine = "undefine"
 
 	// subscription required fileds.
 	SubscriptionFieldMode       = "mode"
