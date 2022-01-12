@@ -9,7 +9,7 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 )
 
-func TestMsgPack(t *testing.T) {
+func TestEncodeBase(t *testing.T) {
 	vals := map[string]interface{}{
 		"int":    uint8(123),
 		"string": "string",
@@ -24,7 +24,7 @@ func TestMsgPack(t *testing.T) {
 	assert.Equal(t, vals, v)
 }
 
-func TestBaseCode(t *testing.T) {
+func TestDecodeBase(t *testing.T) {
 	base := &Base{
 		ID:       "device123",
 		Type:     "BASIC",

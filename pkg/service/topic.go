@@ -31,7 +31,7 @@ type TopicService struct {
 	pb.UnimplementedTopicServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 }
 
 const (
@@ -43,13 +43,13 @@ const (
 	SubscriptionResponseStatusDrop = "DROP"
 )
 
-func NewTopicService(ctx context.Context, mgr *entities.EntityManager) (*TopicService, error) {
+func NewTopicService(ctx context.Context, entityManager entities.EntityManager) (*TopicService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &TopicService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
+		entityManager: entityManager,
 	}, nil
 }
 
