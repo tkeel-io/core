@@ -191,6 +191,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		stateManager:   stateMgr,
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
+		status:         SMStatusActive,
 		disposing:      StateDisposingIdle,
 		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
@@ -313,7 +314,7 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 		EnabledSearch:     true,
 		EnabledTimeSeries: true,
 		Define:            make(map[string]interface{}),
-		LastTime:          util.UnixMill(),
+		LastTime:          util.UnixMilli(),
 	}
 
 	if len(segs) > 1 {
@@ -338,7 +339,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 
 		// set values.
 		cfg.ID = segs[len(segs)-1]
-		cfg.LastTime = util.UnixMill()
+		cfg.LastTime = util.UnixMilli()
 
 		if len(segs) > 1 {
 			segment = segs[len(segs)-1]

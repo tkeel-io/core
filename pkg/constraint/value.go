@@ -19,6 +19,7 @@ package constraint
 import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/kit/log"
 )
 
 const (
@@ -103,7 +104,7 @@ func (cfg *Config) RemoveField(id string) error {
 }
 
 type DefineStruct struct {
-	Fields map[string]Config `json:"fields"`
+	Fields map[string]Config `json:"fields" mapstructure:"fields"`
 }
 
 func newDefineStruct() DefineStruct {
@@ -111,8 +112,8 @@ func newDefineStruct() DefineStruct {
 }
 
 type DefineArray struct {
-	Length   int    `json:"length"`
-	ElemType Config `json:"elem_type"`
+	Length   int    `json:"length" mapstructure:"length"`
+	ElemType Config `json:"elem_type" mapstructure:"elem_type"`
 }
 
 func ParseConfigsFrom(data interface{}) (cfg Config, err error) {
@@ -139,7 +140,6 @@ func parseField(in Config) (out Config, err error) { //nolint
 		} else if arrDefine.Length <= 0 {
 			return out, ErrEntityConfigInvalid
 		}
-
 		arrDefine.ElemType, err = parseField(arrDefine.ElemType)
 		in.Define["elem_type"] = arrDefine.ElemType
 	case PropertyTypeStruct:
@@ -158,6 +158,7 @@ func parseField(in Config) (out Config, err error) { //nolint
 
 		in.Define["fields"] = jsonDefine2.Fields
 	default:
+		log.Info("===================", in)
 		return out, ErrEntityConfigInvalid
 	}
 
