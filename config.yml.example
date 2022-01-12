@@ -1,0 +1,14 @@
+server:
+  app_port: 6789
+logger:
+  dev: true
+  level: DEBUG
+
+time_series:
+  name: influxdb
+  properties:
+    - key: url
+      value: http://localhost:8086/
+    - key: bucket
+      value: bucket123
+

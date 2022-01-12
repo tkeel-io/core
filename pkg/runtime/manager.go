@@ -62,21 +62,23 @@ type Manager struct {
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
 	var (
-		err        error
 		daprClient dapr.Client
 		etcdClient *clientv3.Client
+		err        error
 	)
 
 	expireTime := 3 * time.Second
-	etcdAddr := config.GetConfig().Etcd.Address
-	tseriesClient := tseries.NewTimeSerier(config.GetConfig().TimeSeries.Name)
+	etcdAddr := config.Get().Etcd.Address
+	tseriesClient := tseries.NewTimeSerier(config.Get().TimeSeries.Name)
 	returnErr := func(err error) error { return errors.Wrap(err, "create manager failed") }
 
 	if daprClient, err = dapr.NewClient(); nil != err {
 		return nil, returnErr(err)
-	} else if err = tseriesClient.Init(resource.ParseFrom(&config.GetConfig().TimeSeries)); nil != err {
+	}
+	if err = tseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
 		return nil, returnErr(err)
-	} else if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
+	}
+	if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
 		return nil, returnErr(err)
 	}
 
@@ -111,7 +113,7 @@ func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
 }
 
 func (m *Manager) init() error {
-	// load all subcriptions.
+	// load all subscriptions.
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
 	defer cancel()
 
@@ -139,7 +141,7 @@ func (m *Manager) init() error {
 
 func (m *Manager) watchResource() error {
 	// watch tqls.
-	tqlWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
+	tqlWatcher, err := util.NewWatcher(m.ctx, config.Get().Etcd.Address)
 	if nil != err {
 		return errors.Wrap(err, "create tql watcher failed")
 	}
