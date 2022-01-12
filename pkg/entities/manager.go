@@ -43,7 +43,7 @@ const EntityStateName = "core-state"
 const SubscriptionPrefix = "core.subsc."
 const TQLEtcdPrefix = "core.tql"
 
-type EntityManager struct {
+type entityManager struct {
 	daprClient   dapr.Client
 	etcdClient   *clientv3.Client
 	searchClient pb.SearchHTTPServer
@@ -54,7 +54,7 @@ type EntityManager struct {
 	cancel context.CancelFunc
 }
 
-func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb.SearchHTTPServer) (*EntityManager, error) {
+func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb.SearchHTTPServer) (EntityManager, error) {
 	var (
 		err        error
 		daprClient dapr.Client
@@ -72,7 +72,7 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	return &EntityManager{
+	return &entityManager{
 		ctx:          ctx,
 		cancel:       cancel,
 		stateManager: mgr,
@@ -83,11 +83,11 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 	}, nil
 }
 
-func (m *EntityManager) Start() error {
+func (m *entityManager) Start() error {
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
 }
 
-func (m *EntityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
+func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
 	// 接受来自 pubsub 的消息，这些消息将触发 实体 运行时.
 	m.stateManager.SendMsg(msgCtx)
 }
@@ -107,7 +107,7 @@ func merge(dest, src *statem.Base) *statem.Base {
 }
 
 // CreateEntity create a entity.
-func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*statem.Base, error) {
+func (m *entityManager) CreateEntity(ctx context.Context, base *statem.Base) (*statem.Base, error) {
 	var err error
 	if base.ID == "" {
 		base.ID = uuid()
@@ -165,7 +165,7 @@ func (m *EntityManager) CreateEntity(ctx context.Context, base *statem.Base) (*s
 }
 
 // DeleteEntity delete an entity from manager.
-func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
 		log.Error("delete entity", zap.Error(err), logger.EntityID(en.ID))
@@ -203,14 +203,14 @@ func (m *EntityManager) DeleteEntity(ctx context.Context, en *statem.Base) (base
 }
 
 // GetProperties returns statem.Base.
-func (m *EntityManager) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	if base, err = m.getEntityFromState(ctx, en); nil != err {
 		log.Error("get entity", zap.Error(err), logger.EntityID(en.ID))
 	}
 	return base, errors.Wrap(err, "entity GetProperties")
 }
 
-func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) getEntityFromState(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	var item *dapr.StateItem
 	if item, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
 		return
@@ -224,7 +224,7 @@ func (m *EntityManager) getEntityFromState(ctx context.Context, en *statem.Base)
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// TODO：这里的调用其实是可能通过entity-manager的proxy的同步调用，这个可以设置可选项.
 	if err = m.stateManager.SetProperties(ctx, en); nil != err {
 		log.Error("set entity properties", zap.Error(err), logger.EntityID(en.ID))
@@ -235,7 +235,7 @@ func (m *EntityManager) SetProperties(ctx context.Context, en *statem.Base) (bas
 	return base, errors.Wrap(err, "set entity properties")
 }
 
-func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error) {
+func (m *entityManager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error) {
 	if err = m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
 		log.Error("patch entity", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "patch entity properties")
@@ -253,7 +253,7 @@ func (m *EntityManager) PatchEntity(ctx context.Context, en *statem.Base, patchD
 }
 
 // AppendMapper append a mapper into entity.
-func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. 判断实体是否存在.
 	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
 		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
@@ -285,7 +285,7 @@ func (m *EntityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	// 1. 判断实体是否存在.
 	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
 		log.Error("remove mapper", zap.Error(err), logger.EntityID(en.ID))
@@ -309,7 +309,7 @@ func (m *EntityManager) RemoveMapper(ctx context.Context, en *statem.Base) (base
 	return base, errors.Wrap(err, "remove mapper")
 }
 
-func (m *EntityManager) CheckSubscription(ctx context.Context, en *statem.Base) (err error) {
+func (m *entityManager) CheckSubscription(ctx context.Context, en *statem.Base) (err error) {
 	// check TQLs.
 	if err = checkTQLs(en); nil != err {
 		return errors.Wrap(err, "check subscription")
@@ -330,7 +330,7 @@ func (m *EntityManager) CheckSubscription(ctx context.Context, en *statem.Base) 
 }
 
 // SetProperties set properties into entity.
-func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	if err = m.stateManager.SetConfigs(ctx, en); nil != err {
 		log.Error("set entity configs", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "set entity configs")
@@ -341,7 +341,7 @@ func (m *EntityManager) SetConfigs(ctx context.Context, en *statem.Base) (base *
 }
 
 // PatchConfigs patch properties into entity.
-func (m *EntityManager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error) {
+func (m *entityManager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error) {
 	if err = m.stateManager.PatchConfigs(ctx, en, patchData); nil != err {
 		log.Error("patch entity configs", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "patch entity configs")
@@ -366,7 +366,7 @@ func (m *EntityManager) PatchConfigs(ctx context.Context, en *statem.Base, patch
 }
 
 // AppendConfigs append entity configs.
-func (m *EntityManager) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
+func (m *entityManager) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
 	if err = m.stateManager.AppendConfigs(ctx, en); nil != err {
 		log.Error("append entity configs", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "append entity configs")
@@ -377,7 +377,7 @@ func (m *EntityManager) AppendConfigs(ctx context.Context, en *statem.Base) (bas
 }
 
 // RemoveConfigs remove entity configs.
-func (m *EntityManager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
+func (m *entityManager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
 	if err = m.stateManager.RemoveConfigs(ctx, en, propertyIDs); nil != err {
 		log.Error("remove entity configs", zap.Error(err), logger.EntityID(en.ID))
 		return nil, errors.Wrap(err, "remove entity configs")
@@ -388,7 +388,7 @@ func (m *EntityManager) RemoveConfigs(ctx context.Context, en *statem.Base, prop
 }
 
 // QueryConfigs query entity configs.
-func (m *EntityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
+func (m *entityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
 	base, err = m.getEntityFromState(ctx, en)
 	baseEntity := base.DuplicateExpectValue()
 	for _, propertyID := range propertyIDs {

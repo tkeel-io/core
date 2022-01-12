@@ -26,10 +26,10 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
+	"github.com/tkeel-io/core/pkg/resource/search"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/search"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/version"
@@ -69,7 +69,7 @@ var (
 
 var (
 	_esClient      corev1.SearchHTTPServer
-	_entityManager *entities.EntityManager
+	_entityManager entities.EntityManager
 )
 
 func main() {
@@ -140,13 +140,11 @@ func main() {
 	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31233", "grpc listen address.")
 	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", []string{"http://localhost:2379"}, "etcd brokers address.")
 	cmd.PersistentFlags().StringSliceVar(&_es, "es", []string{"http://localhost:9200"}, "Elasticsearch brokers address.")
-
 	cmd.Version = version.Version
+	cmd.SetVersionTemplate(version.Template())
 	cobra.OnInitialize(func() {
 		// add sub commands.
 	})
-
-	cmd.SetVersionTemplate(version.Template())
 
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err.Error())

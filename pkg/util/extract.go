@@ -1,9 +1,16 @@
 package util
 
+import (
+	"sort"
+	"strings"
+)
+
 func ExtractMap(m map[string]string) string {
-	var result string
+	var pairs sort.StringSlice
 	for key, value := range m {
-		result += "," + key + "=" + value
+		pairs = append(pairs, key+"="+value)
 	}
-	return result[1:]
+
+	sort.Sort(pairs)
+	return strings.Join([]string(pairs), ",")
 }
