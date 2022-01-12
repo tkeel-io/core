@@ -173,7 +173,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	var entity = new(Entity)
 
 	entity.ID = req.Id
-	entity.Type = runtime.StateMarchineTypeSubscription
+	entity.Type = runtime.StateMachineTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -190,7 +190,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	var entity = new(Entity)
 
 	entity.ID = req.Id
-	entity.Type = runtime.StateMarchineTypeSubscription
+	entity.Type = runtime.StateMachineTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
