@@ -26,6 +26,7 @@ type EntityClient interface {
 	GetEntity(ctx context.Context, in *GetEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
 	AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error)
+	RemoveMapper(ctx context.Context, in *RemoveMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	SetConfigs(ctx context.Context, in *SetConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	AppendConfigs(ctx context.Context, in *AppendConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	RemoveConfigs(ctx context.Context, in *RemoveConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
@@ -114,6 +115,15 @@ func (c *entityClient) AppendMapper(ctx context.Context, in *AppendMapperRequest
 	return out, nil
 }
 
+func (c *entityClient) RemoveMapper(ctx context.Context, in *RemoveMapperRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/RemoveMapper", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *entityClient) SetConfigs(ctx context.Context, in *SetConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
 	out := new(EntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/SetConfigs", in, out, opts...)
@@ -180,6 +190,7 @@ type EntityServer interface {
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
 	AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error)
+	RemoveMapper(context.Context, *RemoveMapperRequest) (*EntityResponse, error)
 	SetConfigs(context.Context, *SetConfigsRequest) (*EntityResponse, error)
 	AppendConfigs(context.Context, *AppendConfigsRequest) (*EntityResponse, error)
 	RemoveConfigs(context.Context, *RemoveConfigsRequest) (*EntityResponse, error)
@@ -216,6 +227,9 @@ func (UnimplementedEntityServer) ListEntity(context.Context, *ListEntityRequest)
 }
 func (UnimplementedEntityServer) AppendMapper(context.Context, *AppendMapperRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppendMapper not implemented")
+}
+func (UnimplementedEntityServer) RemoveMapper(context.Context, *RemoveMapperRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveMapper not implemented")
 }
 func (UnimplementedEntityServer) SetConfigs(context.Context, *SetConfigsRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetConfigs not implemented")
@@ -392,6 +406,24 @@ func _Entity_AppendMapper_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_RemoveMapper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveMapperRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).RemoveMapper(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/RemoveMapper",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).RemoveMapper(ctx, req.(*RemoveMapperRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Entity_SetConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetConfigsRequest)
 	if err := dec(in); err != nil {
@@ -538,6 +570,10 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AppendMapper",
 			Handler:    _Entity_AppendMapper_Handler,
+		},
+		{
+			MethodName: "RemoveMapper",
+			Handler:    _Entity_RemoveMapper_Handler,
 		},
 		{
 			MethodName: "SetConfigs",

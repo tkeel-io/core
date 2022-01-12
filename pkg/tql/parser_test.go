@@ -20,6 +20,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -57,10 +58,34 @@ func TestParserAndComputing(t *testing.T) {
 }
 
 func TestParser(t *testing.T) {
-	tql := `insert into target_entity select *`
+	tqls := map[string]string{
+		"tql1": "insert into device123 select device234.*",
+		"tql2": "insert into device123 select device234.temp as temp",
+		"tql3": "insert into sub123 select *",
+		"tql4": "insert into sub123 select *.temp",
+	}
 
-	t.Log("parse tql: ", tql)
-	l, _ := Parse(tql)
-	cfg, _ := l.GetParseConfigs()
-	t.Log("parse tql, result: ", cfg)
+	for name, tqlString := range tqls {
+		l, err := Parse(tqlString)
+		assert.Equal(t, nil, err)
+		_, err = l.GetParseConfigs()
+		assert.Equal(t, nil, err)
+		t.Logf("TQL name: %s, TQL: %s", name, tqlString)
+	}
+}
+
+func TestGetParseConfigs(t *testing.T) {
+	tqlString := "insert into device123 select device234.*"
+
+	l, err := Parse(tqlString)
+	assert.Equal(t, nil, err)
+	cfg, err := l.GetParseConfigs()
+	assert.Equal(t, nil, err)
+
+	expectCfg := TQLConfig{
+		TargetEntity:   "device123",
+		SourceEntities: []string{"device234"},
+		Tentacles:      []TentacleConfig{{SourceEntity: "device234", PropertyKeys: []string{"*"}}},
+	}
+	assert.Equal(t, expectCfg, cfg)
 }

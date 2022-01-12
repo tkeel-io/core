@@ -155,6 +155,13 @@
             "type": "string"
           },
           {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "source",
             "description": "source id",
             "in": "query",
@@ -196,6 +203,13 @@
             "description": "entity id",
             "in": "path",
             "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
             "type": "string"
           },
           {
@@ -251,6 +265,13 @@
               "type": "object",
               "description": "entity properties"
             }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
           },
           {
             "name": "source",
@@ -316,6 +337,13 @@
           {
             "name": "owner",
             "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
             "in": "query",
             "required": false,
             "type": "string"
@@ -630,6 +658,64 @@
       }
     },
     "/entities/{id}/mappers": {
+      "delete": {
+        "summary": "remove entity mappers",
+        "operationId": "RemoveMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mapper_name",
+            "description": "mapper name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
       "post": {
         "summary": "Append entity mapper",
         "operationId": "AppendMapper",
@@ -664,6 +750,13 @@
               "$ref": "#/definitions/v1MapperDesc",
               "description": "mapper description"
             }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
           },
           {
             "name": "source",
@@ -730,6 +823,13 @@
           {
             "name": "owner",
             "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
             "in": "query",
             "required": false,
             "type": "string"

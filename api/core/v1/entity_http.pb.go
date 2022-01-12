@@ -33,6 +33,7 @@ type EntityHTTPServer interface {
 	PatchEntityZ(context.Context, *PatchEntityRequest) (*EntityResponse, error)
 	QueryConfigs(context.Context, *QueryConfigsRequest) (*EntityResponse, error)
 	RemoveConfigs(context.Context, *RemoveConfigsRequest) (*EntityResponse, error)
+	RemoveMapper(context.Context, *RemoveMapperRequest) (*EntityResponse, error)
 	SetConfigs(context.Context, *SetConfigsRequest) (*EntityResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 }
@@ -493,6 +494,42 @@ func (h *EntityHTTPHandler) RemoveConfigs(req *go_restful.Request, resp *go_rest
 	}
 }
 
+func (h *EntityHTTPHandler) RemoveMapper(req *go_restful.Request, resp *go_restful.Response) {
+	in := RemoveMapperRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.RemoveMapper(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
 func (h *EntityHTTPHandler) SetConfigs(req *go_restful.Request, resp *go_restful.Response) {
 	in := SetConfigsRequest{}
 	if err := transportHTTP.GetBody(req, &in.Configs); err != nil {
@@ -605,6 +642,8 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.ListEntity))
 	ws.Route(ws.POST("/entities/{id}/mappers").
 		To(handler.AppendMapper))
+	ws.Route(ws.DELETE("/entities/{id}/mappers").
+		To(handler.RemoveMapper))
 	ws.Route(ws.POST("/entities/{id}/configs").
 		To(handler.SetConfigs))
 	ws.Route(ws.PUT("/entities/{id}/configs").

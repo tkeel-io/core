@@ -34,17 +34,17 @@ type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 }
 
 // NewSubscriptionService returns a new SubscriptionService.
-func NewSubscriptionService(ctx context.Context, mgr *entities.EntityManager) (*SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context, entityManager entities.EntityManager) (*SubscriptionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &SubscriptionService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
+		entityManager: entityManager,
 	}, nil
 }
 
@@ -69,6 +69,7 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 
 	out.Id = entity.ID
 	out.Owner = entity.Owner
+	out.Source = entity.Source
 	out.Subscription = &pb.SubscriptionObject{}
 	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
 	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
@@ -88,12 +89,12 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMarchineTypeSubscription
+	entity.Type = runtime.StateMachineTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = map[string]constraint.Node{
-		runtime.StateMarchineFieldType:      constraint.StringNode(entity.Type),
-		runtime.StateMarchineFieldOwner:     constraint.StringNode(entity.Owner),
-		runtime.StateMarchineFieldSource:    constraint.StringNode(entity.Source),
+		runtime.StateMachineFieldType:       constraint.StringNode(entity.Type),
+		runtime.StateMachineFieldOwner:      constraint.StringNode(entity.Owner),
+		runtime.StateMachineFieldSource:     constraint.StringNode(entity.Source),
 		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
 		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
 		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -105,17 +106,17 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return
 	}
 
-	// set properties.
-	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
-		return
-	}
-
 	// set mapper.
 	entity.Mappers = []statem.MapperDesc{{
 		Name:      "subscription",
 		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
 	}}
+
+	// set properties.
+	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+		return
+	}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
@@ -126,7 +127,6 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	out = s.entity2SubscriptionResponse(entity)
-
 	return out, errors.Wrap(err, "create subscription")
 }
 
@@ -136,7 +136,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMarchineTypeSubscription
+	entity.Type = runtime.StateMachineTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = map[string]constraint.Node{
 		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
@@ -173,6 +173,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	var entity = new(Entity)
 
 	entity.ID = req.Id
+	entity.Type = runtime.StateMachineTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -189,6 +190,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	var entity = new(Entity)
 
 	entity.ID = req.Id
+	entity.Type = runtime.StateMachineTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
