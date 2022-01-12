@@ -23,6 +23,7 @@ import (
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
@@ -85,7 +86,7 @@ type StateMachiner interface {
 	// RemoveConfig remove entity property configs.
 	RemoveConfigs(propertyIDs []string) error
 	// LoadEnvironments load environments.
-	LoadEnvironments(EnvDescription)
+	LoadEnvironments(environment.ActorEnv)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.
@@ -94,11 +95,6 @@ type StateMachiner interface {
 	GetManager() StateManager
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
-}
-
-type EnvDescription struct {
-	Mappers   []mapper.Mapper
-	Tentacles []mapper.Tentacler
 }
 
 type Flusher interface {

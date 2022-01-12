@@ -30,6 +30,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -46,7 +47,7 @@ type Manager struct {
 	msgCh         chan statem.MessageContext
 	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
-	actorEnv      *Environment
+	actorEnv      environment.IEnvironment
 
 	daprClient    dapr.Client
 	etcdClient    *clientv3.Client
@@ -84,11 +85,11 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
-		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
 		tseriesClient: tseriesClient,
+		actorEnv:      environment.NewEnvironment(),
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
 		disposeCh:     make(chan statem.MessageContext, 10),
@@ -115,26 +116,24 @@ func (m *Manager) init() error {
 	defer cancel()
 
 	log.Info("initialize actor manager, tql loadding...")
-	res, err := m.etcdClient.Get(ctx, TQLEtcdPrefix, clientv3.WithPrefix())
+	res, err := m.etcdClient.Get(ctx, util.EtcdMapperPrefix, clientv3.WithPrefix())
 	if nil != err {
 		return errors.Wrap(err, "load all tql")
 	}
 
-	descs := make([]EtcdPair, len(res.Kvs))
+	pairs := make([]environment.EtcdPair, len(res.Kvs))
 	for index, kv := range res.Kvs {
-		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
+		pairs[index] = environment.EtcdPair{Key: string(kv.Key), Value: kv.Value}
 	}
 
-	stateIDs := make([]string, 0)
-	loadEntities := m.actorEnv.LoadMapper(descs)
-	for _, info := range loadEntities {
+	for _, info := range m.actorEnv.StoreMappers(pairs) {
 		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load state machine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+			log.Error("load state machine", zap.Error(err),
+				zap.String("type", info.Type), logger.EntityID(info.EntityID))
 		}
-		stateIDs = append(stateIDs, info.EntityID)
 	}
-	m.reloadActor(stateIDs)
+
 	return nil
 }
 
@@ -145,10 +144,9 @@ func (m *Manager) watchResource() error {
 		return errors.Wrap(err, "create tql watcher failed")
 	}
 
-	log.Info("watch resource")
-	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
-		// on changed.
-		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+	tqlWatcher.Watch(util.EtcdMapperPrefix, true, func(ev *clientv3.Event) {
+		pair := environment.EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value}
+		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, pair)
 		m.reloadActor(effects)
 	})
 
@@ -169,7 +167,7 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
 				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
 			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				stateMachine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+				stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
 				continue
 			}
 		}
@@ -316,6 +314,9 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 	if _, has := m.containers[channelID]; !has {
 		m.containers[channelID] = NewContainer()
 	}
+
+	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
+	sm.LoadEnvironments(thisActorEnv)
 
 	sm.Setup()
 	m.containers[channelID].Add(sm)
@@ -505,7 +506,7 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 	return errors.Wrap(stateMachine.Flush(ctx), "remove entity configs")
 }
 
-// DeleteStateMarchin delete runtime.Entity.
+// DeleteStateMachine delete runtime.Entity.
 func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
 	var err error
 	channelID, stateMachine := m.getStateMachine("", base.ID)

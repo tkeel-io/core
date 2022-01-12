@@ -22,6 +22,7 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/kit/log"
@@ -153,7 +154,7 @@ func (s *subscription) GetStatus() statem.Status {
 	return s.stateMachine.GetStatus()
 }
 
-func (s *subscription) LoadEnvironments(env statem.EnvDescription) {
+func (s *subscription) LoadEnvironments(env environment.ActorEnv) {
 	s.stateMachine.LoadEnvironments(env)
 }
 

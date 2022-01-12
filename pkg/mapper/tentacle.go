@@ -71,6 +71,7 @@ func (t *tentacle) Copy() Tentacler {
 	}
 
 	return &tentacle{
+		id:       t.id,
 		tp:       t.tp,
 		items:    items,
 		targetID: t.targetID,
