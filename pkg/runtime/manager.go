@@ -127,9 +127,9 @@ func (m *Manager) init() error {
 	}
 
 	for _, info := range m.actorEnv.StoreMappers(pairs) {
-		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load state marchine", zap.Error(err),
+			log.Error("load state machine", zap.Error(err),
 				zap.String("type", info.Type), logger.EntityID(info.EntityID))
 		}
 	}
@@ -162,12 +162,12 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 	if m.isThisNode() {
 		var err error
 		for _, stateID := range stateIDs {
-			var stateMarchine statem.StateMachiner
+			var stateMachine statem.StateMachiner
 			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
-			if _, stateMarchine = m.getStateMachine("", stateID); nil != stateMarchine {
-				log.Debug("load state marchine @ runtime.", logger.EntityID(stateID))
-			} else if stateMarchine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				stateMarchine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
+			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
+				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
 				continue
 			}
 		}
@@ -506,7 +506,7 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 	return errors.Wrap(stateMachine.Flush(ctx), "remove entity configs")
 }
 
-// DeleteStateMarchine delete runtime.Entity.
+// DeleteStateMachine delete runtime.Entity.
 func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
 	var err error
 	channelID, stateMachine := m.getStateMachine("", base.ID)
