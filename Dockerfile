@@ -16,9 +16,9 @@ FROM alpine:3.13
 
 RUN mkdir /keel
 COPY --from=builder /src/dist/linux_amd64/release/core /keel
-COPY --from=builder /src/config.yml /keel
+COPY --from=builder /src/config.yml.example /keel/config.yml
 
 
 EXPOSE 6789
 WORKDIR /keel
-CMD ["/keel/core", "--search_brokers", "http://elasticsearch-master:9200", "--etcd_brokers", "http://etcd:2379"]
+CMD ["/keel/core", "--es", "http://elasticsearch-master:9200", "--etcd", "http://etcd:2379"]
