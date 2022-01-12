@@ -177,7 +177,7 @@ type statem struct {
 }
 
 // newEntity create an statem object.
-func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMarchiner, error) {
+func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = uuid()
 	}
@@ -267,7 +267,7 @@ func (s *statem) GetManager() StateManager {
 
 // SetConfigs set entity configs.
 func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
-	// reset state marchine configs.
+	// reset state machine configs.
 	s.Configs = make(map[string]constraint.Config)
 	s.constraints = make(map[string]*constraint.Constraint)
 	s.searchConstraints = make(sort.StringSlice, 0)
@@ -376,10 +376,10 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 					logger.EntityID(s.ID),
 					zap.Any("config", pd.Value),
 					zap.String("path", pd.Path))
-				return errors.Wrap(err, "state marchine patch configs")
+				return errors.Wrap(err, "state machine patch configs")
 			}
 
-			log.Debug("patch state marchine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
+			log.Debug("patch state machine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
 
 			switch pd.Operator {
 			case constraint.PatchOpAdd:
@@ -388,12 +388,12 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				if index == 0 {
 					s.Configs[segment] = cfg
 				} else if err = parentCfg.AppendField(cfg); nil != err {
-					return errors.Wrap(err, "upsert state marchine configs")
+					return errors.Wrap(err, "upsert state machine configs")
 				}
 			case constraint.PatchOpRemove:
 				if index == len(segs)-1 || nil != parentCfg {
 					if err = parentCfg.RemoveField(segment); nil != err {
-						return errors.Wrap(err, "remove state marchine configs")
+						return errors.Wrap(err, "remove state machine configs")
 					}
 				}
 			case constraint.PatchOpCopy:
@@ -409,7 +409,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				delete(s.Configs, segs[0])
 			}
 		}
-		log.Debug("patch state marchine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
+		log.Debug("patch state machine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
 	}
 
 	s.constraints = make(map[string]*constraint.Constraint)
@@ -431,7 +431,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 		}
 	}
 
-	log.Debug("patch state marchine configs", zap.Any("value", patchData))
+	log.Debug("patch state machine configs", zap.Any("value", patchData))
 
 	return nil
 }

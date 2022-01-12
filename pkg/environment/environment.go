@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// cache for state marchine.
+// cache for state machine.
 type MapperCache struct {
 	mappers       map[string]mapper.Mapper    // map[mapperID]Mapper.
 	tentacles     map[string]mapper.Tentacler // tentacle set.
@@ -174,7 +174,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 			env.addTentacle(remoteID, tentacle)
 			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		case mapper.TentacleTypeMapper:
-			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMarchine.
+			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMachine.
 			mCache.tentacles[tentacle.ID()] = tentacle
 			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		default:
@@ -192,7 +192,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 // removeMapper remove mapper from Environment.
 func (env *Environment) removeMapper(stateID, mapperID string) []string {
 	if _, exists := env.mapperCaches[stateID]; !exists {
-		log.Warn("state marchine environment not found",
+		log.Warn("state machine environment not found",
 			zap.String("stateID", stateID), zap.String("mapperID", mapperID))
 		return nil
 	}

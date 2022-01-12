@@ -66,16 +66,16 @@ type StateManager interface {
 	RemoveConfigs(context.Context, *Base, []string) error
 }
 
-type StateMarchiner interface {
-	// GetID return state marchine id.
+type StateMachiner interface {
+	// GetID return state machine id.
 	GetID() string
 	// GetBase returns state.Base
 	GetBase() *Base
-	// Setup state marchine setup.
+	// Setup state machine setup.
 	Setup() error
-	// SetStatus set state-marchine status.
+	// SetStatus set state-machine status.
 	SetStatus(Status)
-	// GetStatus returns state-marchine status.
+	// GetStatus returns state-machine status.
 	GetStatus() Status
 	// SetConfig set entity configs.
 	SetConfigs(map[string]constraint.Config) error
@@ -134,7 +134,7 @@ type MessageContext struct {
 // GetTargetID returns message target id.
 func (h Header) GetTargetID() string { return h[MessageCtxHeaderTargetID] }
 
-// SetTargetID set target state marchine id.
+// SetTargetID set target state machine id.
 func (h Header) SetTargetID(targetID string) { h[MessageCtxHeaderTargetID] = targetID }
 
 // GetOwner returns message owner.

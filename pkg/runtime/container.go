@@ -24,16 +24,16 @@ import (
 
 type Container struct {
 	lock   sync.RWMutex
-	states map[string]statem.StateMarchiner
+	states map[string]statem.StateMachiner
 }
 
 func NewContainer() *Container {
 	return &Container{
-		states: make(map[string]statem.StateMarchiner),
+		states: make(map[string]statem.StateMachiner),
 	}
 }
 
-func (c *Container) Add(s statem.StateMarchiner) {
+func (c *Container) Add(s statem.StateMachiner) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.states[s.GetID()] = s
@@ -45,7 +45,7 @@ func (c *Container) Remove(id string) {
 	delete(c.states, id)
 }
 
-func (c *Container) Get(id string) statem.StateMarchiner {
+func (c *Container) Get(id string) statem.StateMachiner {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.states[id]

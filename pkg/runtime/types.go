@@ -31,8 +31,8 @@ const EtcdMapperPrefix = "core.mapper."
 type WatchKey = mapper.WatchKey
 
 const (
-	StateMarchineTypeBasic        = "BASIC"
-	StateMarchineTypeSubscription = "SUBSCRIPTION"
+	StateMachineTypeBasic        = "BASIC"
+	StateMachineTypeSubscription = "SUBSCRIPTION"
 )
 
 var (
@@ -41,4 +41,4 @@ var (
 	ErrSubscriptionInvalid = errors.New("invalid subscription")
 )
 
-type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMarchiner, error)
+type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMachiner, error)

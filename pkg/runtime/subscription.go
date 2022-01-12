@@ -44,10 +44,10 @@ const (
 	SubscriptionFieldTopic      = "topic"
 	SubscriptionFieldPubsubName = "pubsub_name"
 
-	// state marchine required fileds.
-	StateMarchineFieldType   = "type"
-	StateMarchineFieldOwner  = "owner"
-	StateMarchineFieldSource = "source"
+	// state machine required fileds.
+	StateMachineFieldType   = "type"
+	StateMachineFieldOwner  = "owner"
+	StateMachineFieldSource = "source"
 )
 
 // SubscriptionBase subscription basic information.
@@ -63,7 +63,7 @@ type SubscriptionBase struct {
 type subscription struct {
 	SubscriptionBase `mapstructure:",squash"`
 	daprClient       dapr.Client
-	stateMarchine    statem.StateMarchiner `mapstructure:"-"`
+	stateMachine     statem.StateMachiner `mapstructure:"-"`
 }
 
 func decode2Subscription(kvalues map[string]constraint.Node, subsc *SubscriptionBase) {
@@ -90,7 +90,7 @@ func decode2Subscription(kvalues map[string]constraint.Node, subsc *Subscription
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM statem.StateMarchiner, err error) {
+func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM statem.StateMachiner, err error) {
 	subsc := subscription{SubscriptionBase: SubscriptionBase{
 		Mode: SubscriptionModeUndefine,
 	}}
@@ -112,11 +112,11 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM
 	}
 
 	subsc.daprClient = daprClient
-	subsc.stateMarchine = stateM
+	subsc.stateMachine = stateM
 	subsc.GetBase().KValues = in.KValues
 
 	// set mapper.
-	subsc.stateMarchine.GetBase().Mappers = []statem.MapperDesc{{
+	subsc.stateMachine.GetBase().Mappers = []statem.MapperDesc{{
 		Name:      "subscription",
 		TQLString: subsc.Filter,
 	}}
@@ -124,17 +124,17 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM
 }
 
 func (s *subscription) Flush(ctx context.Context) error {
-	return errors.Wrap(s.stateMarchine.Flush(ctx), "flush subscription")
+	return errors.Wrap(s.stateMachine.Flush(ctx), "flush subscription")
 }
 
 // Setup setup filter.
 func (s *subscription) Setup() error {
-	return errors.Wrap(s.stateMarchine.Setup(), "subscription setup")
+	return errors.Wrap(s.stateMachine.Setup(), "subscription setup")
 }
 
-// GetID return state marchine id.
+// GetID return state machine id.
 func (s *subscription) GetID() string {
-	return s.stateMarchine.GetID()
+	return s.stateMachine.GetID()
 }
 
 // GetMode returns subscription mode.
@@ -143,57 +143,57 @@ func (s *subscription) GetMode() string {
 }
 
 func (s *subscription) GetBase() *statem.Base {
-	return s.stateMarchine.GetBase()
+	return s.stateMachine.GetBase()
 }
 
 func (s *subscription) SetStatus(status statem.Status) {
-	s.stateMarchine.SetStatus(status)
+	s.stateMachine.SetStatus(status)
 }
 
 func (s *subscription) GetStatus() statem.Status {
-	return s.stateMarchine.GetStatus()
+	return s.stateMachine.GetStatus()
 }
 
 func (s *subscription) LoadEnvironments(env environment.ActorEnv) {
-	s.stateMarchine.LoadEnvironments(env)
+	s.stateMachine.LoadEnvironments(env)
 }
 
 func (s *subscription) GetManager() statem.StateManager {
-	return s.stateMarchine.GetManager()
+	return s.stateMachine.GetManager()
 }
 
 // SetConfig set entity configs.
 func (s *subscription) SetConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMarchine.SetConfigs(configs)
+	err := s.stateMachine.SetConfigs(configs)
 	return errors.Wrap(err, "set subscription configs")
 }
 
 // PatchConfigs set entity configs.
 func (s *subscription) PatchConfigs(patchData []*statem.PatchData) error {
-	err := s.stateMarchine.PatchConfigs(patchData)
+	err := s.stateMachine.PatchConfigs(patchData)
 	return errors.Wrap(err, "patch subscription configs")
 }
 
 // AppendConfig append entity property config.
 func (s *subscription) AppendConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMarchine.AppendConfigs(configs)
+	err := s.stateMachine.AppendConfigs(configs)
 	return errors.Wrap(err, "append subscription configs")
 }
 
 // RemoveConfig remove entity property configs.
 func (s *subscription) RemoveConfigs(propertyIDs []string) error {
-	err := s.stateMarchine.RemoveConfigs(propertyIDs)
+	err := s.stateMachine.RemoveConfigs(propertyIDs)
 	return errors.Wrap(err, "remove subscription configs")
 }
 
 // OnMessage recv message from pubsub.
 func (s *subscription) OnMessage(msg statem.Message) bool {
-	return s.stateMarchine.OnMessage(msg)
+	return s.stateMachine.OnMessage(msg)
 }
 
 // InvokeMsg dispose entity message.
 func (s *subscription) HandleLoop() {
-	s.stateMarchine.HandleLoop()
+	s.stateMachine.HandleLoop()
 }
 
 func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
