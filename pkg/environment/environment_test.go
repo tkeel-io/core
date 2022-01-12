@@ -20,5 +20,5 @@ func TestEnvironment(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, "sub123", infos[0].EntityID)
+	assert.Equal(t, "device123", infos[0].EntityID)
 }
