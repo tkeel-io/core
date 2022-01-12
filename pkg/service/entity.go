@@ -38,18 +38,18 @@ type EntityService struct {
 	pb.UnimplementedEntityServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 	searchClient  pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, mgr *entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
+func NewEntityService(ctx context.Context, entityManager entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
 		searchClient:  searchClient,
+		entityManager: entityManager,
 	}, nil
 }
 
@@ -89,8 +89,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 
 	// set properties.
 	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create entity failed",
-			logger.EntityID(req.Id), zap.Error(err))
+		log.Error("create entity failed", logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
@@ -101,8 +100,10 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
+
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -137,6 +138,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -191,6 +193,7 @@ func checkPatchData(patchData *pb.PatchData) error {
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -210,19 +213,20 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
 	pids := strings.Split(strings.TrimSpace(in.Pids), ",")
 	if len(pids) == 0 {
-		log.Error("get entity properties, empty property ids.", logger.EntityID(in.Id))
+		log.Error("patch entity properties, empty property ids.", logger.EntityID(in.Id))
 		return out, ErrEntityInvalidParams
 	}
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("patch entity failed.", logger.EntityID(in.Id), zap.Error(err))
 		return
 	}
 
@@ -238,22 +242,26 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 		}
 
 		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
-		// patch property.
-		props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
-		if nil != err {
-			log.Error("get entity failed.", logger.EntityID(in.Id), zap.Error(err))
-			return
+		if props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
+			if !errors.Is(err, constraint.ErrPatchNotFound) {
+				log.Error("patch entity", logger.EntityID(in.Id), zap.Error(err))
+				return out, errors.Wrap(err, "patch entity properties")
+			}
+			err = nil
+			props[pid] = constraint.NewNode(nil)
+			log.Warn("patch entity", logger.EntityID(in.Id), zap.Error(err))
 		}
 	}
 
 	entity.KValues = props
 	out = s.entity2EntityResponse(entity)
-	return out, errors.Wrap(err, "get entity properties")
+	return out, errors.Wrap(err, "patch entity properties")
 }
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -308,10 +316,11 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	parseHeaderFrom(ctx, entity)
 
+	parseHeaderFrom(ctx, entity)
 	mapperDesc := statem.MapperDesc{}
 	if req.Mapper != nil {
 		mapperDesc.Name = req.Mapper.Name
@@ -332,10 +341,29 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	return
 }
 
+func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Type = req.Type
+	entity.Owner = req.Owner
+	entity.Source = req.Source
+	parseHeaderFrom(ctx, entity)
+
+	entity.Mappers = []statem.MapperDesc{{Name: req.MapperName}}
+	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
+		log.Error("remove mapper", logger.EntityID(req.Id), zap.Error(err))
+		return
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return
+}
+
 // SetConfigs set entity configs.
 func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -358,6 +386,7 @@ func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest
 func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -380,6 +409,7 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -398,6 +428,7 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -420,6 +451,7 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = in.Id
+	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
@@ -537,10 +569,10 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}
 
-	out.Source = entity.Source
-	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
+	out.Owner = entity.Owner
+	out.Source = entity.Source
 
 	return out
 }

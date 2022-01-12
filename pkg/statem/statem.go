@@ -74,15 +74,16 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id" msgpack:"id" mapstructure:"id"`
-	Type     string                       `json:"type" msgpack:"type" mapstructure:"type"`
-	Owner    string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
-	Source   string                       `json:"source" msgpack:"source" mapstructure:"source"`
-	Version  int64                        `json:"version" msgpack:"version" mapstructure:"version"`
-	LastTime int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
-	Configs  map[string]constraint.Config `json:"configs" msgpack:"configs" mapstructure:"configs"`
+	ID           string                       `json:"id" msgpack:"id" mapstructure:"id"`
+	Type         string                       `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner        string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source       string                       `json:"source" msgpack:"source" mapstructure:"source"`
+	Version      int64                        `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime     int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers      []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	KValues      map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
+	Configs      map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
+	ConfigsBytes []byte                       `json:"-" msgpack:"configs_bytes" mapstructure:"-"`
 }
 
 func (b *Base) Copy() Base {
@@ -191,6 +192,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		stateManager:   stateMgr,
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
+		status:         SMStatusActive,
 		disposing:      StateDisposingIdle,
 		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
@@ -318,7 +320,7 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 		EnabledSearch:     true,
 		EnabledTimeSeries: true,
 		Define:            make(map[string]interface{}),
-		LastTime:          util.UnixMill(),
+		LastTime:          util.UnixMilli(),
 	}
 
 	if len(segs) > 1 {
@@ -343,7 +345,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 
 		// set values.
 		cfg.ID = segs[len(segs)-1]
-		cfg.LastTime = util.UnixMill()
+		cfg.LastTime = util.UnixMilli()
 
 		if len(segs) > 1 {
 			segment = segs[len(segs)-1]

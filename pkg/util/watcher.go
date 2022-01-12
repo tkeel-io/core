@@ -54,6 +54,11 @@ func NewWatcher(ctx context.Context, brokers []string) (Watcher, error) {
 	}, errors.Wrap(err, "create watcher failed")
 }
 
+func NewWatcherWithClient(ctx context.Context, cli *clientv3.Client) (Watcher, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	return &watcher{client: cli, ctx: ctx, cancel: cancel}, nil
+}
+
 func (w *watcher) Watch(key string, prefix bool, handler func(*clientv3.Event)) {
 	go func() {
 		opts := []clientv3.OpOption{}
