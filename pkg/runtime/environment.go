@@ -35,7 +35,7 @@ type EtcdPair struct {
 	Value []byte
 }
 
-// cache for state marchine.
+// cache for state machine.
 type MapperCache struct {
 	mappers       map[string]mapper.Mapper    // map[mapperID]Mapper.
 	tentacles     map[string]mapper.Tentacler // tentacle set.
@@ -114,7 +114,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
 			env.addTentacle(tentacle.TargetID(), tentacle)
 		case mapper.TentacleTypeMapper:
-			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMarchine.
+			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMachine.
 			mCache.tentacles[tentacle.ID()] = tentacle
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
@@ -130,7 +130,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 
 func (env *Environment) removeMapper(stateID, mapperID string) []string {
 	if _, exists := env.mapperCaches[stateID]; !exists {
-		log.Warn("state marchine environment not found",
+		log.Warn("state machine environment not found",
 			zap.String("stateID", stateID), zap.String("mapperID", mapperID))
 		return nil
 	}
@@ -172,7 +172,7 @@ func (env *Environment) LoadMapper(pairs []EtcdPair) []KeyInfo {
 		}
 
 		env.addMapper(mapperInstence)
-		if StateMarchineTypeSubscription == info.Type {
+		if StateMachineTypeSubscription == info.Type {
 			loadEntities = append(loadEntities, info)
 		}
 	}

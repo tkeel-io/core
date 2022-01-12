@@ -128,9 +128,9 @@ func (m *Manager) init() error {
 	stateIDs := make([]string, 0)
 	loadEntities := m.actorEnv.LoadMapper(descs)
 	for _, info := range loadEntities {
-		log.Debug("load state marchine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load state marchine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
+			log.Error("load state machine", zap.Error(err), logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		}
 		stateIDs = append(stateIDs, info.EntityID)
 	}
@@ -164,12 +164,12 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 	if m.isThisNode() {
 		var err error
 		for _, stateID := range stateIDs {
-			var stateMarchine statem.StateMarchiner
-			base := &statem.Base{ID: stateID, Type: StateMarchineTypeBasic}
-			if _, stateMarchine = m.getStateMarchine("", stateID); nil != stateMarchine {
-				log.Debug("load state marchine @ runtime.", logger.EntityID(stateID))
-			} else if stateMarchine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				stateMarchine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
+			var stateMachine statem.StateMachiner
+			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
+			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
+				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				stateMachine.LoadEnvironments(m.actorEnv.GetEnvBy(stateID))
 				continue
 			}
 		}
@@ -197,8 +197,8 @@ func (m *Manager) Start() error {
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
 				log.Debug("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
-				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
-				if nil == stateMarchine {
+				channelID, stateMachine := m.getStateMachine(channelID, eid)
+				if nil == stateMachine {
 					var err error
 					en := &statem.Base{
 						ID:     eid,
@@ -206,7 +206,7 @@ func (m *Manager) Start() error {
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
 					}
-					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, en)
+					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
@@ -214,12 +214,12 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				if stateMarchine.OnMessage(msgCtx.Message) {
+				if stateMachine.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
-					m.coroutinePool.Submit(stateMarchine.HandleLoop)
+					m.coroutinePool.Submit(stateMachine.HandleLoop)
 				}
 			case <-m.shutdown:
-				log.Info("state marchine manager exit.")
+				log.Info("state machine manager exit.")
 				return
 			}
 		}
@@ -237,7 +237,7 @@ func (m *Manager) GetDaprClient() dapr.Client {
 	return m.daprClient
 }
 
-func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) { //nolint
+func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) { //nolint
 	if cid == "" {
 		cid = "default"
 	}
@@ -278,34 +278,34 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMarchiner, err error) { // nolint
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMachiner, err error) { // nolint
 	var en *statem.Base
 	var res *dapr.StateItem
 	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)
 
 	if nil != err && !flagCreate {
-		return nil, errors.Wrap(err, "load state marchine")
+		return nil, errors.Wrap(err, "load state machine")
 	} else if en, err = statem.DecodeBase(res.Value); nil == err {
 		base = en // decode value to statem.Base.
 	} else if !flagCreate {
-		return nil, errors.Wrap(err, "load state marchine, state not found")
+		return nil, errors.Wrap(err, "load state machine, state not found")
 	}
 
-	log.Debug("load or create state marchiner",
+	log.Debug("load or create state machiner",
 		logger.EntityID(base.ID),
 		zap.String("type", base.Type),
 		zap.String("owner", base.Owner),
 		zap.String("source", base.Source))
 
 	switch base.Type {
-	case StateMarchineTypeSubscription:
+	case StateMachineTypeSubscription:
 		if sm, err = newSubscription(ctx, m, base); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
 	default:
 		// default base entity type.
 		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
-			return nil, errors.Wrap(err, "load state marchine")
+			return nil, errors.Wrap(err, "load state machine")
 		}
 	}
 
@@ -396,14 +396,14 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 // SetConfigs set entity configs.
 func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 	var (
-		err           error
-		channelID     string
-		stateMarchine statem.StateMarchiner
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
 	)
 
-	// load state marchine.
-	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("set configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -413,25 +413,25 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 	}
 
 	// set entity configs.
-	if err = stateMarchine.SetConfigs(en.Configs); nil != err {
+	if err = stateMachine.SetConfigs(en.Configs); nil != err {
 		return errors.Wrap(err, "set entity configs")
 	}
 
 	// flush entity configs.
-	return errors.Wrap(stateMarchine.Flush(ctx), "set entity configs")
+	return errors.Wrap(stateMachine.Flush(ctx), "set entity configs")
 }
 
 // PatchConfigs patch entity configs.
 func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) error {
 	var (
-		err           error
-		channelID     string
-		stateMarchine statem.StateMarchiner
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
 	)
 
-	// load state marchine.
-	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("set configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -441,25 +441,25 @@ func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData [
 	}
 
 	// set entity configs.
-	if err = stateMarchine.PatchConfigs(patchData); nil != err {
+	if err = stateMachine.PatchConfigs(patchData); nil != err {
 		return errors.Wrap(err, "set entity configs")
 	}
 
 	// flush entity configs.
-	return errors.Wrap(stateMarchine.Flush(ctx), "set entity configs")
+	return errors.Wrap(stateMachine.Flush(ctx), "set entity configs")
 }
 
 // AppendConfigs append entity configs.
 func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 	var (
-		err           error
-		channelID     string
-		stateMarchine statem.StateMarchiner
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
 	)
 
-	// load state marchine.
-	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("append configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -469,25 +469,25 @@ func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 	}
 
 	// append entity configs.
-	if err = stateMarchine.AppendConfigs(en.Configs); nil != err {
+	if err = stateMachine.AppendConfigs(en.Configs); nil != err {
 		return errors.Wrap(err, "append entity configs")
 	}
 
 	// flush entity configs.
-	return errors.Wrap(stateMarchine.Flush(ctx), "append entity configs")
+	return errors.Wrap(stateMachine.Flush(ctx), "append entity configs")
 }
 
 // RemoveConfigs remove entity configs.
 func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) error {
 	var (
-		err           error
-		channelID     string
-		stateMarchine statem.StateMarchiner
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
 	)
 
-	// load state marchine.
-	if channelID, stateMarchine = m.getStateMarchine("", en.ID); nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("remove configs",
 				logger.EntityID(en.ID),
 				zap.Any("entity", en),
@@ -497,20 +497,20 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 	}
 
 	// remove entity configs.
-	if err = stateMarchine.RemoveConfigs(propertyIDs); nil != err {
+	if err = stateMachine.RemoveConfigs(propertyIDs); nil != err {
 		return errors.Wrap(err, "remove entity configs")
 	}
 
 	// flush entity configs.
-	return errors.Wrap(stateMarchine.Flush(ctx), "remove entity configs")
+	return errors.Wrap(stateMachine.Flush(ctx), "remove entity configs")
 }
 
 // DeleteStateMarchin delete runtime.Entity.
 func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
 	var err error
-	channelID, stateMarchine := m.getStateMarchine("", base.ID)
-	if nil == stateMarchine {
-		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
+	channelID, stateMachine := m.getStateMachine("", base.ID)
+	if nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
 			log.Error("remove configs",
 				logger.EntityID(base.ID),
 				zap.Any("entity", base),
@@ -518,13 +518,13 @@ func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*s
 			return nil, errors.Wrap(err, "remove entity configs")
 		}
 	}
-	stateMarchine.SetStatus(statem.SMStatusDeleted)
-	return stateMarchine.GetBase(), nil
+	stateMachine.SetStatus(statem.SMStatusDeleted)
+	return stateMachine.GetBase(), nil
 }
 
 // CleanEntity clean entity.
 func (m *Manager) CleanEntity(ctx context.Context, id string) error {
-	channelID, sm := m.getStateMarchine("", id)
+	channelID, sm := m.getStateMachine("", id)
 	if nil != sm {
 		m.containers[channelID].Remove(id)
 	}

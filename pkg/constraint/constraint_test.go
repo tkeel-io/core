@@ -17,6 +17,7 @@ limitations under the License.
 package constraint
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -99,5 +100,8 @@ func TestContraint2(t *testing.T) {
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSelf), true)
 	assert.Equal(t, ct.EnableFlag.Enabled(EnabledFlagSearch), true)
 	assert.Equal(t, 2, len(ct.ChildNodes))
-	assert.Equal(t, ct.GenEnabledIndexes(EnabledFlagSearch), []string{"property2", "property2.property2-1", "property2.property2-2"})
+
+	var ret sort.StringSlice = ct.GenEnabledIndexes(EnabledFlagSearch)
+	sort.Sort(ret)
+	assert.Equal(t, []string(ret), []string{"property2", "property2.property2-1", "property2.property2-2"})
 }
