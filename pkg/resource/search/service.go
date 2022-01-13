@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"

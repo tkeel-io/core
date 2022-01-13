@@ -56,7 +56,7 @@ func NewElasticsearchEngine(url ...string) SearchEngine {
 }
 
 func (es *ESClient) BuildIndex(ctx context.Context, id, body string) error {
-	if _, err := es.Client.Index().Index(EntityIndex).Id(id).BodyString(body).Do(context.Background()); err != nil {
+	if _, err := es.Client.Index().Index(EntityIndex).Id(id).BodyString(body).Do(ctx); err != nil {
 		return errors.Wrap(err, "set index in es error")
 	}
 	return nil
