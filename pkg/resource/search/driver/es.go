@@ -39,8 +39,8 @@ type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(url ...string) Engine {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
+func NewElasticsearchEngine(url ...string) SearchEngine {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
 	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
 	if err != nil {
 		log.Fatal(err)
@@ -154,6 +154,6 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	return page
 }
 
-func SelectESDriver() Type {
+func WithElasticsearch() Type {
 	return Elasticsearch
 }

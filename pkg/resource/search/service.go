@@ -2,7 +2,6 @@ package search
 
 import (
 	"context"
-
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
@@ -11,20 +10,31 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var Service = newService()
+var GlobalService *Service
 
-type service struct {
-	drivers    map[driver.Type]driver.Engine
-	driverOpts []driver.SelectDriveOption
-}
-
-func newService() *service {
-	return &service{drivers: map[driver.Type]driver.Engine{
+func Init() {
+	defaultRegistered := map[driver.Type]driver.SearchEngine{
+		// Add other drivers to SearchService here.
 		driver.Elasticsearch: driver.NewElasticsearchEngine(config.Get().SearchEngine.ES.Urls...),
-	}}
+	}
+	GlobalService = NewService(defaultRegistered).SetDefaultSelectOptions(driver.WithElasticsearch)
 }
 
-func (s *service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.SearchResponse, error) {
+var _ pb.SearchHTTPServer = &Service{}
+
+type Service struct {
+	drivers    map[driver.Type]driver.SearchEngine
+	selectOpts []driver.SelectDriveOption
+}
+
+func NewService(registered map[driver.Type]driver.SearchEngine) *Service {
+	return &Service{
+		drivers:    registered,
+		selectOpts: make([]driver.SelectDriveOption, 0),
+	}
+}
+
+func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.SearchResponse, error) {
 	out := &pb.SearchResponse{}
 	req := driver.SearchRequest{
 		Source:    request.Source,
@@ -35,9 +45,13 @@ func (s *service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 	}
 
 	// TODO: Multiple Driver Services One Response support.
-	// assumption len(s.driverOpts) == 1.
-	for i := range s.driverOpts {
-		resp, err := s.drivers[s.driverOpts[i]()].Search(ctx, req)
+	// assumption len(s.selectOpts) == 1.
+	for i := range s.selectOpts {
+		engine, ok := s.drivers[s.selectOpts[i]()]
+		if !ok {
+			return out, errors.New("no specified engine:" + string(s.selectOpts[i]()))
+		}
+		resp, err := engine.Search(ctx, req)
 		if err != nil {
 			return nil, errors.Wrap(err, "build index error")
 		}
@@ -56,17 +70,21 @@ func (s *service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 	return out, nil
 }
 
-func (s *service) DeleteByID(ctx context.Context, request *pb.DeleteByIDRequest) (*pb.DeleteByIDResponse, error) {
+func (s *Service) DeleteByID(ctx context.Context, request *pb.DeleteByIDRequest) (*pb.DeleteByIDResponse, error) {
 	out := &pb.DeleteByIDResponse{}
-	for i := range s.driverOpts {
-		if err := s.drivers[s.driverOpts[i]()].Delete(ctx, request.Id); err != nil {
+	for i := range s.selectOpts {
+		engine, ok := s.drivers[s.selectOpts[i]()]
+		if !ok {
+			return out, errors.New("no specified engine:" + string(s.selectOpts[i]()))
+		}
+		if err := engine.Delete(ctx, request.Id); err != nil {
 			return out, errors.Wrap(err, "build index error")
 		}
 	}
 	return out, nil
 }
 
-func (s *service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexResponse, error) {
+func (s *Service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexResponse, error) {
 	var (
 		id  string
 		out *pb.IndexResponse
@@ -86,8 +104,12 @@ func (s *service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexRespo
 	if err != nil {
 		return out, errors.Wrap(err, "json marshal error")
 	}
-	for i := range s.driverOpts {
-		if err = s.drivers[s.driverOpts[i]()].BuildIndex(ctx, id, string(objBytes)); err != nil {
+	for i := range s.selectOpts {
+		engine, ok := s.drivers[s.selectOpts[i]()]
+		if !ok {
+			return out, errors.New("no specified engine:" + string(s.selectOpts[i]()))
+		}
+		if err = engine.BuildIndex(ctx, id, string(objBytes)); err != nil {
 			return out, errors.Wrap(err, "build index error")
 		}
 	}
@@ -95,10 +117,30 @@ func (s *service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexRespo
 	return out, nil
 }
 
-func (s *service) SelectDrive(opts ...driver.SelectDriveOption) *service {
+func (s *Service) SetDefaultSelectOptions(opts ...driver.SelectDriveOption) *Service {
 	if len(opts) != 0 {
-		s.driverOpts = opts
+		s.selectOpts = opts
 	}
+	return s
+}
+
+func (s *Service) AppendSelectOptions(opts ...driver.SelectDriveOption) *Service {
+	if len(opts) != 0 {
+		s.selectOpts = append(s.selectOpts, opts...)
+	}
+	return s
+}
+
+func (s Service) Use(opts ...driver.SelectDriveOption) *Service {
+	serv := s
+	if len(opts) != 0 {
+		serv.selectOpts = append(serv.selectOpts, opts...)
+	}
+	return &serv
+}
+
+func (s *Service) Register(name driver.Type, implement driver.SearchEngine) *Service {
+	s.drivers[name] = implement
 	return s
 }
 

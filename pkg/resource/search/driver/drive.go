@@ -8,7 +8,7 @@ import (
 
 type Type string
 
-type Engine interface {
+type SearchEngine interface {
 	BuildIndex(ctx context.Context, index, content string) error
 	Search(ctx context.Context, request SearchRequest) (SearchResponse, error)
 	Delete(ctx context.Context, id string) error

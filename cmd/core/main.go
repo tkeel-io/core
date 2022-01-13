@@ -27,7 +27,6 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
-	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -81,6 +80,10 @@ func main() {
 			config.SetEtcdBrokers(_etcdBrokers)
 			config.SetSearchEngineESUrls(_es)
 
+			if search.GlobalService == nil {
+				search.Init()
+			}
+
 			// new servers.
 			httpSrv := server.NewHTTPServer(_httpAddr)
 			grpcSrv := server.NewGRPCServer(_grpcAddr)
@@ -102,12 +105,12 @@ func main() {
 				log.Fatal(err)
 			}
 
-			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.Service.SelectDrive(driver.SelectESDriver))
+			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
 			if nil != err {
 				log.Fatal(err)
 			}
 
-			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.Service.SelectDrive(driver.SelectESDriver))
+			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
 			if nil != err {
 				log.Fatal(err)
 			}
@@ -151,7 +154,7 @@ func main() {
 
 func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.Service.SelectDrive(driver.SelectESDriver))
+	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.GlobalService)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -175,7 +178,7 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	corev1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
 
 	// register search service.
-	SearchSrv := service.NewSearchService(search.Service.SelectDrive(driver.SelectESDriver))
+	SearchSrv := service.NewSearchService(search.GlobalService)
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
 }
