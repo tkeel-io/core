@@ -22,15 +22,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"net/http"
-	"os"
 	"reflect"
 
-	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/olivere/elastic/v7"
-	"google.golang.org/protobuf/types/known/structpb"
+	"github.com/pkg/errors"
+	"github.com/tkeel-io/kit/log"
 )
 
 var Elasticsearch Type = "elasticsearch"
@@ -38,56 +36,85 @@ var Elasticsearch Type = "elasticsearch"
 const EntityIndex = "entity"
 
 type ESClient struct {
-	client *elastic.Client
+	Client *elastic.Client
 }
 
-func interface2string(in interface{}) (out string) {
-	if in == nil {
-		return
+func NewElasticsearchEngine(url ...string) Engine {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
+	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
+	if err != nil {
+		log.Fatal(err)
 	}
-	switch inString := in.(type) {
-	case string:
-		out = inString
-	default:
-		out = ""
+
+	// ping connection.
+	info, _, err := client.Ping(url[0]).Do(context.Background())
+	if nil != err {
+		log.Fatal(err)
 	}
-	return
+	log.Info("use Elasticsearch version:", info.Version.Number)
+	return &ESClient{Client: client}
 }
 
-func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.IndexResponse, err error) {
-	var indexID string
-	out = &pb.IndexResponse{}
-	out.Status = "SUCCESS"
-
-	switch kv := req.Obj.AsInterface().(type) {
-	case map[string]interface{}:
-		indexID = interface2string(kv["id"])
-	case nil:
-		// do nothing.
-		return out, nil
-	default:
-		return out, ErrIndexParamInvalid
+func (es *ESClient) BuildIndex(ctx context.Context, id, body string) error {
+	if _, err := es.Client.Index().Index(EntityIndex).Id(id).BodyString(body).Do(context.Background()); err != nil {
+		return errors.Wrap(err, "set index in es error")
 	}
-
-	objBytes, _ := req.Obj.MarshalJSON()
-	_, err = es.client.Index().Index(EntityIndex).Id(indexID).BodyString(string(objBytes)).Do(context.Background())
-	return out, errors.Wrap(err, "es index failed")
+	return nil
 }
 
-func (es *ESClient) DeleteByID(ctx context.Context, req *pb.DeleteByIDRequest) (out *pb.DeleteByIDResponse, err error) {
-	_, err = es.client.Delete().Index(EntityIndex).Id(req.Id).Do(ctx)
-	return out, errors.Wrap(err, "elasticsearch delete by id")
+func (es *ESClient) Delete(ctx context.Context, id string) error {
+	_, err := es.Client.Delete().Index(EntityIndex).Id(id).Do(ctx)
+	return errors.Wrap(err, "elasticsearch delete by id")
 }
 
 func (es *ESClient) DeleteByQuery(ctx context.Context, query map[string]interface{}) error {
 	var bytes bytes.Buffer
 	if err := json.NewEncoder(&bytes).Encode(query); err != nil {
 		return errors.Wrap(err, "json encoding query")
-	} else if _, err = es.client.DeleteByQuery(EntityIndex, bytes.String()).DoAsync(ctx); err != nil {
+	} else if _, err = es.Client.DeleteByQuery(EntityIndex, bytes.String()).DoAsync(ctx); err != nil {
 		return errors.Wrap(err, "elasticsearch deleye by query")
 	}
 
 	return nil
+}
+
+func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchResponse, error) {
+	resp := SearchResponse{}
+	boolQuery := elastic.NewBoolQuery()
+	searchQuery := es.Client.Search().Index(EntityIndex)
+
+	if req.Condition != nil {
+		condition2boolQuery(req.Condition, boolQuery)
+	}
+	if req.Query != "" {
+		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
+	}
+
+	req.Page = defaultPage(req.Page)
+	// searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse).
+	searchQuery = searchQuery.Query(boolQuery).From(int(req.Page.Offset)).Size(int(req.Page.Limit))
+
+	searchResult, err := searchQuery.Pretty(true).Do(ctx)
+	if err != nil {
+		return resp, errors.Wrap(err, "query search failed")
+	}
+
+	var data []map[string]interface{}
+	for _, item := range searchResult.Each(reflect.TypeOf(map[string]interface{}{})) {
+		if t, ok := item.(map[string]interface{}); ok {
+			data = append(data, t)
+		}
+	}
+
+	resp.Total = searchResult.TotalHits()
+	resp.Data = data
+	resp.Raw, _ = json.Marshal(data)
+	if req.Page != nil {
+		resp.Limit = req.Page.Limit
+		resp.Offset = req.Page.Offset
+	}
+
+	return resp, nil
 }
 
 // reference: https://www.tutorialspoint.com/elasticsearch/elasticsearch_query_dsl.htm#:~:text=In%20Elasticsearch%2C%20searching%20is%20carried%20out%20by%20using,look%20for%20a%20specific%20value%20in%20specific%20field.
@@ -113,45 +140,6 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 	}
 }
 
-func (es *ESClient) Search(ctx context.Context, req *pb.SearchRequest) (out *pb.SearchResponse, err error) {
-	out = &pb.SearchResponse{}
-	boolQuery := elastic.NewBoolQuery()
-	searchQuery := es.client.Search().Index(EntityIndex)
-
-	if req.Condition != nil {
-		condition2boolQuery(req.Condition, boolQuery)
-	}
-	if req.Query != "" {
-		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
-	}
-
-	req.Page = defaultPage(req.Page)
-	searchQuery = searchQuery.Query(boolQuery)
-	// searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse).
-	searchQuery = searchQuery.From(int(req.Page.Offset)).Size(int(req.Page.Limit))
-
-	searchResult, err := searchQuery.Pretty(true).Do(ctx)
-	if err != nil {
-		return
-	}
-
-	var ttyp map[string]interface{}
-	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		if t, ok := item.(map[string]interface{}); ok {
-			tt, _ := structpb.NewValue(t)
-			out.Items = append(out.Items, tt)
-		}
-	}
-
-	out.Total = searchResult.TotalHits()
-	if req.Page != nil {
-		out.Limit = req.Page.Limit
-		out.Offset = req.Page.Offset
-	}
-
-	return out, errors.Wrap(err, "search failed")
-}
-
 func defaultPage(page *pb.Pager) *pb.Pager {
 	if nil == page {
 		page = &pb.Pager{}
@@ -166,19 +154,6 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	return page
 }
 
-func NewElasticsearchEngine(url ...string) Engine {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
-	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
-	if err != nil {
-		panic(err)
-	}
-
-	// ping connection.
-	info, _, err := client.Ping(url[0]).Do(context.Background())
-	if nil != err {
-		panic(err)
-	}
-
-	print.InfoStatusEvent(os.Stdout, "use Elasticsearch version<%s>", info.Version.Number)
-	return &ESClient{client: client}
+func SelectESDriver() Type {
+	return Elasticsearch
 }

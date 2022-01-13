@@ -27,6 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -67,10 +68,7 @@ var (
 	_es          []string
 )
 
-var (
-	_esClient      corev1.SearchHTTPServer
-	_entityManager entities.EntityManager
-)
+var _entityManager entities.EntityManager
 
 func main() {
 	cmd := cobra.Command{
@@ -81,6 +79,7 @@ func main() {
 			print.InfoStatusEvent(os.Stdout, "loading configuration...")
 			config.InitConfig(_cfgFile)
 			config.SetEtcdBrokers(_etcdBrokers)
+			config.SetSearchEngineESUrls(_es)
 
 			// new servers.
 			httpSrv := server.NewHTTPServer(_httpAddr)
@@ -103,13 +102,12 @@ func main() {
 				log.Fatal(err)
 			}
 
-			_esClient = search.NewESClient(_es...)
-			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, _esClient)
+			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.Service.SelectDrive(driver.SelectESDriver))
 			if nil != err {
 				log.Fatal(err)
 			}
 
-			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, _esClient)
+			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.Service.SelectDrive(driver.SelectESDriver))
 			if nil != err {
 				log.Fatal(err)
 			}
@@ -153,7 +151,7 @@ func main() {
 
 func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, _esClient)
+	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.Service.SelectDrive(driver.SelectESDriver))
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -177,7 +175,7 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	corev1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
 
 	// register search service.
-	SearchSrv := service.NewSearchService(_esClient)
+	SearchSrv := service.NewSearchService(search.Service.SelectDrive(driver.SelectESDriver))
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
 }

@@ -39,10 +39,11 @@ const (
 var config = defaultConfig()
 
 type Configuration struct {
-	Server     Server     `mapstructure:"server"`
-	Logger     LogConfig  `mapstructure:"logger"`
-	Etcd       EtcdConfig `mapstructure:"etcd"`
-	TimeSeries Metadata   `mapstructure:"time_series"`
+	Server       Server       `mapstructure:"server"`
+	Logger       LogConfig    `mapstructure:"logger"`
+	Etcd         EtcdConfig   `mapstructure:"etcd"`
+	TimeSeries   Metadata     `mapstructure:"time_series"`
+	SearchEngine SearchEngine `mapstructure:"search_engine"`
 }
 
 type Pair struct {
@@ -57,6 +58,14 @@ type Metadata struct {
 
 type EtcdConfig struct {
 	Address []string
+}
+
+type SearchEngine struct {
+	ES ESConfig
+}
+
+type ESConfig struct {
+	Urls []string
 }
 
 type LogConfig struct {
@@ -119,6 +128,10 @@ func InitConfig(cfgFile string) {
 
 func SetEtcdBrokers(brokers []string) {
 	config.Etcd.Address = brokers
+}
+
+func SetSearchEngineESUrls(urls []string) {
+	config.SearchEngine.ES.Urls = urls
 }
 
 func onConfigChanged(in fsnotify.Event) {

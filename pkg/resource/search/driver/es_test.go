@@ -23,10 +23,6 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 )
 
-func Test_interface2string(t *testing.T) {
-	assert.Equal(t, "interface2string", interface2string("interface2string"))
-}
-
 func Test_condition2boolQuery(t *testing.T) {
 
 }
