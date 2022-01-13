@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package search
+package driver
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	"net/http"
 	"os"
 	"reflect"
@@ -33,6 +32,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+var Elasticsearch Type = "elasticsearch"
 
 const EntityIndex = "entity"
 
@@ -65,7 +66,7 @@ func (es *ESClient) Index(ctx context.Context, req *pb.IndexObject) (out *pb.Ind
 		// do nothing.
 		return out, nil
 	default:
-		return out, driver.ErrIndexParamInvalid
+		return out, ErrIndexParamInvalid
 	}
 
 	objBytes, _ := req.Obj.MarshalJSON()
@@ -165,7 +166,7 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	return page
 }
 
-func NewESClient(url ...string) pb.SearchHTTPServer {
+func NewElasticsearchEngine(url ...string) Engine {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
 	if err != nil {

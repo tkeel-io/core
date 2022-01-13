@@ -14,10 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package search
+package driver
 
-import "errors"
+import (
+	"testing"
 
-var (
-	ErrIndexParamInvalid = errors.New("invalid index params")
+	"github.com/stretchr/testify/assert"
+	pb "github.com/tkeel-io/core/api/core/v1"
 )
+
+func Test_interface2string(t *testing.T) {
+	assert.Equal(t, "interface2string", interface2string("interface2string"))
+}
+
+func Test_condition2boolQuery(t *testing.T) {
+
+}
+
+func Test_defaultPage(t *testing.T) {
+	page := &pb.Pager{Offset: 20}
+
+	defaultPage(page)
+	assert.Equal(t, int64(10), page.Limit)
+}

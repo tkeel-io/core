@@ -2,16 +2,23 @@ package search
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/config"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/search/driver"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
 )
 
-type searchEngine interface {
-}
+var Service = newService()
 
 type service struct {
-	driver map[driver.Type]searchEngine
+	drivers map[driver.Type]driver.Engine
+}
+
+func newService() *service {
+
+	return &service{drivers: map[driver.Type]driver.Engine{
+		driver.Elasticsearch: driver.NewElasticsearchEngine(config.Get().Elasticsearch.Url),
+	}}
 }
 
 func (s *service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.SearchResponse, error) {
