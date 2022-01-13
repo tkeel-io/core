@@ -30,11 +30,12 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/environment"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -297,7 +298,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 
 	switch base.Type {
 	case StateMachineTypeSubscription:
-		if sm, err = newSubscription(ctx, m, base); nil != err {
+		if sm, err = subscription.NewSubscription(ctx, m, base); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
 	default:

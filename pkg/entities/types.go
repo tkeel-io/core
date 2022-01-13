@@ -21,7 +21,7 @@ import (
 	"errors"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 type TemplateEntityID struct{}

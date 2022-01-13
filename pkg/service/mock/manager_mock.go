@@ -5,7 +5,7 @@ import (
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )

@@ -21,7 +21,7 @@ import (
 	"errors"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 const EntityStateName = "core-state"
@@ -31,12 +31,6 @@ type WatchKey = mapper.WatchKey
 const (
 	StateMachineTypeBasic        = "BASIC"
 	StateMachineTypeSubscription = "SUBSCRIPTION"
-
-	// subscription required fileds.
-	SubscriptionFieldMode       = "mode"
-	SubscriptionFieldFilter     = "filter"
-	SubscriptionFieldTopic      = "topic"
-	SubscriptionFieldPubsubName = "pubsub_name"
 
 	// state machine required fileds.
 	StateMachineFieldType   = "type"

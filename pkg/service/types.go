@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 var (

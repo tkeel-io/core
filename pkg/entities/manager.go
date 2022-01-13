@@ -31,7 +31,8 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/tql"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -316,12 +317,12 @@ func (m *entityManager) CheckSubscription(ctx context.Context, en *statem.Base) 
 	}
 
 	// check request.
-	mode := getString(en.KValues[runtime.SubscriptionFieldMode])
-	topic := getString(en.KValues[runtime.SubscriptionFieldTopic])
-	filter := getString(en.KValues[runtime.SubscriptionFieldFilter])
-	pubsubName := getString(en.KValues[runtime.SubscriptionFieldPubsubName])
+	mode := getString(en.KValues[subscription.SubscriptionFieldMode])
+	topic := getString(en.KValues[subscription.SubscriptionFieldTopic])
+	filter := getString(en.KValues[subscription.SubscriptionFieldFilter])
+	pubsubName := getString(en.KValues[subscription.SubscriptionFieldPubsubName])
 	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
-	if mode == runtime.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
+	if mode == subscription.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
 		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
 		return runtime.ErrSubscriptionInvalid
 	}
@@ -390,7 +391,7 @@ func (m *entityManager) RemoveConfigs(ctx context.Context, en *statem.Base, prop
 // QueryConfigs query entity configs.
 func (m *entityManager) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
 	base, err = m.getEntityFromState(ctx, en)
-	baseEntity := base.DuplicateExpectValue()
+	baseEntity := base.Basic()
 	for _, propertyID := range propertyIDs {
 		cfg, err0 := base.GetConfig(propertyID)
 		if nil != err0 {

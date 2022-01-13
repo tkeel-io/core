@@ -19,7 +19,7 @@ package runtime
 import (
 	"sync"
 
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 type Container struct {

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package runtime
+package subscription
 
 import (
 	"context"
@@ -22,69 +22,45 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/runtime/environment"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
 const (
 	// subscription mode enum.
-	SubscriptionModeRealtime = "realtime"
-	SubscriptionModePeriod   = "period"
-	SubscriptionModeChanged  = "changed"
-	SubscriptionModeUndefine = "undefine"
-)
+	SubscriptionModeRealtime = "REALTIME"
+	SubscriptionModePeriod   = "PERIOD"
+	SubscriptionModeChanged  = "ONCHANGED"
+	SubscriptionModeUndefine = "UNDEFINE"
 
-// SubscriptionBase subscription basic information.
-type SubscriptionBase struct {
-	Mode       string `json:"mode" mapstructure:"mode"`
-	Source     string `json:"source" mapstructure:"source"`
-	Filter     string `json:"filter" mapstructure:"filter"`
-	Topic      string `json:"topic" mapstructure:"topic"`
-	PubsubName string `json:"pubsub_name" mapstructure:"pubsub_name"`
-}
+	// subscription required fileds.
+	SubscriptionFieldMode       = "mode"
+	SubscriptionFieldFilter     = "filter"
+	SubscriptionFieldTopic      = "topic"
+	SubscriptionFieldPubsubName = "pubsub_name"
+)
 
 // subscription subscription actor based entity.
 type subscription struct {
-	SubscriptionBase `mapstructure:",squash"`
-	daprClient       dapr.Client
-	stateMachine     statem.StateMachiner `mapstructure:"-"`
-}
-
-func decode2Subscription(kvalues map[string]constraint.Node, subsc *SubscriptionBase) {
-	// parse Mode.
-	if node, has := kvalues[SubscriptionFieldMode]; has {
-		subsc.Mode = node.String()
-	}
-	// parse Filter.
-	if node, has := kvalues[SubscriptionFieldFilter]; has {
-		subsc.Filter = node.String()
-	}
-	// parse Topic.
-	if node, has := kvalues[SubscriptionFieldTopic]; has {
-		subsc.Topic = node.String()
-	}
-	// parse PubsubName.
-	if node, has := kvalues[SubscriptionFieldPubsubName]; has {
-		subsc.PubsubName = node.String()
-	}
+	// Base `mapstructure:",squash"`
+	daprClient   dapr.Client
+	stateMachine statem.StateMachiner `mapstructure:"-"`
 }
 
 // newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM statem.StateMachiner, err error) {
-	subsc := subscription{SubscriptionBase: SubscriptionBase{
-		Mode: SubscriptionModeUndefine,
-	}}
+func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Base) (stateM statem.StateMachiner, err error) {
+	subsc := subscription{}
 
-	errFunc := func(err error) error { return errors.Wrap(err, "create subscription failed") }
+	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
 	if stateM, err = statem.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
 		return nil, errFunc(err)
 	}
 
 	// decode in.KValues into subsc.
-	decode2Subscription(in.KValues, &subsc.SubscriptionBase)
 	if err = subsc.checkSubscription(); nil != err {
 		return nil, errFunc(err)
 	}
@@ -98,11 +74,6 @@ func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM
 	subsc.stateMachine = stateM
 	subsc.GetBase().KValues = in.KValues
 
-	// set mapper.
-	subsc.stateMachine.GetBase().Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: subsc.Filter,
-	}}
 	return &subsc, nil
 }
 
@@ -122,7 +93,7 @@ func (s *subscription) GetID() string {
 
 // GetMode returns subscription mode.
 func (s *subscription) GetMode() string {
-	return s.Mode
+	return s.Mode()
 }
 
 func (s *subscription) GetBase() *statem.Base {
@@ -179,12 +150,12 @@ func (s *subscription) HandleLoop() {
 	s.stateMachine.HandleLoop()
 }
 
-func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
+func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
 	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.MessageInst(message))
-	var watchKeys []WatchKey
+	var watchKeys []mapper.WatchKey
 	switch msg := message.(type) {
 	case statem.PropertyMessage:
-		switch s.Mode {
+		switch s.Mode() {
 		case SubscriptionModeRealtime:
 			watchKeys = s.invokeRealtime(msg)
 		case SubscriptionModePeriod:
@@ -193,7 +164,7 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 			watchKeys = s.invokeChanged(msg)
 		default:
 			// invalid subscription mode.
-			log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode))
+			log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode()))
 		}
 	default:
 		// invalid msg typs.
@@ -203,11 +174,21 @@ func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Realtime 直接转发就OK了.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
+func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.WatchKey {
+	b := s.GetBase()
+	cp := statem.Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
+	}
+
+	cp.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -215,11 +196,21 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Period 直接查询快照.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
+func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKey {
+	b := s.GetBase()
+	cp := statem.Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
+	}
+
+	cp.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
@@ -227,23 +218,53 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Changed 直接转发就OK了.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
+func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchKey {
+	b := s.GetBase()
+	cp := statem.Base{
+		ID:       b.ID,
+		Type:     b.Type,
+		Owner:    b.Owner,
+		Source:   b.Source,
+		Version:  b.Version,
+		LastTime: b.LastTime,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
+	}
+
+	cp.KValues = msg.Properties
+	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
 
 	return nil
 }
 
-// checkSubscription returns subscription status.
 func (s *subscription) checkSubscription() error {
-	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
-		s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
-		return ErrSubscriptionInvalid
-	}
+	sb := Base{}
+	decode2Subscription(s.GetBase().KValues, &sb)
+	return errors.Wrap(sb.Validate(), "check subscription required fileds")
+}
 
-	return nil
+func (s *subscription) Mode() string {
+	sb := Base{}
+	decode2Subscription(s.GetBase().KValues, &sb)
+	return sb.Mode
+}
+
+func (s *subscription) Filter() string {
+	sb := Base{}
+	decode2Subscription(s.GetBase().KValues, &sb)
+	return sb.Filter
+}
+
+func (s *subscription) Topic() string {
+	sb := Base{}
+	decode2Subscription(s.GetBase().KValues, &sb)
+	return sb.Topic
+}
+
+func (s *subscription) Pubsub() string {
+	sb := Base{}
+	decode2Subscription(s.GetBase().KValues, &sb)
+	return sb.PubsubName
 }

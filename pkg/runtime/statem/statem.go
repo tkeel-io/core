@@ -47,20 +47,20 @@ const (
 	StateDisposingAsync int32 = 2
 
 	// statem runtime-status enumerates.
-	StateDetached int32 = 0
-	StateAttached int32 = 1
+	StateRuntimeDetached int32 = 0
+	StateRuntimeAttached int32 = 1
 
 	// statem status enumerates.
-	StateStatusActive   = "active"
-	StateStatusInactive = "inactive"
-	StateStatusDeleted  = "deleted"
+	SMStatusActive   Status = "active"
+	SMStatusInactive Status = "inactive"
+	SMStatusDeleted  Status = "deleted"
 )
 
 func stateRuntimeStatusString(statusNum int32) string {
 	switch statusNum {
-	case StateDetached:
+	case StateRuntimeDetached:
 		return "detached"
-	case StateAttached:
+	case StateRuntimeAttached:
 		return "attached"
 	default:
 		return "undefine"
@@ -92,7 +92,7 @@ func (b *Base) Copy() Base {
 	return *bb
 }
 
-func (b *Base) DuplicateExpectValue() Base {
+func (b *Base) Basic() Base {
 	cp := Base{
 		ID:       b.ID,
 		Type:     b.Type,
@@ -279,11 +279,11 @@ func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
 			s.constraints[ct.ID] = ct
 			// generate search indexes.
 			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
-				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+				s.searchConstraints = util.SliceAppend(s.searchConstraints, searchIndexes)
 			}
 			// generate time-series indexes.
 			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
-				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+				s.tseriesConstraints = util.SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
 		}
 	}
@@ -422,11 +422,11 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 			s.constraints[ct.ID] = ct
 			// generate search indexes.
 			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
-				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+				s.searchConstraints = util.SliceAppend(s.searchConstraints, searchIndexes)
 			}
 			// generate time-series indexes.
 			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
-				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+				s.tseriesConstraints = util.SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
 		}
 	}
@@ -444,11 +444,11 @@ func (s *statem) AppendConfigs(configs map[string]constraint.Config) error {
 			s.constraints[ct.ID] = ct
 			// generate search indexes.
 			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
-				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+				s.searchConstraints = util.SliceAppend(s.searchConstraints, searchIndexes)
 			}
 			// generate time-series indexes.
 			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
-				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+				s.tseriesConstraints = util.SliceAppend(s.tseriesConstraints, tseriesIndexes)
 			}
 		}
 	}
@@ -471,11 +471,11 @@ func (s *statem) RemoveConfigs(propertyIDs []string) error {
 	for _, ct := range s.constraints {
 		// generate search indexes.
 		if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
-			s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			s.searchConstraints = util.SliceAppend(s.searchConstraints, searchIndexes)
 		}
 		// generate time-series indexes.
 		if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
-			s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			s.tseriesConstraints = util.SliceAppend(s.tseriesConstraints, tseriesIndexes)
 		}
 	}
 	return nil
@@ -507,7 +507,7 @@ func (s *statem) OnMessage(msg Message) bool {
 		runtime.Gosched()
 	}
 
-	if atomic.CompareAndSwapInt32(&s.attached, StateDetached, StateAttached) {
+	if atomic.CompareAndSwapInt32(&s.attached, StateRuntimeDetached, StateRuntimeAttached) {
 		attaching = true
 		log.Info("attatched statem.", logger.EntityID(s.ID))
 	}
@@ -539,7 +539,7 @@ func (s *statem) HandleLoop() { //nolint
 			}
 
 			// detach this statem.
-			if !atomic.CompareAndSwapInt32(&s.attached, StateAttached, StateDetached) {
+			if !atomic.CompareAndSwapInt32(&s.attached, StateRuntimeAttached, StateRuntimeDetached) {
 				log.Error("exception occurred, mismatched statem runtime status.",
 					logger.Status(stateRuntimeStatusString(atomic.LoadInt32(&s.attached))))
 			}

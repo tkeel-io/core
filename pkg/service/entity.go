@@ -27,7 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/statem"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 
