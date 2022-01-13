@@ -18,7 +18,7 @@ func Init() {
 		// Add other drivers to SearchService here.
 		driver.Elasticsearch: driver.NewElasticsearchEngine(config.Get().SearchEngine.ES.Urls...),
 	}
-	GlobalService = NewService(defaultRegistered).SetDefaultSelectOptions(driver.WithElasticsearch)
+	GlobalService = NewService(defaultRegistered).SetSelectOptions(driver.WithElasticsearch)
 }
 
 var _ pb.SearchHTTPServer = &Service{}
@@ -118,7 +118,7 @@ func (s *Service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexRespo
 	return out, nil
 }
 
-func (s *Service) SetDefaultSelectOptions(opts ...driver.SelectDriveOption) *Service {
+func (s *Service) SetSelectOptions(opts ...driver.SelectDriveOption) *Service {
 	if len(opts) != 0 {
 		s.selectOpts = opts
 	}
@@ -134,13 +134,17 @@ func (s *Service) AppendSelectOptions(opts ...driver.SelectDriveOption) *Service
 
 func (s Service) Use(opts ...driver.SelectDriveOption) *Service {
 	serv := s
+	serv.selectOpts = nil
 	if len(opts) != 0 {
-		serv.selectOpts = append(serv.selectOpts, opts...)
+		serv.selectOpts = opts
 	}
 	return &serv
 }
 
 func (s *Service) Register(name driver.Type, implement driver.SearchEngine) *Service {
+	if s.drivers == nil {
+		s.drivers = make(map[driver.Type]driver.SearchEngine)
+	}
 	s.drivers[name] = implement
 	return s
 }
