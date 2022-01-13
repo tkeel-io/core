@@ -65,7 +65,9 @@ type SearchEngine struct {
 }
 
 type ESConfig struct {
-	Urls []string
+	Urls     []string
+	Username string
+	Password string
 }
 
 type LogConfig struct {
@@ -78,6 +80,9 @@ func defaultConfig() Configuration {
 	return Configuration{
 		Server: Server{
 			AppPort: 6789,
+		},
+		SearchEngine: SearchEngine{
+			ES: ESConfig{Username: "admin", Password: "admin"},
 		},
 	}
 }

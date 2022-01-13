@@ -25,6 +25,7 @@ import (
 	"reflect"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -39,15 +40,22 @@ type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(url ...string) SearchEngine {
+func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
-	client, err := elastic.NewClient(elastic.SetURL(url...), elastic.SetSniff(false), elastic.SetBasicAuth("admin", "admin"))
+	client, err := elastic.NewClient(
+		elastic.SetURL(config.Urls...),
+		elastic.SetSniff(false),
+		elastic.SetBasicAuth(config.Username, config.Password),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// ping connection.
-	info, _, err := client.Ping(url[0]).Do(context.Background())
+	if len(config.Urls) == 0 {
+		log.Fatal("please check your configuration with elasticsearch")
+	}
+	info, _, err := client.Ping(config.Urls[0]).Do(context.Background())
 	if nil != err {
 		log.Fatal(err)
 	}
