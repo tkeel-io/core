@@ -25,11 +25,20 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"github.com/tkeel-io/kit/log"
+)
+
+const (
+	_defaultConfigFilename = "config.yml"
+	_corePrefix            = "CORE"
+
+	DefaultAppPort = 6789
+	DefaultAppID   = "core"
 )
 
 var config = defaultConfig()
 
-type Config struct {
+type Configuration struct {
 	Server     Server     `mapstructure:"server"`
 	Logger     LogConfig  `mapstructure:"logger"`
 	Etcd       EtcdConfig `mapstructure:"etcd"`
@@ -56,47 +65,45 @@ type LogConfig struct {
 	Output []string `yaml:"output"`
 }
 
-func defaultConfig() Config {
-	return Config{
+func defaultConfig() Configuration {
+	return Configuration{
 		Server: Server{
 			AppPort: 6789,
 		},
 	}
 }
 
-func GetConfig() *Config {
-	return &config
+func Get() Configuration {
+	return config
 }
 
 func InitConfig(cfgFile string) {
 	if cfgFile != "" {
-		// Use config file from the flag.
+		// Use Config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search config in home directory with name ".cobra" (without extension).
+		// Search Config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath("./conf")
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("/etc/core")
 	}
 
-	viper.SetEnvPrefix("CORE")
+	viper.SetEnvPrefix(_corePrefix)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); nil != err {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok { //nolint
-			// config file not found.
+		if ok := errors.Is(err, viper.ConfigFileNotFoundError{}); ok {
+			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
-			panic(errors.Unwrap(err))
+			log.Fatal(err)
 		}
 	}
 
-	print.InfoStatusEvent(os.Stdout, "loading configuration...")
-
 	// default.
-	viper.SetDefault("server.app_port", 6789)
-	viper.SetDefault("server.app_id", "core")
+	viper.SetDefault("server.app_port", DefaultAppPort)
+	viper.SetDefault("server.app_id", DefaultAppID)
 	viper.SetDefault("server.coroutine_pool_size", 500)
 	viper.SetDefault("logger.level", "info")
 	viper.SetDefault("logger.output_json", false)
@@ -110,17 +117,21 @@ func InitConfig(cfgFile string) {
 	viper.WatchConfig()
 }
 
+func SetEtcdBrokers(brokers []string) {
+	config.Etcd.Address = brokers
+}
+
 func onConfigChanged(in fsnotify.Event) {
 	_ = viper.Unmarshal(&config)
 }
 
 func writeDefault(cfgFile string) {
 	if cfgFile == "" {
-		cfgFile = "config.yml"
+		cfgFile = _defaultConfigFilename
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
-		// todo...
+		// TODO add write failed handler and remove print info in this package.
 		print.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }

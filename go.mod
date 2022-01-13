@@ -18,6 +18,7 @@ require (
 	github.com/shamaton/msgpack/v2 v2.1.0
 	github.com/smartystreets/assertions v1.2.0
 	github.com/smartystreets/gunit v1.4.2
+	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tkeel-io/collectjs v0.0.0-20211130035606-e8d64c4a2a39

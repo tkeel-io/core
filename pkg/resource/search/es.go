@@ -26,11 +26,11 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/print"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
