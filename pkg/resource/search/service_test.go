@@ -42,7 +42,6 @@ func TestNewService(t *testing.T) {
 	engine := &fakeEngine{}
 	registered := map[driver.Type]driver.SearchEngine{fake: engine}
 	NewService(registered)
-
 }
 
 func TestService_Register(t *testing.T) {
