@@ -35,19 +35,6 @@ const (
 	SubscriptionModePeriod   = "period"
 	SubscriptionModeChanged  = "changed"
 	SubscriptionModeUndefine = "undefine"
-
-	// subscription required fileds.
-	SubscriptionFieldMode       = "mode"
-	SubscriptionFieldSource     = "source"
-	SubscriptionFieldTarget     = "target"
-	SubscriptionFieldFilter     = "filter"
-	SubscriptionFieldTopic      = "topic"
-	SubscriptionFieldPubsubName = "pubsub_name"
-
-	// state machine required fileds.
-	StateMachineFieldType   = "type"
-	StateMachineFieldOwner  = "owner"
-	StateMachineFieldSource = "source"
 )
 
 // SubscriptionBase subscription basic information.
@@ -70,10 +57,6 @@ func decode2Subscription(kvalues map[string]constraint.Node, subsc *Subscription
 	// parse Mode.
 	if node, has := kvalues[SubscriptionFieldMode]; has {
 		subsc.Mode = node.String()
-	}
-	// parse Source.
-	if node, has := kvalues[SubscriptionFieldSource]; has {
-		subsc.Source = node.String()
 	}
 	// parse Filter.
 	if node, has := kvalues[SubscriptionFieldFilter]; has {

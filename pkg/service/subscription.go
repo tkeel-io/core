@@ -71,9 +71,7 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 	out.Owner = entity.Owner
 	out.Source = entity.Source
 	out.Subscription = &pb.SubscriptionObject{}
-	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
 	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
-	out.Subscription.Target = interface2string(entity.KValues[runtime.SubscriptionFieldTarget])
 	out.Subscription.Topic = interface2string(entity.KValues[runtime.SubscriptionFieldTopic])
 	out.Subscription.Mode = interface2string(entity.KValues[runtime.SubscriptionFieldMode])
 	out.Subscription.PubsubName = interface2string(entity.KValues[runtime.SubscriptionFieldPubsubName])
@@ -139,9 +137,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.Type = runtime.StateMachineTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = map[string]constraint.Node{
-		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
 		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		runtime.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
 		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
 		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
 		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),

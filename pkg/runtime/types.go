@@ -31,6 +31,17 @@ type WatchKey = mapper.WatchKey
 const (
 	StateMachineTypeBasic        = "BASIC"
 	StateMachineTypeSubscription = "SUBSCRIPTION"
+
+	// subscription required fileds.
+	SubscriptionFieldMode       = "mode"
+	SubscriptionFieldFilter     = "filter"
+	SubscriptionFieldTopic      = "topic"
+	SubscriptionFieldPubsubName = "pubsub_name"
+
+	// state machine required fileds.
+	StateMachineFieldType   = "type"
+	StateMachineFieldOwner  = "owner"
+	StateMachineFieldSource = "source"
 )
 
 var (
