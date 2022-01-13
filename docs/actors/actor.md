@@ -45,17 +45,17 @@
 > Reactor 模式是一种典型的事件驱动的编程模型。
 > Reactor 逆置了程序处理的流程。事件驱动模型是一个状态机，包含了状态(state), 输入事件(input-event), 状态转移(transition), 状态转移即状态到输入事件的一组映射。
 
-![state-marchine-consistents](../images/reactor.png)
-`State Marchine` 通过注册的回调来接受消息并更新自身状态。
+![state-machine-consistents](../images/reactor.png)
+`State Machine` 通过注册的回调来接受消息并更新自身状态。
 
 ![dispatch-message-to-reactor](../images/dispatch-msg-to-reactor.png)
 
 ### 执行流程分析
 
 1. 创建并初始化状态机。
-2. `State Marchine Pool` 从 `Message Queue` 消费到一条事件。
-3. 根据事件拿到事件对应的 `State Marchine` 的上下文。
-4. 以事件为输入执行 `State Marchine` 注册的回调， 完成 `State Marchine` 的状态更新。
+2. `State Machine Pool` 从 `Message Queue` 消费到一条事件。
+3. 根据事件拿到事件对应的 `State Machine` 的上下文。
+4. 以事件为输入执行 `State Machine` 注册的回调， 完成 `State Machine` 的状态更新。
 5. 重复执行 2-4 过程。
 
 
@@ -91,7 +91,7 @@
 ![entity-runtime-arch](../images/entity-runtime-arch.png)
 上图中组成部分有：`Entity Manager`，`Dispatcher`,`Coroutine Pool`, `Entity`。
 
-- **Entity**：`Entity`存在两种状态， `attatched`, `detatched`，当coroutine与Entity结合的时候Entity为attached状态，当coroutine与Entity分离的时候Entity为detached状态，简单看来Entity可以在`actor`和`state marchine`之间切换。
+- **Entity**：`Entity`存在两种状态， `attatched`, `detatched`，当coroutine与Entity结合的时候Entity为attached状态，当coroutine与Entity分离的时候Entity为detached状态，简单看来Entity可以在`actor`和`state machine`之间切换。
 - **Entity Manager**：`Entity Manager`是管理一个服务实例内的所有的Entity。
 - **Dispatcher**： `Dispatcher`是从`Message Queue`的`mailbox`之间的一个消息分发器。
 - **Coroutine Pool**: `Coroutine Pool`是`Coroutine`的管理器，主要提供`Coroutine`上任务的负载均衡。

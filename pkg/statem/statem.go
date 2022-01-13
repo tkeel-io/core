@@ -30,6 +30,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/util"
@@ -176,7 +177,7 @@ type statem struct {
 }
 
 // newEntity create an statem object.
-func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMarchiner, error) {
+func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = uuid()
 	}
@@ -191,6 +192,7 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 		stateManager:   stateMgr,
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
+		status:         SMStatusActive,
 		disposing:      StateDisposingIdle,
 		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
@@ -221,11 +223,6 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 }
 
 func (s *statem) Setup() error {
-	descs := s.Mappers
-	s.Mappers = make([]MapperDesc, 0)
-	for _, desc := range descs {
-		s.appendMapper(desc)
-	}
 	return nil
 }
 
@@ -245,12 +242,22 @@ func (s *statem) SetStatus(status Status) {
 	s.status = status
 }
 
-func (s *statem) LoadEnvironments(env EnvDescription) {
+func (s *statem) LoadEnvironments(env environment.ActorEnv) {
+	s.tentacles = make(map[string][]mapper.Tentacler)
+
+	// load actor mappers.
 	for _, m := range env.Mappers {
-		log.Info("load environments", logger.EntityID(s.ID), zap.String("TQL", m.String()))
+		s.mappers[m.ID()] = m
+		log.Debug("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
+
+	// load actor tentacles.
 	for _, t := range env.Tentacles {
-		log.Info("load environments", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+		for _, item := range t.Items() {
+			s.tentacles[item.String()] = append(s.tentacles[item.String()], t)
+			log.Debug("load environments, watching ", logger.EntityID(s.ID), zap.String("WatchKey", item.String()))
+		}
+		log.Debug("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
 }
 
@@ -260,7 +267,7 @@ func (s *statem) GetManager() StateManager {
 
 // SetConfigs set entity configs.
 func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
-	// reset state marchine configs.
+	// reset state machine configs.
 	s.Configs = make(map[string]constraint.Config)
 	s.constraints = make(map[string]*constraint.Constraint)
 	s.searchConstraints = make(sort.StringSlice, 0)
@@ -313,7 +320,7 @@ func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.
 		EnabledSearch:     true,
 		EnabledTimeSeries: true,
 		Define:            make(map[string]interface{}),
-		LastTime:          util.UnixMill(),
+		LastTime:          util.UnixMilli(),
 	}
 
 	if len(segs) > 1 {
@@ -338,7 +345,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 
 		// set values.
 		cfg.ID = segs[len(segs)-1]
-		cfg.LastTime = util.UnixMill()
+		cfg.LastTime = util.UnixMilli()
 
 		if len(segs) > 1 {
 			segment = segs[len(segs)-1]
@@ -369,10 +376,10 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 					logger.EntityID(s.ID),
 					zap.Any("config", pd.Value),
 					zap.String("path", pd.Path))
-				return errors.Wrap(err, "state marchine patch configs")
+				return errors.Wrap(err, "state machine patch configs")
 			}
 
-			log.Debug("patch state marchine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
+			log.Debug("patch state machine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
 
 			switch pd.Operator {
 			case constraint.PatchOpAdd:
@@ -381,12 +388,12 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				if index == 0 {
 					s.Configs[segment] = cfg
 				} else if err = parentCfg.AppendField(cfg); nil != err {
-					return errors.Wrap(err, "upsert state marchine configs")
+					return errors.Wrap(err, "upsert state machine configs")
 				}
 			case constraint.PatchOpRemove:
 				if index == len(segs)-1 || nil != parentCfg {
 					if err = parentCfg.RemoveField(segment); nil != err {
-						return errors.Wrap(err, "remove state marchine configs")
+						return errors.Wrap(err, "remove state machine configs")
 					}
 				}
 			case constraint.PatchOpCopy:
@@ -402,7 +409,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 				delete(s.Configs, segs[0])
 			}
 		}
-		log.Debug("patch state marchine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
+		log.Debug("patch state machine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
 	}
 
 	s.constraints = make(map[string]*constraint.Constraint)
@@ -424,7 +431,7 @@ func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
 		}
 	}
 
-	log.Debug("patch state marchine configs", zap.Any("value", patchData))
+	log.Debug("patch state machine configs", zap.Any("value", patchData))
 
 	return nil
 }
@@ -649,7 +656,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		} else {
 			// TODO...
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
-			log.Debug("match end of \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
 			// match entityID.*   .
 			for watchKey, tentacles := range s.tentacles {
 				arr := strings.Split(watchKey, ".")

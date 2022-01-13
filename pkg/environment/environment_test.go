@@ -1,4 +1,4 @@
-package runtime
+package environment
 
 import (
 	"testing"
@@ -7,9 +7,9 @@ import (
 )
 
 func TestEnvironment(t *testing.T) {
-	env := NewEnv()
+	env := NewEnvironment()
 
-	infos := env.LoadMapper([]EtcdPair{
+	infos := env.StoreMappers([]EtcdPair{
 		{
 			Key:   "core.mappe.BASIC.device123.mapper-from-device234",
 			Value: []byte("insert into device123 select device234.temp as temp"),
@@ -20,5 +20,5 @@ func TestEnvironment(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, "sub123", infos[0].EntityID)
+	assert.Equal(t, "device123", infos[0].EntityID)
 }
