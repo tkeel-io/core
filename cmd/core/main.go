@@ -58,7 +58,7 @@ configure your etcd server, you can specify multiple
 core --etcd <one etcd server address>
 
 configure your elasticsearch server, you can specify multiple
-core -es <one elasticsearch server address>
+core --search-engine drive://username:password@url0,url1
 `
 
 var (
