@@ -24,7 +24,6 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -60,7 +59,7 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Ba
 		return nil, errFunc(err)
 	}
 
-	// decode in.KValues into subsc.
+	// decode in.Properties into subsc.
 	if err = subsc.checkSubscription(); nil != err {
 		return nil, errFunc(err)
 	}
@@ -72,18 +71,13 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Ba
 
 	subsc.daprClient = daprClient
 	subsc.stateMachine = stateM
-	subsc.GetBase().KValues = in.KValues
+	subsc.GetBase().Properties = in.Properties
 
 	return &subsc, nil
 }
 
 func (s *subscription) Flush(ctx context.Context) error {
 	return errors.Wrap(s.stateMachine.Flush(ctx), "flush subscription")
-}
-
-// Setup setup filter.
-func (s *subscription) Setup() error {
-	return errors.Wrap(s.stateMachine.Setup(), "subscription setup")
 }
 
 // GetID return state machine id.
@@ -100,44 +94,12 @@ func (s *subscription) GetBase() *statem.Base {
 	return s.stateMachine.GetBase()
 }
 
-func (s *subscription) SetStatus(status statem.Status) {
-	s.stateMachine.SetStatus(status)
-}
-
 func (s *subscription) GetStatus() statem.Status {
 	return s.stateMachine.GetStatus()
 }
 
-func (s *subscription) LoadEnvironments(env environment.ActorEnv) {
-	s.stateMachine.LoadEnvironments(env)
-}
-
-func (s *subscription) GetManager() statem.StateManager {
-	return s.stateMachine.GetManager()
-}
-
-// SetConfig set entity configs.
-func (s *subscription) SetConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMachine.SetConfigs(configs)
-	return errors.Wrap(err, "set subscription configs")
-}
-
-// PatchConfigs set entity configs.
-func (s *subscription) PatchConfigs(patchData []*statem.PatchData) error {
-	err := s.stateMachine.PatchConfigs(patchData)
-	return errors.Wrap(err, "patch subscription configs")
-}
-
-// AppendConfig append entity property config.
-func (s *subscription) AppendConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMachine.AppendConfigs(configs)
-	return errors.Wrap(err, "append subscription configs")
-}
-
-// RemoveConfig remove entity property configs.
-func (s *subscription) RemoveConfigs(propertyIDs []string) error {
-	err := s.stateMachine.RemoveConfigs(propertyIDs)
-	return errors.Wrap(err, "remove subscription configs")
+func (s *subscription) WithContext(sCtx statem.StateContext) statem.StateMachiner {
+	return s.stateMachine.WithContext(sCtx)
 }
 
 // OnMessage recv message from pubsub.
@@ -177,17 +139,17 @@ func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
 func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.WatchKey {
 	b := s.GetBase()
 	cp := statem.Base{
-		ID:       b.ID,
-		Type:     b.Type,
-		Owner:    b.Owner,
-		Source:   b.Source,
-		Version:  b.Version,
-		LastTime: b.LastTime,
-		KValues:  make(map[string]constraint.Node),
-		Configs:  make(map[string]constraint.Config),
+		ID:         b.ID,
+		Type:       b.Type,
+		Owner:      b.Owner,
+		Source:     b.Source,
+		Version:    b.Version,
+		LastTime:   b.LastTime,
+		Properties: make(map[string]constraint.Node),
+		Configs:    make(map[string]constraint.Config),
 	}
 
-	cp.KValues = msg.Properties
+	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
@@ -199,17 +161,17 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.Watch
 func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKey {
 	b := s.GetBase()
 	cp := statem.Base{
-		ID:       b.ID,
-		Type:     b.Type,
-		Owner:    b.Owner,
-		Source:   b.Source,
-		Version:  b.Version,
-		LastTime: b.LastTime,
-		KValues:  make(map[string]constraint.Node),
-		Configs:  make(map[string]constraint.Config),
+		ID:         b.ID,
+		Type:       b.Type,
+		Owner:      b.Owner,
+		Source:     b.Source,
+		Version:    b.Version,
+		LastTime:   b.LastTime,
+		Properties: make(map[string]constraint.Node),
+		Configs:    make(map[string]constraint.Config),
 	}
 
-	cp.KValues = msg.Properties
+	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
@@ -221,17 +183,17 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKe
 func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchKey {
 	b := s.GetBase()
 	cp := statem.Base{
-		ID:       b.ID,
-		Type:     b.Type,
-		Owner:    b.Owner,
-		Source:   b.Source,
-		Version:  b.Version,
-		LastTime: b.LastTime,
-		KValues:  make(map[string]constraint.Node),
-		Configs:  make(map[string]constraint.Config),
+		ID:         b.ID,
+		Type:       b.Type,
+		Owner:      b.Owner,
+		Source:     b.Source,
+		Version:    b.Version,
+		LastTime:   b.LastTime,
+		Properties: make(map[string]constraint.Node),
+		Configs:    make(map[string]constraint.Config),
 	}
 
-	cp.KValues = msg.Properties
+	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
 		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
 	}
@@ -241,30 +203,30 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchK
 
 func (s *subscription) checkSubscription() error {
 	sb := Base{}
-	decode2Subscription(s.GetBase().KValues, &sb)
+	decode2Subscription(s.GetBase().Properties, &sb)
 	return errors.Wrap(sb.Validate(), "check subscription required fileds")
 }
 
 func (s *subscription) Mode() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().KValues, &sb)
+	decode2Subscription(s.GetBase().Properties, &sb)
 	return sb.Mode
 }
 
 func (s *subscription) Filter() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().KValues, &sb)
+	decode2Subscription(s.GetBase().Properties, &sb)
 	return sb.Filter
 }
 
 func (s *subscription) Topic() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().KValues, &sb)
+	decode2Subscription(s.GetBase().Properties, &sb)
 	return sb.Topic
 }
 
 func (s *subscription) Pubsub() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().KValues, &sb)
+	decode2Subscription(s.GetBase().Properties, &sb)
 	return sb.PubsubName
 }

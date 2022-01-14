@@ -32,7 +32,7 @@ func TestDecodeBase(t *testing.T) {
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
 		Mappers:  []MapperDesc{{Name: "test", TQLString: "insert into device123 select device234.temp as temp"}},
-		KValues: map[string]constraint.Node{
+		Properties: map[string]constraint.Node{
 			"temp": constraint.NewNode(123.3),
 		},
 		Configs: make(map[string]constraint.Config),

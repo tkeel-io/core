@@ -29,15 +29,15 @@ func TestNewStatem(t *testing.T) {
 	stateManager := NewStateManagerMock()
 
 	base := Base{
-		ID:           "device123",
-		Type:         "DEVICE",
-		Owner:        "admin",
-		Source:       "dm",
-		Version:      0,
-		LastTime:     util.UnixMilli(),
-		Mappers:      []MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
-		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
-		ConfigsBytes: nil,
+		ID:         "device123",
+		Type:       "DEVICE",
+		Owner:      "admin",
+		Source:     "dm",
+		Version:    0,
+		LastTime:   util.UnixMilli(),
+		Mappers:    []MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
+		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
+		ConfigFile: nil,
 	}
 
 	sm, err := NewState(context.Background(), stateManager, &base, nil)
@@ -45,5 +45,4 @@ func TestNewStatem(t *testing.T) {
 	assert.Equal(t, "device123", sm.GetID())
 	assert.Equal(t, "DEVICE", sm.GetBase().Type)
 	assert.Equal(t, "admin", sm.GetBase().Owner)
-	assert.Equal(t, SMStatusActive, sm.GetStatus())
 }

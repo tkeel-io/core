@@ -76,6 +76,12 @@ func (mb *mailbox) Put(msg Message) error {
 	return nil
 }
 
+func (mb *mailbox) Empty() bool {
+	mb.lock.Lock()
+	defer mb.lock.Unlock()
+	return mb.size == 0
+}
+
 func (mb *mailbox) Size() int {
 	return mb.size
 }

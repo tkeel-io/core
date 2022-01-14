@@ -35,15 +35,15 @@ func TestMain(m *testing.M) {
 
 func Test_entity2EntityResponse(t *testing.T) {
 	base := statem.Base{
-		ID:           "device123",
-		Type:         "DEVICE",
-		Owner:        "admin",
-		Source:       "dm",
-		Version:      0,
-		LastTime:     util.UnixMilli(),
-		Mappers:      []statem.MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
-		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
-		ConfigsBytes: nil,
+		ID:         "device123",
+		Type:       "DEVICE",
+		Owner:      "admin",
+		Source:     "dm",
+		Version:    0,
+		LastTime:   util.UnixMilli(),
+		Mappers:    []statem.MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
+		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
+		ConfigFile: nil,
 	}
 
 	out := entityService.entity2EntityResponse(&base)

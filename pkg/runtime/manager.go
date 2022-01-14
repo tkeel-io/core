@@ -30,7 +30,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/logger"
+	zfiled "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
@@ -40,7 +40,6 @@ import (
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Manager struct {
@@ -61,7 +60,7 @@ type Manager struct {
 	cancel   context.CancelFunc
 }
 
-func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
+func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (statem.StateManager, error) {
 	var (
 		err        error
 		daprClient dapr.Client
@@ -103,14 +102,6 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	return mgr, nil
 }
 
-func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
-	bytes, _ := json.Marshal(msgCtx)
-	log.Debug("actor send message", zap.String("msg", string(bytes)))
-
-	// 解耦actor之间的直接调用
-	m.msgCh <- msgCtx
-}
-
 func (m *Manager) init() error {
 	// load all subcriptions.
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
@@ -128,10 +119,10 @@ func (m *Manager) init() error {
 	}
 
 	for _, info := range m.actorEnv.StoreMappers(pairs) {
-		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		log.Debug("load state machine", zfiled.ID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
 			log.Error("load state machine", zap.Error(err),
-				zap.String("type", info.Type), logger.EntityID(info.EntityID))
+				zap.String("type", info.Type), zfiled.ID(info.EntityID))
 		}
 	}
 
@@ -166,11 +157,12 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 			var stateMachine statem.StateMachiner
 			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
 			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
-				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
+				log.Warn("load state machine", zfiled.ID(stateID))
 			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
 				continue
 			}
+			actorEnv := m.actorEnv.GetActorEnv(stateID)
+			stateMachine.WithContext(statem.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
 		}
 	}
 	return nil
@@ -195,7 +187,7 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
-				log.Debug("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
+				log.Debug("dispose message", zfiled.ID(eid), zfiled.MessageInst(msgCtx))
 				channelID, stateMachine := m.getStateMachine(channelID, eid)
 				if nil == stateMachine {
 					var err error
@@ -208,7 +200,7 @@ func (m *Manager) Start() error {
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
-							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
+							zfiled.ID(eid), zap.String("channel", channelID), zfiled.MessageInst(msgCtx))
 						continue
 					}
 				}
@@ -227,13 +219,24 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) Shutdown() {
+func (m *Manager) Shutdown() error {
 	m.cancel()
 	m.shutdown <- struct{}{}
+	return nil
 }
 
-func (m *Manager) GetDaprClient() dapr.Client {
-	return m.daprClient
+func (m *Manager) RouteMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+	// assume single node.
+	return m.HandleMessage(ctx, msgCtx)
+}
+
+func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+	bytes, _ := json.Marshal(msgCtx)
+	log.Debug("actor send message", zap.String("msg", string(bytes)))
+
+	// 解耦actor之间的直接调用
+	m.msgCh <- msgCtx
+	return nil
 }
 
 func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) { //nolint
@@ -291,7 +294,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 	}
 
 	log.Debug("load or create state machiner",
-		logger.EntityID(base.ID),
+		zfiled.ID(base.ID),
 		zap.String("type", base.Type),
 		zap.String("owner", base.Owner),
 		zap.String("source", base.Source))
@@ -317,9 +320,8 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 	}
 
 	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
-	sm.LoadEnvironments(thisActorEnv)
+	sm.WithContext(statem.NewContext(sm, thisActorEnv.Mappers, thisActorEnv.Tentacles))
 
-	sm.Setup()
 	m.containers[channelID].Add(sm)
 	return sm, nil
 }
@@ -349,7 +351,7 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 		Message: statem.PropertyMessage{
 			StateID:    en.ID,
 			Operator:   constraint.PatchOpReplace.String(),
-			Properties: en.KValues,
+			Properties: en.Properties,
 		},
 	}
 	msgCtx.Headers.SetOwner(en.Owner)
@@ -357,7 +359,7 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 	msgCtx.Headers.SetSource(en.Source)
 	msgCtx.Headers.Set(statem.MessageCtxHeaderType, en.Type)
 
-	m.SendMsg(msgCtx)
+	m.HandleMessage(ctx, msgCtx)
 
 	return nil
 }
@@ -388,7 +390,7 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 			msgCtx.Headers.SetOwner(en.Owner)
 			msgCtx.Headers.SetTargetID(en.ID)
 			msgCtx.Headers.Set(statem.MessageCtxHeaderType, en.Type)
-			m.SendMsg(msgCtx)
+			m.HandleMessage(ctx, msgCtx)
 		}
 	}
 
@@ -407,16 +409,11 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
 		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("set configs",
-				logger.EntityID(en.ID),
+				zfiled.ID(en.ID),
 				zap.Any("entity", en),
 				zap.String("channel", channelID))
 			return errors.Wrap(err, "set entity configs")
 		}
-	}
-
-	// set entity configs.
-	if err = stateMachine.SetConfigs(en.Configs); nil != err {
-		return errors.Wrap(err, "set entity configs")
 	}
 
 	// flush entity configs.
@@ -435,16 +432,11 @@ func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData [
 	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
 		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("set configs",
-				logger.EntityID(en.ID),
+				zfiled.ID(en.ID),
 				zap.Any("entity", en),
 				zap.String("channel", channelID))
 			return errors.Wrap(err, "set entity configs")
 		}
-	}
-
-	// set entity configs.
-	if err = stateMachine.PatchConfigs(patchData); nil != err {
-		return errors.Wrap(err, "set entity configs")
 	}
 
 	// flush entity configs.
@@ -463,16 +455,11 @@ func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
 		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("append configs",
-				logger.EntityID(en.ID),
+				zfiled.ID(en.ID),
 				zap.Any("entity", en),
 				zap.String("channel", channelID))
 			return errors.Wrap(err, "append entity configs")
 		}
-	}
-
-	// append entity configs.
-	if err = stateMachine.AppendConfigs(en.Configs); nil != err {
-		return errors.Wrap(err, "append entity configs")
 	}
 
 	// flush entity configs.
@@ -491,16 +478,11 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
 		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
 			log.Error("remove configs",
-				logger.EntityID(en.ID),
+				zfiled.ID(en.ID),
 				zap.Any("entity", en),
 				zap.String("channel", channelID))
 			return errors.Wrap(err, "remove entity configs")
 		}
-	}
-
-	// remove entity configs.
-	if err = stateMachine.RemoveConfigs(propertyIDs); nil != err {
-		return errors.Wrap(err, "remove entity configs")
 	}
 
 	// flush entity configs.
@@ -514,13 +496,13 @@ func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*s
 	if nil == stateMachine {
 		if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
 			log.Error("remove configs",
-				logger.EntityID(base.ID),
+				zfiled.ID(base.ID),
 				zap.Any("entity", base),
 				zap.String("channel", channelID))
 			return nil, errors.Wrap(err, "remove entity configs")
 		}
 	}
-	stateMachine.SetStatus(statem.SMStatusDeleted)
+
 	return stateMachine.GetBase(), nil
 }
 
@@ -531,83 +513,6 @@ func (m *Manager) CleanEntity(ctx context.Context, id string) error {
 		m.containers[channelID].Remove(id)
 	}
 	return nil
-}
-
-// AppendMapper append a mapper into entity.
-func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
-	if len(en.Mappers) == 0 {
-		log.Error("append mapper into entity failed.", logger.EntityID(en.ID), zap.Error(ErrInvalidParams))
-		return errors.Wrap(ErrInvalidParams, "append entity mapper failed")
-	}
-
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.MapperMessage{
-			Operator: statem.MapperOperatorAppend,
-			Mapper:   en.Mappers[0],
-		},
-	}
-
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
-
-	m.SendMsg(msgCtx)
-
-	return nil
-}
-
-// DeleteMapper delete mapper from entity.
-func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
-	if len(en.Mappers) == 0 {
-		log.Error("remove mapper failed.", logger.EntityID(en.ID), zap.Error(ErrInvalidParams))
-		return errors.Wrap(ErrInvalidParams, "remove entity mapper failed")
-	}
-
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.MapperMessage{
-			Operator: statem.MapperOperatorRemove,
-			Mapper:   en.Mappers[0],
-		},
-	}
-
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
-
-	m.SendMsg(msgCtx)
-
-	return nil
-}
-
-func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}) error {
-	var err error
-	var val *structpb.Value
-	if val, err = structpb.NewValue(values); nil != err {
-		log.Error("search index failed.", zap.Error(err))
-	} else if _, err = m.searchClient.Index(ctx, &pb.IndexObject{Obj: val}); nil != err {
-		log.Error("search index failed.", zap.Error(err))
-	}
-	return errors.Wrap(err, "SearchFlushfailed")
-}
-
-func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []tseries.TSeriesData) error {
-	var err error
-	for _, data := range tds {
-		data.Fields["value"] = data.Value
-		line := fmt.Sprintf("%s,%s %s", data.Measurement, util.ExtractMap(data.Tags), util.ExtractMap(data.Fields))
-
-		_, err = m.tseriesClient.Write(ctx, &tseries.TSeriesRequest{
-			Data:     []string{line},
-			Metadata: map[string]string{},
-		})
-
-		if nil != err {
-			// 这里其实是有问题的, 如果没写成功，怎么处理，和MQ的ack相关，考虑放到batch_queue处理.
-			log.Error("flush time series data failed", zap.Error(err), zap.Any("data", data))
-		}
-	}
-
-	return errors.Wrap(err, "TimeSeriesFlush")
 }
 
 // uuid generate an uuid.

@@ -41,3 +41,11 @@ func Type(t string) zap.Field {
 func Status(status string) zap.Field {
 	return zap.String("status", status)
 }
+
+func ID(id string) zap.Field {
+	return zap.String("id", id)
+}
+
+func Path(path string) zap.Field {
+	return zap.String("path", path)
+}

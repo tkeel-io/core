@@ -6,6 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	cerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -22,12 +23,12 @@ func EncodeBase(base *Base) ([]byte, error) {
 
 	log.Debug("encode Base", logger.EntityID(base.ID), zap.String("configs", string(bytes)))
 
-	// set base.ConfigsBytes
-	base.ConfigsBytes = bytes
+	// set base.ConfigFile
+	base.ConfigFile = bytes
 	bytes, err = msgpack.Marshal(base)
 
-	// reset base.ConfigsBytes .
-	base.ConfigsBytes = nil
+	// reset base.ConfigFile .
+	base.ConfigFile = nil
 	return bytes, errors.Wrap(err, "encode Base")
 }
 
@@ -55,8 +56,8 @@ func DecodeBase(data []byte) (*Base, error) { //nolint
 		base.Configs[key] = cfg
 	}
 
-	// reset Base.ConfigsBytes.
-	base.ConfigsBytes = nil
+	// reset Base.ConfigFile.
+	base.ConfigFile = nil
 
 	// decode base.
 	if err := mapstructure.Decode(v, &base); nil != err {
@@ -66,18 +67,18 @@ func DecodeBase(data []byte) (*Base, error) { //nolint
 	switch properties := v["properties"].(type) {
 	case nil:
 	case map[string]interface{}:
-		base.KValues = make(map[string]constraint.Node)
+		base.Properties = make(map[string]constraint.Node)
 		for key, val := range properties {
-			base.KValues[key] = constraint.NewNode(val)
+			base.Properties[key] = constraint.NewNode(val)
 		}
 	case map[interface{}]interface{}:
-		base.KValues = make(map[string]constraint.Node)
+		base.Properties = make(map[string]constraint.Node)
 		for key, val := range properties {
 			keyString, _ := key.(string)
-			base.KValues[keyString] = constraint.NewNode(val)
+			base.Properties[keyString] = constraint.NewNode(val)
 		}
 	default:
-		return nil, ErrInvalidProperties
+		return nil, cerrors.ErrInternal
 	}
 
 	return &base, nil

@@ -72,10 +72,10 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 	out.Owner = entity.Owner
 	out.Source = entity.Source
 	out.Subscription = &pb.SubscriptionObject{}
-	out.Subscription.Filter = interface2string(entity.KValues[subscription.SubscriptionFieldFilter])
-	out.Subscription.Topic = interface2string(entity.KValues[subscription.SubscriptionFieldTopic])
-	out.Subscription.Mode = interface2string(entity.KValues[subscription.SubscriptionFieldMode])
-	out.Subscription.PubsubName = interface2string(entity.KValues[subscription.SubscriptionFieldPubsubName])
+	out.Subscription.Filter = interface2string(entity.Properties[subscription.SubscriptionFieldFilter])
+	out.Subscription.Topic = interface2string(entity.Properties[subscription.SubscriptionFieldTopic])
+	out.Subscription.Mode = interface2string(entity.Properties[subscription.SubscriptionFieldMode])
+	out.Subscription.PubsubName = interface2string(entity.Properties[subscription.SubscriptionFieldPubsubName])
 	return out
 }
 
@@ -90,7 +90,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.Source = req.Source
 	entity.Type = runtime.StateMachineTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = map[string]constraint.Node{
+	entity.Properties = map[string]constraint.Node{
 		runtime.StateMachineFieldType:            constraint.StringNode(entity.Type),
 		runtime.StateMachineFieldOwner:           constraint.StringNode(entity.Owner),
 		runtime.StateMachineFieldSource:          constraint.StringNode(entity.Source),
@@ -108,7 +108,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	// set mapper.
 	entity.Mappers = []statem.MapperDesc{{
 		Name:      "subscription",
-		TQLString: entity.KValues[subscription.SubscriptionFieldFilter].String(),
+		TQLString: entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
 	// set properties.
@@ -137,7 +137,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.Source = req.Source
 	entity.Type = runtime.StateMachineTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = map[string]constraint.Node{
+	entity.Properties = map[string]constraint.Node{
 		subscription.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
 		subscription.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
 		subscription.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
@@ -153,7 +153,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	// set mapper.
 	entity.Mappers = []statem.MapperDesc{{
 		Name:      "subscription",
-		TQLString: entity.KValues[subscription.SubscriptionFieldFilter].String(),
+		TQLString: entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {

@@ -63,11 +63,11 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	entity.Type = req.Type
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
 		for k, v := range kv {
-			entity.KValues[k] = constraint.NewNode(v)
+			entity.Properties[k] = constraint.NewNode(v)
 		}
 	case nil:
 		log.Warn("create entity, but empty params", logger.EntityID(req.Id))
@@ -78,7 +78,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	}
 
 	// check properties.
-	if _, has := entity.KValues[""]; has {
+	if _, has := entity.Properties[""]; has {
 		log.Error("create entity, but invalid params",
 			logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
@@ -105,11 +105,11 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Source = req.Source
 
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
 		for k, v := range kv {
-			entity.KValues[k] = constraint.NewNode(v)
+			entity.Properties[k] = constraint.NewNode(v)
 		}
 	case nil:
 		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityEmptyRequest))
@@ -120,7 +120,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	// check properties.
-	if _, has := entity.KValues[""]; has {
+	if _, has := entity.Properties[""]; has {
 		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
 	}
@@ -142,7 +142,7 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]constraint.Node)
 
 	switch kv := req.Properties.AsInterface().(type) {
 	case []interface{}:
@@ -235,14 +235,14 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	for _, pid := range pids {
 		props[pid] = constraint.NewNode(nil)
 		if !strings.ContainsAny(pid, ".[") {
-			if val, exists := entity.KValues[pid]; exists {
+			if val, exists := entity.Properties[pid]; exists {
 				props[pid] = val
 			}
 			continue
 		}
 
 		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
-		if props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
+		if props[pid], err = constraint.Patch(entity.Properties[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
 			if !errors.Is(err, constraint.ErrPatchNotFound) {
 				log.Error("patch entity", logger.EntityID(in.Id), zap.Error(err))
 				return out, errors.Wrap(err, "patch entity properties")
@@ -253,7 +253,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 		}
 	}
 
-	entity.KValues = props
+	entity.Properties = props
 	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "patch entity properties")
 }
@@ -455,7 +455,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]constraint.Node)
 
 	switch kv := in.Configs.AsInterface().(type) {
 	case []interface{}:
@@ -550,7 +550,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	out = &pb.EntityResponse{}
 
 	kv := make(map[string]interface{})
-	for k, v := range entity.KValues {
+	for k, v := range entity.Properties {
 		kv[k] = v.Value()
 	}
 

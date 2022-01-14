@@ -55,7 +55,7 @@ func (env *Environment) GetActorEnv(stateID string) ActorEnv {
 	var actorEnv ActorEnv
 	if mCache, has := env.mapperCaches[stateID]; has {
 		for _, m := range mCache.mappers {
-			actorEnv.Mappers = append(actorEnv.Mappers, m.Copy())
+			actorEnv.Mappers[m.ID()] = m.Copy()
 		}
 		for _, tentacle := range mCache.tentacles {
 			actorEnv.Tentacles = append(actorEnv.Tentacles, tentacle.Copy())

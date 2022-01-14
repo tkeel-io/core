@@ -10,7 +10,7 @@ func TestSubscription(t *testing.T) {
 	// 	Type:   "SUBCRIPTION",
 	// 	Owner:  "admin",
 	// 	Source: "device-manager",
-	// 	KValues: map[string]constraint.Node{
+	// 	Properties: map[string]constraint.Node{
 	// 		"mode":        constraint.NewNode("realtime"),
 	// 		"source":      constraint.NewNode("device-manager"),
 	// 		"filter":      constraint.NewNode("insert into sub123 select device123.temp"),

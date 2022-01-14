@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	cerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
@@ -62,10 +63,12 @@ func (s *statem) flush(ctx context.Context) error {
 }
 
 func (s *statem) flushState(ctx context.Context) error {
-	bytes, _ := EncodeBase(&s.Base)
+	bytes, err := EncodeBase(&s.Base)
+	if nil != err {
+		return errors.Wrap(err, "flush state")
+	}
 	log.Debug("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
-	s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
-	return nil
+	return errors.Wrap(s.sCtx.StateCliet().Set(ctx, s.ID, bytes), "flush state")
 }
 
 func (s *statem) flushSearch(ctx context.Context) error {
@@ -74,7 +77,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 	for _, JSONPath := range s.searchConstraints {
 		var val constraint.Node
 		var ct *constraint.Constraint
-		if val, err = s.getProperty(s.KValues, JSONPath); nil != err {
+		if val, err = s.getProperty(s.Properties, JSONPath); nil != err {
 			// TODO: 终止本次写入.
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
 			// TODO: 终止本次写入.
@@ -88,7 +91,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 	}
 
 	// flush all.
-	for key, val := range s.KValues {
+	for key, val := range s.Properties {
 		flushData[key] = val.String()
 	}
 
@@ -99,7 +102,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 	flushData["source"] = s.Source
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
-	if err = s.stateManager.SearchFlush(ctx, flushData); nil != err {
+	if err = s.sCtx.searchClient.Index(ctx, flushData); nil != err {
 		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
@@ -113,7 +116,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 	for _, JSONPath := range s.tseriesConstraints {
 		var val constraint.Node
 		var ct *constraint.Constraint
-		if val, err = s.getProperty(s.KValues, JSONPath); nil != err || val == nil {
+		if val, err = s.getProperty(s.Properties, JSONPath); nil != err || val == nil {
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
 		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
 		} else {
@@ -128,7 +131,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 		log.Warn("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
-	if err = s.stateManager.TimeSeriesFlush(ctx, flushData); nil != err {
+	if err = s.sCtx.TSeriesClient().Write(ctx, flushData); nil != err {
 		log.Error("flush timeseries Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
@@ -150,7 +153,7 @@ func (s *statem) generateTags() map[string]string {
 func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) {
 	arr := strings.Split(jsonPath, ".")
 	if len(arr) == 0 {
-		return nil, errInvalidJSONPath
+		return nil, cerrors.ErrInvalidJSONPath
 	} else if len(arr) == 1 {
 		return s.constraints[arr[0]], nil
 	}

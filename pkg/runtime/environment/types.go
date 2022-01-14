@@ -54,7 +54,7 @@ func parseTQLKey(key string) (MaSummary, error) {
 }
 
 type ActorEnv struct {
-	Mappers   []mapper.Mapper
+	Mappers   map[string]mapper.Mapper
 	Tentacles []mapper.Tentacler
 }
 
