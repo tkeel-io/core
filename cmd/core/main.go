@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
+	"github.com/tkeel-io/core/pkg/util"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,13 +29,11 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
-	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/panjf2000/ants/v2"
@@ -110,21 +110,6 @@ func core(cmd *cobra.Command, args []string) {
 	// user flags input recover config file content.
 	config.SetEtcdBrokers(_etcdBrokers)
 
-	if _searchEngine != "" {
-		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
-			return
-		}
-		switch drive {
-		case driver.ElasticsearchDriver:
-			config.SetSearchEngineElasticsearchConfig(username, password, urls)
-			if search.GlobalService == nil {
-				search.GlobalService = search.Init().Use(driver.Elasticsearch)
-			}
-		}
-	}
-
 	// new servers.
 	httpSrv := server.NewHTTPServer(_httpAddr)
 	grpcSrv := server.NewGRPCServer(_grpcAddr)
@@ -139,6 +124,26 @@ func core(cmd *cobra.Command, args []string) {
 		},
 		serverList...,
 	)
+
+	if _searchEngine != "" {
+		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			return
+		}
+		switch drive {
+		case driver.ElasticsearchDriver:
+			if err = config.SetSearchEngineElasticsearchConfig(username, password, urls); err != nil {
+				print.FailureStatusEvent(os.Stdout, "please check your --search-engine urls of your configuration")
+				return
+			}
+
+			if search.GlobalService == nil {
+				search.GlobalService = search.Init().Use(driver.Elasticsearch)
+				print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
+			}
+		}
+	}
 
 	// create coroutine pool.
 	coroutinePool, err := ants.NewPool(5000)

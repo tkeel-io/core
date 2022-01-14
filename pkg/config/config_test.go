@@ -14,3 +14,18 @@ func TestInitConfig(t *testing.T) {
 	assert.Equal(t, "root", config.SearchEngine.ES.Password)
 	assert.Equal(t, []string{"localhost:8086"}, config.SearchEngine.ES.Urls)
 }
+
+func TestAddHTTPScheme(t *testing.T) {
+	tests := []struct {
+		s       string
+		want    string
+		wantErr error
+	}{
+		{"localhost", "http://localhost", nil},
+	}
+	for _, test := range tests {
+		got, err := addHTTPScheme(test.s)
+		assert.Equal(t, test.want, got)
+		assert.Equal(t, test.wantErr, err)
+	}
+}

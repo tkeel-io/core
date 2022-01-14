@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"net/url"
 	"os"
 	"strings"
 
@@ -25,10 +26,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	"github.com/tkeel-io/kit/log"
 )
 
 const (
+	_httpScheme            = "http"
 	_defaultConfigFilename = "config.yml"
 	_corePrefix            = "CORE"
 
@@ -111,7 +112,7 @@ func InitConfig(cfgFile string) {
 			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
-			log.Fatal(err)
+			panic(err)
 		}
 	}
 
@@ -135,10 +136,19 @@ func SetEtcdBrokers(brokers []string) {
 	config.Etcd.Address = brokers
 }
 
-func SetSearchEngineElasticsearchConfig(username, password string, urls []string) {
-	config.SearchEngine.ES.Urls = urls
+func SetSearchEngineElasticsearchConfig(username, password string, urls []string) error {
+	tempUrls := make([]string, 0, len(urls))
+	for i := 0; i < len(urls); i++ {
+		u, err := addHTTPScheme(urls[i])
+		if err != nil {
+			return err
+		}
+		tempUrls = append(tempUrls, u)
+	}
+	config.SearchEngine.ES.Urls = tempUrls
 	config.SearchEngine.ES.Username = username
 	config.SearchEngine.ES.Password = password
+	return nil
 }
 
 func onConfigChanged(in fsnotify.Event) {
@@ -154,4 +164,14 @@ func writeDefault(cfgFile string) {
 		// TODO add write failed handler and remove print info in this package.
 		print.FailureStatusEvent(os.Stderr, err.Error())
 	}
+}
+
+func addHTTPScheme(path string) (string, error) {
+	u, err := url.Parse(path)
+	if err != nil {
+		return "", err
+	}
+
+	u.Scheme = _httpScheme
+	return u.String(), nil
 }
