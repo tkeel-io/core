@@ -143,8 +143,16 @@ func main() {
 	cmd.PersistentFlags().StringSliceVar(&_es, "es", []string{"http://localhost:9200"}, "Elasticsearch brokers address.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
+
+	{
+		// Subcommand register here.
+		cmd.AddCommand()
+	}
+
 	cobra.OnInitialize(func() {
-		// add sub commands.
+		// Some initialize Func
+		// called after flags have been initialized
+		// before the subcommand execute.
 	})
 
 	if err := cmd.Execute(); err != nil {
