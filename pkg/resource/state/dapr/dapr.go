@@ -9,11 +9,13 @@ import (
 )
 
 type daprStore struct {
+	storeName  string
 	daprClient daprSDK.Client
 }
 
-func (d *daprStore) Get(ctx context.Context, storeName, key string) (*state.StateItem, error) {
-	item, err := d.daprClient.GetState(ctx, storeName, key)
+// Get returns state.
+func (d *daprStore) Get(ctx context.Context, key string) (*state.StateItem, error) {
+	item, err := d.daprClient.GetState(ctx, d.storeName, key)
 	if nil != err {
 		return nil, errors.Wrap(err, "dapr store get")
 	}
@@ -25,13 +27,13 @@ func (d *daprStore) Get(ctx context.Context, storeName, key string) (*state.Stat
 	}, nil
 }
 
-// SaveState saves the raw data into store using default state options.
-func (d *daprStore) Set(ctx context.Context, storeName, key string, data []byte) error {
-	return errors.Wrap(d.daprClient.SaveState(ctx, storeName, key, data), "dapr store set")
+// Set saves the raw data into store using default state options.
+func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
+	return errors.Wrap(d.daprClient.SaveState(ctx, d.storeName, key, data), "dapr store set")
 }
 
 func init() {
-	state.Register("noop", func() (state.Store, error) {
+	state.Register("dapr", func(storeName string) (state.Store, error) {
 		daprClient, err := daprSDK.NewClient()
 		return &daprStore{daprClient: daprClient}, errors.Wrap(err, "new dapr store")
 	})
