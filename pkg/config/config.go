@@ -171,7 +171,8 @@ func addHTTPScheme(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	u.Scheme = _httpScheme
+	if u.Scheme == "" {
+		u.Scheme = _httpScheme
+	}
 	return u.String(), nil
 }
