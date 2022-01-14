@@ -76,78 +76,7 @@ func main() {
 		Use:     "core",
 		Short:   "Start a new core runtime",
 		Example: _coreCmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
-			print.InfoStatusEvent(os.Stdout, "loading configuration...")
-			config.InitConfig(_cfgFile)
-
-			// user flags input recover config file content.
-			config.SetEtcdBrokers(_etcdBrokers)
-
-			if _searchEngine != "" {
-				drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
-				if err != nil {
-					print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
-					return
-				}
-				switch drive {
-				case driver.ElasticsearchDriver:
-					config.SetSearchEngineElasticsearchConfig(username, password, urls)
-					if search.GlobalService == nil {
-						search.GlobalService = search.Init().Use(driver.Elasticsearch)
-					}
-				}
-			}
-
-			// new servers.
-			httpSrv := server.NewHTTPServer(_httpAddr)
-			grpcSrv := server.NewGRPCServer(_grpcAddr)
-			serverList := []transport.Server{httpSrv, grpcSrv}
-
-			coreApp := app.New(config.Get().Server.AppID,
-				&log.Conf{
-					App:    config.Get().Server.AppID,
-					Level:  config.Get().Logger.Level,
-					Dev:    config.Get().Logger.Dev,
-					Output: config.Get().Logger.Output,
-				},
-				serverList...,
-			)
-
-			// create coroutine pool.
-			coroutinePool, err := ants.NewPool(5000)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
-			if nil != err {
-				log.Fatal(err)
-			}
-
-			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
-			if nil != err {
-				log.Fatal(err)
-			}
-
-			serviceRegisterToCoreV1(httpSrv, grpcSrv)
-
-			print.SuccessStatusEvent(os.Stdout, "all service registered.")
-			print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
-			if err = _entityManager.Start(); nil != err {
-				log.Fatal(err)
-			}
-			if err = coreApp.Run(context.TODO()); err != nil {
-				log.Fatal(err)
-			}
-
-			stop := make(chan os.Signal, 1)
-			signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
-			<-stop
-
-			if err = coreApp.Stop(context.TODO()); err != nil {
-				log.Fatal(err)
-			}
-		},
+		Run:     core,
 	}
 
 	cmd.PersistentFlags().StringVarP(&_cfgFile, "conf", "c", "config.yml", "config file path.")
@@ -171,6 +100,79 @@ func main() {
 
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err.Error())
+	}
+}
+
+func core(cmd *cobra.Command, args []string) {
+	print.InfoStatusEvent(os.Stdout, "loading configuration...")
+	config.InitConfig(_cfgFile)
+
+	// user flags input recover config file content.
+	config.SetEtcdBrokers(_etcdBrokers)
+
+	if _searchEngine != "" {
+		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			return
+		}
+		switch drive {
+		case driver.ElasticsearchDriver:
+			config.SetSearchEngineElasticsearchConfig(username, password, urls)
+			if search.GlobalService == nil {
+				search.GlobalService = search.Init().Use(driver.Elasticsearch)
+			}
+		}
+	}
+
+	// new servers.
+	httpSrv := server.NewHTTPServer(_httpAddr)
+	grpcSrv := server.NewGRPCServer(_grpcAddr)
+	serverList := []transport.Server{httpSrv, grpcSrv}
+
+	coreApp := app.New(config.Get().Server.AppID,
+		&log.Conf{
+			App:    config.Get().Server.AppID,
+			Level:  config.Get().Logger.Level,
+			Dev:    config.Get().Logger.Dev,
+			Output: config.Get().Logger.Output,
+		},
+		serverList...,
+	)
+
+	// create coroutine pool.
+	coroutinePool, err := ants.NewPool(5000)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	serviceRegisterToCoreV1(httpSrv, grpcSrv)
+
+	print.SuccessStatusEvent(os.Stdout, "all service registered.")
+	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
+	if err = _entityManager.Start(); nil != err {
+		log.Fatal(err)
+	}
+	if err = coreApp.Run(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
+	<-stop
+
+	if err = coreApp.Stop(context.TODO()); err != nil {
+		log.Fatal(err)
 	}
 }
 
