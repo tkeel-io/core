@@ -15,4 +15,9 @@ time_series:
       value: yunify
     - key: bucket
       value: bucket123
-
+search_engine:
+  es:
+    urls:
+      - localhost:8086
+    username: root
+    password: root

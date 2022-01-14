@@ -135,8 +135,10 @@ func SetEtcdBrokers(brokers []string) {
 	config.Etcd.Address = brokers
 }
 
-func SetSearchEngineESUrls(urls []string) {
+func SetSearchEngineElasticsearchConfig(username, password string, urls []string) {
 	config.SearchEngine.ES.Urls = urls
+	config.SearchEngine.ES.Username = username
+	config.SearchEngine.ES.Password = password
 }
 
 func onConfigChanged(in fsnotify.Event) {

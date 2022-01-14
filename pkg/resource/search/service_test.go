@@ -15,26 +15,14 @@ func TestGlobalSearch(t *testing.T) {
 
 func TestService_Use(t *testing.T) {
 	service := NewService(nil)
-	newServ := service.Use(driver.WithElasticsearch)
+	newServ := service.Use(driver.Elasticsearch)
+	assert.Equal(t, newServ, service)
+}
+
+func TestService_With(t *testing.T) {
+	service := NewService(nil)
+	newServ := service.With(driver.Elasticsearch)
 	assert.NotEqual(t, newServ, service)
-	assert.Equal(t, 1, len(newServ.selectOpts))
-}
-
-func TestService_SetDefaultSelectOptions(t *testing.T) {
-	service := NewService(nil)
-	newServ := service.SetSelectOptions(driver.WithElasticsearch)
-	assert.Equal(t, newServ, service)
-	assert.Equal(t, 1, len(newServ.selectOpts))
-}
-
-func TestService_AppendSelectOptions(t *testing.T) {
-	service := NewService(nil)
-	newServ := service.SetSelectOptions(driver.WithElasticsearch)
-	assert.Equal(t, newServ, service)
-	assert.Equal(t, 1, len(newServ.selectOpts))
-
-	newServ.AppendSelectOptions(driver.WithElasticsearch)
-	assert.Equal(t, 2, len(newServ.selectOpts))
 }
 
 func TestNewService(t *testing.T) {

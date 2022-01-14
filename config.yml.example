@@ -12,3 +12,9 @@ time_series:
     - key: bucket
       value: bucket123
 
+search_engine:
+  es:
+    urls:
+      - localhost:8086
+    username: admin
+    password: admin

@@ -27,11 +27,13 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/panjf2000/ants/v2"
@@ -60,11 +62,11 @@ core -es <one elasticsearch server address>
 `
 
 var (
-	_cfgFile     string
-	_httpAddr    string
-	_grpcAddr    string
-	_etcdBrokers []string
-	_es          []string
+	_cfgFile      string
+	_httpAddr     string
+	_grpcAddr     string
+	_etcdBrokers  []string
+	_searchEngine string
 )
 
 var _entityManager entities.EntityManager
@@ -77,11 +79,23 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			print.InfoStatusEvent(os.Stdout, "loading configuration...")
 			config.InitConfig(_cfgFile)
-			config.SetEtcdBrokers(_etcdBrokers)
-			config.SetSearchEngineESUrls(_es)
 
-			if search.GlobalService == nil {
-				search.Init()
+			// user flags input recover config file content.
+			config.SetEtcdBrokers(_etcdBrokers)
+
+			if _searchEngine != "" {
+				drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
+				if err != nil {
+					print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+					return
+				}
+				switch drive {
+				case driver.ElasticsearchDriver:
+					config.SetSearchEngineElasticsearchConfig(username, password, urls)
+					if search.GlobalService == nil {
+						search.GlobalService = search.Init().Use(driver.Elasticsearch)
+					}
+				}
 			}
 
 			// new servers.
@@ -140,7 +154,7 @@ func main() {
 	cmd.PersistentFlags().StringVar(&_httpAddr, "http_addr", ":6789", "http listen address.")
 	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31233", "grpc listen address.")
 	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", []string{"http://localhost:2379"}, "etcd brokers address.")
-	cmd.PersistentFlags().StringSliceVar(&_es, "es", []string{"http://localhost:9200"}, "Elasticsearch brokers address.")
+	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "es://admin:admin@localhost:9200", "ElasticsearchDriver brokers address.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
 

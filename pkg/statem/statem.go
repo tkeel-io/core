@@ -516,7 +516,7 @@ func (s *statem) OnMessage(msg Message) bool {
 }
 
 // InvokeMsg run loopHandler.
-func (s *statem) HandleLoop() { //nolint
+func (s *statem) HandleLoop() {
 	var (
 		Ensure  = 3
 		message Message
@@ -703,7 +703,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
+func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	if len(actives) == 0 {
 		return
 	}

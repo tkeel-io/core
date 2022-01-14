@@ -32,7 +32,7 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
-var Elasticsearch Type = "elasticsearch"
+var ElasticsearchDriver Type = "elasticsearch"
 
 const EntityIndex = "entity"
 
@@ -59,7 +59,7 @@ func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
 	if nil != err {
 		log.Fatal(err)
 	}
-	log.Info("use Elasticsearch version:", info.Version.Number)
+	log.Info("use ElasticsearchDriver version:", info.Version.Number)
 	return &ESClient{Client: client}
 }
 
@@ -162,6 +162,6 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	return page
 }
 
-func WithElasticsearch() Type {
-	return Elasticsearch
+func Elasticsearch() Type {
+	return ElasticsearchDriver
 }

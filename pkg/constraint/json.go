@@ -155,7 +155,7 @@ type StringNode string
 func (r StringNode) Type() Type         { return String }
 func (r StringNode) String() string     { return string(r) }
 func (r StringNode) Value() interface{} { return string(r) }
-func (r StringNode) To(typ Type) Node { //nolint
+func (r StringNode) To(typ Type) Node {
 	switch typ {
 	case String:
 		return r
@@ -250,7 +250,7 @@ func (r JSONNode) To(typ Type) Node {
 	}
 }
 
-func NewNode(v interface{}) Node { //nolint
+func NewNode(v interface{}) Node {
 	switch val := v.(type) {
 	case float32:
 		return FloatNode(val)
