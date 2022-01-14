@@ -169,7 +169,7 @@ func writeDefault(cfgFile string) {
 func addHTTPScheme(path string) (string, error) {
 	u, err := url.Parse(path)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "url parse err")
 	}
 	if u.Scheme == "" {
 		u.Scheme = _httpScheme

@@ -18,8 +18,6 @@ package main
 
 import (
 	"context"
-	"github.com/tkeel-io/core/pkg/resource/search/driver"
-	"github.com/tkeel-io/core/pkg/util"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,11 +27,13 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/panjf2000/ants/v2"
