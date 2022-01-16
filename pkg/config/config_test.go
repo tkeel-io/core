@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_LoadConfig(t *testing.T) {
-	InitConfig("../../config.yml")
-	cfg := GetConfig()
-	assert.Equal(t, "core", cfg.Server.AppID)
+func TestInitConfig(t *testing.T) {
+	assert.Equal(t, "", config.Server.AppID)
+	InitConfig("../../testdata/testconfig.yml")
+	assert.Equal(t, "core", config.Server.AppID)
 }

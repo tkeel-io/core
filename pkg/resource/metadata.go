@@ -7,7 +7,7 @@ type Metadata struct {
 	Properties map[string]string `json:"properties"`
 }
 
-func ParseFrom(meta *config.Metadata) Metadata {
+func ParseFrom(meta config.Metadata) Metadata {
 	m := Metadata{Name: meta.Name}
 	if len(meta.Properties) > 0 {
 		m.Properties = make(map[string]string)

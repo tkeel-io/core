@@ -65,7 +65,7 @@ func NewEntityManager(ctx context.Context, mgr statem.StateManager, searchClient
 	if daprClient, err = dapr.NewClient(); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
 	} else if etcdClient, err = clientv3.New(clientv3.Config{
-		Endpoints:   config.GetConfig().Etcd.Address,
+		Endpoints:   config.Get().Etcd.Address,
 		DialTimeout: 3 * time.Second,
 	}); nil != err {
 		return nil, errors.Wrap(err, "create manager failed")
