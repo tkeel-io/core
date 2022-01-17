@@ -41,7 +41,17 @@ const (
 
 var (
 	_config = defaultConfig()
+)
 
+var (
+	_defaultAppServer = Server{
+		AppID:             DefaultAppID,
+		AppPort:           DefaultAppPort,
+		CoroutinePoolSize: 500,
+	}
+	_defaultLogConfig = LogConfig{
+		Level: "info",
+	}
 	_defaultESConfig = ESConfig{
 		Address:  []string{"http://localhost:9200"},
 		Username: "admin",
@@ -114,9 +124,8 @@ func Init(cfgFile string) {
 	// default.
 	viper.SetDefault("server.app_port", DefaultAppPort)
 	viper.SetDefault("server.app_id", DefaultAppID)
-	viper.SetDefault("server.coroutine_pool_size", 500)
-	viper.SetDefault("logger.level", "info")
-	viper.SetDefault("logger.output_json", false)
+	viper.SetDefault("server.coroutine_pool_size", _defaultAppServer.CoroutinePoolSize)
+	viper.SetDefault("logger.level", _defaultLogConfig.Level)
 	viper.SetDefault("etcd.address", _defaultEtcdConfig.Address)
 	viper.SetDefault("search_engine.elasticsearch.address", _defaultESConfig.Address)
 	viper.SetDefault("search_engine.elasticsearch.username", _defaultESConfig.Username)
