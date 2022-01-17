@@ -39,10 +39,10 @@ const (
 var config = defaultConfig()
 
 type Configuration struct {
-	Server     Server     `mapstructure:"server"`
-	Logger     LogConfig  `mapstructure:"logger"`
-	Etcd       EtcdConfig `mapstructure:"etcd"`
-	TimeSeries Metadata   `mapstructure:"time_series"`
+	Server     Server               `mapstructure:"server"`
+	Logger     LogConfig            `mapstructure:"logger"`
+	Etcd       EtcdConfig           `mapstructure:"etcd"`
+	TimeSeries []TimeSeriesMetadata `mapstructure:"time_series"`
 }
 
 type Pair struct {
@@ -50,7 +50,7 @@ type Pair struct {
 	Value string `yaml:"value"`
 }
 
-type Metadata struct {
+type TimeSeriesMetadata struct {
 	Name       string `yaml:"name"`
 	Properties []Pair `yaml:"properties"`
 }

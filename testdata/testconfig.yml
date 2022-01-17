@@ -5,14 +5,17 @@ logger:
   level: DEBUG
 
 time_series:
-  name: influxdb
-  properties:
-    - key: url
-      value: http://localhost:8086/
-    - key: token
-      value: 9bUWcVwUpxbNSuhJMLbRaJxCVl8LzFV33znGx-pAXg4HUxFgWRTkRArF5Z9lMDcOn1pzzfD4dovLkkTnxuVMtg==
-    - key: org
-      value: yunify
-    - key: bucket
-      value: bucket123
-
+  - name: influxdb
+    properties:
+      - key: url
+        value: http://localhost:8086/
+      - key: token
+        value: 9bUWcVwUpxbNSuhJMLbRaJxCVl8LzFV33znGx-pAXg4HUxFgWRTkRArF5Z9lMDcOn1pzzfD4dovLkkTnxuVMtg==
+      - key: org
+        value: yunify
+      - key: bucket
+        value: bucket123
+  - name: testdb
+    properties:
+      - key: username
+        value: username

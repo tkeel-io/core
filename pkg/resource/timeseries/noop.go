@@ -15,7 +15,7 @@ func newNoop() Actuator {
 	return &noop{}
 }
 
-func (n *noop) Init(meta resource.Metadata) error {
+func (n *noop) Init(meta resource.TimeSeriesMetadata) error {
 	log.Info("initialize timeseries.Noop")
 	return nil
 }

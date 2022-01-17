@@ -34,7 +34,7 @@ func newInflux() Actuator {
 }
 
 // Init does metadata parsing and connection establishment.
-func (i *Influx) Init(metadata resource.Metadata) error {
+func (i *Influx) Init(metadata resource.TimeSeriesMetadata) error {
 	influxMeta, err := i.getInfluxMetadata(metadata)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (i *Influx) Init(metadata resource.Metadata) error {
 }
 
 // GetInfluxMetadata returns new Influx metadata.
-func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, error) {
+func (i *Influx) getInfluxMetadata(metadata resource.TimeSeriesMetadata) (*InfluxConfig, error) {
 	b, err := json.Marshal(metadata.Properties)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse influx configurations")
@@ -89,12 +89,12 @@ func (i *Influx) Write(ctx context.Context, req *WriteRequest) *Response {
 	case []string:
 		points = val
 	default:
-		return &Response{Err: ErrInfluxInvalidParams}
+		return &Response{Error: ErrInfluxInvalidParams}
 	}
 
 	// write the point.
 	if err := i.writeAPI.WriteRecord(context.Background(), points...); err != nil {
-		return &Response{Err: errors.Wrap(err, "write influxdb")}
+		return &Response{Error: errors.Wrap(err, "write influxdb")}
 	}
 
 	i.client.Close()

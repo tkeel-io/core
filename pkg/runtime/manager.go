@@ -71,7 +71,11 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 		etcdClient *clientv3.Client
 	)
 
-	timeseriesClient, err := timeseries.NewEngine(timeseries.SwitchToEngine(config.Get().TimeSeries.Name))
+	if len(config.Get().TimeSeries) == 0 {
+		return nil, errors.New("no time series configs")
+	}
+
+	timeseriesClient, err := timeseries.New(timeseries.SwitchToEngine(config.Get().TimeSeries[0].Name))
 	if err != nil {
 		return nil, wrapErrCreateFailed(err)
 	}
@@ -79,7 +83,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	if daprClient, err = dapr.NewClient(); nil != err {
 		return nil, wrapErrCreateFailed(err)
 	}
-	if err = timeseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
+	if err = timeseriesClient.Init(resource.GetTimeSeriesMetadata(config.Get().TimeSeries[0].Name)); nil != err {
 		return nil, wrapErrCreateFailed(err)
 	}
 	if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
@@ -604,7 +608,7 @@ func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []timeseries.Data) er
 		err = m.timeseriesClient.Write(ctx, &timeseries.WriteRequest{
 			Data:     []string{line},
 			Metadata: map[string]string{},
-		}).Err
+		}).Error
 
 		if nil != err {
 			// 这里其实是有问题的, 如果没写成功，怎么处理，和MQ的ack相关，考虑放到batch_queue处理.

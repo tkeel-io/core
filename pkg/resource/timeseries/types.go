@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	ErrInfluxRequiredURL    = errors.New("Influx Error: URL required")
-	ErrInfluxRequiredToken  = errors.New("Influx Error: Token required")
-	ErrInfluxRequiredOrg    = errors.New("Influx Error: Org required")
-	ErrInfluxRequiredBucket = errors.New("Influx Error: Bucket required")
-	ErrInfluxInvalidParams  = errors.New("Influx Error: Cannot convert request data")
+	ErrInfluxRequiredURL    = errors.New("influx Error: URL required")
+	ErrInfluxRequiredToken  = errors.New("influx Error: Token required")
+	ErrInfluxRequiredOrg    = errors.New("influx Error: Org required")
+	ErrInfluxRequiredBucket = errors.New("influx Error: Bucket required")
+	ErrInfluxInvalidParams  = errors.New("influx Error: Cannot convert request data")
 )
 
 type Engine string
@@ -56,7 +56,7 @@ func (r RawQueryRequest) ToRawQuery() string {
 }
 
 type Response struct {
-	Raw      []byte            `json:"data"`
+	Raw      []byte            `json:"raw"`
 	Metadata map[string]string `json:"metadata"`
-	Err      error             `json:"error"`
+	Error    error             `json:"error"`
 }

@@ -3,7 +3,6 @@ package timeseries
 import (
 	"context"
 	"github.com/pkg/errors"
-
 	"github.com/tkeel-io/core/pkg/resource"
 )
 
@@ -15,14 +14,14 @@ var registerMap = map[Engine]Generator{
 }
 
 type Actuator interface {
-	Init(resource.Metadata) error
+	Init(resource.TimeSeriesMetadata) error
 	Write(ctx context.Context, req *WriteRequest) *Response
 	Query(ctx context.Context, req QueryRequest) *Response
 }
 
 type Generator func() Actuator
 
-func NewEngine(name Engine) (Actuator, error) {
+func New(name Engine) (Actuator, error) {
 	if generator, has := registerMap[name]; has {
 		return generator(), nil
 	}
