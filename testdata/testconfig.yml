@@ -16,8 +16,8 @@ time_series:
     - key: bucket
       value: bucket123
 search_engine:
-  es:
-    urls:
+  elasticsearch:
+    address:
       - localhost:8086
     username: root
     password: root

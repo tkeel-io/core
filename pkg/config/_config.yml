@@ -1,0 +1,16 @@
+etcd:
+  address:
+  - http://localhost:2379
+logger:
+  level: info
+  output_json: false
+search_engine:
+  elasticsearch:
+    address:
+    - http://localhost:9200
+    password: admin
+    username: admin
+server:
+  app_id: core
+  app_port: 6789
+  coroutine_pool_size: 500

@@ -43,7 +43,7 @@ type ESClient struct {
 func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
 	client, err := elastic.NewClient(
-		elastic.SetURL(config.Urls...),
+		elastic.SetURL(config.Address...),
 		elastic.SetSniff(false),
 		elastic.SetBasicAuth(config.Username, config.Password),
 	)
@@ -52,10 +52,10 @@ func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
 	}
 
 	// ping connection.
-	if len(config.Urls) == 0 {
+	if len(config.Address) == 0 {
 		log.Fatal("please check your configuration with elasticsearch")
 	}
-	info, _, err := client.Ping(config.Urls[0]).Do(context.Background())
+	info, _, err := client.Ping(config.Address[0]).Do(context.Background())
 	if nil != err {
 		log.Fatal(err)
 	}

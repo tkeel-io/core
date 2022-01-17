@@ -82,8 +82,8 @@ func main() {
 	cmd.PersistentFlags().StringVarP(&_cfgFile, "conf", "c", "config.yml", "config file path.")
 	cmd.PersistentFlags().StringVar(&_httpAddr, "http_addr", ":6789", "http listen address.")
 	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31233", "grpc listen address.")
-	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", []string{"http://localhost:2379"}, "etcd brokers address.")
-	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "es://admin:admin@localhost:9200", "ElasticsearchDriver brokers address.")
+	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", nil, "etcd brokers address.")
+	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "", "ElasticsearchDriver brokers address.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
 
@@ -105,10 +105,28 @@ func main() {
 
 func core(cmd *cobra.Command, args []string) {
 	print.InfoStatusEvent(os.Stdout, "loading configuration...")
-	config.InitConfig(_cfgFile)
+	config.Init(_cfgFile)
 
 	// user flags input recover config file content.
-	config.SetEtcdBrokers(_etcdBrokers)
+	if _etcdBrokers != nil {
+		config.SetEtcdBrokers(_etcdBrokers)
+	}
+
+	if _searchEngine != "" {
+		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			return
+		}
+		switch drive {
+		case driver.ElasticsearchDriver:
+			config.SetSearchEngineElasticsearchConfig(username, password, urls)
+			if search.GlobalService == nil {
+				search.GlobalService = search.Init().Use(driver.Elasticsearch)
+				print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
+			}
+		}
+	}
 
 	// new servers.
 	httpSrv := server.NewHTTPServer(_httpAddr)
@@ -124,26 +142,6 @@ func core(cmd *cobra.Command, args []string) {
 		},
 		serverList...,
 	)
-
-	if _searchEngine != "" {
-		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
-			return
-		}
-		switch drive {
-		case driver.ElasticsearchDriver:
-			if err = config.SetSearchEngineElasticsearchConfig(username, password, urls); err != nil {
-				print.FailureStatusEvent(os.Stdout, "please check your --search-engine urls of your configuration")
-				return
-			}
-
-			if search.GlobalService == nil {
-				search.GlobalService = search.Init().Use(driver.Elasticsearch)
-				print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
-			}
-		}
-	}
 
 	// create coroutine pool.
 	coroutinePool, err := ants.NewPool(5000)
