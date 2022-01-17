@@ -17,7 +17,7 @@ limitations under the License.
 package config
 
 import (
-	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"strings"
@@ -110,7 +110,8 @@ func InitConfig(cfgFile string) {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); nil != err {
-		if ok := errors.Is(err, viper.ConfigFileNotFoundError{}); ok {
+		if errors.Is(err, viper.ConfigFileNotFoundError{}) ||
+			errors.Is(err, fs.ErrNotExist) {
 			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
@@ -150,7 +151,6 @@ func SetSearchEngineElasticsearchConfig(username, password string, urls []string
 	config.SearchEngine.ES.Urls = tempUrls
 	config.SearchEngine.ES.Username = username
 	config.SearchEngine.ES.Password = password
-	fmt.Printf("Setting search engine: %+v\n", config.SearchEngine.ES)
 	return nil
 }
 
