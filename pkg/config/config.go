@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -30,6 +31,7 @@ import (
 
 const (
 	_httpScheme            = "http"
+	_schemeSpliterator     = "://"
 	_defaultConfigFilename = "config.yml"
 	_corePrefix            = "CORE"
 
@@ -148,6 +150,7 @@ func SetSearchEngineElasticsearchConfig(username, password string, urls []string
 	config.SearchEngine.ES.Urls = tempUrls
 	config.SearchEngine.ES.Username = username
 	config.SearchEngine.ES.Password = password
+	fmt.Printf("Setting search engine: %+v\n", config.SearchEngine.ES)
 	return nil
 }
 
@@ -167,12 +170,15 @@ func writeDefault(cfgFile string) {
 }
 
 func addHTTPScheme(path string) (string, error) {
-	u, err := url.Parse(path)
-	if err != nil {
-		return "", errors.Wrap(err, "url parse err")
+	if strings.Index(path, _schemeSpliterator) > 0 {
+		u, err := url.Parse(path)
+		if err != nil {
+			return "", errors.Wrap(err, "url parse err")
+		}
+		if u.Scheme == "" {
+			u.Scheme = _httpScheme
+		}
+		return u.String(), nil
 	}
-	if u.Scheme == "" {
-		u.Scheme = _httpScheme
-	}
-	return u.String(), nil
+	return _httpScheme + _schemeSpliterator + path, nil
 }

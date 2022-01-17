@@ -23,6 +23,7 @@ func TestAddHTTPScheme(t *testing.T) {
 	}{
 		{"localhost", "http://localhost", nil},
 		{"https://localhost", "https://localhost", nil},
+		{"localhost:9200", "http://localhost:9200", nil},
 	}
 	for _, test := range tests {
 		got, err := addHTTPScheme(test.s)
