@@ -19,13 +19,13 @@ package statem
 import (
 	"context"
 	"errors"
+	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"sort"
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
 
 const (
@@ -59,7 +59,7 @@ type StateManager interface {
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
-	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
+	TimeSeriesFlush(context.Context, []timeseries.Data) error
 	SetConfigs(context.Context, *Base) error
 	PatchConfigs(context.Context, *Base, []*PatchData) error
 	AppendConfigs(context.Context, *Base) error
@@ -77,23 +77,23 @@ type StateMachiner interface {
 	SetStatus(Status)
 	// GetStatus returns state-machine status.
 	GetStatus() Status
-	// SetConfig set entity configs.
+	// SetConfigs set entity configs.
 	SetConfigs(map[string]constraint.Config) error
 	// PatchConfigs patch configs.
 	PatchConfigs(patchDatas []*PatchData) error
-	// AppendConfig append entity property config.
+	// AppendConfigs append entity property config.
 	AppendConfigs(map[string]constraint.Config) error
-	// RemoveConfig remove entity property configs.
+	// RemoveConfigs remove entity property configs.
 	RemoveConfigs(propertyIDs []string) error
 	// LoadEnvironments load environments.
 	LoadEnvironments(environment.ActorEnv)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
-	// InvokeMsg dispose entity message.
+	//HandleLoop InvokeMsg dispose entity message.
 	HandleLoop()
-	// StateManager returns state manager.
+	// GetManager returns state manager.
 	GetManager() StateManager
-	// Flush flush entity data.
+	// Flush entity data.
 	Flush(ctx context.Context) error
 }
 

@@ -18,12 +18,12 @@ package statem
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -109,7 +109,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 
 func (s *statem) flushTimeSeries(ctx context.Context) error {
 	var err error
-	var flushData []tseries.TSeriesData
+	var flushData []timeseries.Data
 	for _, JSONPath := range s.tseriesConstraints {
 		var val constraint.Node
 		var ct *constraint.Constraint
@@ -117,7 +117,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
 		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
 		} else {
-			point := tseries.TSeriesData{
+			point := timeseries.Data{
 				Measurement: "core-default",
 				Tags:        s.generateTags(),
 				Fields:      map[string]string{},

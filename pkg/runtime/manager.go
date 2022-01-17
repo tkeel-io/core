@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"sync"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -49,10 +49,10 @@ type Manager struct {
 	coroutinePool *ants.Pool
 	actorEnv      environment.IEnvironment
 
-	daprClient    dapr.Client
-	etcdClient    *clientv3.Client
-	searchClient  pb.SearchHTTPServer
-	tseriesClient tseries.TimeSerier
+	daprClient       dapr.Client
+	etcdClient       *clientv3.Client
+	searchClient     pb.SearchHTTPServer
+	timeseriesClient timeseries.Actuator
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -61,42 +61,46 @@ type Manager struct {
 }
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
+	wrapErrCreateFailed := func(err error) error { return errors.Wrap(err, "create manager failed") }
+
 	var (
+		expireTime = 3 * time.Second
+		etcdAddr   = config.Get().Etcd.Address
+
 		daprClient dapr.Client
 		etcdClient *clientv3.Client
-		err        error
 	)
 
-	expireTime := 3 * time.Second
-	etcdAddr := config.Get().Etcd.Address
-	tseriesClient := tseries.NewTimeSerier(config.Get().TimeSeries.Name)
-	returnErr := func(err error) error { return errors.Wrap(err, "create manager failed") }
+	timeseriesClient, err := timeseries.NewEngine(timeseries.SwitchToEngine(config.Get().TimeSeries.Name))
+	if err != nil {
+		return nil, wrapErrCreateFailed(err)
+	}
 
 	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, returnErr(err)
+		return nil, wrapErrCreateFailed(err)
 	}
-	if err = tseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
-		return nil, returnErr(err)
+	if err = timeseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
+		return nil, wrapErrCreateFailed(err)
 	}
 	if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
-		return nil, returnErr(err)
+		return nil, wrapErrCreateFailed(err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 
 	mgr := &Manager{
-		ctx:           ctx,
-		cancel:        cancel,
-		daprClient:    daprClient,
-		etcdClient:    etcdClient,
-		searchClient:  searchClient,
-		tseriesClient: tseriesClient,
-		actorEnv:      environment.NewEnvironment(),
-		containers:    make(map[string]*Container),
-		msgCh:         make(chan statem.MessageContext, 10),
-		disposeCh:     make(chan statem.MessageContext, 10),
-		coroutinePool: coroutinePool,
-		lock:          sync.RWMutex{},
+		ctx:              ctx,
+		cancel:           cancel,
+		daprClient:       daprClient,
+		etcdClient:       etcdClient,
+		searchClient:     searchClient,
+		timeseriesClient: timeseriesClient,
+		actorEnv:         environment.NewEnvironment(),
+		containers:       make(map[string]*Container),
+		msgCh:            make(chan statem.MessageContext, 10),
+		disposeCh:        make(chan statem.MessageContext, 10),
+		coroutinePool:    coroutinePool,
+		lock:             sync.RWMutex{},
 	}
 
 	// set default container.
@@ -557,7 +561,7 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 	return nil
 }
 
-// DeleteMapper delete mapper from entity.
+// RemoveMapper delete mapper from entity.
 func (m *Manager) RemoveMapper(ctx context.Context, en *statem.Base) error {
 	if len(en.Mappers) == 0 {
 		log.Error("remove mapper failed.", logger.EntityID(en.ID), zap.Error(ErrInvalidParams))
@@ -591,16 +595,16 @@ func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}
 	return errors.Wrap(err, "SearchFlushfailed")
 }
 
-func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []tseries.TSeriesData) error {
+func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []timeseries.Data) error {
 	var err error
 	for _, data := range tds {
 		data.Fields["value"] = data.Value
 		line := fmt.Sprintf("%s,%s %s", data.Measurement, util.ExtractMap(data.Tags), util.ExtractMap(data.Fields))
 
-		_, err = m.tseriesClient.Write(ctx, &tseries.TSeriesRequest{
+		err = m.timeseriesClient.Write(ctx, &timeseries.WriteRequest{
 			Data:     []string{line},
 			Metadata: map[string]string{},
-		})
+		}).Err
 
 		if nil != err {
 			// 这里其实是有问题的, 如果没写成功，怎么处理，和MQ的ack相关，考虑放到batch_queue处理.

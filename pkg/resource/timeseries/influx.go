@@ -1,4 +1,4 @@
-package influxdb
+package timeseries
 
 import (
 	"context"
@@ -8,10 +8,11 @@ import (
 	"github.com/influxdata/influxdb-client-go/api"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
+
+var EngineInflux Engine = "influxdb"
 
 // Influx allows writing to InfluxDB.
 type Influx struct {
@@ -28,7 +29,7 @@ type InfluxConfig struct {
 }
 
 // NewInflux returns a new kafka binding instance.
-func newInflux() tseries.TimeSerier {
+func newInflux() Actuator {
 	return &Influx{}
 }
 
@@ -81,25 +82,25 @@ func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, e
 }
 
 // Invoke called on supported operations.
-func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
+func (i *Influx) Write(ctx context.Context, req *WriteRequest) *Response {
 	var points []string
 
 	switch val := req.Data.(type) {
 	case []string:
 		points = val
 	default:
-		return nil, ErrInfluxInvalidParams
+		return &Response{Err: ErrInfluxInvalidParams}
 	}
 
 	// write the point.
 	if err := i.writeAPI.WriteRecord(context.Background(), points...); err != nil {
-		return nil, errors.Wrap(err, "write influxdb")
+		return &Response{Err: errors.Wrap(err, "write influxdb")}
 	}
 
 	i.client.Close()
-	return &tseries.TSeriesResponse{Metadata: req.Metadata}, nil
+	return &Response{Metadata: req.Metadata}
 }
 
-func init() {
-	tseries.Register("influxdb", newInflux)
+func (i Influx) Query(ctx context.Context, req QueryRequest) *Response {
+	return &Response{}
 }
