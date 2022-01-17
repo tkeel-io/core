@@ -2,8 +2,10 @@ package timeseries
 
 import (
 	"context"
+
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
+
 	"go.uber.org/zap"
 )
 

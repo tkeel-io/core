@@ -2,8 +2,10 @@ package timeseries
 
 import (
 	"context"
-	"github.com/pkg/errors"
+
 	"github.com/tkeel-io/core/pkg/resource"
+
+	"github.com/pkg/errors"
 )
 
 var ErrUnregisteredEngine = errors.New("unregistered engine")

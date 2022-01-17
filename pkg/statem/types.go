@@ -19,13 +19,14 @@ package statem
 import (
 	"context"
 	"errors"
-	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"sort"
 
-	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/resource/timeseries"
+
+	dapr "github.com/dapr/go-sdk/client"
 )
 
 const (
@@ -89,7 +90,7 @@ type StateMachiner interface {
 	LoadEnvironments(environment.ActorEnv)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
-	//HandleLoop InvokeMsg dispose entity message.
+	// HandleLoop InvokeMsg dispose entity message.
 	HandleLoop()
 	// GetManager returns state manager.
 	GetManager() StateManager

@@ -18,13 +18,14 @@ package statem
 
 import (
 	"context"
-	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/resource/timeseries"
 	"github.com/tkeel-io/kit/log"
+
 	"go.uber.org/zap"
 )
 
