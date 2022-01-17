@@ -32,7 +32,7 @@ import (
 const (
 	_httpScheme            = "http"
 	_schemeSpliterator     = "://"
-	_defaultConfigFilename = "_config.yml"
+	_defaultConfigFilename = "config.yml"
 	_corePrefix            = "CORE"
 
 	DefaultAppPort = 6789
