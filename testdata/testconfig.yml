@@ -16,6 +16,7 @@ time_series:
     - key: bucket
       value: bucket123
 search_engine:
+  use: elasticsearch
   elasticsearch:
     address:
       - localhost:8086

@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"strings"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 )
@@ -15,6 +16,19 @@ type SearchEngine interface {
 }
 
 type SelectDriveOption func() Type
+
+func NoopDriver() Type {
+	return ""
+}
+
+func Parse(drive string) SelectDriveOption {
+	switch strings.ToLower(drive) {
+	case "elasticsearch", "es":
+		return Elasticsearch
+	default:
+		return NoopDriver
+	}
+}
 
 type SearchRequest struct {
 	Source    string                `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`

@@ -18,7 +18,7 @@ func Init() *Service {
 		// Add other drivers to SearchService here.
 		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().SearchEngine.ES),
 	}
-	return NewService(defaultRegistered)
+	return NewService(defaultRegistered).Use(driver.Parse(config.Get().SearchEngine.Use))
 }
 
 var _ pb.SearchHTTPServer = &Service{}
@@ -31,7 +31,7 @@ type Service struct {
 func NewService(registered map[driver.Type]driver.SearchEngine) *Service {
 	return &Service{
 		drivers:   registered,
-		selectOpt: nil,
+		selectOpt: driver.NoopDriver,
 	}
 }
 

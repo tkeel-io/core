@@ -52,7 +52,8 @@ var (
 	_defaultLogConfig = LogConfig{
 		Level: "info",
 	}
-	_defaultESConfig = ESConfig{
+	_defaultUseSearchEngine = "elasticsearch"
+	_defaultESConfig        = ESConfig{
 		Address:  []string{"http://localhost:9200"},
 		Username: "admin",
 		Password: "admin",
@@ -83,7 +84,8 @@ type EtcdConfig struct {
 }
 
 type SearchEngine struct {
-	ES ESConfig `mapstructure:"elasticsearch" yaml:"elasticsearch"` //nolint:tagliatelle
+	Use string   `mapstructure:"use" yaml:"use"`
+	ES  ESConfig `mapstructure:"elasticsearch" yaml:"elasticsearch"` //nolint:tagliatelle
 }
 
 type ESConfig struct {
@@ -127,6 +129,7 @@ func Init(cfgFile string) {
 	viper.SetDefault("server.coroutine_pool_size", _defaultAppServer.CoroutinePoolSize)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)
 	viper.SetDefault("etcd.address", _defaultEtcdConfig.Address)
+	viper.SetDefault("search_engine.use", _defaultUseSearchEngine)
 	viper.SetDefault("search_engine.elasticsearch.address", _defaultESConfig.Address)
 	viper.SetDefault("search_engine.elasticsearch.username", _defaultESConfig.Username)
 	viper.SetDefault("search_engine.elasticsearch.password", _defaultESConfig.Password)
@@ -162,6 +165,10 @@ func SetSearchEngineElasticsearchConfig(username, password string, urls []string
 	_config.SearchEngine.ES.Address = urls
 	_config.SearchEngine.ES.Username = username
 	_config.SearchEngine.ES.Password = password
+}
+
+func SetSearchEngineUseDrive(drive string) {
+	_config.SearchEngine.Use = drive
 }
 
 func onConfigChanged(in fsnotify.Event) {

@@ -112,6 +112,7 @@ func core(cmd *cobra.Command, args []string) {
 		config.SetEtcdBrokers(_etcdBrokers)
 	}
 
+	// rewrite search engine config by flags input info.
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
 		if err != nil {
@@ -121,11 +122,17 @@ func core(cmd *cobra.Command, args []string) {
 		switch drive {
 		case driver.ElasticsearchDriver:
 			config.SetSearchEngineElasticsearchConfig(username, password, urls)
-			if search.GlobalService == nil {
-				search.GlobalService = search.Init().Use(driver.Elasticsearch)
-				print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
-			}
+			// add use flag when more drive flags are available.
+			config.SetSearchEngineUseDrive(string(drive))
 		}
+	}
+
+	// Start Search Service.
+	search.GlobalService = search.Init()
+	// print started Info.
+	switch config.Get().SearchEngine.Use {
+	case string(driver.ElasticsearchDriver):
+		print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
 	}
 
 	// new servers.

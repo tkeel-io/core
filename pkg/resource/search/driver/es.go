@@ -32,7 +32,7 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
-var ElasticsearchDriver Type = "elasticsearch"
+const ElasticsearchDriver Type = "elasticsearch"
 
 const EntityIndex = "entity"
 
