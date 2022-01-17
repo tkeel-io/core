@@ -21,7 +21,7 @@ func EncodeBase(base *Base) ([]byte, error) {
 		return nil, errors.Wrap(err, "encode Base")
 	}
 
-	log.Debug("encode Base", logger.EntityID(base.ID), zap.String("configs", string(bytes)))
+	log.Debug("encode Base", logger.Eid(base.ID), zap.String("configs", string(bytes)))
 
 	// set base.ConfigFile
 	base.ConfigFile = bytes

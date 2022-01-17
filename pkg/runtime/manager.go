@@ -70,9 +70,10 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	expireTime := 3 * time.Second
 	etcdAddr := config.Get().Etcd.Address
 	tseriesClient := tseries.NewTimeSerier(config.Get().TimeSeries.Name)
-	returnErr := func(err error) error { return errors.Wrap(err, "create manager failed") }
+	returnErr := func(err error) error { return errors.Wrap(err, "new runtime.Manager") }
 
 	if daprClient, err = dapr.NewClient(); nil != err {
+		log.Error("")
 		return nil, returnErr(err)
 	}
 	if err = tseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
@@ -147,29 +148,6 @@ func (m *Manager) watchResource() error {
 	return nil
 }
 
-func (m *Manager) isThisNode() bool {
-	return true
-}
-
-func (m *Manager) reloadActor(stateIDs []string) error {
-	// 判断 actor 是否在当前节点.
-	if m.isThisNode() {
-		var err error
-		for _, stateID := range stateIDs {
-			var stateMachine statem.StateMachiner
-			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
-			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
-				log.Warn("load state machine", zfiled.ID(stateID))
-			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				continue
-			}
-			actorEnv := m.actorEnv.GetActorEnv(stateID)
-			stateMachine.WithContext(statem.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
-		}
-	}
-	return nil
-}
-
 func (m *Manager) Start() error {
 	// init: load some resource.
 	m.init()
@@ -189,7 +167,7 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
-				log.Debug("dispose message", zfiled.ID(eid), zfiled.MessageInst(msgCtx))
+				log.Debug("dispose message", zfiled.ID(eid), zfiled.Message(msgCtx))
 				channelID, stateMachine := m.getStateMachine(channelID, eid)
 				if nil == stateMachine {
 					var err error
@@ -202,7 +180,7 @@ func (m *Manager) Start() error {
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
-							zfiled.ID(eid), zap.String("channel", channelID), zfiled.MessageInst(msgCtx))
+							zfiled.ID(eid), zap.String("channel", channelID), zfiled.Message(msgCtx))
 						continue
 					}
 				}
@@ -275,6 +253,29 @@ func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner
 	}
 
 	return cid, nil
+}
+
+func (m *Manager) isThisNode() bool {
+	return true
+}
+
+func (m *Manager) reloadActor(stateIDs []string) error {
+	// 判断 actor 是否在当前节点.
+	if m.isThisNode() {
+		var err error
+		for _, stateID := range stateIDs {
+			var stateMachine statem.StateMachiner
+			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
+			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
+				log.Warn("load state machine", zfiled.ID(stateID))
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				continue
+			}
+			actorEnv := m.actorEnv.GetActorEnv(stateID)
+			stateMachine.WithContext(statem.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
+		}
+	}
+	return nil
 }
 
 func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {

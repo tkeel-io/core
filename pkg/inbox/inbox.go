@@ -122,7 +122,7 @@ func (ib *inbox) Start() { // nolint
 				}
 
 				ib.blockNum--
-				log.Info("handle msg.", logger.MessageInst(msg))
+				log.Info("handle message", logger.Message(msg))
 			}
 
 			// commit.

@@ -234,7 +234,7 @@ func (s *statem) internelMessageHandler(message Message) []WatchKey {
 		return s.invokePropertyMessage(msg)
 	default:
 		// invalid msg typs.
-		log.Error("undefine message type", zfield.ID(s.ID), zfield.MessageInst(msg))
+		log.Error("undefine message type", zfield.ID(s.ID), zfield.Message(msg))
 	}
 
 	return nil
@@ -255,7 +255,7 @@ func (s *statem) invokePropertyMessage(msg PropertyMessage) []WatchKey {
 	stateProps := s.cacheProps[setStateID]
 	for key, value := range msg.Properties {
 		if _, err := patchProperty(stateProps, key, constraint.PatchOpReplace, value); nil != err {
-			log.Error("set state property", zfield.ID(s.ID), zfield.PropertyKey(key), zap.Error(err))
+			log.Error("set state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 			continue
 		}
 		watchKeys = append(watchKeys, mapper.WatchKey{EntityId: setStateID, PropertyKey: key})
@@ -366,7 +366,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 			for _, item := range tentacle.Items() {
 				var val constraint.Node
 				if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
-					log.Error("patch copy", zfield.RequestID(item.PropertyKey), zap.Error(err))
+					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
 					continue
 				} else if nil != val {
 					input[item.String()] = val
@@ -375,7 +375,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 		}
 
 		if len(input) == 0 {
-			log.Debug("obtain mapper input, empty params", zfield.MapperID(mapperID))
+			log.Debug("obtain mapper input, empty params", zfield.Mid(mapperID))
 			continue
 		}
 
@@ -386,7 +386,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 			log.Error("exec statem mapper failed ", zap.Error(err))
 		}
 
-		log.Debug("exec mapper", zfield.MapperID(mapperID), zap.Any("input", input), zap.Any("output", properties))
+		log.Debug("exec mapper", zfield.Mid(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
 		for propertyKey, value := range properties {
 			if err = s.setProperty(propertyKey, constraint.PatchOpReplace, value); nil != err {

@@ -49,15 +49,15 @@ func (s *statem) flush(ctx context.Context) error {
 	var err error
 	// flush state properties to es.
 	if err = s.flushSearch(ctx); nil == err {
-		log.Debug("entity flush Search completed", zfield.EntityID(s.ID))
+		log.Debug("entity flush Search completed", zfield.Eid(s.ID))
 	}
 	// flush state properties to state.
 	if err = s.flushState(ctx); nil == err {
-		log.Debug("entity flush State completed", zfield.EntityID(s.ID))
+		log.Debug("entity flush State completed", zfield.Eid(s.ID))
 	}
 	// flush state properties to TSDB.
 	if err = s.flushTimeSeries(ctx); nil == err {
-		log.Debug("entity flush TimeSeries completed", zfield.EntityID(s.ID))
+		log.Debug("entity flush TimeSeries completed", zfield.Eid(s.ID))
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
@@ -67,7 +67,7 @@ func (s *statem) flushState(ctx context.Context) error {
 	if nil != err {
 		return errors.Wrap(err, "flush state")
 	}
-	log.Debug("flush state", zfield.EntityID(s.ID), zap.String("state", string(bytes)))
+	log.Debug("flush state", zfield.Eid(s.ID), zap.String("state", string(bytes)))
 	return errors.Wrap(s.sCtx.StateCliet().Set(ctx, s.ID, bytes), "flush state")
 }
 
@@ -87,7 +87,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 			flushData[JSONPath] = val.Value()
 			continue
 		}
-		log.Warn("patch.copy entity property failed", zfield.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	// flush all.
@@ -128,7 +128,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 			}
 			flushData = append(flushData, point)
 		}
-		log.Warn("patch.copy entity property failed", zfield.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	if err = s.sCtx.TSeriesClient().Write(ctx, flushData); nil != err {

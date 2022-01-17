@@ -113,7 +113,7 @@ func (s *subscription) HandleLoop() {
 }
 
 func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
-	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.MessageInst(message))
+	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.Message(message))
 	var watchKeys []mapper.WatchKey
 	switch msg := message.(type) {
 	case statem.PropertyMessage:
@@ -130,7 +130,7 @@ func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
 		}
 	default:
 		// invalid msg typs.
-		log.Error("undefine message type.", logger.MessageInst(msg))
+		log.Error("undefine message type.", logger.Message(msg))
 	}
 	return watchKeys
 }
@@ -151,7 +151,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.Watch
 
 	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
-		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
+		log.Error("invoke realtime subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil
@@ -173,7 +173,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKe
 
 	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
-		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
+		log.Error("invoke period subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil
@@ -195,7 +195,7 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchK
 
 	cp.Properties = msg.Properties
 	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
-		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
+		log.Error("invoke changed subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil

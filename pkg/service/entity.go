@@ -70,17 +70,17 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 			entity.Properties[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Warn("create entity, but empty params", logger.EntityID(req.Id))
+		log.Warn("create entity, but empty params", logger.Eid(req.Id))
 	default:
 		log.Error("create entity, but invalid params",
-			logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
+			logger.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
 		return out, ErrEntityInvalidParams
 	}
 
 	// check properties.
 	if _, has := entity.Properties[""]; has {
 		log.Error("create entity, but invalid params",
-			logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
+			logger.Eid(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
 	}
 
@@ -89,7 +89,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 
 	// set properties.
 	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create entity failed", logger.EntityID(req.Id), zap.Error(err))
+		log.Error("create entity failed", logger.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
@@ -112,22 +112,22 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			entity.Properties[k] = constraint.NewNode(v)
 		}
 	case nil:
-		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityEmptyRequest))
+		log.Error("update entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
+		log.Error("update entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityInvalidParams
 	}
 
 	// check properties.
 	if _, has := entity.Properties[""]; has {
-		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
+		log.Error("update entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityPropertyIDEmpty))
 		return out, ErrEntityPropertyIDEmpty
 	}
 
 	// set properties.
 	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
-		log.Error("update entity failed.", logger.EntityID(req.Id), zap.Error(err))
+		log.Error("update entity failed.", logger.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
 
@@ -149,27 +149,27 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 		patchData := make([]*pb.PatchData, 0)
 		data, _ := json.Marshal(kv)
 		if err = json.Unmarshal(data, &patchData); nil != err {
-			log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
+			log.Error("patch entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
 			return nil, ErrEntityInvalidParams
 		}
 
 		// check path data.
 		for _, pd := range patchData {
 			if err = checkPatchData(pd); nil != err {
-				log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(err))
+				log.Error("patch entity failed.", logger.Eid(req.Id), zap.Error(err))
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
 		}
 
 		if entity, err = s.entityManager.PatchEntity(ctx, entity, patchData); nil != err {
-			log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(err))
+			log.Error("patch entity failed.", logger.Eid(req.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
 	case nil:
-		log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityEmptyRequest))
+		log.Error("patch entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Error("patch entity failed.", logger.EntityID(req.Id), zap.Error(ErrEntityInvalidParams))
+		log.Error("patch entity failed.", logger.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityInvalidParams
 	}
 
@@ -220,13 +220,13 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 
 	pids := strings.Split(strings.TrimSpace(in.Pids), ",")
 	if len(pids) == 0 {
-		log.Error("patch entity properties, empty property ids.", logger.EntityID(in.Id))
+		log.Error("patch entity properties, empty property ids.", logger.Eid(in.Id))
 		return out, ErrEntityInvalidParams
 	}
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Error("patch entity failed.", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("patch entity failed.", logger.Eid(in.Id), zap.Error(err))
 		return
 	}
 
@@ -244,12 +244,12 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
 		if props[pid], err = constraint.Patch(entity.Properties[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
 			if !errors.Is(err, constraint.ErrPatchNotFound) {
-				log.Error("patch entity", logger.EntityID(in.Id), zap.Error(err))
+				log.Error("patch entity", logger.Eid(in.Id), zap.Error(err))
 				return out, errors.Wrap(err, "patch entity properties")
 			}
 			err = nil
 			props[pid] = constraint.NewNode(nil)
-			log.Warn("patch entity", logger.EntityID(in.Id), zap.Error(err))
+			log.Warn("patch entity", logger.Eid(in.Id), zap.Error(err))
 		}
 	}
 
@@ -268,7 +268,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 
 	// get entity from entity manager.
 	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Error("get entity failed.", logger.EntityID(req.Id), zap.Error(err))
+		log.Error("get entity failed.", logger.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity failed")
 	}
 
@@ -327,7 +327,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		mapperDesc.TQLString = req.Mapper.Tql
 		entity.Mappers = []statem.MapperDesc{mapperDesc}
 	} else {
-		log.Error("append mapper failed.", logger.EntityID(req.Id), zap.Error(err))
+		log.Error("append mapper failed.", logger.Eid(req.Id), zap.Error(err))
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
 
@@ -351,7 +351,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 
 	entity.Mappers = []statem.MapperDesc{{Name: req.MapperName}}
 	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
-		log.Error("remove mapper", logger.EntityID(req.Id), zap.Error(err))
+		log.Error("remove mapper", logger.Eid(req.Id), zap.Error(err))
 		return
 	}
 
@@ -369,13 +369,13 @@ func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest
 	parseHeaderFrom(ctx, entity)
 
 	if entity.Configs, err = parseConfigFrom(ctx, in.Configs.AsInterface()); nil != err {
-		log.Error("set entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("set entity configs", logger.Eid(in.Id), zap.Error(err))
 		return out, err
 	}
 
 	// set properties.
 	if entity, err = s.entityManager.SetConfigs(ctx, entity); nil != err {
-		log.Error("set entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("set entity configs", logger.Eid(in.Id), zap.Error(err))
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -392,13 +392,13 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 	parseHeaderFrom(ctx, entity)
 
 	if entity.Configs, err = parseConfigFrom(ctx, in.Configs.AsInterface()); nil != err {
-		log.Error("append entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("append entity configs", logger.Eid(in.Id), zap.Error(err))
 		return out, err
 	}
 
 	// set properties.
 	if entity, err = s.entityManager.AppendConfigs(ctx, entity); nil != err {
-		log.Error("append entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("append entity configs", logger.Eid(in.Id), zap.Error(err))
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -417,7 +417,7 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
 	if entity, err = s.entityManager.RemoveConfigs(ctx, entity, propertyIDs); nil != err {
-		log.Error("remove entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("remove entity configs", logger.Eid(in.Id), zap.Error(err))
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -436,7 +436,7 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
 	if entity, err = s.entityManager.QueryConfigs(ctx, entity, propertyIDs); nil != err {
-		log.Error("query entity configs", logger.EntityID(in.Id), zap.Error(err))
+		log.Error("query entity configs", logger.Eid(in.Id), zap.Error(err))
 	}
 
 	configs := make(map[string]constraint.Config)
@@ -462,7 +462,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 		patchData := make([]*pb.PatchData, 0)
 		data, _ := json.Marshal(kv)
 		if err = json.Unmarshal(data, &patchData); nil != err {
-			log.Error("patch entity  configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+			log.Error("patch entity  configs", logger.Eid(in.Id), zap.Error(ErrEntityInvalidParams))
 			return nil, ErrEntityInvalidParams
 		}
 
@@ -479,14 +479,14 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 		}
 
 		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
-			log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(err))
+			log.Error("patch entity configs", logger.Eid(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
 	case nil:
-		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityEmptyRequest))
+		log.Error("patch entity configs", logger.Eid(in.Id), zap.Error(ErrEntityEmptyRequest))
 		return nil, ErrEntityEmptyRequest
 	default:
-		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+		log.Error("patch entity configs", logger.Eid(in.Id), zap.Error(ErrEntityInvalidParams))
 		return nil, ErrEntityInvalidParams
 	}
 

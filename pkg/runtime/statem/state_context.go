@@ -54,15 +54,15 @@ func (ctx StateContext) LoadEnvironments(env environment.ActorEnv) {
 	// load actor mappers.
 	for _, m := range env.Mappers {
 		ctx.mappers[m.ID()] = m
-		log.Debug("load environments, mapper ", logger.EntityID(ctx.stateMachine.GetID()), zap.String("TQL", m.String()))
+		log.Debug("load environments, mapper ", logger.Eid(ctx.stateMachine.GetID()), zap.String("TQL", m.String()))
 	}
 
 	// load actor tentacles.
 	for _, t := range env.Tentacles {
 		for _, item := range t.Items() {
 			ctx.tentacles[item.String()] = append(ctx.tentacles[item.String()], t)
-			log.Debug("load environments, watching ", logger.EntityID(ctx.stateMachine.GetID()), zap.String("WatchKey", item.String()))
+			log.Debug("load environments, watching ", logger.Eid(ctx.stateMachine.GetID()), zap.String("WatchKey", item.String()))
 		}
-		log.Debug("load environments, tentacle ", logger.EntityID(ctx.stateMachine.GetID()), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+		log.Debug("load environments, tentacle ", logger.Eid(ctx.stateMachine.GetID()), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
 }
