@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	cerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logger"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -49,15 +49,15 @@ func (s *statem) flush(ctx context.Context) error {
 	var err error
 	// flush state properties to es.
 	if err = s.flushSearch(ctx); nil == err {
-		log.Debug("entity flush Search completed", logger.EntityID(s.ID))
+		log.Debug("entity flush Search completed", zfield.EntityID(s.ID))
 	}
 	// flush state properties to state.
 	if err = s.flushState(ctx); nil == err {
-		log.Debug("entity flush State completed", logger.EntityID(s.ID))
+		log.Debug("entity flush State completed", zfield.EntityID(s.ID))
 	}
 	// flush state properties to TSDB.
 	if err = s.flushTimeSeries(ctx); nil == err {
-		log.Debug("entity flush TimeSeries completed", logger.EntityID(s.ID))
+		log.Debug("entity flush TimeSeries completed", zfield.EntityID(s.ID))
 	}
 	return errors.Wrap(err, "entity flush data failed")
 }
@@ -67,7 +67,7 @@ func (s *statem) flushState(ctx context.Context) error {
 	if nil != err {
 		return errors.Wrap(err, "flush state")
 	}
-	log.Debug("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
+	log.Debug("flush state", zfield.EntityID(s.ID), zap.String("state", string(bytes)))
 	return errors.Wrap(s.sCtx.StateCliet().Set(ctx, s.ID, bytes), "flush state")
 }
 
@@ -78,7 +78,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 		var val constraint.Node
 		var ct *constraint.Constraint
 		if val, err = s.getProperty(s.Properties, JSONPath); nil != err {
-			// TODO: 终止本次写入.
+			log.Warn("flush search", zap.Error(err), zfield.ID(s.ID))
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
 			// TODO: 终止本次写入.
 		} else if val, err = constraint.ExecData(val, ct); nil != err {
@@ -87,7 +87,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 			flushData[JSONPath] = val.Value()
 			continue
 		}
-		log.Warn("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", zfield.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	// flush all.
@@ -128,7 +128,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 			}
 			flushData = append(flushData, point)
 		}
-		log.Warn("patch.copy entity property failed", logger.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed", zfield.EntityID(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	if err = s.sCtx.TSeriesClient().Write(ctx, flushData); nil != err {

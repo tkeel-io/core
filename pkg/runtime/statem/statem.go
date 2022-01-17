@@ -54,27 +54,31 @@ const (
 
 // statem state marchins.
 type statem struct {
+	// state basic fields.
 	Base
+	// other state machine property cache.
+	cacheProps map[string]map[string]constraint.Node // cache other property.
 
 	// mapper & tentacles.
-	mappers    map[string]mapper.Mapper              // key=mapperId
-	tentacles  map[string][]mapper.Tentacler         // key=Sid#propertyKey
-	cacheProps map[string]map[string]constraint.Node // cache other property.
+	mappers   map[string]mapper.Mapper      // key=mapperId
+	tentacles map[string][]mapper.Tentacler // key=Sid#propertyKey
 
 	// parse from Configs.
 	constraints        map[string]*constraint.Constraint
 	searchConstraints  sort.StringSlice
 	tseriesConstraints sort.StringSlice
 
-	// mailbox & state runtime status.
-	mailbox      *mailbox
-	attached     int32
-	nextFlushNum int
+	// state machine mailbox.
+	mailbox *mailbox
+	// state manager.
 	stateManager StateManager
-	msgHandler   MessageHandler
-	status       Status
 
+	status             Status
+	attached           int32
+	nextFlushNum       int
 	ensureComsumeTimes int
+	// state machine message handler.
+	msgHandler MessageHandler
 
 	sCtx   StateContext
 	ctx    context.Context
@@ -82,7 +86,7 @@ type statem struct {
 }
 
 // newEntity create an statem object.
-func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
+func NewState(ctx context.Context, stateManager StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = uuid()
 	}
@@ -94,10 +98,10 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 
 		ctx:                ctx,
 		cancel:             cancel,
-		stateManager:       stateMgr,
-		msgHandler:         msgHandler,
 		mailbox:            newMailbox(20),
 		status:             SMStatusActive,
+		msgHandler:         msgHandler,
+		stateManager:       stateManager,
 		nextFlushNum:       defaultStateFlushPeried,
 		ensureComsumeTimes: defaultEnsureConsumeTimes,
 		mappers:            make(map[string]mapper.Mapper),
@@ -126,25 +130,25 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 	return state, nil
 }
 
+// GetID returns state ID.
 func (s *statem) GetID() string {
 	return s.ID
 }
 
+// GetBase return state basic info.
 func (s *statem) GetBase() *Base {
 	return &s.Base
 }
 
+// GetStatus returns state machine status.
 func (s *statem) GetStatus() Status {
 	return s.status
 }
 
+// WithContext set state Context.
 func (s *statem) WithContext(ctx StateContext) StateMachiner {
 	s.sCtx = ctx
 	return s
-}
-
-func (s *statem) SetMessageHandler(msgHandler MessageHandler) {
-	s.msgHandler = msgHandler
 }
 
 // OnMessage recive statem input messages.
@@ -168,7 +172,7 @@ func (s *statem) OnMessage(msg Message) bool {
 	return attaching
 }
 
-// InvokeMsg run loopHandler.
+// HandleLoop run loopHandler.
 func (s *statem) HandleLoop() {
 	var message Message
 	var ensureComsumeTimes = s.ensureComsumeTimes
@@ -223,7 +227,7 @@ func (s *statem) HandleLoop() {
 	log.Info("detached statem.", zfield.ID(s.ID))
 }
 
-// InvokeMsg dispose statem input messages.
+// internelMessageHandler dispose statem input messages.
 func (s *statem) internelMessageHandler(message Message) []WatchKey {
 	switch msg := message.(type) {
 	case PropertyMessage:

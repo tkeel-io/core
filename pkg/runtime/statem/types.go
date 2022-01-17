@@ -34,9 +34,13 @@ const (
 )
 
 type StateManager interface {
+	// start manager.
 	Start() error
+	// shutdown manager.
 	Shutdown() error
+	// route messages cluster.
 	RouteMessage(context.Context, MessageContext) error
+	// handle message on this node.
 	HandleMessage(context.Context, MessageContext) error
 }
 
@@ -45,11 +49,13 @@ type StateMachiner interface {
 	GetID() string
 	// GetBase returns state.Base
 	GetBase() *Base
+	// GetStatus returns actor status.
 	GetStatus() Status
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.
 	HandleLoop()
+	// WithContext set actor context.
 	WithContext(StateContext) StateMachiner
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
