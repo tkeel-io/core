@@ -83,7 +83,7 @@ func main() {
 	cmd.PersistentFlags().StringVar(&_httpAddr, "http_addr", ":6789", "http listen address.")
 	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31233", "grpc listen address.")
 	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", nil, "etcd brokers address.")
-	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "", "ElasticsearchDriver brokers address.")
+	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "", "your search engine SDN.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
 
@@ -186,6 +186,7 @@ func core(cmd *cobra.Command, args []string) {
 	}
 }
 
+// serviceRegisterToCoreV1 register your services here.
 func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
 	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.GlobalService)
