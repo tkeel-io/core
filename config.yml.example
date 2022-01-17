@@ -9,12 +9,15 @@ time_series:
   properties:
     - key: url
       value: http://localhost:8086/
+    - key: token
+      value: please_change_this
+    - key: org
+      value: tkeel
     - key: bucket
       value: bucket123
-
 search_engine:
-  es:
-    urls:
+  elasticsearch:
+    address:
       - localhost:8086
     username: admin
     password: admin
