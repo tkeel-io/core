@@ -68,7 +68,7 @@ func (s *statem) flushState(ctx context.Context) error {
 		return errors.Wrap(err, "flush state")
 	}
 	log.Debug("flush state", zfield.Eid(s.ID), zap.String("state", string(bytes)))
-	return errors.Wrap(s.sCtx.StateCliet().Set(ctx, s.ID, bytes), "flush state")
+	return errors.Wrap(s.stateClient().Set(ctx, s.ID, bytes), "flush state")
 }
 
 func (s *statem) flushSearch(ctx context.Context) error {
@@ -87,7 +87,8 @@ func (s *statem) flushSearch(ctx context.Context) error {
 			flushData[JSONPath] = val.Value()
 			continue
 		}
-		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+		log.Warn("patch.copy entity property failed",
+			zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
 	// flush all.
@@ -102,7 +103,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 	flushData["source"] = s.Source
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
-	if err = s.sCtx.searchClient.Index(ctx, flushData); nil != err {
+	if err = s.searchClient().Index(ctx, flushData); nil != err {
 		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
@@ -131,7 +132,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
-	if err = s.sCtx.TSeriesClient().Write(ctx, flushData); nil != err {
+	if err = s.tseriesClient().Write(ctx, flushData); nil != err {
 		log.Error("flush timeseries Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
@@ -183,4 +184,20 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 	}
 
 	return ct, nil
+}
+
+func (s *statem) stateClient() IStore {
+	return s.stateManager.GetResource().StateClient()
+}
+
+func (s *statem) tseriesClient() TSerier {
+	return s.stateManager.GetResource().TSeriesClient()
+}
+
+func (s *statem) pubsubClient() IPubsub { //nolint
+	return s.stateManager.GetResource().PubsubClient()
+}
+
+func (s *statem) searchClient() ISearch {
+	return s.stateManager.GetResource().SearchClient()
 }

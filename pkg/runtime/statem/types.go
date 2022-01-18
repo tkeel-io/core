@@ -38,10 +38,19 @@ type StateManager interface {
 	Start() error
 	// shutdown manager.
 	Shutdown() error
+	// GetResource return resource manager.
+	GetResource() ResourceManager
 	// route messages cluster.
 	RouteMessage(context.Context, MessageContext) error
 	// handle message on this node.
 	HandleMessage(context.Context, MessageContext) error
+}
+
+type ResourceManager interface {
+	StateClient() IStore
+	PubsubClient() IPubsub
+	SearchClient() ISearch
+	TSeriesClient() TSerier
 }
 
 type StateMachiner interface {

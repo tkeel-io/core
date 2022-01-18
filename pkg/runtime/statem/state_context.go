@@ -9,13 +9,9 @@ import (
 )
 
 type StateContext struct {
-	stateMachine     StateMachiner
-	storeClient      IStore
-	pubsubClient     IPubsub
-	searchClient     ISearch
-	timeSeriesClient TSerier
-	mappers          map[string]mapper.Mapper      // key=mapperId
-	tentacles        map[string][]mapper.Tentacler // key=Sid#propertyKey
+	stateMachine StateMachiner
+	mappers      map[string]mapper.Mapper
+	tentacles    map[string][]mapper.Tentacler
 }
 
 func NewContext(sm StateMachiner, mappers map[string]mapper.Mapper, tentacles []mapper.Tentacler) StateContext {
@@ -33,19 +29,6 @@ func NewContext(sm StateMachiner, mappers map[string]mapper.Mapper, tentacles []
 	}
 
 	return stateCtx
-}
-
-func (ctx StateContext) StateCliet() IStore {
-	return ctx.storeClient
-}
-func (ctx StateContext) PubsubClient() IPubsub {
-	return ctx.pubsubClient
-}
-func (ctx StateContext) SearchClient() ISearch {
-	return ctx.searchClient
-}
-func (ctx StateContext) TSeriesClient() TSerier {
-	return ctx.timeSeriesClient
 }
 
 func (ctx StateContext) LoadEnvironments(env environment.ActorEnv) {

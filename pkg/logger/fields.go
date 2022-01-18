@@ -49,3 +49,7 @@ func ID(id string) zap.Field {
 func Path(path string) zap.Field {
 	return zap.String("path", path)
 }
+
+func Reason(reason string) zap.Field {
+	return zap.String("reason", reason)
+}

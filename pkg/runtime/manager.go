@@ -85,7 +85,7 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	mgr := &Manager{
+	stateManager := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
 		daprClient:    daprClient,
@@ -101,8 +101,8 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	}
 
 	// set default container.
-	mgr.containers["default"] = NewContainer()
-	return mgr, nil
+	stateManager.containers["default"] = NewContainer()
+	return stateManager, nil
 }
 
 func (m *Manager) init() error {
@@ -219,6 +219,11 @@ func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContex
 	return nil
 }
 
+// GetResource return resource manager.
+func (m *Manager) GetResource() statem.ResourceManager {
+	panic("implement me")
+}
+
 func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) { //nolint
 	if cid == "" {
 		cid = "default"
@@ -327,11 +332,6 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 
 	m.containers[channelID].Add(sm)
 	return sm, nil
-}
-
-func (m *Manager) HandleMsg(ctx context.Context, msg statem.MessageContext) {
-	// dispose message from pubsub.
-	m.msgCh <- msg
 }
 
 // Tools.
