@@ -77,7 +77,7 @@ func (ib *inbox) OnMessage(msg MessageCtx) {
 	ib.msgCh <- msg
 }
 
-func (ib *inbox) Start() { // nolint
+func (ib *inbox) Start() {
 	log.Info("inbox start...")
 
 	for {

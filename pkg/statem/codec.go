@@ -31,7 +31,7 @@ func EncodeBase(base *Base) ([]byte, error) {
 	return bytes, errors.Wrap(err, "encode Base")
 }
 
-func DecodeBase(data []byte) (*Base, error) { //nolint
+func DecodeBase(data []byte) (*Base, error) {
 	var v = make(map[string]interface{})
 	if err := msgpack.Unmarshal(data, &v); nil != err {
 		return nil, errors.Wrap(err, "decode Base-State json")

@@ -19,3 +19,10 @@ time_series:
     properties:
       - key: username
         value: username
+search_engine:
+  use: elasticsearch
+  elasticsearch:
+    address:
+      - localhost:8086
+    username: root
+    password: root

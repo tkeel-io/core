@@ -126,7 +126,7 @@ func ParseConfigsFrom(data interface{}) (cfg Config, err error) {
 	return cfgRequest, nil
 }
 
-func parseField(in Config) (out Config, err error) { //nolint
+func parseField(in Config) (out Config, err error) {
 	switch in.Type {
 	case PropertyTypeInt:
 	case PropertyTypeBool:

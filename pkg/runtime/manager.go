@@ -246,7 +246,7 @@ func (m *Manager) GetDaprClient() dapr.Client {
 	return m.daprClient
 }
 
-func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) { //nolint
+func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) {
 	if cid == "" {
 		cid = "default"
 	}
@@ -287,7 +287,7 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMachiner, err error) { // nolint
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMachiner, err error) {
 	var en *statem.Base
 	var res *dapr.StateItem
 	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)

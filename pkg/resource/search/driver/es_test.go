@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package search
+package driver
 
 import (
 	"testing"
@@ -22,10 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
 )
-
-func Test_interface2string(t *testing.T) {
-	assert.Equal(t, "interface2string", interface2string("interface2string"))
-}
 
 func Test_condition2boolQuery(t *testing.T) {
 
