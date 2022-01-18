@@ -1,11 +1,7 @@
 package dao
 
 import (
-	"context"
-
-	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/resource/state"
 )
 
 type Entity struct {
@@ -20,20 +16,38 @@ type Entity struct {
 	ConfigFile []byte                     `json:"-" msgpack:"config_file" mapstructure:"-"`
 }
 
-func (d *Dao) Put(ctx context.Context, en *Entity) error {
-	bytes, err := Encode(en)
-	if nil == err {
-		err = d.stateClient.Set(ctx, StoreKey(en.ID), bytes)
+func (e *Entity) Copy() Entity {
+	en := Entity{
+		ID:         e.ID,
+		Type:       e.Type,
+		Owner:      e.Owner,
+		Source:     e.Source,
+		Version:    e.Version,
+		LastTime:   e.LastTime,
+		TemplateID: e.TemplateID,
+		Properties: make(map[string]constraint.Node),
 	}
-	return errors.Wrap(err, "put entity")
+
+	// copy entity properties.
+	for pid, pval := range e.Properties {
+		en.Properties[pid] = pval.Copy()
+	}
+
+	copy(en.ConfigFile, e.ConfigFile)
+	return en
 }
 
-func (d *Dao) Get(ctx context.Context, id string) (en *Entity, err error) {
-	var item *state.StateItem
-	item, err = d.stateClient.Get(ctx, StoreKey(id))
-	if nil == err {
-		en = new(Entity)
-		err = Decode(item.Value, en)
+func (e *Entity) Basic() Entity {
+	en := Entity{
+		ID:         e.ID,
+		Type:       e.Type,
+		Owner:      e.Owner,
+		Source:     e.Source,
+		Version:    e.Version,
+		LastTime:   e.LastTime,
+		TemplateID: e.TemplateID,
+		Properties: make(map[string]constraint.Node),
 	}
-	return en, errors.Wrap(err, "get entity")
+
+	return en
 }

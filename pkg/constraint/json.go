@@ -81,6 +81,7 @@ func (t Type) String() string {
 type Node interface {
 	Type() Type
 	To(Type) Node
+	Copy() Node
 	String() string
 	Value() interface{}
 }
@@ -95,6 +96,7 @@ type DefaultNode struct {
 
 func (r DefaultNode) Type() Type         { return r.typ }
 func (r DefaultNode) To(Type) Node       { return r }
+func (r DefaultNode) Copy() Node         { return DefaultNode{typ: r.typ, raw: r.raw} }
 func (r DefaultNode) String() string     { return r.raw }
 func (r DefaultNode) Value() interface{} { return r.raw }
 
@@ -103,6 +105,7 @@ type BoolNode bool
 func (r BoolNode) String() string     { return fmt.Sprintf("%t", r) }
 func (r BoolNode) Value() interface{} { return bool(r) }
 func (r BoolNode) Type() Type         { return Bool }
+func (r BoolNode) Copy() Node         { return r }
 func (r BoolNode) To(typ Type) Node {
 	switch typ {
 	case Bool:
@@ -119,6 +122,7 @@ type IntNode int64
 func (r IntNode) Type() Type         { return Integer }
 func (r IntNode) String() string     { return strconv.FormatInt(int64(r), 10) }
 func (r IntNode) Value() interface{} { return int64(r) }
+func (r IntNode) Copy() Node         { return r }
 func (r IntNode) To(typ Type) Node {
 	switch typ {
 	case Number, Integer:
@@ -137,6 +141,7 @@ type FloatNode float64
 func (r FloatNode) Type() Type         { return Float }
 func (r FloatNode) String() string     { return strconv.FormatFloat(float64(r), 'f', -1, 64) }
 func (r FloatNode) Value() interface{} { return float64(r) }
+func (r FloatNode) Copy() Node         { return r }
 func (r FloatNode) To(typ Type) Node {
 	switch typ {
 	case Number, Float:
@@ -155,6 +160,7 @@ type StringNode string
 func (r StringNode) Type() Type         { return String }
 func (r StringNode) String() string     { return string(r) }
 func (r StringNode) Value() interface{} { return string(r) }
+func (r StringNode) Copy() Node         { return r }
 func (r StringNode) To(typ Type) Node {
 	switch typ {
 	case String:
@@ -192,6 +198,7 @@ type NullNode struct{}
 func (r NullNode) Type() Type         { return Null }
 func (r NullNode) String() string     { return "null" }
 func (r NullNode) Value() interface{} { return nil }
+func (r NullNode) Copy() Node         { return r }
 func (r NullNode) To(typ Type) Node {
 	switch typ {
 	case Null:
@@ -213,6 +220,11 @@ func (r ArrayNode) Value() interface{} {
 	var data interface{}
 	_ = json.Unmarshal(r, &data)
 	return data
+}
+func (r ArrayNode) Copy() Node {
+	var res []byte
+	copy(res, r)
+	return ArrayNode(res)
 }
 
 func (r ArrayNode) To(typ Type) Node {
@@ -237,6 +249,12 @@ func (r JSONNode) Value() interface{} {
 	var data interface{}
 	_ = json.Unmarshal(r, &data)
 	return data
+}
+
+func (r JSONNode) Copy() Node {
+	var res []byte
+	copy(res, r)
+	return JSONNode(res)
 }
 
 func (r JSONNode) To(typ Type) Node {
