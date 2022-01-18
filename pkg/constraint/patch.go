@@ -92,7 +92,7 @@ func IsValidPath(path string) bool {
 	return true
 }
 
-func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) { //nolint
+func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) {
 	bytes := ToBytesWithWrapString(destNode)
 	if nil != bytes {
 		collect := collectjs.ByteNew(bytes)

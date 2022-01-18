@@ -15,4 +15,10 @@ time_series:
       value: yunify
     - key: bucket
       value: bucket123
-
+search_engine:
+  use: elasticsearch
+  elasticsearch:
+    address:
+      - localhost:8086
+    username: root
+    password: root

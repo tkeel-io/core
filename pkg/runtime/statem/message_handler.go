@@ -140,7 +140,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
+func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	if len(actives) == 0 {
 		return
 	}
@@ -194,7 +194,7 @@ func (s *statem) setProperty(path string, op constraint.PatchOperator, value con
 	return errors.Wrap(err, "set property")
 }
 
-func patchProperty(props map[string]constraint.Node, path string, op constraint.PatchOperator, val constraint.Node) (constraint.Node, error) { //nolint
+func patchProperty(props map[string]constraint.Node, path string, op constraint.PatchOperator, val constraint.Node) (constraint.Node, error) {
 	var err error
 	var resultNode constraint.Node
 	if !strings.ContainsAny(path, ".[") {
