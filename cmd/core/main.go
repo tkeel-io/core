@@ -27,11 +27,13 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/print"
 	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/panjf2000/ants/v2"
@@ -56,94 +58,44 @@ configure your etcd server, you can specify multiple
 core --etcd <one etcd server address>
 
 configure your elasticsearch server, you can specify multiple
-core -es <one elasticsearch server address>
+core --search-engine drive://username:password@url0,url1
 `
 
 var (
-	_cfgFile     string
-	_httpAddr    string
-	_grpcAddr    string
-	_etcdBrokers []string
-	_es          []string
+	_cfgFile      string
+	_httpAddr     string
+	_grpcAddr     string
+	_etcdBrokers  []string
+	_searchEngine string
 )
 
-var (
-	_esClient      corev1.SearchHTTPServer
-	_entityManager entities.EntityManager
-)
+var _entityManager entities.EntityManager
 
 func main() {
 	cmd := cobra.Command{
 		Use:     "core",
 		Short:   "Start a new core runtime",
 		Example: _coreCmdExample,
-		Run: func(cmd *cobra.Command, args []string) {
-			print.InfoStatusEvent(os.Stdout, "loading configuration...")
-			config.InitConfig(_cfgFile)
-			config.SetEtcdBrokers(_etcdBrokers)
-
-			// new servers.
-			httpSrv := server.NewHTTPServer(_httpAddr)
-			grpcSrv := server.NewGRPCServer(_grpcAddr)
-			serverList := []transport.Server{httpSrv, grpcSrv}
-
-			coreApp := app.New(config.Get().Server.AppID,
-				&log.Conf{
-					App:    config.Get().Server.AppID,
-					Level:  config.Get().Logger.Level,
-					Dev:    config.Get().Logger.Dev,
-					Output: config.Get().Logger.Output,
-				},
-				serverList...,
-			)
-
-			// create coroutine pool.
-			coroutinePool, err := ants.NewPool(5000)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			_esClient = search.NewESClient(_es...)
-			stateManager, err := runtime.NewManager(context.Background(), coroutinePool, _esClient)
-			if nil != err {
-				log.Fatal(err)
-			}
-
-			_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, _esClient)
-			if nil != err {
-				log.Fatal(err)
-			}
-
-			serviceRegisterToCoreV1(httpSrv, grpcSrv)
-
-			print.SuccessStatusEvent(os.Stdout, "all service registered.")
-			print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
-			if err = _entityManager.Start(); nil != err {
-				log.Fatal(err)
-			}
-			if err = coreApp.Run(context.TODO()); err != nil {
-				log.Fatal(err)
-			}
-
-			stop := make(chan os.Signal, 1)
-			signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
-			<-stop
-
-			if err = coreApp.Stop(context.TODO()); err != nil {
-				log.Fatal(err)
-			}
-		},
+		Run:     core,
 	}
 
 	cmd.PersistentFlags().StringVarP(&_cfgFile, "conf", "c", "config.yml", "config file path.")
 	cmd.PersistentFlags().StringVar(&_httpAddr, "http_addr", ":6789", "http listen address.")
 	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31233", "grpc listen address.")
-	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", []string{"http://localhost:2379"}, "etcd brokers address.")
-	cmd.PersistentFlags().StringSliceVar(&_es, "es", []string{"http://localhost:9200"}, "Elasticsearch brokers address.")
+	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", nil, "etcd brokers address.")
+	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "", "your search engine SDN.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
+
+	{
+		// Subcommand register here.
+		cmd.AddCommand()
+	}
+
 	cobra.OnInitialize(func() {
-		// add sub commands.
+		// Some initialize Func
+		// called after flags have been initialized
+		// before the subcommand execute.
 	})
 
 	if err := cmd.Execute(); err != nil {
@@ -151,9 +103,93 @@ func main() {
 	}
 }
 
+func core(cmd *cobra.Command, args []string) {
+	print.InfoStatusEvent(os.Stdout, "loading configuration...")
+	config.Init(_cfgFile)
+
+	// user flags input recover config file content.
+	if _etcdBrokers != nil {
+		config.SetEtcdBrokers(_etcdBrokers)
+	}
+
+	// rewrite search engine config by flags input info.
+	if _searchEngine != "" {
+		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			return
+		}
+		switch drive {
+		case driver.ElasticsearchDriver:
+			config.SetSearchEngineElasticsearchConfig(username, password, urls)
+			// add use flag when more drive flags are available.
+			config.SetSearchEngineUseDrive(string(drive))
+		}
+	}
+
+	// Start Search Service.
+	search.GlobalService = search.Init()
+	// print started Info.
+	switch config.Get().SearchEngine.Use {
+	case string(driver.ElasticsearchDriver):
+		print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
+	}
+
+	// new servers.
+	httpSrv := server.NewHTTPServer(_httpAddr)
+	grpcSrv := server.NewGRPCServer(_grpcAddr)
+	serverList := []transport.Server{httpSrv, grpcSrv}
+
+	coreApp := app.New(config.Get().Server.AppID,
+		&log.Conf{
+			App:    config.Get().Server.AppID,
+			Level:  config.Get().Logger.Level,
+			Dev:    config.Get().Logger.Dev,
+			Output: config.Get().Logger.Output,
+		},
+		serverList...,
+	)
+
+	// create coroutine pool.
+	coroutinePool, err := ants.NewPool(5000)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	serviceRegisterToCoreV1(httpSrv, grpcSrv)
+
+	print.SuccessStatusEvent(os.Stdout, "all service registered.")
+	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
+	if err = _entityManager.Start(); nil != err {
+		log.Fatal(err)
+	}
+	if err = coreApp.Run(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
+	<-stop
+
+	if err = coreApp.Stop(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// serviceRegisterToCoreV1 register your services here.
 func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, _esClient)
+	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.GlobalService)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -177,7 +213,7 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	corev1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
 
 	// register search service.
-	SearchSrv := service.NewSearchService(_esClient)
+	SearchSrv := service.NewSearchService(search.GlobalService)
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
 }
