@@ -52,7 +52,7 @@ func NewEnvironment() *Environment {
 
 // GetActorEnv returns Actor Environments.
 func (env *Environment) GetActorEnv(stateID string) ActorEnv {
-	var actorEnv ActorEnv
+	var actorEnv = newActorEnv()
 	if mCache, has := env.mapperCaches[stateID]; has {
 		for _, m := range mCache.mappers {
 			actorEnv.Mappers[m.ID()] = m.Copy()

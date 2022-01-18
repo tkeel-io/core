@@ -40,7 +40,7 @@ func DecodeBase(data []byte) (*Base, error) {
 
 	// unmarshal Configs.
 	var configs = make(map[string]constraint.Config)
-	configsBytes, _ := v["configs_bytes"].([]byte)
+	configsBytes, _ := v["config_file"].([]byte)
 	if err := json.Unmarshal(configsBytes, &configs); nil != err {
 		log.Error("decode Base", zap.Error(err), zap.Any("data", string(data)))
 		// return nil, errors.Wrap(err, "decode Base")

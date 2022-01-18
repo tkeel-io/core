@@ -58,6 +58,10 @@ type ActorEnv struct {
 	Tentacles []mapper.Tentacler
 }
 
+func newActorEnv() ActorEnv {
+	return ActorEnv{Mappers: make(map[string]mapper.Mapper)}
+}
+
 type IEnvironment interface {
 	GetActorEnv(string) ActorEnv
 	StoreMappers([]EtcdPair) []MaSummary

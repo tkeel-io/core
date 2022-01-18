@@ -60,6 +60,7 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Ba
 	}
 
 	// decode in.Properties into subsc.
+	subsc.stateMachine = stateM
 	if err = subsc.checkSubscription(); nil != err {
 		return nil, errFunc(err)
 	}
@@ -70,7 +71,6 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Ba
 	}
 
 	subsc.daprClient = daprClient
-	subsc.stateMachine = stateM
 	subsc.GetBase().Properties = in.Properties
 
 	return &subsc, nil
@@ -90,6 +90,7 @@ func (s *subscription) GetMode() string {
 	return s.Mode()
 }
 
+// GetBase returns Base.
 func (s *subscription) GetBase() *statem.Base {
 	return s.stateMachine.GetBase()
 }
