@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/resource"
 	"strings"
+
+	"github.com/tkeel-io/core/pkg/resource"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb-client-go/api"
