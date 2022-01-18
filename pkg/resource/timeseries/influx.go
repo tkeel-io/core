@@ -117,11 +117,11 @@ func (i Influx) Query(ctx context.Context, req QueryRequest) *Response {
 type FluxOption func(raw string) string
 
 func FluxRangeOption(start, end string) FluxOption {
-	if end == "" {
-		end = "now()"
-	}
 	return func(raw string) string {
-		raw += fmt.Sprintf("start: %s, stop: %s", start, end)
+		raw += fmt.Sprintf("start: %s", start)
+		if end != "" {
+			raw += fmt.Sprintf(", stop: %s", end)
+		}
 		return raw
 	}
 }

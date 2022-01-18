@@ -6,28 +6,60 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Write(t *testing.T) {
-	// outer := newInflux()
-	// outer.Init(resource.Metadata{
-	// 	Name: "influxdb",
-	// 	Properties: map[string]string{
-	// 		"org":    "yunify",
-	// 		"bucket": "entity",
-	// 		"url":    "http://localhost:8086",
-	// 		"token":  "9bUWcVwUpxbNSuhJMLbRaJxCVl8LzFV33znGx-pAXg4HUxFgWRTkRArF5Z9lMDcOn1pzzfD4dovLkkTnxuVMtg==",
-	// 	},
-	// })
+func TestWrite(t *testing.T) {
+	/*
 
-	// num := 10000
-	// t.Log("write som data, N=", num)
-	// for i := 0; i < num; i++ {
-	// 	_, err := outer.Write(context.Background(), &tseries.TSeriesRequest{
-	// 		Raw: []string{fmt.Sprintf("mem,host=host1 used_percent=%f %d", 40.0, time.Now().Unix())},
-	// 	})
-	// 	if nil != err {
-	// 		t.Log("write influx failed", err)
-	// 	}
-	// }
+		outer := newInflux()
+		err := outer.Init(resource.TimeSeriesMetadata{
+			Name: "influxdb",
+			Properties: map[string]string{
+				"org":    "tkeel",
+				"bucket": "tkeel",
+				"url":    "http://localhost:8086",
+				"token":  "mYpGorSK156qPQ3m_i9NdxeD3bFQhF-oRb3XbEXIWTMe0kH2HoDh_6sYa8CtwNcyKtNXYMuPoN8rjfqusQzmkQ==",
+			},
+		})
+
+		assert.Nil(t, err)
+
+		num := 1000
+		t.Log("write som data, N=", num)
+		for i := 0; i < num; i++ {
+			t.Log("writing:", i)
+			resp := outer.Write(context.Background(), &WriteRequest{
+				Data: []string{fmt.Sprintf("test,host=host used_percent=%d", num)},
+			})
+			if resp.Error != nil {
+				t.Log("write influx failed", err)
+			}
+		}
+		t.Log("write Success!")
+
+	*/
+}
+
+func TestQuery(t *testing.T) {
+	/*
+
+		outer := newInflux()
+		err := outer.Init(resource.TimeSeriesMetadata{
+			Name: "influxdb",
+			Properties: map[string]string{
+				"org":    "tkeel",
+				"bucket": "tkeel",
+				"url":    "http://localhost:8086",
+				"token":  "Kg7mQM9pzPw_23XM6P8HJxiHl-D1eYbpnemTNxFkcHLp97ulUbIoqHIwGY9cWZkiGJjsbows-mWZO2ZZQOTO0Q==",
+			},
+		})
+
+		assert.Nil(t, err)
+		q := FluxQuery{FromBucket: "tkeel", RangeOpt: FluxRangeOption("-2h", ""), FilterOpts: []FluxOption{FluxMeasurementFilterOption("and", "test")}}
+		//q := RawQueryRequest("from(bucket: \"tkeel\")\n  |> range(start: -2h)\n  |> filter(fn: (r) => r._measurement == \"mem\")")
+		resp := outer.Query(context.Background(), &q)
+		assert.Nil(t, resp.Error)
+		fmt.Println(string(resp.Raw))
+
+	*/
 }
 
 func TestFluxQuery(t *testing.T) {
@@ -37,9 +69,14 @@ func TestFluxQuery(t *testing.T) {
 		want string
 	}{
 		{"bucket", FluxQuery{FromBucket: "test"}, `from(bucket: "test")`},
+		{"valid test", FluxQuery{FromBucket: "tkeel", RangeOpt: FluxRangeOption("-2h", ""), FilterOpts: []FluxOption{FluxMeasurementFilterOption("and", "mem")}},
+			"from(bucket: \"tkeel\")\n|> range(start: -2h)\n|> filter(fn: (r) =>\nr._measurement == \"mem\"\n)"},
 		{"bucket and range", FluxQuery{FromBucket: "test", RangeOpt: FluxRangeOption("now()", "now()")},
 			`from(bucket: "test")
 |> range(start: now(), stop: now())`},
+		{"bucket and range", FluxQuery{FromBucket: "test", RangeOpt: FluxRangeOption("now()", "")},
+			`from(bucket: "test")
+|> range(start: now())`},
 		{"bucket and range and filter", FluxQuery{FromBucket: "test", RangeOpt: FluxRangeOption("now()", "now()"), FilterOpts: []FluxOption{FluxMeasurementFilterOption("and", "_test")}},
 			`from(bucket: "test")
 |> range(start: now(), stop: now())
