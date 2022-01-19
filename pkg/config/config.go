@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tkeel-io/core/pkg/print"
+	"github.com/tkeel-io/core/pkg/logger"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -195,8 +195,8 @@ func writeDefault(cfgFile string) {
 	}
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
-		// TODO add write failed handler and remove print info in this package.
-		print.FailureStatusEvent(os.Stderr, err.Error())
+		// TODO add write failed handler and remove logger info in this package.
+		logger.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }
 

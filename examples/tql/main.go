@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	 TQL "github.com/tkeel-io/core/pkg/tql"
+
+	TQL "github.com/tkeel-io/core/pkg/mapper/tql"
 )
 
 func main() {

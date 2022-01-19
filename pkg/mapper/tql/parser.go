@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	"github.com/tkeel-io/core/pkg/tql/parser"
+	"github.com/tkeel-io/core/pkg/mapper/tql/parser"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )

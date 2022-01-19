@@ -25,7 +25,7 @@ import (
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/print"
+	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
@@ -104,7 +104,7 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
-	print.InfoStatusEvent(os.Stdout, "loading configuration...")
+	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
 	config.Init(_cfgFile)
 
 	// user flags input recover config file content.
@@ -116,7 +116,7 @@ func core(cmd *cobra.Command, args []string) {
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
 		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			logger.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
 			return
 		}
 		switch drive {
@@ -129,10 +129,10 @@ func core(cmd *cobra.Command, args []string) {
 
 	// Start Search Service.
 	search.GlobalService = search.Init()
-	// print started Info.
+	// logger started Info.
 	switch config.Get().SearchEngine.Use {
 	case string(driver.ElasticsearchDriver):
-		print.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
+		logger.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
 	}
 
 	// new servers.
@@ -168,8 +168,8 @@ func core(cmd *cobra.Command, args []string) {
 
 	serviceRegisterToCoreV1(httpSrv, grpcSrv)
 
-	print.SuccessStatusEvent(os.Stdout, "all service registered.")
-	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
+	logger.SuccessStatusEvent(os.Stdout, "all service registered.")
+	logger.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
 	if err = _entityManager.Start(); nil != err {
 		log.Fatal(err)
 	}

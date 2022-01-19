@@ -19,7 +19,7 @@ package mapper
 import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/tql"
+	"github.com/tkeel-io/core/pkg/mapper/tql"
 )
 
 type mapper struct {
