@@ -20,7 +20,7 @@ func Test_Write(t *testing.T) {
 	// t.Log("write som data, N=", num)
 	// for i := 0; i < num; i++ {
 	// 	_, err := outer.Write(context.Background(), &tseries.TSeriesRequest{
-	// 		Data: []string{fmt.Sprintf("mem,host=host1 used_percent=%f %d", 40.0, time.Now().Unix())},
+	// 		Data: []string{fmt.Sprintf("mem,host=host1 used_percent=%f %d", 40.0, time.Now().UnixNano())},
 	// 	})
 	// 	if nil != err {
 	// 		t.Log("write influx failed", err)

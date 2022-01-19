@@ -22,6 +22,7 @@ import (
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dao"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
@@ -50,8 +51,8 @@ type subscription struct {
 	stateMachine statem.StateMachiner `mapstructure:"-"`
 }
 
-// newSubscription returns a subscription.
-func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Base) (stateM statem.StateMachiner, err error) {
+// NewSubscription returns a subscription.
+func NewSubscription(ctx context.Context, mgr statem.StateManager, in *dao.Entity) (stateM statem.StateMachiner, err error) {
 	subsc := subscription{}
 
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
@@ -71,7 +72,6 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *statem.Ba
 	}
 
 	subsc.daprClient = daprClient
-	subsc.GetBase().Properties = in.Properties
 
 	return &subsc, nil
 }
@@ -90,13 +90,12 @@ func (s *subscription) GetMode() string {
 	return s.Mode()
 }
 
-// GetBase returns Base.
-func (s *subscription) GetBase() *statem.Base {
-	return s.stateMachine.GetBase()
-}
-
 func (s *subscription) GetStatus() statem.Status {
 	return s.stateMachine.GetStatus()
+}
+
+func (s *subscription) GetEntity() *dao.Entity {
+	return s.stateMachine.GetEntity()
 }
 
 func (s *subscription) WithContext(sCtx statem.StateContext) statem.StateMachiner {
@@ -138,16 +137,16 @@ func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
 
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.WatchKey {
-	b := s.GetBase()
-	cp := statem.Base{
+	b := s.stateMachine.GetEntity()
+	cp := dao.Entity{
 		ID:         b.ID,
 		Type:       b.Type,
 		Owner:      b.Owner,
 		Source:     b.Source,
 		Version:    b.Version,
 		LastTime:   b.LastTime,
+		TemplateID: b.TemplateID,
 		Properties: make(map[string]constraint.Node),
-		Configs:    make(map[string]constraint.Config),
 	}
 
 	cp.Properties = msg.Properties
@@ -160,16 +159,16 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.Watch
 
 // invokePeriod.
 func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKey {
-	b := s.GetBase()
-	cp := statem.Base{
+	b := s.stateMachine.GetEntity()
+	cp := dao.Entity{
 		ID:         b.ID,
 		Type:       b.Type,
 		Owner:      b.Owner,
 		Source:     b.Source,
 		Version:    b.Version,
 		LastTime:   b.LastTime,
+		TemplateID: b.TemplateID,
 		Properties: make(map[string]constraint.Node),
-		Configs:    make(map[string]constraint.Config),
 	}
 
 	cp.Properties = msg.Properties
@@ -182,16 +181,16 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKe
 
 // invokeChanged.
 func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchKey {
-	b := s.GetBase()
-	cp := statem.Base{
+	b := s.stateMachine.GetEntity()
+	cp := dao.Entity{
 		ID:         b.ID,
 		Type:       b.Type,
 		Owner:      b.Owner,
 		Source:     b.Source,
 		Version:    b.Version,
 		LastTime:   b.LastTime,
+		TemplateID: b.TemplateID,
 		Properties: make(map[string]constraint.Node),
-		Configs:    make(map[string]constraint.Config),
 	}
 
 	cp.Properties = msg.Properties
@@ -204,30 +203,30 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchK
 
 func (s *subscription) checkSubscription() error {
 	sb := Base{}
-	decode2Subscription(s.GetBase().Properties, &sb)
+	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return errors.Wrap(sb.Validate(), "check subscription required fileds")
 }
 
 func (s *subscription) Mode() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().Properties, &sb)
+	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return sb.Mode
 }
 
 func (s *subscription) Filter() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().Properties, &sb)
+	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return sb.Filter
 }
 
 func (s *subscription) Topic() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().Properties, &sb)
+	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return sb.Topic
 }
 
 func (s *subscription) Pubsub() string {
 	sb := Base{}
-	decode2Subscription(s.GetBase().Properties, &sb)
+	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return sb.PubsubName
 }

@@ -20,17 +20,8 @@ import (
 	"context"
 
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dao"
 	"github.com/tkeel-io/core/pkg/mapper"
-)
-
-const (
-	MessageCtxHeaderOwner     = "x-owner"
-	MessageCtxHeaderType      = "x-type"
-	MessageCtxHeaderSourceID  = "x-source"
-	MessageCtxHeaderTargetID  = "x-target"
-	MessageCtxHeaderStateType = "x-state-type"
-	MessageCtxHeaderRequestID = "x-reqsuest-id"
-	MessageCtxHeaderChannelID = "x-channel-id"
 )
 
 type StateManager interface {
@@ -39,7 +30,7 @@ type StateManager interface {
 	// shutdown manager.
 	Shutdown() error
 	// GetResource return resource manager.
-	GetResource() ResourceManager
+	Resource() ResourceManager
 	// route messages cluster.
 	RouteMessage(context.Context, MessageContext) error
 	// handle message on this node.
@@ -51,15 +42,16 @@ type ResourceManager interface {
 	PubsubClient() IPubsub
 	SearchClient() ISearch
 	TSeriesClient() TSerier
+	Dao() dao.IDao
 }
 
 type StateMachiner interface {
 	// GetID return state machine id.
 	GetID() string
-	// GetBase returns state.Base
-	GetBase() *Base
 	// GetStatus returns actor status.
 	GetStatus() Status
+	// GetEntity returns this.Entity.
+	GetEntity() *dao.Entity
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.

@@ -38,29 +38,29 @@ type EntityManager interface {
 	// OnMessage handle message.
 	OnMessage(ctx context.Context, msgCtx statem.MessageContext)
 	// CreateEntity create entity.
-	CreateEntity(ctx context.Context, base *statem.Base) (*statem.Base, error)
+	CreateEntity(ctx context.Context, base *Base) (*Base, error)
 	// DeleteEntity delete entity.
-	DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	DeleteEntity(ctx context.Context, en *Base) (base *Base, err error)
 	// GetProperties returns entity properties.
-	GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	GetProperties(ctx context.Context, en *Base) (base *Base, err error)
 	// SetProperties set entity properties.
-	SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	SetProperties(ctx context.Context, en *Base) (base *Base, err error)
 	// PatchEntity patch entity properties.
-	PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error)
+	PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error)
 	// AppendMapper append entity mapper.
-	AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	AppendMapper(ctx context.Context, en *Base) (base *Base, err error)
 	// RemoveMapper remove entity mapper.
-	RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	RemoveMapper(ctx context.Context, en *Base) (base *Base, err error)
 	// CheckSubscription check subscription.
-	CheckSubscription(ctx context.Context, en *statem.Base) (err error)
+	CheckSubscription(ctx context.Context, en *Base) (err error)
 	// SetConfigs set entity configs.
-	SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	SetConfigs(ctx context.Context, en *Base) (base *Base, err error)
 	// PatchConfigs patch entity configs.
-	PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error)
+	PatchConfigs(ctx context.Context, en *Base, patchData []*statem.PatchData) (base *Base, err error)
 	// AppendConfigs append entity configs.
-	AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error)
+	AppendConfigs(ctx context.Context, en *Base) (base *Base, err error)
 	// RemoveConfigs remove entity configs.
-	RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error)
+	RemoveConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 	// QueryConfigs returns entity configs.
-	QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error)
+	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 }

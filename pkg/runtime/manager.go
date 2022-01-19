@@ -30,6 +30,8 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dao"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfiled "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -49,6 +51,7 @@ type Manager struct {
 	coroutinePool *ants.Pool
 	actorEnv      environment.IEnvironment
 
+	repository    dao.IDao
 	daprClient    dapr.Client
 	etcdClient    *clientv3.Client
 	searchClient  pb.SearchHTTPServer
@@ -165,17 +168,17 @@ func (m *Manager) Start() error {
 				m.disposeCh <- msgCtx
 
 			case msgCtx := <-m.disposeCh:
-				eid := msgCtx.Headers.GetTargetID()
-				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
+				eid := msgCtx.Headers.GetReceiver()
+				channelID := msgCtx.Headers.Get(statem.MsgCtxHeaderChannelID)
 				log.Debug("dispose message", zfiled.ID(eid), zfiled.Message(msgCtx))
 				channelID, stateMachine := m.getStateMachine(channelID, eid)
 				if nil == stateMachine {
 					var err error
-					en := &statem.Base{
+					en := &dao.Entity{
 						ID:     eid,
 						Owner:  msgCtx.Headers.GetOwner(),
 						Source: msgCtx.Headers.GetSource(),
-						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
+						Type:   msgCtx.Headers.Get(statem.MsgCtxHeaderType),
 					}
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
@@ -219,8 +222,8 @@ func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContex
 	return nil
 }
 
-// GetResource return resource manager.
-func (m *Manager) GetResource() statem.ResourceManager {
+// Resource return resource manager.
+func (m *Manager) Resource() statem.ResourceManager {
 	panic("implement me")
 }
 
@@ -270,7 +273,7 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 		var err error
 		for _, stateID := range stateIDs {
 			var stateMachine statem.StateMachiner
-			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
+			base := &dao.Entity{ID: stateID, Type: SMTypeBasic}
 			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
 				log.Warn("load state machine", zfiled.ID(stateID))
 			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
@@ -284,31 +287,29 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 }
 
 func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
-	_, err := m.loadOrCreate(ctx, "", false, &statem.Base{ID: id, Type: typ})
+	_, err := m.loadOrCreate(ctx, "", false, &dao.Entity{ID: id, Type: typ})
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMachiner, err error) {
-	var en *statem.Base
-	var res *dapr.StateItem
-	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *dao.Entity) (sm statem.StateMachiner, err error) {
+	log.Debug("load or create actor", zfiled.ID(base.ID),
+		zap.String("type", base.Type), zap.String("owner", base.Owner), zap.String("source", base.Source))
 
-	if nil != err && !flagCreate {
-		return nil, errors.Wrap(err, "load state machine")
-	} else if en, err = statem.DecodeBase(res.Value); nil == err {
-		base = en // decode value to statem.Base.
-	} else if !flagCreate {
-		return nil, errors.Wrap(err, "load state machine, state not found")
+	var en *dao.Entity
+	if en, err = m.repository.Get(ctx, base.ID); nil != err {
+		base = en
+	} else {
+		log.Warn("load or create actor", zap.Error(err),
+			zfiled.Eid(base.ID), zfiled.Type(base.Type), zfiled.Template(base.TemplateID))
+
+		// notfound.
+		if !flagCreate || !errors.Is(err, xerrors.ErrEntityNotFound) {
+			return nil, errors.Wrap(err, "load or create actor")
+		}
 	}
 
-	log.Debug("load or create state machiner",
-		zfiled.ID(base.ID),
-		zap.String("type", base.Type),
-		zap.String("owner", base.Owner),
-		zap.String("source", base.Source))
-
 	switch base.Type {
-	case StateMachineTypeSubscription:
+	case SMTypeSubscription:
 		if sm, err = subscription.NewSubscription(ctx, m, base); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
@@ -343,7 +344,7 @@ func (m *Manager) EscapedEntities(expression string) []string {
 // ------------------------------------APIs-----------------------------.
 
 // SetProperties set properties into entity.
-func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
+func (m *Manager) SetProperties(ctx context.Context, en *dao.Entity) error {
 	if en.ID == "" {
 		en.ID = uuid()
 	}
@@ -358,16 +359,16 @@ func (m *Manager) SetProperties(ctx context.Context, en *statem.Base) error {
 		},
 	}
 	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetTargetID(en.ID)
+	msgCtx.Headers.SetReceiver(en.ID)
 	msgCtx.Headers.SetSource(en.Source)
-	msgCtx.Headers.Set(statem.MessageCtxHeaderType, en.Type)
+	msgCtx.Headers.Set(statem.MsgCtxHeaderType, en.Type)
 
 	m.HandleMessage(ctx, msgCtx)
 
 	return nil
 }
 
-func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) error {
+func (m *Manager) PatchEntity(ctx context.Context, en *dao.Entity, patchData []*pb.PatchData) error {
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
@@ -391,8 +392,8 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 
 			// set headers.
 			msgCtx.Headers.SetOwner(en.Owner)
-			msgCtx.Headers.SetTargetID(en.ID)
-			msgCtx.Headers.Set(statem.MessageCtxHeaderType, en.Type)
+			msgCtx.Headers.SetReceiver(en.ID)
+			msgCtx.Headers.Set(statem.MsgCtxHeaderType, en.Type)
 			m.HandleMessage(ctx, msgCtx)
 		}
 	}
@@ -401,7 +402,7 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 }
 
 // SetConfigs set entity configs.
-func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
+func (m *Manager) SetConfigs(ctx context.Context, en *dao.Entity) error {
 	var (
 		err          error
 		channelID    string
@@ -424,7 +425,7 @@ func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
 }
 
 // PatchConfigs patch entity configs.
-func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) error {
+func (m *Manager) PatchConfigs(ctx context.Context, en *dao.Entity, patchData []*statem.PatchData) error {
 	var (
 		err          error
 		channelID    string
@@ -447,7 +448,7 @@ func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData [
 }
 
 // AppendConfigs append entity configs.
-func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
+func (m *Manager) AppendConfigs(ctx context.Context, en *dao.Entity) error {
 	var (
 		err          error
 		channelID    string
@@ -470,7 +471,7 @@ func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
 }
 
 // RemoveConfigs remove entity configs.
-func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) error {
+func (m *Manager) RemoveConfigs(ctx context.Context, en *dao.Entity, propertyIDs []string) error {
 	var (
 		err          error
 		channelID    string
@@ -493,20 +494,8 @@ func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyID
 }
 
 // DeleteStateMachine delete runtime.Entity.
-func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
-	var err error
-	channelID, stateMachine := m.getStateMachine("", base.ID)
-	if nil == stateMachine {
-		if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
-			log.Error("remove configs",
-				zfiled.ID(base.ID),
-				zap.Any("entity", base),
-				zap.String("channel", channelID))
-			return nil, errors.Wrap(err, "remove entity configs")
-		}
-	}
-
-	return stateMachine.GetBase(), nil
+func (m *Manager) DeleteStateMarchin(ctx context.Context, id string) error {
+	return nil
 }
 
 // CleanEntity clean entity.

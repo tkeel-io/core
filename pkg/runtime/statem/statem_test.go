@@ -22,20 +22,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dao"
 	"github.com/tkeel-io/core/pkg/util"
 )
 
 func TestNewStatem(t *testing.T) {
 	stateManager := NewStateManagerMock()
 
-	base := Base{
+	base := dao.Entity{
 		ID:         "device123",
 		Type:       "DEVICE",
 		Owner:      "admin",
 		Source:     "dm",
 		Version:    0,
 		LastTime:   util.UnixMilli(),
-		Mappers:    []MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
 		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
 		ConfigFile: nil,
 	}
@@ -43,6 +43,4 @@ func TestNewStatem(t *testing.T) {
 	sm, err := NewState(context.Background(), stateManager, &base, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", sm.GetID())
-	assert.Equal(t, "DEVICE", sm.GetBase().Type)
-	assert.Equal(t, "admin", sm.GetBase().Owner)
 }

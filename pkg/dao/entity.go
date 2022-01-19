@@ -1,6 +1,8 @@
 package dao
 
 import (
+	"encoding/json"
+
 	"github.com/tkeel-io/core/pkg/constraint"
 )
 
@@ -50,4 +52,27 @@ func (e *Entity) Basic() Entity {
 	}
 
 	return en
+}
+
+func (e *Entity) JONS() string {
+	info := make(map[string]interface{})
+	info["id"] = e.ID
+	info["type"] = e.Type
+	info["owner"] = e.Owner
+	info["source"] = e.Source
+	info["version"] = e.Version
+	info["last_time"] = e.LastTime
+	info["template_id"] = e.TemplateID
+
+	// marhsal properties.
+	props := make(map[string]interface{})
+	for key, val := range e.Properties {
+		props[key] = val.String()
+	}
+
+	info["properties"] = props
+	info["config_file"] = string(e.ConfigFile)
+
+	bytes, _ := json.Marshal(info)
+	return string(bytes)
 }

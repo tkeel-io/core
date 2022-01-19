@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dao"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/util"
@@ -51,7 +52,7 @@ const (
 // statem state marchins.
 type statem struct {
 	// state basic fields.
-	Base
+	dao.Entity
 	// other state machine property cache.
 	cacheProps map[string]map[string]constraint.Node // cache other property.
 
@@ -83,7 +84,7 @@ type statem struct {
 }
 
 // NewState create an statem object.
-func NewState(ctx context.Context, stateManager StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
+func NewState(ctx context.Context, stateManager StateManager, in *dao.Entity, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = util.UUID()
 	}
@@ -91,7 +92,7 @@ func NewState(ctx context.Context, stateManager StateManager, in *Base, msgHandl
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := &statem{
-		Base: in.Copy(),
+		Entity: in.Copy(),
 
 		ctx:                ctx,
 		cancel:             cancel,
@@ -107,13 +108,8 @@ func NewState(ctx context.Context, stateManager StateManager, in *Base, msgHandl
 	}
 
 	// initialize Properties.
-	if nil == state.Base.Properties {
+	if nil == state.Entity.Properties {
 		state.Properties = make(map[string]constraint.Node)
-	}
-
-	// initialize Configs.
-	if nil == state.Configs {
-		state.Configs = make(map[string]constraint.Config)
 	}
 
 	// set properties into cacheProps.
@@ -132,14 +128,13 @@ func (s *statem) GetID() string {
 	return s.ID
 }
 
-// GetBase return state basic info.
-func (s *statem) GetBase() *Base {
-	return &s.Base
-}
-
 // GetStatus returns state machine status.
 func (s *statem) GetStatus() Status {
 	return s.status
+}
+
+func (s *statem) GetEntity() *dao.Entity {
+	return &s.Entity
 }
 
 // WithContext set state Context.

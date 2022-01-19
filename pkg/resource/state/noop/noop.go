@@ -18,6 +18,10 @@ func (n *noopStore) Set(ctx context.Context, key string, data []byte) error {
 	return nil
 }
 
+func (n *noopStore) Del(ctx context.Context, key string) error {
+	return nil
+}
+
 func init() {
 	state.Register("noop", func(storeName string) (state.Store, error) { return &noopStore{}, nil })
 }

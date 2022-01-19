@@ -522,7 +522,7 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]cons
 }
 
 // parseHeaderFrom parse headers.
-func parseHeaderFrom(ctx context.Context, en *statem.Base) {
+func parseHeaderFrom(ctx context.Context, en *entities.Base) {
 	if header := ctx.Value(struct{}{}); nil != header {
 		switch h := header.(type) {
 		case http.Header:

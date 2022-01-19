@@ -20,6 +20,8 @@ type Store interface {
 	Get(ctx context.Context, key string) (item *StateItem, err error)
 	// SaveState saves the raw data into store using default state options.
 	Set(ctx context.Context, key string, data []byte) error
+	// Del delete record from store.
+	Del(ctx context.Context, key string) error
 }
 
 var registeredStores = make(map[string]StoreGenerator)

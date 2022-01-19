@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test_entity2EntityResponse(t *testing.T) {
-	base := statem.Base{
+	base := entities.Base{
 		ID:         "device123",
 		Type:       "DEVICE",
 		Owner:      "admin",

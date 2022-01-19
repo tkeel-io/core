@@ -53,3 +53,7 @@ func Path(path string) zap.Field {
 func Reason(reason string) zap.Field {
 	return zap.String("reason", reason)
 }
+
+func Template(tid string) zap.Field {
+	return zap.String("template_id", tid)
+}

@@ -1,11 +1,12 @@
-package statem
+package entities
 
 import (
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	cerrors "github.com/tkeel-io/core/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 // EntityBase statem basic informatinon.
@@ -16,16 +17,11 @@ type Base struct {
 	Source     string                       `json:"source" msgpack:"source" mapstructure:"source"`
 	Version    int64                        `json:"version" msgpack:"version" mapstructure:"version"`
 	LastTime   int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers    []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	Mappers    []statem.MapperDesc          `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	TemplateID string                       `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
 	Properties map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"`
 	Configs    map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
 	ConfigFile []byte                       `json:"-" msgpack:"config_file" mapstructure:"-"`
-}
-
-func (b *Base) Copy() Base {
-	bytes, _ := EncodeBase(b)
-	bb, _ := DecodeBase(bytes)
-	return *bb
 }
 
 func (b *Base) Basic() Base {
@@ -47,7 +43,7 @@ func (b *Base) Basic() Base {
 func (b *Base) GetProperty(path string) (constraint.Node, error) {
 	if !strings.ContainsAny(path, ".[") {
 		if _, has := b.Properties[path]; !has {
-			return constraint.NullNode{}, cerrors.ErrPropertyNotFound
+			return constraint.NullNode{}, xerrors.ErrPropertyNotFound
 		}
 		return b.Properties[path], nil
 	}
@@ -77,7 +73,7 @@ func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
 		return *pcfg, errors.Wrap(err, "prev config not found")
 	} else if len(segs) == 1 {
 		if _, ok := b.Configs[segs[0]]; !ok {
-			return cfg, cerrors.ErrPropertyNotFound
+			return cfg, xerrors.ErrPropertyNotFound
 		}
 		return b.Configs[segs[0]], nil
 	}

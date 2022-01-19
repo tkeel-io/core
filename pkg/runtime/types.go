@@ -17,11 +17,9 @@ limitations under the License.
 package runtime
 
 import (
-	"context"
 	"errors"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
 const EntityStateName = "core-state"
@@ -29,13 +27,14 @@ const EntityStateName = "core-state"
 type WatchKey = mapper.WatchKey
 
 const (
-	StateMachineTypeBasic        = "BASIC"
-	StateMachineTypeSubscription = "SUBSCRIPTION"
+	SMTypeBasic        = "BASIC"
+	SMTypeSubscription = "SUBSCRIPTION"
 
 	// state machine required fileds.
-	StateMachineFieldType   = "type"
-	StateMachineFieldOwner  = "owner"
-	StateMachineFieldSource = "source"
+	SMFieldType     = "type"
+	SMFieldOwner    = "owner"
+	SMFieldSource   = "source"
+	SMFieldTemplate = "template"
 )
 
 var (
@@ -43,5 +42,3 @@ var (
 	ErrInvalidTQLKey       = errors.New("invalid TQL key")
 	ErrSubscriptionInvalid = errors.New("invalid subscription")
 )
-
-type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMachiner, error)

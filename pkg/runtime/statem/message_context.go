@@ -1,5 +1,15 @@
 package statem
 
+const (
+	MsgCtxHeaderType      = "x-type"
+	MsgCtxHeaderOwner     = "x-owner"
+	MsgCtxHeaderSource    = "x-source"
+	MsgCtxHeaderSender    = "x-sender"
+	MsgCtxHeaderReceiver  = "x-receiver"
+	MsgCtxHeaderRequestID = "x-reqsuest-id"
+	MsgCtxHeaderChannelID = "x-channel-id"
+)
+
 type Header map[string]string
 
 type MessageContext struct {
@@ -7,25 +17,18 @@ type MessageContext struct {
 	Message Message
 }
 
-// GetTargetID returns message target id.
-func (h Header) GetTargetID() string { return h[MessageCtxHeaderTargetID] }
-
-// SetTargetID set target state machine id.
-func (h Header) SetTargetID(targetID string) { h[MessageCtxHeaderTargetID] = targetID }
-
-// GetOwner returns message owner.
-func (h Header) GetOwner() string { return h[MessageCtxHeaderOwner] }
-
-// SetOwner set message owner.
-func (h Header) SetOwner(owner string) { h[MessageCtxHeaderOwner] = owner }
-
-// GetSource returns message source field.
-func (h Header) GetSource() string { return h[MessageCtxHeaderSourceID] }
-
-// SetSource set message source.
-func (h Header) SetSource(owner string) { h[MessageCtxHeaderSourceID] = owner }
-
-func (h Header) Get(key string) string { return h[key] }
+func (h Header) Get(key string) string       { return h[key] }
+func (h Header) Set(key, value string)       { h[key] = value }
+func (h Header) GetType() string             { return h[MsgCtxHeaderType] }
+func (h Header) SetType(typ string)          { h[MsgCtxHeaderType] = typ }
+func (h Header) GetOwner() string            { return h[MsgCtxHeaderOwner] }
+func (h Header) SetOwner(owner string)       { h[MsgCtxHeaderOwner] = owner }
+func (h Header) GetSource() string           { return h[MsgCtxHeaderSource] }
+func (h Header) SetSource(source string)     { h[MsgCtxHeaderSource] = source }
+func (h Header) GetSender() string           { return h[MsgCtxHeaderSender] }
+func (h Header) SetSender(sender string)     { h[MsgCtxHeaderSender] = sender }
+func (h Header) GetReceiver() string         { return h[MsgCtxHeaderReceiver] }
+func (h Header) SetReceiver(receiver string) { h[MsgCtxHeaderReceiver] = receiver }
 
 func (h Header) GetDefault(key, defaultValue string) string {
 	if _, has := h[key]; !has {
@@ -33,5 +36,3 @@ func (h Header) GetDefault(key, defaultValue string) string {
 	}
 	return h[key]
 }
-
-func (h Header) Set(key, value string) { h[key] = value }

@@ -88,12 +88,12 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	entity.Properties = map[string]constraint.Node{
-		runtime.StateMachineFieldType:            constraint.StringNode(entity.Type),
-		runtime.StateMachineFieldOwner:           constraint.StringNode(entity.Owner),
-		runtime.StateMachineFieldSource:          constraint.StringNode(entity.Source),
+		runtime.SMFieldType:                      constraint.StringNode(entity.Type),
+		runtime.SMFieldOwner:                     constraint.StringNode(entity.Owner),
+		runtime.SMFieldSource:                    constraint.StringNode(entity.Source),
 		subscription.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
 		subscription.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
 		subscription.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -135,7 +135,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	entity.Properties = map[string]constraint.Node{
 		subscription.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
@@ -170,7 +170,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	var entity = new(Entity)
 
 	entity.ID = req.Id
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = runtime.SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -187,7 +187,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	var entity = new(Entity)
 
 	entity.ID = req.Id
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = runtime.SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)

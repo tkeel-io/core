@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/entities"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 	ErrEntityPropertyIDEmpty = errors.New("emtpty property id")
 )
 
-type Entity = statem.Base
+type Entity = entities.Base
 
 const (
 	HeaderSource      = "Source"

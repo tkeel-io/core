@@ -88,7 +88,7 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 		},
 	}
 
-	msgCtx.Headers.SetTargetID(interface2string(values["id"]))
+	msgCtx.Headers.SetReceiver(interface2string(values["id"]))
 	msgCtx.Headers.SetOwner(interface2string(values["owner"]))
 	msgCtx.Headers.SetOwner(interface2string(values["type"]))
 	msgCtx.Headers.SetOwner(interface2string(values["source"]))

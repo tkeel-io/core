@@ -125,8 +125,8 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		s.stateManager.RouteMessage(context.Background(),
 			MessageContext{
 				Headers: Header{
-					MessageCtxHeaderSourceID: s.ID,
-					MessageCtxHeaderTargetID: stateID,
+					MsgCtxHeaderSender:   s.ID,
+					MsgCtxHeaderReceiver: stateID,
 				},
 				Message: PropertyMessage{
 					StateID:    s.ID,
