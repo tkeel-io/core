@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/dao"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
@@ -63,4 +64,18 @@ type EntityManager interface {
 	RemoveConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 	// QueryConfigs returns entity configs.
 	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
+}
+
+func convert(en *dao.Entity) *Base {
+	return &Base{
+		ID:         en.ID,
+		Type:       en.Type,
+		Owner:      en.Owner,
+		Source:     en.Source,
+		Version:    en.Version,
+		LastTime:   en.LastTime,
+		TemplateID: en.TemplateID,
+		Properties: en.Properties,
+		ConfigFile: en.ConfigFile,
+	}
 }

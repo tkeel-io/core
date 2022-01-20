@@ -122,7 +122,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, er
 		Headers: statem.Header{},
 		Message: statem.PropertyMessage{
 			StateID:    base.ID,
-			Operator:   "replace",
+			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
 		},
 	}
@@ -130,12 +130,15 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, er
 	msgCtx.Headers.SetType(base.Type)
 	msgCtx.Headers.SetOwner(base.Owner)
 	msgCtx.Headers.SetReceiver(base.ID)
+	msgCtx.Headers.SetTemplate(templateID)
 
 	return base, errors.Wrap(m.stateManager.RouteMessage(ctx, msgCtx), "create entity")
 }
 
 // DeleteEntity delete an entity from manager.
 func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base, err error) {
+	// delete from runtime.
+
 	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
@@ -143,15 +146,6 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 			return nil, errors.Wrap(err, "delete entity from es state")
 		}
 	}
-
-	// // 2. delete from runtime.
-	// if base, err = m.stateManager.DeleteStateMarchin(ctx, en); nil != err {
-	// 	log.Error("delete entity runtime", zap.Error(err), zfield.Eid(en.ID))
-	// 	if base, err = m.getEntityFromState(ctx, en); nil != err {
-	// 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID))
-	// 		return nil, errors.Wrap(err, "delete entity from runtime")
-	// 	}
-	// }
 
 	// 3. delete from state.
 	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
@@ -174,46 +168,65 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 
 // GetProperties returns Base.
 func (m *entityManager) GetProperties(ctx context.Context, en *Base) (base *Base, err error) {
-	if base, err = m.getEntityFromState(ctx, en); nil != err {
+	res, err := m.entityRepo.Get(ctx, en.ID)
+	if nil != err {
 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID))
+		return nil, errors.Wrap(err, "get entity")
 	}
-	return base, errors.Wrap(err, "entity GetProperties")
-}
 
-func (m *entityManager) getEntityFromState(ctx context.Context, en *Base) (base *Base, err error) {
-	var item *dapr.StateItem
-	if item, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
-		return
-	} else if nil == item || len(item.Value) == 0 {
-		return nil, ErrEntityNotFound
-	}
-	return
+	return convert(res), errors.Wrap(err, "get entity")
 }
 
 // SetProperties set properties into entity.
 func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base, err error) {
-	// // TODO：这里的调用其实是可能通过entity-manager的proxy的同步调用，这个可以设置可选项.
-	// if err = m.stateManager.SetProperties(ctx, en); nil != err {
-	// 	log.Error("set entity properties", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "set entity properties")
-	// }
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.PropertyMessage{
+			StateID:    base.ID,
+			Operator:   constraint.PatchOpReplace.String(),
+			Properties: base.Properties,
+		},
+	}
 
-	base, err = m.getEntityFromState(ctx, en)
+	msgCtx.Headers.SetType(base.Type)
+	msgCtx.Headers.SetOwner(base.Owner)
+	msgCtx.Headers.SetReceiver(base.ID)
+	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+		log.Error("route message", zfield.Eid(en.ID), zap.Error(err))
+		return nil, errors.Wrap(err, "route message")
+	}
+
 	return base, errors.Wrap(err, "set entity properties")
 }
 
 func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error) {
-	// if err = m.stateManager.PatchEntity(ctx, en, patchData); nil != err {
-	// 	log.Error("patch entity", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "patch entity properties")
-	// }
-
-	base, err = m.getEntityFromState(ctx, en)
+	// group by operator.
+	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
-		if pd.Operator == constraint.PatchOpCopy.String() {
-			if base.Properties[pd.Path], err = base.GetProperty(pd.Path); nil != err {
-				log.Error("patch copy config", zap.String("path", pd.Path), zap.String("op", pd.Operator))
+		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
+	}
+
+	for op, pds := range pdm {
+		kvs := make(map[string]constraint.Node)
+		for _, pd := range pds {
+			kvs[pd.Path] = constraint.NewNode(pd.Value.AsInterface())
+		}
+
+		if len(kvs) > 0 {
+			msgCtx := statem.MessageContext{
+				Headers: statem.Header{},
+				Message: statem.PropertyMessage{
+					StateID:    en.ID,
+					Operator:   op,
+					Properties: kvs,
+				},
 			}
+
+			// set headers.
+			msgCtx.Headers.SetOwner(en.Owner)
+			msgCtx.Headers.SetReceiver(en.ID)
+			msgCtx.Headers.Set(statem.MsgCtxHeaderType, en.Type)
+			m.stateManager.RouteMessage(ctx, msgCtx)
 		}
 	}
 	return base, errors.Wrap(err, "patch entity properties")
@@ -241,7 +254,6 @@ func (m *entityManager) AppendMapper(ctx context.Context, en *Base) (base *Base,
 		log.Info("append mapper", zfield.Eid(en.ID), zap.Any("mapper", mm))
 	}
 
-	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "append mapper")
 }
 
@@ -262,7 +274,6 @@ func (m *entityManager) RemoveMapper(ctx context.Context, en *Base) (base *Base,
 		log.Info("remove mapper", zfield.Eid(en.ID), zap.Any("mapper", mm))
 	}
 
-	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove mapper")
 }
 
@@ -293,7 +304,6 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 	// 	return nil, errors.Wrap(err, "set entity configs")
 	// }
 
-	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "set entity configs")
 }
 
@@ -303,11 +313,6 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 	// 	log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID))
 	// 	return nil, errors.Wrap(err, "patch entity configs")
 	// }
-
-	if base, err = m.getEntityFromState(ctx, en); nil != err {
-		log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "patch entity configs")
-	}
 
 	for _, pd := range patchData {
 		if pd.Operator == constraint.PatchOpCopy {
@@ -329,7 +334,6 @@ func (m *entityManager) AppendConfigs(ctx context.Context, en *Base) (base *Base
 	// 	return nil, errors.Wrap(err, "append entity configs")
 	// }
 
-	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "append entity configs")
 }
 
@@ -340,13 +344,11 @@ func (m *entityManager) RemoveConfigs(ctx context.Context, en *Base, propertyIDs
 	// 	return nil, errors.Wrap(err, "remove entity configs")
 	// }
 
-	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "remove entity configs")
 }
 
 // QueryConfigs query entity configs.
 func (m *entityManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error) {
-	base, err = m.getEntityFromState(ctx, en)
 	baseEntity := base.Basic()
 	for _, propertyID := range propertyIDs {
 		cfg, err0 := base.GetConfig(propertyID)

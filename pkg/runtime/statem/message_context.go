@@ -8,6 +8,7 @@ const (
 	MsgCtxHeaderReceiver  = "x-receiver"
 	MsgCtxHeaderRequestID = "x-reqsuest-id"
 	MsgCtxHeaderChannelID = "x-channel-id"
+	MsgCtxHeaderTemplate  = "x-template-id"
 )
 
 type Header map[string]string
@@ -29,6 +30,8 @@ func (h Header) GetSender() string           { return h[MsgCtxHeaderSender] }
 func (h Header) SetSender(sender string)     { h[MsgCtxHeaderSender] = sender }
 func (h Header) GetReceiver() string         { return h[MsgCtxHeaderReceiver] }
 func (h Header) SetReceiver(receiver string) { h[MsgCtxHeaderReceiver] = receiver }
+func (h Header) GetTemplate() string         { return h[MsgCtxHeaderTemplate] }
+func (h Header) SetTemplate(template string) { h[MsgCtxHeaderTemplate] = template }
 
 func (h Header) GetDefault(key, defaultValue string) string {
 	if _, has := h[key]; !has {
