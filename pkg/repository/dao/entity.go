@@ -54,7 +54,7 @@ func (e *Entity) Basic() Entity {
 	return en
 }
 
-func (e *Entity) JONS() string {
+func (e *Entity) JSON() string {
 	info := make(map[string]interface{})
 	info["id"] = e.ID
 	info["type"] = e.Type

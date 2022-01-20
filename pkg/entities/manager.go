@@ -29,9 +29,9 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/dao"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
@@ -102,6 +102,10 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, er
 		base.ID = uuid()
 	}
 
+	log.Info("entity.CreateEntity",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(base.JSON()))
+
 	// 1. check entity exists.
 	if err = m.entityRepo.Exists(ctx, base.ID); nil != err {
 		log.Error("check entity", zap.Error(err), zfield.Eid(base.ID))
@@ -117,13 +121,23 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, er
 		}
 	}
 
-	// 3. 向实体发送消息，来在某一个节点上拉起实体，执行实体运行时过程.
+	waitG := sync.WaitGroup{}
+	// send msg.
+	waitG.Add(1)
+	elapsedTime := util.NewElapsed()
+	reqID, msgID := util.UUID(), util.UUID()
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
+		Message: statem.FlushPropertyMessage{
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
+			MessageBase: statem.NewMessageBase(func(v interface{}) {
+				waitG.Done()
+				log.Debug("dispose message completed",
+					zfield.Eid(base.ID), zfield.ReqID(reqID),
+					zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+			}),
 		},
 	}
 
@@ -131,13 +145,23 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, er
 	msgCtx.Headers.SetOwner(base.Owner)
 	msgCtx.Headers.SetReceiver(base.ID)
 	msgCtx.Headers.SetTemplate(templateID)
+	msgCtx.Headers.SetRequestID(reqID)
+	msgCtx.Headers.SetMessageID(msgID)
+	msgCtx.Headers.SetSender(CoreAPISender)
+	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+		log.Error("create entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	}
 
-	return base, errors.Wrap(m.stateManager.RouteMessage(ctx, msgCtx), "create entity")
+	waitG.Wait()
+	return base, errors.Wrap(err, "create entity")
 }
 
 // DeleteEntity delete an entity from manager.
 func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base, err error) {
-	// delete from runtime.
+	log.Info("entity.DeleteEntity",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
 	// 1. delete from elasticsearch.
 	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
@@ -168,6 +192,10 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 
 // GetProperties returns Base.
 func (m *entityManager) GetProperties(ctx context.Context, en *Base) (base *Base, err error) {
+	log.Info("entity.GetProperties",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
+
 	res, err := m.entityRepo.Get(ctx, en.ID)
 	if nil != err {
 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID))
@@ -179,33 +207,60 @@ func (m *entityManager) GetProperties(ctx context.Context, en *Base) (base *Base
 
 // SetProperties set properties into entity.
 func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base, err error) {
+	log.Info("entity.SetProperties",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
+
+	waitG := sync.WaitGroup{}
+
+	// send msg.
+	waitG.Add(1)
+	elapsedTime := util.NewElapsed()
+	reqID, msgID := util.UUID(), util.UUID()
 	msgCtx := statem.MessageContext{
 		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
+		Message: statem.FlushPropertyMessage{
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
+			MessageBase: statem.NewMessageBase(func(v interface{}) {
+				waitG.Done()
+				log.Debug("dispose message completed",
+					zfield.Eid(base.ID), zfield.ReqID(reqID),
+					zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+			}),
 		},
 	}
 
 	msgCtx.Headers.SetType(base.Type)
 	msgCtx.Headers.SetOwner(base.Owner)
 	msgCtx.Headers.SetReceiver(base.ID)
+	msgCtx.Headers.SetRequestID(reqID)
+	msgCtx.Headers.SetMessageID(msgID)
+	msgCtx.Headers.SetSender(CoreAPISender)
 	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
-		log.Error("route message", zfield.Eid(en.ID), zap.Error(err))
-		return nil, errors.Wrap(err, "route message")
+		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "route entity")
 	}
 
+	waitG.Wait()
 	return base, errors.Wrap(err, "set entity properties")
 }
 
 func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error) {
+	log.Info("entity.SetProperties",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
+
 	// group by operator.
 	pdm := make(map[string][]*pb.PatchData)
 	for _, pd := range patchData {
 		pdm[pd.Operator] = append(pdm[pd.Operator], pd)
 	}
 
+	reqID := util.UUID()
+	waitG := sync.WaitGroup{}
+	elapsedTime := util.NewElapsed()
 	for op, pds := range pdm {
 		kvs := make(map[string]constraint.Node)
 		for _, pd := range pds {
@@ -213,22 +268,39 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 		}
 
 		if len(kvs) > 0 {
+			waitG.Add(1)
+			msgID := util.UUID()
 			msgCtx := statem.MessageContext{
 				Headers: statem.Header{},
-				Message: statem.PropertyMessage{
+				Message: statem.FlushPropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
+					MessageBase: statem.NewMessageBase(func(v interface{}) {
+						waitG.Done()
+						log.Debug("dispose message completed",
+							zfield.Eid(base.ID), zfield.ReqID(reqID),
+							zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+					}),
 				},
 			}
 
 			// set headers.
+			msgCtx.Headers.SetType(en.Type)
 			msgCtx.Headers.SetOwner(en.Owner)
 			msgCtx.Headers.SetReceiver(en.ID)
-			msgCtx.Headers.Set(statem.MsgCtxHeaderType, en.Type)
-			m.stateManager.RouteMessage(ctx, msgCtx)
+			msgCtx.Headers.SetSource(en.Source)
+			msgCtx.Headers.SetSender(CoreAPISender)
+			msgCtx.Headers.SetRequestID(reqID)
+			msgCtx.Headers.SetMessageID(msgID)
+			if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+				log.Error("route message", zfield.Eid(en.ID), zap.Error(err))
+				return nil, errors.Wrap(err, "route message")
+			}
 		}
 	}
+
+	waitG.Wait()
 	return base, errors.Wrap(err, "patch entity properties")
 }
 

@@ -7,6 +7,7 @@ const (
 	MsgCtxHeaderSender    = "x-sender"
 	MsgCtxHeaderReceiver  = "x-receiver"
 	MsgCtxHeaderRequestID = "x-reqsuest-id"
+	MsgCtxHeaderMessageID = "x-message-id"
 	MsgCtxHeaderChannelID = "x-channel-id"
 	MsgCtxHeaderTemplate  = "x-template-id"
 )
@@ -32,6 +33,10 @@ func (h Header) GetReceiver() string         { return h[MsgCtxHeaderReceiver] }
 func (h Header) SetReceiver(receiver string) { h[MsgCtxHeaderReceiver] = receiver }
 func (h Header) GetTemplate() string         { return h[MsgCtxHeaderTemplate] }
 func (h Header) SetTemplate(template string) { h[MsgCtxHeaderTemplate] = template }
+func (h Header) GetRequestID() string        { return h[MsgCtxHeaderRequestID] }
+func (h Header) SetRequestID(reqID string)   { h[MsgCtxHeaderRequestID] = reqID }
+func (h Header) GetMessageID() string        { return h[MsgCtxHeaderMessageID] }
+func (h Header) SetMessageID(msgID string)   { h[MsgCtxHeaderMessageID] = msgID }
 
 func (h Header) GetDefault(key, defaultValue string) string {
 	if _, has := h[key]; !has {

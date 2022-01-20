@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -78,4 +79,29 @@ func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
 		return b.Configs[segs[0]], nil
 	}
 	return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "copy config")
+}
+
+func (b *Base) JSON() map[string]interface{} {
+	info := make(map[string]interface{})
+	info["id"] = b.ID
+	info["type"] = b.Type
+	info["owner"] = b.Owner
+	info["source"] = b.Source
+	info["version"] = b.Version
+	info["last_time"] = b.LastTime
+	info["template_id"] = b.TemplateID
+
+	// marhsal properties.
+	props := make(map[string]string)
+	for key, val := range b.Properties {
+		props[key] = val.String()
+	}
+
+	bytes, _ := json.Marshal(b.Configs)
+
+	info["properties"] = props
+	info["configs"] = string(bytes)
+	info["config_file"] = string(b.ConfigFile)
+
+	return info
 }

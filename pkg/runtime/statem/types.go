@@ -18,10 +18,12 @@ package statem
 
 import (
 	"context"
+	"time"
 
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/dao"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/util"
 )
 
 type StateManager interface {
@@ -62,12 +64,6 @@ type StateMachiner interface {
 	Flush(ctx context.Context) error
 }
 
-type Flusher interface {
-	FlushState() error
-	FlushSearch() error
-	FlushTimeSeries() error
-}
-
 type MessageHandler = func(Message) []WatchKey
 
 type PromiseFunc = func(interface{})
@@ -78,7 +74,15 @@ type Message interface {
 }
 
 type MessageBase struct {
+	startTime      time.Time
 	PromiseHandler PromiseFunc `json:"-"`
+}
+
+func NewMessageBase(promise PromiseFunc) MessageBase {
+	return MessageBase{
+		startTime:      time.Now(),
+		PromiseHandler: promise,
+	}
 }
 
 func (ms MessageBase) Message() {}
@@ -87,6 +91,10 @@ func (ms MessageBase) Promised(v interface{}) {
 		return
 	}
 	ms.PromiseHandler(v)
+}
+
+func (ms MessageBase) Elapsed() util.ElapsedTime {
+	return util.NewElapsedFrom(ms.startTime)
 }
 
 type WatchKey = mapper.WatchKey

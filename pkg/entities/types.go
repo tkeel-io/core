@@ -21,9 +21,11 @@ import (
 	"errors"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/dao"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
+
+const CoreAPISender = "core.api"
 
 type TemplateEntityID struct{}
 

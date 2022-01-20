@@ -22,9 +22,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/dao"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -68,7 +68,7 @@ func (s *statem) flushState(ctx context.Context) error {
 		zfield.Eid(s.ID),
 		zfield.Type(s.Type),
 		zfield.Template(s.TemplateID),
-		zap.String("state", s.Entity.JONS()))
+		zap.String("state", s.Entity.JSON()))
 
 	err := s.Dao().Put(ctx, &s.Entity)
 	return errors.Wrap(err, "flush entity state")

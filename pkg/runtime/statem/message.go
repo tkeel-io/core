@@ -20,12 +20,8 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 )
 
-// PropertyMessage state property message.
-type StateMessage struct {
-	MessageBase
-
-	StateID  string `json:"state_id"`
-	Operator string `json:"operator"`
+type Flusher interface {
+	viod()
 }
 
 func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {
@@ -44,3 +40,7 @@ type PropertyMessage struct {
 	Operator   string                     `json:"operator"`
 	Properties map[string]constraint.Node `json:"properties"`
 }
+
+type FlushPropertyMessage PropertyMessage
+
+func (f FlushPropertyMessage) viod() {}

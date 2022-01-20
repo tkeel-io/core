@@ -11,6 +11,11 @@ func NewElapsed() ElapsedTime {
 	return ElapsedTime{start: time.Now()}
 }
 
+// NewElapsedFrom construct ElapsedTime from t.
+func NewElapsedFrom(t time.Time) ElapsedTime {
+	return ElapsedTime{start: t}
+}
+
 // Elapsed returns elapsed duration.
 func (et ElapsedTime) Elapsed() time.Duration {
 	return time.Since(et.start)
