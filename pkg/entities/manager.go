@@ -84,7 +84,8 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 }
 
 func (m *entityManager) Start() error {
-	return errors.Wrap(m.stateManager.Start(), "start entity manager")
+	go m.stateManager.Start()
+	return errors.Wrap(nil, "start entity manager")
 }
 
 func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
