@@ -64,8 +64,11 @@ func (s *statem) flush(ctx context.Context) error {
 func (s *statem) flushState(ctx context.Context) error {
 	bytes, _ := EncodeBase(&s.Base)
 	log.Debug("flush state", logger.EntityID(s.ID), zap.String("state", string(bytes)))
-	s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
-	return nil
+	err := s.stateManager.GetDaprClient().SaveState(ctx, "core-state", s.ID, bytes)
+	if nil != err {
+		log.Error("flush state", logger.EntityID(s.ID), zap.Error(err))
+	}
+	return errors.Wrap(err, "flush state")
 }
 
 func (s *statem) flushSearch(ctx context.Context) error {
@@ -89,7 +92,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 
 	// flush all.
 	for key, val := range s.KValues {
-		flushData[key] = val.Value()
+		flushData[key] = val.String()
 	}
 
 	// basic fields.

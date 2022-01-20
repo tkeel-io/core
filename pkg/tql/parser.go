@@ -254,7 +254,7 @@ func computing(input string) string {
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
 
 	if len(listener.sstack) > 0 {
-		result := listener.sstack[0]
+		result := "\"" + listener.sstack[0] + "\""
 		listener.sstack = []string{}
 		return result
 	}

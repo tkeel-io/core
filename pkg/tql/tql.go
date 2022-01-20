@@ -57,7 +57,7 @@ func (t *tql) Tentacles() []TentacleConfig {
 func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, error) {
 	input := make(map[string][]byte)
 	for key, val := range in {
-		input[key] = []byte(val.String())
+		input[key] = []byte(wrapString(val))
 	}
 	ret := t.listener.GetComputeResults(input)
 
@@ -67,4 +67,13 @@ func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, e
 	}
 
 	return out, nil
+}
+
+func wrapString(node constraint.Node) string {
+	switch node.Type() {
+	case constraint.String:
+		return "'" + node.String() + "'"
+	default:
+		return node.String()
+	}
 }

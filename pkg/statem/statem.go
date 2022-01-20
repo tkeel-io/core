@@ -711,9 +711,10 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	var err error
 	for mapperID := range actives {
 		input := make(map[string]constraint.Node)
-		for _, tentacle := range s.indexTentacles[mapperID] {
+		for _, tentacle := range s.mappers[mapperID].Tentacles() {
 			for _, item := range tentacle.Items() {
 				var val constraint.Node
+
 				if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
 					log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
 					continue
@@ -751,10 +752,10 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
 	if !strings.ContainsAny(propertyKey, ".[") {
-		if _, has := s.KValues[propertyKey]; !has {
+		if _, has := properties[propertyKey]; !has {
 			return constraint.NullNode{}, ErrPropertyNotFound
 		}
-		return s.KValues[propertyKey], nil
+		return properties[propertyKey], nil
 	}
 
 	// patch property.
