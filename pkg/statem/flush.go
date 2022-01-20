@@ -89,7 +89,7 @@ func (s *statem) flushSearch(ctx context.Context) error {
 
 	// flush all.
 	for key, val := range s.KValues {
-		flushData[key] = val.String()
+		flushData[key] = val.Value()
 	}
 
 	// basic fields.

@@ -33,7 +33,8 @@ func TestParserAndComputing(t *testing.T) {
 	tql := `insert into entity3 select
 		entity1.property1 as property1,
 		entity.property2.name as property2,
-		entity1.property1 + entity.property3 as property3`
+		entity1.property1 + entity.property3 as property3,
+		pp1+pp2 as pp3`
 
 	t.Log("parse tql: ", tql)
 	l, _ := Parse(tql)
@@ -44,9 +45,12 @@ func TestParserAndComputing(t *testing.T) {
 	in["entity1.property1"] = []byte("1")
 	in["entity.property2.name"] = []byte("2")
 	in["entity.property3"] = []byte("3")
+	in["pp1"] = []byte("'device'")
+	in["pp2"] = []byte("'123'")
 	t.Log("in: ", in)
 	out := l.GetComputeResults(in)
 	t.Log(" out: ", out)
+	t.Log(" out: ", string(out["pp3"]))
 
 	// out2
 	in["entity1.property1"] = []byte("4")
@@ -88,4 +92,21 @@ func TestGetParseConfigs(t *testing.T) {
 		Tentacles:      []TentacleConfig{{SourceEntity: "device234", PropertyKeys: []string{"*"}}},
 	}
 	assert.Equal(t, expectCfg, cfg)
+}
+
+func TestComputingString(t *testing.T) {
+	tqlS := `insert into device123 select field1 + field2 as field3`
+	l, err := Parse(tqlS)
+	assert.Equal(t, nil, err)
+
+	in := make(map[string][]byte)
+	in["field1"] = []byte("4")
+	in["field2"] = []byte("7")
+	out1 := l.GetComputeResults(in)
+	t.Log("out1: ", string(out1["field3"]))
+
+	in["field1"] = []byte("'111'")
+	in["field2"] = []byte("'xxx'")
+	out2 := l.GetComputeResults(in)
+	t.Log("out2: ", string(out2["field3"]))
 }

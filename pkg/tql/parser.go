@@ -38,7 +38,8 @@ type Listener struct {
 
 	execs []*Exec
 	// computing results
-	stack []int
+	stack  []int
+	sstack []string
 }
 
 type Exec struct {
@@ -191,8 +192,12 @@ func (l *Listener) ExitNumber(c *parser.NumberContext) {
 	if err != nil {
 		panic(err.Error())
 	}
-
 	l.push(i)
+}
+
+// ExitString is called when exiting the String production.
+func (l *Listener) ExitString(c *parser.StringContext) {
+	l.sstack = append(l.sstack, c.GetText()[1:len(c.GetText())-1])
 }
 
 // ExitMulDiv is called when exiting the MulDiv production.
@@ -211,8 +216,17 @@ func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 
 // ExitAddSub is called when exiting the AddSub production.
 func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
-	right, left := l.pop(), l.pop()
+	if len(l.sstack) > 0 {
+		switch c.GetOp().GetTokenType() {
+		case parser.TQLParserADD:
+			l.sstack = []string{l.sstack[0] + l.sstack[1]}
+		default:
+			panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+		}
+		return
+	}
 
+	right, left := l.pop(), l.pop()
 	switch c.GetOp().GetTokenType() {
 	case parser.TQLParserADD:
 		l.push(left + right)
@@ -238,6 +252,13 @@ func computing(input string) string {
 	// Finally parse the expression (by walking the tree)
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
+
+	if len(listener.sstack) > 0 {
+		result := listener.sstack[0]
+		listener.sstack = []string{}
+		return result
+	}
+
 	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 

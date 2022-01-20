@@ -120,6 +120,7 @@ numExp
    | numExp op=('+'|'-') numExp # AddSub
    | numExp op=(EQ | GT | LT | GTE | LTE | NE) numExp  # CompareValue
    | NUMBER                             # Number
+   | STRING                             # String
    ;
 
 fragment A: [aA];

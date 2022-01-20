@@ -55,6 +55,9 @@ type TQLListener interface {
 	// EnterAddSub is called when entering the AddSub production.
 	EnterAddSub(c *AddSubContext)
 
+	// EnterString is called when entering the String production.
+	EnterString(c *StringContext)
+
 	// ExitRoot is called when exiting the root production.
 	ExitRoot(c *RootContext)
 
@@ -96,4 +99,7 @@ type TQLListener interface {
 
 	// ExitAddSub is called when exiting the AddSub production.
 	ExitAddSub(c *AddSubContext)
+
+	// ExitString is called when exiting the String production.
+	ExitString(c *StringContext)
 }

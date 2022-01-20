@@ -4,6 +4,7 @@
 // +build !codeanalysis
 
 // Generated from TQL.g4 by ANTLR 4.7.
+
 package parser // TQL
 
 import (
@@ -20,7 +21,7 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 51, 94, 4,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 51, 96, 4,
 	2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7, 4,
 	8, 9, 8, 4, 9, 9, 9, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3,
 	3, 3, 3, 7, 3, 29, 10, 3, 12, 3, 14, 3, 32, 11, 3, 3, 4, 3, 4, 3, 5, 3,
@@ -28,37 +29,38 @@ var parserATN = []uint16{
 	13, 5, 14, 5, 46, 5, 5, 49, 10, 5, 3, 5, 3, 5, 3, 5, 3, 5, 3, 5, 3, 5,
 	3, 5, 3, 5, 3, 5, 7, 5, 60, 10, 5, 12, 5, 14, 5, 63, 11, 5, 3, 6, 3, 6,
 	3, 6, 5, 6, 68, 10, 6, 5, 6, 70, 10, 6, 3, 7, 3, 7, 3, 8, 3, 8, 3, 8, 3,
-	9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 7,
-	9, 89, 10, 9, 12, 9, 14, 9, 92, 11, 9, 3, 9, 2, 4, 8, 16, 10, 2, 4, 6,
-	8, 10, 12, 14, 16, 2, 6, 3, 2, 36, 38, 3, 2, 39, 40, 4, 2, 11, 11, 13,
-	17, 3, 2, 36, 37, 2, 97, 2, 18, 3, 2, 2, 2, 4, 25, 3, 2, 2, 2, 6, 33, 3,
-	2, 2, 2, 8, 48, 3, 2, 2, 2, 10, 69, 3, 2, 2, 2, 12, 71, 3, 2, 2, 2, 14,
-	73, 3, 2, 2, 2, 16, 76, 3, 2, 2, 2, 18, 19, 7, 4, 2, 2, 19, 20, 7, 5, 2,
-	2, 20, 21, 5, 6, 4, 2, 21, 22, 7, 21, 2, 2, 22, 23, 5, 4, 3, 2, 23, 24,
-	7, 2, 2, 3, 24, 3, 3, 2, 2, 2, 25, 30, 5, 8, 5, 2, 26, 27, 7, 3, 2, 2,
-	27, 29, 5, 8, 5, 2, 28, 26, 3, 2, 2, 2, 29, 32, 3, 2, 2, 2, 30, 28, 3,
-	2, 2, 2, 30, 31, 3, 2, 2, 2, 31, 5, 3, 2, 2, 2, 32, 30, 3, 2, 2, 2, 33,
-	34, 7, 44, 2, 2, 34, 7, 3, 2, 2, 2, 35, 36, 8, 5, 1, 2, 36, 49, 5, 10,
-	6, 2, 37, 39, 5, 10, 6, 2, 38, 37, 3, 2, 2, 2, 39, 40, 3, 2, 2, 2, 40,
-	38, 3, 2, 2, 2, 40, 41, 3, 2, 2, 2, 41, 42, 3, 2, 2, 2, 42, 44, 7, 6, 2,
-	2, 43, 45, 5, 12, 7, 2, 44, 43, 3, 2, 2, 2, 45, 46, 3, 2, 2, 2, 46, 44,
-	3, 2, 2, 2, 46, 47, 3, 2, 2, 2, 47, 49, 3, 2, 2, 2, 48, 35, 3, 2, 2, 2,
-	48, 38, 3, 2, 2, 2, 49, 61, 3, 2, 2, 2, 50, 51, 12, 5, 2, 2, 51, 52, 9,
-	2, 2, 2, 52, 60, 5, 8, 5, 6, 53, 54, 12, 4, 2, 2, 54, 55, 9, 3, 2, 2, 55,
-	60, 5, 8, 5, 5, 56, 57, 12, 3, 2, 2, 57, 58, 9, 4, 2, 2, 58, 60, 5, 8,
-	5, 4, 59, 50, 3, 2, 2, 2, 59, 53, 3, 2, 2, 2, 59, 56, 3, 2, 2, 2, 60, 63,
-	3, 2, 2, 2, 61, 59, 3, 2, 2, 2, 61, 62, 3, 2, 2, 2, 62, 9, 3, 2, 2, 2,
-	63, 61, 3, 2, 2, 2, 64, 70, 7, 36, 2, 2, 65, 67, 7, 44, 2, 2, 66, 68, 7,
-	45, 2, 2, 67, 66, 3, 2, 2, 2, 67, 68, 3, 2, 2, 2, 68, 70, 3, 2, 2, 2, 69,
-	64, 3, 2, 2, 2, 69, 65, 3, 2, 2, 2, 70, 11, 3, 2, 2, 2, 71, 72, 7, 44,
-	2, 2, 72, 13, 3, 2, 2, 2, 73, 74, 5, 16, 9, 2, 74, 75, 7, 2, 2, 3, 75,
-	15, 3, 2, 2, 2, 76, 77, 8, 9, 1, 2, 77, 78, 7, 47, 2, 2, 78, 90, 3, 2,
-	2, 2, 79, 80, 12, 6, 2, 2, 80, 81, 9, 5, 2, 2, 81, 89, 5, 16, 9, 7, 82,
-	83, 12, 5, 2, 2, 83, 84, 9, 3, 2, 2, 84, 89, 5, 16, 9, 6, 85, 86, 12, 4,
-	2, 2, 86, 87, 9, 4, 2, 2, 87, 89, 5, 16, 9, 5, 88, 79, 3, 2, 2, 2, 88,
-	82, 3, 2, 2, 2, 88, 85, 3, 2, 2, 2, 89, 92, 3, 2, 2, 2, 90, 88, 3, 2, 2,
-	2, 90, 91, 3, 2, 2, 2, 91, 17, 3, 2, 2, 2, 92, 90, 3, 2, 2, 2, 12, 30,
-	40, 46, 48, 59, 61, 67, 69, 88, 90,
+	9, 3, 9, 3, 9, 5, 9, 80, 10, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3, 9, 3,
+	9, 3, 9, 3, 9, 7, 9, 91, 10, 9, 12, 9, 14, 9, 94, 11, 9, 3, 9, 2, 4, 8,
+	16, 10, 2, 4, 6, 8, 10, 12, 14, 16, 2, 6, 3, 2, 36, 38, 3, 2, 39, 40, 4,
+	2, 11, 11, 13, 17, 3, 2, 36, 37, 2, 100, 2, 18, 3, 2, 2, 2, 4, 25, 3, 2,
+	2, 2, 6, 33, 3, 2, 2, 2, 8, 48, 3, 2, 2, 2, 10, 69, 3, 2, 2, 2, 12, 71,
+	3, 2, 2, 2, 14, 73, 3, 2, 2, 2, 16, 79, 3, 2, 2, 2, 18, 19, 7, 4, 2, 2,
+	19, 20, 7, 5, 2, 2, 20, 21, 5, 6, 4, 2, 21, 22, 7, 21, 2, 2, 22, 23, 5,
+	4, 3, 2, 23, 24, 7, 2, 2, 3, 24, 3, 3, 2, 2, 2, 25, 30, 5, 8, 5, 2, 26,
+	27, 7, 3, 2, 2, 27, 29, 5, 8, 5, 2, 28, 26, 3, 2, 2, 2, 29, 32, 3, 2, 2,
+	2, 30, 28, 3, 2, 2, 2, 30, 31, 3, 2, 2, 2, 31, 5, 3, 2, 2, 2, 32, 30, 3,
+	2, 2, 2, 33, 34, 7, 44, 2, 2, 34, 7, 3, 2, 2, 2, 35, 36, 8, 5, 1, 2, 36,
+	49, 5, 10, 6, 2, 37, 39, 5, 10, 6, 2, 38, 37, 3, 2, 2, 2, 39, 40, 3, 2,
+	2, 2, 40, 38, 3, 2, 2, 2, 40, 41, 3, 2, 2, 2, 41, 42, 3, 2, 2, 2, 42, 44,
+	7, 6, 2, 2, 43, 45, 5, 12, 7, 2, 44, 43, 3, 2, 2, 2, 45, 46, 3, 2, 2, 2,
+	46, 44, 3, 2, 2, 2, 46, 47, 3, 2, 2, 2, 47, 49, 3, 2, 2, 2, 48, 35, 3,
+	2, 2, 2, 48, 38, 3, 2, 2, 2, 49, 61, 3, 2, 2, 2, 50, 51, 12, 5, 2, 2, 51,
+	52, 9, 2, 2, 2, 52, 60, 5, 8, 5, 6, 53, 54, 12, 4, 2, 2, 54, 55, 9, 3,
+	2, 2, 55, 60, 5, 8, 5, 5, 56, 57, 12, 3, 2, 2, 57, 58, 9, 4, 2, 2, 58,
+	60, 5, 8, 5, 4, 59, 50, 3, 2, 2, 2, 59, 53, 3, 2, 2, 2, 59, 56, 3, 2, 2,
+	2, 60, 63, 3, 2, 2, 2, 61, 59, 3, 2, 2, 2, 61, 62, 3, 2, 2, 2, 62, 9, 3,
+	2, 2, 2, 63, 61, 3, 2, 2, 2, 64, 70, 7, 36, 2, 2, 65, 67, 7, 44, 2, 2,
+	66, 68, 7, 45, 2, 2, 67, 66, 3, 2, 2, 2, 67, 68, 3, 2, 2, 2, 68, 70, 3,
+	2, 2, 2, 69, 64, 3, 2, 2, 2, 69, 65, 3, 2, 2, 2, 70, 11, 3, 2, 2, 2, 71,
+	72, 7, 44, 2, 2, 72, 13, 3, 2, 2, 2, 73, 74, 5, 16, 9, 2, 74, 75, 7, 2,
+	2, 3, 75, 15, 3, 2, 2, 2, 76, 77, 8, 9, 1, 2, 77, 80, 7, 47, 2, 2, 78,
+	80, 7, 50, 2, 2, 79, 76, 3, 2, 2, 2, 79, 78, 3, 2, 2, 2, 80, 92, 3, 2,
+	2, 2, 81, 82, 12, 7, 2, 2, 82, 83, 9, 5, 2, 2, 83, 91, 5, 16, 9, 8, 84,
+	85, 12, 6, 2, 2, 85, 86, 9, 3, 2, 2, 86, 91, 5, 16, 9, 7, 87, 88, 12, 5,
+	2, 2, 88, 89, 9, 4, 2, 2, 89, 91, 5, 16, 9, 6, 90, 81, 3, 2, 2, 2, 90,
+	84, 3, 2, 2, 2, 90, 87, 3, 2, 2, 2, 91, 94, 3, 2, 2, 2, 92, 90, 3, 2, 2,
+	2, 92, 93, 3, 2, 2, 2, 93, 17, 3, 2, 2, 2, 94, 92, 3, 2, 2, 2, 13, 30,
+	40, 46, 48, 59, 61, 67, 69, 79, 90, 92,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
@@ -1664,6 +1666,40 @@ func (s *AddSubContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
+type StringContext struct {
+	*NumExpContext
+}
+
+func NewStringContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *StringContext {
+	var p = new(StringContext)
+
+	p.NumExpContext = NewEmptyNumExpContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*NumExpContext))
+
+	return p
+}
+
+func (s *StringContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *StringContext) STRING() antlr.TerminalNode {
+	return s.GetToken(TQLParserSTRING, 0)
+}
+
+func (s *StringContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(TQLListener); ok {
+		listenerT.EnterString(s)
+	}
+}
+
+func (s *StringContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(TQLListener); ok {
+		listenerT.ExitString(s)
+	}
+}
+
 func (p *TQLParser) NumExp() (localctx INumExpContext) {
 	return p.numExp(0)
 }
@@ -1697,19 +1733,36 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	localctx = NewNumberContext(p, localctx)
-	p.SetParserRuleContext(localctx)
-	_prevctx = localctx
-
-	{
-		p.SetState(75)
-		p.Match(TQLParserNUMBER)
-	}
-
-	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(88)
+	p.SetState(77)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext())
+
+	switch p.GetTokenStream().LA(1) {
+	case TQLParserNUMBER:
+		localctx = NewNumberContext(p, localctx)
+		p.SetParserRuleContext(localctx)
+		_prevctx = localctx
+
+		{
+			p.SetState(75)
+			p.Match(TQLParserNUMBER)
+		}
+
+	case TQLParserSTRING:
+		localctx = NewStringContext(p, localctx)
+		p.SetParserRuleContext(localctx)
+		_prevctx = localctx
+		{
+			p.SetState(76)
+			p.Match(TQLParserSTRING)
+		}
+
+	default:
+		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
+	}
+	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
+	p.SetState(90)
+	p.GetErrorHandler().Sync(p)
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 10, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -1717,18 +1770,18 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			p.SetState(86)
+			p.SetState(88)
 			p.GetErrorHandler().Sync(p)
-			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 8, p.GetParserRuleContext()) {
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewMulDivContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(77)
+				p.SetState(79)
 
-				if !(p.Precpred(p.GetParserRuleContext(), 4)) {
-					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 4)", ""))
+				if !(p.Precpred(p.GetParserRuleContext(), 5)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 5)", ""))
 				}
-				p.SetState(78)
+				p.SetState(80)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -1745,19 +1798,19 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(79)
-					p.numExp(5)
+					p.SetState(81)
+					p.numExp(6)
 				}
 
 			case 2:
 				localctx = NewAddSubContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(80)
+				p.SetState(82)
 
-				if !(p.Precpred(p.GetParserRuleContext(), 3)) {
-					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 3)", ""))
+				if !(p.Precpred(p.GetParserRuleContext(), 4)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 4)", ""))
 				}
-				p.SetState(81)
+				p.SetState(83)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -1774,19 +1827,19 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(82)
-					p.numExp(4)
+					p.SetState(84)
+					p.numExp(5)
 				}
 
 			case 3:
 				localctx = NewCompareValueContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(83)
+				p.SetState(85)
 
-				if !(p.Precpred(p.GetParserRuleContext(), 2)) {
-					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 2)", ""))
+				if !(p.Precpred(p.GetParserRuleContext(), 3)) {
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 3)", ""))
 				}
-				p.SetState(84)
+				p.SetState(86)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -1803,16 +1856,16 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(85)
-					p.numExp(3)
+					p.SetState(87)
+					p.numExp(4)
 				}
 
 			}
 
 		}
-		p.SetState(90)
+		p.SetState(92)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 10, p.GetParserRuleContext())
 	}
 
 	return localctx
@@ -1858,13 +1911,13 @@ func (p *TQLParser) Expr_Sempred(localctx antlr.RuleContext, predIndex int) bool
 func (p *TQLParser) NumExp_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 3:
-		return p.Precpred(p.GetParserRuleContext(), 4)
+		return p.Precpred(p.GetParserRuleContext(), 5)
 
 	case 4:
-		return p.Precpred(p.GetParserRuleContext(), 3)
+		return p.Precpred(p.GetParserRuleContext(), 4)
 
 	case 5:
-		return p.Precpred(p.GetParserRuleContext(), 2)
+		return p.Precpred(p.GetParserRuleContext(), 3)
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(predIndex))
