@@ -297,7 +297,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			id := interface2string(kv["id"])
 			source := interface2string(kv["source"])
 			owner := interface2string(kv["owner"])
-			_type := interface2string(kv["type"])
+			entityType := interface2string(kv["type"])
 
 			delete(kv, "id")
 			delete(kv, "source")
@@ -310,7 +310,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 				Id:         id,
 				Source:     source,
 				Owner:      owner,
-				Type:       _type,
+				Type:       entityType,
 				Properties: properties,
 				Mappers:    []*pb.MapperDesc{},
 			}
