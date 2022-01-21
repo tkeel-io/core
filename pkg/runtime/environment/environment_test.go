@@ -4,19 +4,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
 func TestEnvironment(t *testing.T) {
 	env := NewEnvironment()
 
-	infos := env.StoreMappers([]EtcdPair{
+	infos := env.StoreMappers([]dao.Mapper{
 		{
-			Key:   "core.mappe.BASIC.device123.mapper-from-device234",
-			Value: []byte("insert into device123 select device234.temp as temp"),
+			ID:       "mapper123",
+			Name:     "mapping device234 props",
+			EntityID: "device123",
+			TQL:      "insert into device123 select device234.temp as temp",
 		},
 		{
-			Key:   "core.mapper.SUBSCRIPTION.sub123.mapper-from-device234",
-			Value: []byte("insert into sub123 select device234.temp"),
+			ID:       "mapper234",
+			Name:     "mapping device234 props",
+			EntityID: "sub123",
+			TQL:      "insert into sub123 select device234.temp",
 		},
 	})
 

@@ -18,6 +18,14 @@ func (s *statem) internelMessageHandler(message Message) []WatchKey {
 	switch msg := message.(type) {
 	case PropertyMessage:
 		return s.invokePropertyMessage(msg)
+	case FlushPropertyMessage:
+		// convert msg type.
+		message := PropertyMessage(msg)
+		// handle property message.
+		watchKeys := s.internelMessageHandler(message)
+		// flush state.
+		s.flush(context.Background())
+		return watchKeys
 	default:
 		// invalid msg typs.
 		log.Error("undefine message type", zfield.ID(s.ID), zfield.Message(msg))
@@ -29,10 +37,6 @@ func (s *statem) internelMessageHandler(message Message) []WatchKey {
 // invokePropertyMessage invoke property message.
 func (s *statem) invokePropertyMessage(msg PropertyMessage) []WatchKey {
 	setStateID := msg.StateID
-	if setStateID == "" {
-		setStateID = s.ID
-	}
-
 	watchKeys := make([]mapper.WatchKey, 0)
 	if _, has := s.cacheProps[setStateID]; !has {
 		s.cacheProps[setStateID] = make(map[string]constraint.Node)

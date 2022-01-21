@@ -16,5 +16,5 @@ type IRepository interface {
 	DelMapper(context.Context, *dao.Mapper) error
 	HasMapper(context.Context, *dao.Mapper) (bool, error)
 	RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler)
-	WatchMapper(ctx context.Context, rev int64, handler dao.MapperHandler)
+	WatchMapper(ctx context.Context, rev int64, handler dao.WatchHandler)
 }

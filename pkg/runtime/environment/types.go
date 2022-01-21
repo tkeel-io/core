@@ -18,10 +18,9 @@ package environment
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"go.etcd.io/etcd/api/v3/mvccpb"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
 var (
@@ -29,29 +28,6 @@ var (
 )
 
 type CleanHandler func() []string
-
-type EtcdPair struct {
-	Key   string
-	Value []byte
-}
-
-// MaSummary: mapper summary.
-type MaSummary struct {
-	Type     string
-	Name     string
-	EntityID string
-}
-
-// parseTQLKey parse TQL-key.
-func parseTQLKey(key string) (MaSummary, error) {
-	arr := strings.Split(key, ".")
-	if len(arr) != 5 {
-		return MaSummary{}, ErrInvalidTQLKey
-	}
-
-	// core.mapper.{type}.{entityID}.{name} .
-	return MaSummary{Type: arr[2], Name: arr[4], EntityID: arr[3]}, nil
-}
 
 type ActorEnv struct {
 	Mappers   map[string]mapper.Mapper
@@ -64,6 +40,6 @@ func newActorEnv() ActorEnv {
 
 type IEnvironment interface {
 	GetActorEnv(string) ActorEnv
-	StoreMappers([]EtcdPair) []MaSummary
-	OnMapperChanged(mvccpb.Event_EventType, EtcdPair) ([]string, error)
+	StoreMappers([]dao.Mapper) []dao.Mapper
+	OnMapperChanged(dao.EnventType, dao.Mapper) ([]string, error)
 }

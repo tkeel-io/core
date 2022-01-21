@@ -4,6 +4,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 
 	msgpack "github.com/shamaton/msgpack/v2"
 )
@@ -45,7 +46,7 @@ func (ec entityCodec) Decode(data []byte, en *Entity) error {
 			en.Properties[keyString] = constraint.NewNode(val)
 		}
 	default:
-		return errors.Wrap(ErrEntityInvalidProps, "should be map[interface{}]interface{} or map[string]interface{}")
+		return errors.Wrap(xerrors.ErrInvalidProperties, "should be map[interface{}]interface{} or map[string]interface{}")
 	}
 
 	return nil

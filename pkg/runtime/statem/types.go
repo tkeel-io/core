@@ -23,6 +23,10 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/state"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/util"
 )
 
@@ -48,10 +52,10 @@ type StateManager interface {
 }
 
 type ResourceManager interface {
-	StateClient() IStore
-	PubsubClient() IPubsub
-	SearchClient() ISearch
-	TSeriesClient() TSerier
+	StateClient() state.Store
+	PubsubClient() pubsub.Pubsub
+	SearchClient() *search.Service
+	TSeriesClient() tseries.TimeSerier
 	Dao() dao.IDao
 }
 

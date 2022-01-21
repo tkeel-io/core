@@ -82,18 +82,14 @@ func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, e
 
 // Invoke called on supported operations.
 func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
-	var points []string
-
-	switch val := req.Data.(type) {
+	switch points := req.Data.(type) {
 	case []string:
-		points = val
+		// write the point.
+		if err := i.writeAPI.WriteRecord(context.Background(), points...); err != nil {
+			return nil, errors.Wrap(err, "write influxdb")
+		}
 	default:
 		return nil, ErrInfluxInvalidParams
-	}
-
-	// write the point.
-	if err := i.writeAPI.WriteRecord(context.Background(), points...); err != nil {
-		return nil, errors.Wrap(err, "write influxdb")
 	}
 
 	i.client.Close()

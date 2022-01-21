@@ -18,9 +18,10 @@ package environment
 
 import (
 	"github.com/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/kit/log"
-	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.uber.org/zap"
 )
 
@@ -64,71 +65,52 @@ func (env *Environment) GetActorEnv(stateID string) ActorEnv {
 	return actorEnv
 }
 
-func (env *Environment) StoreMappers(pairs []EtcdPair) []MaSummary {
-	var (
-		err  error
-		info MaSummary
-	)
+func (env *Environment) StoreMappers(mappers []dao.Mapper) []dao.Mapper {
+	var err error
+	for _, m := range mappers {
+		log.Debug("store mapper", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
+			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
 
-	result := make([]MaSummary, 0)
-	for _, pair := range pairs {
-		log.Debug("load mapper", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
-		if info, err = parseTQLKey(pair.Key); nil != err {
-			log.Error("load mapper", zap.Error(err), zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
-			continue
-		}
-
+		// parse mapper.
 		var mapperInstence mapper.Mapper
-		if mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value)); nil != err {
-			log.Error("parse TQL", zap.String("key", pair.Key), zap.String("value", string(pair.Value)))
+		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL); nil != err {
+			log.Error("parse mapper", zap.Error(err), zfield.ID(m.ID), zfield.Eid(m.EntityID))
 			continue
 		}
-
 		env.addMapper(mapperInstence)
-		result = append(result, info)
 	}
-
-	return result
+	return mappers
 }
 
 // OnMapperChanged respond for mapper.
-func (env *Environment) OnMapperChanged(op mvccpb.Event_EventType, pair EtcdPair) ([]string, error) {
-	var (
-		err     error
-		info    MaSummary
-		effects []string
-	)
+func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) ([]string, error) {
+	var err error
+	var effects []string
 
-	switch op {
-	case mvccpb.PUT:
+	switch et {
+	case dao.PUT:
+		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
+			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		// parse mapper again.
 		var mapperInstence mapper.Mapper
-		log.Debug("tql changed", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
-		if mapperInstence, err = mapper.NewMapper(pair.Key, string(pair.Value)); nil != err {
-			log.Error("parse TQL",
-				zap.String("key", pair.Key),
-				zap.String("value", string(pair.Value)))
-			return effects, errors.Wrap(err, "mapper changed")
+		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL); nil != err {
+			log.Error("parse mapper", zap.Error(err), zfield.ID(m.ID), zfield.Eid(m.EntityID))
+			return effects, errors.Wrap(err, "parse mapper again")
 		}
-
+		// add mapper into caches.
 		effects = env.addMapper(mapperInstence)
-	case mvccpb.DELETE:
-		log.Debug("tql deleted", zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
-		if info, err = parseTQLKey(pair.Key); nil != err {
-			log.Error("parse TQL",
-				zap.Error(err),
-				zap.String("key", pair.Key),
-				zap.String("value", string(pair.Value)))
-			return effects, errors.Wrap(err, "mapper deleted")
-		}
-
-		effects = env.removeMapper(info.EntityID, pair.Key)
+	case dao.DELETE:
+		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
+			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		// remove mapper from caches.
+		effects = env.removeMapper(m.EntityID, m.ID)
 	default:
-		log.Error("invalid etcd operator type", zap.Any("operator", op),
-			zap.String("tql.Key", pair.Key), zap.String("tql.Val", string(pair.Value)))
+		log.Error("invalid operator", zap.Any("operator", et.String()), zfield.ID(m.ID), zfield.Name(m.Name),
+			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
 	}
 
-	log.Debug("environment.OnMapperChanged", zap.String("key", pair.Key), zap.Any("effects", effects))
-
+	log.Debug("update environment", zfield.ID(m.ID),
+		zfield.Name(m.Name), zfield.Eid(m.EntityID), zap.Strings("effects", effects))
 	return effects, nil
 }
 

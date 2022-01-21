@@ -117,32 +117,28 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 	}
 }
 
-func (d *Dao) WatchRoute(ctx context.Context, rev int64, handler MapperHandler) {
+func (d *Dao) WatchRoute(ctx context.Context, rev int64, handler WatchHandler) {
 	opts := make([]clientv3.OpOption, 0)
 	opts = append(opts, clientv3.WithPrefix(), clientv3.WithRev(rev+1))
 	resp := d.etcdEndpoint.Watch(ctx, MapperPrefix, opts...)
 
-	for wr := range resp {
-		if len(wr.Events) == 0 {
-			return
-		}
-
-		mappers := make([]Mapper, 0, len(wr.Events))
-		for _, ev := range wr.Events {
-			var mapper Mapper
-			if err := json.Unmarshal(ev.Kv.Value, &mapper); nil != err {
-				log.Error("unmarshal mapper", zap.Error(err),
-					zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
-				continue
-			}
-			mappers = append(mappers, mapper)
-		}
-
+	for {
 		select {
-		case <-ctx.Done(): // Cancel
-			return
-		default:
-			handler(mappers)
+		case <-ctx.Done():
+		case wr := <-resp:
+			if len(wr.Events) == 0 {
+				return
+			}
+
+			for _, ev := range wr.Events {
+				var mapper Mapper
+				if err := json.Unmarshal(ev.Kv.Value, &mapper); nil != err {
+					log.Error("unmarshal mapper", zap.Error(err),
+						zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
+					continue
+				}
+				handler(EnventType(ev.Type), mapper)
+			}
 		}
 	}
 }

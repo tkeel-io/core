@@ -89,3 +89,11 @@ func Key(key string) zap.Field {
 func Value(val interface{}) zap.Field {
 	return zap.Any("value", val)
 }
+
+func Desc(description string) zap.Field {
+	return zap.String("description", description)
+}
+
+func Name(name string) zap.Field {
+	return zap.String("name", name)
+}

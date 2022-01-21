@@ -63,8 +63,8 @@ func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
 	return &ESClient{Client: client}
 }
 
-func (es *ESClient) BuildIndex(ctx context.Context, id, body string) error {
-	if _, err := es.Client.Index().Index(EntityIndex).Id(id).BodyString(body).Do(ctx); err != nil {
+func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
+	if _, err := es.Client.Index().Index(EntityIndex).Id(index).BodyString(body).Do(ctx); err != nil {
 		return errors.Wrap(err, "set index in es error")
 	}
 	return nil

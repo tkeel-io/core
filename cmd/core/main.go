@@ -26,6 +26,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
@@ -36,7 +37,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/version"
 
-	"github.com/panjf2000/ants/v2"
 	"github.com/spf13/cobra"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
@@ -151,12 +151,8 @@ func core(cmd *cobra.Command, args []string) {
 	)
 
 	// create coroutine pool.
-	coroutinePool, err := ants.NewPool(5000)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
+	var repo repository.IRepository
+	stateManager, err := runtime.NewManager(context.Background(), repo)
 	if nil != err {
 		log.Fatal(err)
 	}

@@ -18,16 +18,23 @@ package statem
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
+	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	"github.com/tkeel-io/core/pkg/resource/search"
+	"github.com/tkeel-io/core/pkg/resource/state"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func (s *statem) Flush(ctx context.Context) error {
@@ -106,12 +113,17 @@ func (s *statem) flushSearch(ctx context.Context) error {
 	flushData["source"] = s.Source
 	flushData["version"] = s.Version
 	flushData["last_time"] = s.LastTime
-	if err = s.stateManager.Resource().SearchClient().Index(ctx, flushData); nil != err {
+
+	var data *structpb.Value
+	if data, err = structpb.NewValue(flushData); nil != err {
+		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+		return errors.Wrap(err, "Search flush")
+	} else if _, err = s.Search().Index(ctx, &pb.IndexObject{Obj: data}); nil != err {
 		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
 	log.Debug("flush state Search.", zap.Any("data", flushData))
-	return errors.Wrap(err, "Search flush failed")
+	return errors.Wrap(err, "Search flush")
 }
 
 func (s *statem) flushTimeSeries(ctx context.Context) error {
@@ -135,7 +147,7 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
 
-	if err = s.TSeries().Write(ctx, flushData); nil != err {
+	if _, err = s.TSeries().Write(ctx, convertPoints(flushData)); nil != err {
 		log.Error("flush timeseries Search.", zap.Any("data", flushData), zap.Error(err))
 	}
 
@@ -189,22 +201,32 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 	return ct, nil
 }
 
-func (s *statem) Store() IStore {
+func (s *statem) Store() state.Store {
 	return s.stateManager.Resource().StateClient()
 }
 
-func (s *statem) TSeries() TSerier {
+func (s *statem) TSeries() tseries.TimeSerier {
 	return s.stateManager.Resource().TSeriesClient()
 }
 
-func (s *statem) Pubsub() IPubsub {
+func (s *statem) Pubsub() pubsub.Pubsub {
 	return s.stateManager.Resource().PubsubClient()
 }
 
-func (s *statem) Search() ISearch {
+func (s *statem) Search() *search.Service {
 	return s.stateManager.Resource().SearchClient()
 }
 
 func (s *statem) Dao() dao.IDao {
 	return s.stateManager.Resource().Dao()
+}
+
+func convertPoints(points []tseries.TSeriesData) *tseries.TSeriesRequest {
+	lines := make([]string, 0)
+	for _, point := range points {
+		point.Fields["value"] = point.Value
+		lines = append(lines,
+			fmt.Sprintf("%s,%s %s", point.Measurement, util.ExtractMap(point.Tags), util.ExtractMap(point.Fields)))
+	}
+	return &tseries.TSeriesRequest{Data: lines}
 }

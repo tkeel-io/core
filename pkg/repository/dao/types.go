@@ -2,14 +2,25 @@ package dao
 
 import (
 	"context"
-	"errors"
+
+	"go.etcd.io/etcd/api/v3/mvccpb"
 )
 
 const EntityStorePrefix = "core.entity."
 
-var ErrEntityInvalidProps = errors.New("invalid entity properties")
+var (
+	PUT    EnventType = EnventType(mvccpb.PUT)
+	DELETE EnventType = EnventType(mvccpb.DELETE)
+)
+
+type EnventType mvccpb.Event_EventType
+
+func (et EnventType) String() string {
+	return mvccpb.Event_EventType(et).String()
+}
 
 type MapperHandler func([]Mapper)
+type WatchHandler func(EnventType, Mapper)
 
 type IDao interface {
 	Get(ctx context.Context, id string) (en *Entity, err error)

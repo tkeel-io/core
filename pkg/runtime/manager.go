@@ -20,39 +20,27 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
-	"time"
 
-	dapr "github.com/dapr/go-sdk/client"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
-	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfiled "github.com/tkeel-io/core/pkg/logger"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 )
 
 type Manager struct {
+	coroutinePool *ants.Pool
 	containers    map[string]*Container
 	msgCh         chan statem.MessageContext
 	disposeCh     chan statem.MessageContext
-	coroutinePool *ants.Pool
 	actorEnv      environment.IEnvironment
-
-	repository    dao.IDao
-	daprClient    dapr.Client
-	etcdClient    *clientv3.Client
-	searchClient  pb.SearchHTTPServer
-	tseriesClient tseries.TimeSerier
+	repository    repository.IRepository
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -60,38 +48,17 @@ type Manager struct {
 	cancel   context.CancelFunc
 }
 
-func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (statem.StateManager, error) {
-	var (
-		daprClient dapr.Client
-		etcdClient *clientv3.Client
-		err        error
-	)
-
-	expireTime := 3 * time.Second
-	etcdAddr := config.Get().Etcd.Address
-	tseriesClient := tseries.NewTimeSerier(config.Get().TimeSeries.Name)
-	returnErr := func(err error) error { return errors.Wrap(err, "new runtime.Manager") }
-
-	if daprClient, err = dapr.NewClient(); nil != err {
-		log.Error("")
-		return nil, returnErr(err)
-	}
-	if err = tseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
-		return nil, returnErr(err)
-	}
-	if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
-		return nil, returnErr(err)
+func NewManager(ctx context.Context, repo repository.IRepository) (statem.StateManager, error) {
+	coroutinePool, err := ants.NewPool(5000)
+	if err != nil {
+		return nil, errors.Wrap(err, "new coroutine pool")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-
 	stateManager := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
-		daprClient:    daprClient,
-		etcdClient:    etcdClient,
-		searchClient:  searchClient,
-		tseriesClient: tseriesClient,
+		repository:    repo,
 		actorEnv:      environment.NewEnvironment(),
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
@@ -105,53 +72,8 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	return stateManager, nil
 }
 
-func (m *Manager) init() error {
-	// load all subscriptions.
-	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
-	defer cancel()
-
-	log.Info("initialize actor manager, tql loadding...")
-	res, err := m.etcdClient.Get(ctx, util.EtcdMapperPrefix, clientv3.WithPrefix())
-	if nil != err {
-		return errors.Wrap(err, "load all tql")
-	}
-
-	pairs := make([]environment.EtcdPair, len(res.Kvs))
-	for index, kv := range res.Kvs {
-		pairs[index] = environment.EtcdPair{Key: string(kv.Key), Value: kv.Value}
-	}
-
-	for _, info := range m.actorEnv.StoreMappers(pairs) {
-		log.Debug("load state machine", zfiled.ID(info.EntityID), zap.String("type", info.Type))
-		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
-			log.Error("load state machine", zap.Error(err),
-				zap.String("type", info.Type), zfiled.ID(info.EntityID))
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) watchResource() error {
-	// watch tqls.
-	tqlWatcher, err := util.NewWatcher(m.ctx, config.Get().Etcd.Address)
-	if nil != err {
-		return errors.Wrap(err, "create tql watcher failed")
-	}
-
-	tqlWatcher.Watch(util.EtcdMapperPrefix, true, func(ev *clientv3.Event) {
-		pair := environment.EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value}
-		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, pair)
-		m.reloadActor(effects)
-	})
-
-	return nil
-}
-
 func (m *Manager) Start() error {
-	// init: load some resource.
-	m.init()
-	// watch resource.
+	m.initialize()
 	m.watchResource()
 
 	go func() {
@@ -167,7 +89,7 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetReceiver()
 				channelID := msgCtx.Headers.Get(statem.MsgCtxHeaderChannelID)
-				log.Debug("dispose message", zfiled.ID(eid), zfiled.Message(msgCtx))
+				log.Debug("dispose message", zfield.ID(eid), zfield.Message(msgCtx))
 				channelID, stateMachine := m.getStateMachine(channelID, eid)
 				if nil == stateMachine {
 					var err error
@@ -180,7 +102,7 @@ func (m *Manager) Start() error {
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
-							zfiled.ID(eid), zap.String("channel", channelID), zfiled.Message(msgCtx))
+							zfield.ID(eid), zap.String("channel", channelID), zfield.Message(msgCtx))
 						continue
 					}
 				}
@@ -272,7 +194,7 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 			var stateMachine statem.StateMachiner
 			base := &dao.Entity{ID: stateID, Type: SMTypeBasic}
 			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
-				log.Warn("load state machine", zfiled.ID(stateID))
+				log.Warn("load state machine", zfield.ID(stateID))
 			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
 				continue
 			}
@@ -289,15 +211,15 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 }
 
 func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *dao.Entity) (sm statem.StateMachiner, err error) {
-	log.Debug("load or create actor", zfiled.ID(base.ID),
+	log.Debug("load or create actor", zfield.ID(base.ID),
 		zap.String("type", base.Type), zap.String("owner", base.Owner), zap.String("source", base.Source))
 
 	var en *dao.Entity
-	if en, err = m.repository.Get(ctx, base.ID); nil != err {
+	if en, err = m.repository.GetEntity(ctx, base); nil != err {
 		base = en
 	} else {
 		log.Warn("load or create actor", zap.Error(err),
-			zfiled.Eid(base.ID), zfiled.Type(base.Type), zfiled.Template(base.TemplateID))
+			zfield.Eid(base.ID), zfield.Type(base.Type), zfield.Template(base.TemplateID))
 
 		// notfound.
 		if !flagCreate || !errors.Is(err, xerrors.ErrEntityNotFound) {
