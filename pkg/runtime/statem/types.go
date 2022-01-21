@@ -26,6 +26,14 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 )
 
+const (
+	SMMethodSetConfigs   Method = "SetConfigs"
+	SMMethodPatchConfigs Method = "PatchConfigs"
+	SMMethodDeleteEntity Method = "DeleteEntity"
+)
+
+type Method string
+
 type StateManager interface {
 	// start manager.
 	Start() error

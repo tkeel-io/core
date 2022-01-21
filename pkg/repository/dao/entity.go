@@ -1,9 +1,13 @@
 package dao
 
 import (
+	"context"
 	"encoding/json"
 
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/resource/state"
 )
 
 type Entity struct {
@@ -75,4 +79,39 @@ func (e *Entity) JSON() string {
 
 	bytes, _ := json.Marshal(info)
 	return string(bytes)
+}
+
+// dao interfaces.
+func (d *Dao) PutEntity(ctx context.Context, en *Entity) error {
+	bytes, err := d.entityCodec.Encode(en)
+	if nil == err {
+		err = d.stateClient.Set(ctx, d.entityCodec.Key(en.ID), bytes)
+	}
+	return errors.Wrap(err, "repo put entity")
+}
+
+func (d *Dao) GetEntity(ctx context.Context, id string) (en *Entity, err error) {
+	var item *state.StateItem
+	item, err = d.stateClient.Get(ctx, d.entityCodec.Key(id))
+	if nil == err {
+		en = new(Entity)
+		err = d.entityCodec.Decode(item.Value, en)
+	}
+	return en, errors.Wrap(err, "repo get entity")
+}
+
+func (d *Dao) DelEntity(ctx context.Context, id string) error {
+	return errors.Wrap(d.stateClient.Del(ctx, d.entityCodec.Key(id)), "repo del entity")
+}
+
+func (d *Dao) HasEntity(ctx context.Context, id string) (bool, error) {
+	res, err := d.stateClient.Get(ctx, d.entityCodec.Key(id))
+	if nil == err {
+		if len(res.Value) > 0 {
+			return true, nil
+		}
+		err = xerrors.ErrEntityNotFound
+	}
+
+	return false, errors.Wrap(err, "repo exists entity")
 }

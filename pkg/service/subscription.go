@@ -106,9 +106,9 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set mapper.
-	entity.Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: entity.Properties[subscription.SubscriptionFieldFilter].String(),
+	entity.Mappers = []statem.Mapper{{
+		Name: "subscription",
+		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
 	// set properties.
@@ -151,9 +151,9 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set mapper.
-	entity.Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: entity.Properties[subscription.SubscriptionFieldFilter].String(),
+	entity.Mappers = []statem.Mapper{{
+		Name: "subscription",
+		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {

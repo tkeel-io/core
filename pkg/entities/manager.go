@@ -18,35 +18,25 @@ package entities
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
 	"sync"
-	"time"
 
-	dapr "github.com/dapr/go-sdk/client"
-	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 )
 
-const EntityStateName = "core-state"
-
 type entityManager struct {
-	entityRepo   dao.IDao
-	daprClient   dapr.Client
-	etcdClient   *clientv3.Client
+	entityRepo   repository.IRepository
 	searchClient pb.SearchHTTPServer
 	stateManager statem.StateManager
 
@@ -56,28 +46,10 @@ type entityManager struct {
 }
 
 func NewEntityManager(ctx context.Context, stateManager statem.StateManager, searchClient pb.SearchHTTPServer) (EntityManager, error) {
-	var (
-		err        error
-		daprClient dapr.Client
-		etcdClient *clientv3.Client
-	)
-
-	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
-	} else if etcdClient, err = clientv3.New(clientv3.Config{
-		Endpoints:   config.Get().Etcd.Address,
-		DialTimeout: 3 * time.Second,
-	}); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
-
 	return &entityManager{
 		ctx:          ctx,
 		cancel:       cancel,
-		daprClient:   daprClient,
-		etcdClient:   etcdClient,
 		searchClient: searchClient,
 		stateManager: stateManager,
 		lock:         sync.RWMutex{},
@@ -89,33 +61,37 @@ func (m *entityManager) Start() error {
 }
 
 func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
-	// 接受来自 pubsub 的消息，这些消息将触发 实体 运行时.
 	m.stateManager.HandleMessage(ctx, msgCtx)
 }
 
 // ------------------------------------APIs-----------------------------.
 
-// CreateEntity create a entity.
-func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (*Base, error) {
-	var err error
+func (m *entityManager) checkID(base *Base) {
 	if base.ID == "" {
-		base.ID = uuid()
+		base.ID = util.UUID()
 	}
+}
 
+// CreateEntity create a entity.
+func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base, err error) {
+	var has bool
+	var templateID string
+
+	m.checkID(base)
 	log.Info("entity.CreateEntity",
 		zfield.Eid(base.ID), zfield.Type(base.Type),
 		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(base.JSON()))
 
 	// 1. check entity exists.
-	if err = m.entityRepo.Exists(ctx, base.ID); nil != err {
+	if has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: base.ID}); nil != err && has {
 		log.Error("check entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
 
 	// 2. check template entity.
-	templateID, _ := ctx.Value(TemplateEntityID{}).(string)
-	if templateID != "" {
-		if err = m.entityRepo.Exists(ctx, templateID); nil != err {
+	if templateID, _ = ctx.Value(TemplateEntityID{}).(string); templateID != "" {
+		has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: templateID})
+		if nil != err && has {
 			log.Error("check template", zap.Error(err), zfield.Eid(templateID))
 			return nil, errors.Wrap(err, "create entity")
 		}
@@ -163,29 +139,35 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 		zfield.Eid(base.ID), zfield.Type(base.Type),
 		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
-	// 1. delete from elasticsearch.
-	if _, err = m.searchClient.DeleteByID(ctx, &pb.DeleteByIDRequest{Id: en.ID}); nil != err {
-		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
-		if elastic.IsNotFound(err) {
-			return nil, errors.Wrap(err, "delete entity from es state")
-		}
+	waitG := sync.WaitGroup{}
+	// send msg.
+	waitG.Add(1)
+	elapsedTime := util.NewElapsed()
+	reqID, msgID := util.UUID(), util.UUID()
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.StateMessage{
+			StateID: base.ID,
+			Method:  statem.SMMethodDeleteEntity,
+			MessageBase: statem.NewMessageBase(func(v interface{}) {
+				waitG.Done()
+				log.Debug("dispose message completed",
+					zfield.Eid(base.ID), zfield.ReqID(reqID),
+					zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+			}),
+		},
 	}
 
-	// 3. delete from state.
-	if err = m.daprClient.DeleteState(ctx, EntityStateName, en.ID); nil != err {
-		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "delete entity from state")
+	msgCtx.Headers.SetType(base.Type)
+	msgCtx.Headers.SetOwner(base.Owner)
+	msgCtx.Headers.SetReceiver(base.ID)
+	msgCtx.Headers.SetRequestID(reqID)
+	msgCtx.Headers.SetMessageID(msgID)
+	msgCtx.Headers.SetSender(CoreAPISender)
+	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+		log.Error("delete entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "delete entity")
 	}
-
-	// 4. delete tql from etcd.
-	for _, mm := range base.Mappers {
-		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(base.Type, base.ID, mm.Name), clientv3.WithPrefix()); nil != err {
-			log.Error("delete entity mapper", zap.Error(err), zfield.Eid(en.ID), zap.Any("mapper", base.Mappers))
-		}
-	}
-
-	// 5. log record.
-	log.Info("delete entity", zfield.Eid(en.ID), zap.Any("entity", base))
 
 	return base, errors.Wrap(err, "delete entity")
 }
@@ -196,8 +178,8 @@ func (m *entityManager) GetProperties(ctx context.Context, en *Base) (base *Base
 		zfield.Eid(base.ID), zfield.Type(base.Type),
 		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
-	res, err := m.entityRepo.Get(ctx, en.ID)
-	if nil != err {
+	var res *dao.Entity
+	if res, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "get entity")
 	}
@@ -248,7 +230,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 }
 
 func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error) {
-	log.Info("entity.SetProperties",
+	log.Info("entity.PatchEntity",
 		zfield.Eid(base.ID), zfield.Type(base.Type),
 		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
@@ -306,45 +288,40 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 
 // AppendMapper append a mapper into entity.
 func (m *entityManager) AppendMapper(ctx context.Context, en *Base) (base *Base, err error) {
-	// 1. 判断实体是否存在.
-	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
-		log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "get state")
-	}
+	log.Info("entity.AppendMapper",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
-	// check TQLs.
-	if err = checkTQLs(en); nil != err {
-		return nil, errors.Wrap(err, "check subscription")
-	}
-
-	// 2. 将 mapper 推到 etcd.
-	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Put(ctx, util.FormatMapper(en.Type, en.ID, mm.Name), mm.TQLString); nil != err {
-			log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID), zap.Any("mapper", mm))
-			return nil, errors.Wrap(err, "append mapper")
-		}
-		log.Info("append mapper", zfield.Eid(en.ID), zap.Any("mapper", mm))
-	}
+	// upert mapper.
+	mp := en.Mappers[0]
+	err = m.entityRepo.PutMapper(ctx, &dao.Mapper{
+		ID:          mp.ID,
+		TQL:         mp.TQL,
+		Name:        mp.Name,
+		EntityID:    en.ID,
+		EntityType:  en.Type,
+		Description: mp.Description,
+	})
 
 	return base, errors.Wrap(err, "append mapper")
 }
 
 // DeleteMapper delete mapper from entity.
 func (m *entityManager) RemoveMapper(ctx context.Context, en *Base) (base *Base, err error) {
-	// 1. 判断实体是否存在.
-	if _, err = m.daprClient.GetState(ctx, EntityStateName, en.ID); nil != err {
-		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "remove mapper")
-	}
+	log.Info("entity.RemoveMapper",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
-	// 2. 将 mapper 推到 etcd.
-	for _, mm := range en.Mappers {
-		if _, err = m.etcdClient.Delete(ctx, util.FormatMapper(en.Type, en.ID, mm.Name)); nil != err {
-			log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID), zap.Any("mapper", mm))
-			return nil, errors.Wrap(err, "remove mapper")
-		}
-		log.Info("remove mapper", zfield.Eid(en.ID), zap.Any("mapper", mm))
-	}
+	// delete mapper.
+	mp := en.Mappers[0]
+	err = m.entityRepo.DelMapper(ctx, &dao.Mapper{
+		ID:          mp.ID,
+		TQL:         mp.TQL,
+		Name:        mp.Name,
+		EntityID:    en.ID,
+		EntityType:  en.Type,
+		Description: mp.Description,
+	})
 
 	return base, errors.Wrap(err, "remove mapper")
 }
@@ -371,66 +348,97 @@ func (m *entityManager) CheckSubscription(ctx context.Context, en *Base) (err er
 
 // SetProperties set properties into entity.
 func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, err error) {
-	// if err = m.stateManager.SetConfigs(ctx, en); nil != err {
-	// 	log.Error("set entity configs", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "set entity configs")
-	// }
+	log.Info("entity.SetConfigs",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
-	return base, errors.Wrap(err, "set entity configs")
+	waitG := sync.WaitGroup{}
+	// send msg.
+	waitG.Add(1)
+	elapsedTime := util.NewElapsed()
+	reqID, msgID := util.UUID(), util.UUID()
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.StateMessage{
+			StateID: base.ID,
+			Value:   en.Configs,
+			Method:  statem.SMMethodSetConfigs,
+			MessageBase: statem.NewMessageBase(func(v interface{}) {
+				waitG.Done()
+				log.Debug("dispose message completed",
+					zfield.Eid(base.ID), zfield.ReqID(reqID),
+					zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+			}),
+		},
+	}
+
+	msgCtx.Headers.SetType(base.Type)
+	msgCtx.Headers.SetOwner(base.Owner)
+	msgCtx.Headers.SetReceiver(base.ID)
+	msgCtx.Headers.SetRequestID(reqID)
+	msgCtx.Headers.SetMessageID(msgID)
+	msgCtx.Headers.SetSender(CoreAPISender)
+	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "route entity")
+	}
+
+	waitG.Wait()
+	return base, errors.Wrap(err, "set entity properties")
 }
 
 // PatchConfigs patch properties into entity.
 func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []*statem.PatchData) (base *Base, err error) {
-	// if err = m.stateManager.PatchConfigs(ctx, en, patchData); nil != err {
-	// 	log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "patch entity configs")
-	// }
+	log.Info("entity.PatchConfigs",
+		zfield.Eid(en.ID), zfield.Type(en.Type),
+		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	for _, pd := range patchData {
-		if pd.Operator == constraint.PatchOpCopy {
-			cfg, err0 := base.GetConfig(pd.Path)
-			if nil != err0 {
-				log.Error("patch copy config", zap.String("path", pd.Path), zap.String("op", pd.Operator.String()))
-				continue
-			}
-			base.Configs[pd.Path] = cfg
-		}
+	waitG := sync.WaitGroup{}
+	// send msg.
+	waitG.Add(1)
+	elapsedTime := util.NewElapsed()
+	reqID, msgID := util.UUID(), util.UUID()
+	msgCtx := statem.MessageContext{
+		Headers: statem.Header{},
+		Message: statem.StateMessage{
+			StateID: en.ID,
+			Value:   patchData,
+			Method:  statem.SMMethodPatchConfigs,
+			MessageBase: statem.NewMessageBase(func(v interface{}) {
+				waitG.Done()
+				log.Debug("dispose message completed",
+					zfield.Eid(en.ID), zfield.ReqID(reqID),
+					zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
+			}),
+		},
 	}
+
+	msgCtx.Headers.SetType(en.Type)
+	msgCtx.Headers.SetOwner(en.Owner)
+	msgCtx.Headers.SetReceiver(en.ID)
+	msgCtx.Headers.SetRequestID(reqID)
+	msgCtx.Headers.SetMessageID(msgID)
+	msgCtx.Headers.SetSender(CoreAPISender)
+	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+		log.Error("route entity", zap.Error(err), zfield.Eid(en.ID))
+		return nil, errors.Wrap(err, "route entity")
+	}
+
+	waitG.Wait()
 	return base, nil
-}
-
-// AppendConfigs append entity configs.
-func (m *entityManager) AppendConfigs(ctx context.Context, en *Base) (base *Base, err error) {
-	// if err = m.stateManager.AppendConfigs(ctx, en); nil != err {
-	// 	log.Error("append entity configs", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "append entity configs")
-	// }
-
-	return base, errors.Wrap(err, "append entity configs")
-}
-
-// RemoveConfigs remove entity configs.
-func (m *entityManager) RemoveConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error) {
-	// if err = m.stateManager.RemoveConfigs(ctx, en, propertyIDs); nil != err {
-	// 	log.Error("remove entity configs", zap.Error(err), zfield.Eid(en.ID))
-	// 	return nil, errors.Wrap(err, "remove entity configs")
-	// }
-
-	return base, errors.Wrap(err, "remove entity configs")
 }
 
 // QueryConfigs query entity configs.
 func (m *entityManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error) {
-	baseEntity := base.Basic()
-	for _, propertyID := range propertyIDs {
-		cfg, err0 := base.GetConfig(propertyID)
-		if nil != err0 {
-			log.Error("query configs", zap.Error(err0), zfield.Eid(en.ID), zap.String("property", propertyID))
-			continue
-		}
-		baseEntity.Configs[propertyID] = cfg
-	}
-	return &baseEntity, errors.Wrap(err, "remove entity configs")
+	log.Info("entity.PatchConfigs",
+		zfield.Eid(base.ID), zfield.Type(base.Type),
+		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
+
+	// get entity config file.
+
+	// get properties by ids.
+
+	return base, nil
 }
 
 func checkTQLs(en *Base) error {
@@ -447,7 +455,7 @@ func checkTQLs(en *Base) error {
 	}()
 	for _, mm := range en.Mappers {
 		var tqlInst tql.TQL
-		if tqlInst, err = tql.NewTQL(mm.TQLString); nil != err {
+		if tqlInst, err = tql.NewTQL(mm.TQL); nil != err {
 			log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
 			return errors.Wrap(err, "check TQL")
 		} else if tqlInst.Target() != en.ID {
@@ -463,17 +471,4 @@ func getString(node constraint.Node) string {
 		return node.String()
 	}
 	return ""
-}
-
-// uuid generate an uuid.
-func uuid() string {
-	uuid := make([]byte, 16)
-	if _, err := rand.Read(uuid); err != nil {
-		return ""
-	}
-	// see section 4.1.1.
-	uuid[8] = uuid[8]&^0xc0 | 0x80
-	// see section 4.1.3.
-	uuid[6] = uuid[6]&^0xf0 | 0x40
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }

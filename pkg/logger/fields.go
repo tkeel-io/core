@@ -81,3 +81,11 @@ func Source(source string) zap.Field {
 func Template(tid string) zap.Field {
 	return zap.String("template_id", tid)
 }
+
+func Key(key string) zap.Field {
+	return zap.String("key", key)
+}
+
+func Value(val interface{}) zap.Field {
+	return zap.Any("value", val)
+}

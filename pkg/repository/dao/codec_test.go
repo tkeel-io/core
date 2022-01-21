@@ -27,6 +27,8 @@ func TestMsgPack(t *testing.T) {
 }
 
 func TestEncode(t *testing.T) {
+	enc := entityCodec{}
+
 	en := Entity{
 		ID:       "device123",
 		Type:     "BASIC",
@@ -38,7 +40,7 @@ func TestEncode(t *testing.T) {
 		},
 	}
 
-	bytes, err := Encode(&en)
+	bytes, err := enc.Encode(&en)
 	assert.Nil(t, err, "error must be nil")
 	assert.NotNil(t, bytes, "result can not nil")
 	t.Log("encode result: ", string(bytes))
@@ -56,16 +58,18 @@ func TestDecode(t *testing.T) {
 		},
 	}
 
-	bytes, err := Encode(&en)
+	enc := entityCodec{}
+	bytes, err := enc.Encode(&en)
 	assert.Nil(t, err, "error must be nil")
 
 	var res Entity
-	err = Decode(bytes, &res)
+	err = enc.Decode(bytes, &res)
 	assert.Nil(t, err, "error must be nil")
 	assert.Equal(t, en, res)
 }
 
 func BenchmarkEncode(b *testing.B) {
+	enc := entityCodec{}
 	en := Entity{
 		ID:       "device123",
 		Type:     "BASIC",
@@ -79,7 +83,7 @@ func BenchmarkEncode(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Encode(&en)
+		enc.Encode(&en)
 	}
 }
 
@@ -127,12 +131,13 @@ func BenchmarkDecode(b *testing.B) {
 		},
 	}
 
-	bytes, err := Encode(&en)
+	enc := entityCodec{}
+	bytes, err := enc.Encode(&en)
 	assert.Nil(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Decode(bytes, &en)
+		enc.Decode(bytes, &en)
 	}
 }
 

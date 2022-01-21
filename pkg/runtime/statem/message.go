@@ -20,10 +20,6 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 )
 
-type Flusher interface {
-	viod()
-}
-
 func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {
 	return PropertyMessage{
 		StateID:    id,
@@ -32,7 +28,7 @@ func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMes
 	}
 }
 
-// PropertyMessage state property message.
+// 用于操作实体属性的消息.
 type PropertyMessage struct {
 	MessageBase
 
@@ -41,6 +37,22 @@ type PropertyMessage struct {
 	Properties map[string]constraint.Node `json:"properties"`
 }
 
+// 用于操作实体属性的消息, 消息处理后自动Flush.
 type FlushPropertyMessage PropertyMessage
 
+// 用于操作实体配置的消息.
+//		1. 属性配置.
+//		2. 实体管理.
+type StateMessage struct {
+	MessageBase
+
+	StateID string      `json:"state_id"`
+	Method  Method      `json:"method"`
+	Value   interface{} `json:"value"`
+}
+
+// Flusher interface for State Machine Message.
+type Flusher interface{ viod() }
+
+func (s StateMessage) viod()         {}
 func (f FlushPropertyMessage) viod() {}

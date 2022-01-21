@@ -237,7 +237,9 @@ func stateRuntimeStatusString(statusNum int32) string {
 	}
 }
 
-type MapperDesc struct {
-	Name      string `json:"name"`
-	TQLString string `json:"tql"` //nolint
+type Mapper struct {
+	ID          string `json:"id" msgpack:"id"`
+	TQL         string `json:"tql" msgpack:"tql"`
+	Name        string `json:"name" msgpack:"name"`
+	Description string `json:"description" msgpack:"description"`
 }

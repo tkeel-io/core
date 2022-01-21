@@ -13,10 +13,10 @@ func TestDao(t *testing.T) {
 	assert.NotNil(t, d, "result not nil")
 }
 
-func TestDao_Put(t *testing.T) {
+func TestDao_PutEntity(t *testing.T) {
 	d := New(context.Background(), "core-entity", &storeMock{})
 	assert.NotNil(t, d, "result not nil")
-	err := d.Put(context.TODO(), &Entity{
+	err := d.PutEntity(context.TODO(), &Entity{
 		ID:         "device123",
 		Type:       "DEVICE",
 		Owner:      "admin",
@@ -27,17 +27,17 @@ func TestDao_Put(t *testing.T) {
 	assert.Nil(t, err, "nil error")
 }
 
-func TestDao_Get(t *testing.T) {
+func TestDao_GetEntity(t *testing.T) {
 	d := New(context.Background(), "core-entity", &storeMock{})
 	assert.NotNil(t, d, "result not nil")
-	en, err := d.Get(context.TODO(), "device123")
+	en, err := d.GetEntity(context.TODO(), "device123")
 	assert.Nil(t, err, "nil error")
 	assert.Equal(t, "device123", en.ID)
 }
 
-func TestDao_Del(t *testing.T) {
+func TestDao_DelEntity(t *testing.T) {
 	d := New(context.Background(), "core-entity", &storeMock{})
 	assert.NotNil(t, d, "result not nil")
-	err := d.Del(context.TODO(), "device123")
+	err := d.DelEntity(context.TODO(), "device123")
 	assert.Nil(t, err, "nil error")
 }

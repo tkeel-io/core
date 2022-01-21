@@ -8,12 +8,19 @@ import (
 	msgpack "github.com/shamaton/msgpack/v2"
 )
 
-func Encode(en *Entity) ([]byte, error) {
+type entityCodec struct {
+}
+
+func (ec entityCodec) Key(id string) string {
+	return EntityStorePrefix + id
+}
+
+func (ec entityCodec) Encode(en *Entity) ([]byte, error) {
 	bytes, err := msgpack.Marshal(en)
 	return bytes, errors.Wrap(err, "encode entity")
 }
 
-func Decode(data []byte, en *Entity) error {
+func (ec entityCodec) Decode(data []byte, en *Entity) error {
 	var v = make(map[string]interface{})
 	if err := msgpack.Unmarshal(data, &v); nil != err {
 		return errors.Wrap(err, "decode entity")

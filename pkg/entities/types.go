@@ -60,10 +60,6 @@ type EntityManager interface {
 	SetConfigs(ctx context.Context, en *Base) (base *Base, err error)
 	// PatchConfigs patch entity configs.
 	PatchConfigs(ctx context.Context, en *Base, patchData []*statem.PatchData) (base *Base, err error)
-	// AppendConfigs append entity configs.
-	AppendConfigs(ctx context.Context, en *Base) (base *Base, err error)
-	// RemoveConfigs remove entity configs.
-	RemoveConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 	// QueryConfigs returns entity configs.
 	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 }

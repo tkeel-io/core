@@ -321,11 +321,11 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	entity.Source = req.Source
 
 	parseHeaderFrom(ctx, entity)
-	mapperDesc := statem.MapperDesc{}
+	mapperDesc := statem.Mapper{}
 	if req.Mapper != nil {
+		mapperDesc.TQL = req.Mapper.Tql
 		mapperDesc.Name = req.Mapper.Name
-		mapperDesc.TQLString = req.Mapper.Tql
-		entity.Mappers = []statem.MapperDesc{mapperDesc}
+		entity.Mappers = []statem.Mapper{mapperDesc}
 	} else {
 		log.Error("append mapper failed.", logger.Eid(req.Id), zap.Error(err))
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
@@ -349,7 +349,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
-	entity.Mappers = []statem.MapperDesc{{Name: req.MapperName}}
+	entity.Mappers = []statem.Mapper{{Name: req.MapperName}}
 	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
 		log.Error("remove mapper", logger.Eid(req.Id), zap.Error(err))
 		return
@@ -396,9 +396,18 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 		return out, err
 	}
 
-	// set properties.
-	if entity, err = s.entityManager.AppendConfigs(ctx, entity); nil != err {
-		log.Error("append entity configs", logger.Eid(in.Id), zap.Error(err))
+	pds := make([]*statem.PatchData, 0)
+	for key, cfg := range entity.Configs {
+		pds = append(pds, &statem.PatchData{
+			Value:    cfg,
+			Path:     key,
+			Operator: constraint.PatchOpReplace,
+		})
+	}
+
+	if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+		log.Error("patch entity configs", logger.Eid(in.Id), zap.Error(err))
+		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -416,8 +425,17 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
-	if entity, err = s.entityManager.RemoveConfigs(ctx, entity, propertyIDs); nil != err {
-		log.Error("remove entity configs", logger.Eid(in.Id), zap.Error(err))
+	pds := make([]*statem.PatchData, 0)
+	for index := range propertyIDs {
+		pds = append(pds, &statem.PatchData{
+			Path:     propertyIDs[index],
+			Operator: constraint.PatchOpRemove,
+		})
+	}
+
+	if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+		log.Error("patch entity configs", logger.Eid(in.Id), zap.Error(err))
+		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
 	out = s.entity2EntityResponse(entity)
@@ -566,7 +584,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 
 	out.Mappers = make([]*pb.MapperDesc, 0)
 	for _, mapper := range entity.Mappers {
-		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
+		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQL})
 	}
 
 	out.Id = entity.ID

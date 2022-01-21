@@ -8,4 +8,5 @@ var (
 	ErrPropertyNotFound  = errors.New("Core.Entity.Property.NotFound")
 	ErrInternal          = errors.New("Core.Internal")
 	ErrEntityNotFound    = errors.New("Core.Entity.NotFound")
+	ErrMapperNotFound    = errors.New("Core.Mapper.NotFound")
 )

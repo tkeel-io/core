@@ -9,11 +9,12 @@ import (
 )
 
 type storeMock struct {
+	entityCodec entityCodec
 }
 
 // GetState retrieves state from specific store using default consistency option.
 func (m *storeMock) Get(ctx context.Context, key string) (item *state.StateItem, err error) {
-	bytes, err := Encode(&Entity{
+	bytes, err := m.entityCodec.Encode(&Entity{
 		ID:         "device123",
 		Type:       "DEVICE",
 		Owner:      "admin",

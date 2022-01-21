@@ -22,8 +22,6 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 )
 
-const EntityStateName = "core-state"
-
 type WatchKey = mapper.WatchKey
 
 const (
