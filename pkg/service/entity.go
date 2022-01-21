@@ -294,12 +294,23 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
+			id := interface2string(kv["id"])
+			source := interface2string(kv["source"])
+			owner := interface2string(kv["owner"])
+			entityType := interface2string(kv["type"])
+
+			delete(kv, "id")
+			delete(kv, "source")
+			delete(kv, "owner")
+			delete(kv, "type")
+			delete(kv, "version")
+			delete(kv, "last_time")
 			properties, _ := structpb.NewValue(kv)
 			entityItem := &pb.EntityResponse{
-				Id:         interface2string(kv["id"]),
-				Source:     req.Source,
-				Owner:      req.Owner,
-				Type:       "",
+				Id:         id,
+				Source:     source,
+				Owner:      owner,
+				Type:       entityType,
 				Properties: properties,
 				Mappers:    []*pb.MapperDesc{},
 			}
