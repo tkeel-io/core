@@ -227,6 +227,11 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	SearchSrv := service.NewSearchService(search.GlobalService)
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+
+	// register proxy service.
+	ProxyService := service.NewProxyService(_entityManager)
+	corev1.RegisterProxyHTTPServer(httpSrv.Container, ProxyService)
+	corev1.RegisterProxyServer(grpcSrv.GetServe(), ProxyService)
 }
 
 func newResourceManager(coreRepo repository.IRepository) statem.ResourceManager {

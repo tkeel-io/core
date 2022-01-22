@@ -65,16 +65,17 @@ var (
 )
 
 type Configuration struct {
-	Server     Server     `mapstructure:"server"`
-	Logger     LogConfig  `mapstructure:"logger"`
-	Components Components `mapstructure:"components"`
+	Server     Server     `yaml:"server" mapstructure:"server"`
+	Logger     LogConfig  `yaml:"logger" mapstructure:"logger"`
+	Discovery  Discovery  `yaml:"discovery" mapstructure:"discovery"`
+	Components Components `yaml:"components" mapstructure:"components"`
 }
 
 type Components struct {
-	Etcd         EtcdConfig   `mapstructure:"etcd"`
-	Store        Metadata     `mapstructure:"store"`
-	TimeSeries   Metadata     `mapstructure:"time_series"`
-	SearchEngine SearchEngine `mapstructure:"search_engine"`
+	Etcd         EtcdConfig   `yaml:"etcd" mapstructure:"etcd"`
+	Store        Metadata     `yaml:"store" mapstructure:"store"`
+	TimeSeries   Metadata     `yaml:"time_series" mapstructure:"time_series"`
+	SearchEngine SearchEngine `yaml:"search_engine" mapstructure:"search_engine"`
 }
 
 type Pair struct {
@@ -107,6 +108,11 @@ type LogConfig struct {
 	Dev    bool     `yaml:"dev"`
 	Level  string   `yaml:"level"`
 	Output []string `yaml:"output"`
+}
+
+type Discovery struct {
+	Endpoints   []string `yaml:"endpoints"`
+	DialTimeout int64    `yaml:"dial_timeout"`
 }
 
 func defaultConfig() Configuration {

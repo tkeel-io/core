@@ -12,6 +12,12 @@
       "name": "Topic"
     },
     {
+      "name": "Proxy"
+    },
+    {
+      "name": "Probe"
+    },
+    {
       "name": "Subscription"
     },
     {
@@ -900,6 +906,29 @@
         ]
       }
     },
+    "/health": {
+      "get": {
+        "summary": "health for probe",
+        "operationId": "Health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1HealthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Probe"
+        ]
+      }
+    },
     "/index": {
       "post": {
         "summary": "Index a object",
@@ -930,6 +959,40 @@
         ],
         "tags": [
           "Search"
+        ]
+      }
+    },
+    "/route": {
+      "post": {
+        "summary": "route apis Request",
+        "operationId": "Route",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1RouteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "byte"
+            }
+          }
+        ],
+        "tags": [
+          "Proxy"
         ]
       }
     },
@@ -1382,6 +1445,9 @@
         }
       }
     },
+    "v1HealthResponse": {
+      "type": "object"
+    },
     "v1IndexResponse": {
       "type": "object",
       "properties": {
@@ -1500,6 +1566,9 @@
           "type": "boolean"
         }
       }
+    },
+    "v1RouteResponse": {
+      "type": "object"
     },
     "v1SearchCondition": {
       "type": "object",

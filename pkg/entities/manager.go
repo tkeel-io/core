@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/entities/proxy"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -39,6 +40,7 @@ type entityManager struct {
 	entityRepo   repository.IRepository
 	searchClient pb.SearchHTTPServer
 	stateManager statem.StateManager
+	coreProxy    *proxy.Proxy
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -65,8 +67,9 @@ func (m *entityManager) Start() error {
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
 }
 
-func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
-	m.stateManager.HandleMessage(ctx, msgCtx)
+func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+	err := m.stateManager.HandleMessage(ctx, msgCtx)
+	return errors.Wrap(err, "core consume message")
 }
 
 // ------------------------------------APIs-----------------------------.
@@ -129,7 +132,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base
 	msgCtx.Headers.SetRequestID(reqID)
 	msgCtx.Headers.SetMessageID(msgID)
 	msgCtx.Headers.SetSender(CoreAPISender)
-	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("create entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
@@ -169,7 +172,7 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 	msgCtx.Headers.SetRequestID(reqID)
 	msgCtx.Headers.SetMessageID(msgID)
 	msgCtx.Headers.SetSender(CoreAPISender)
-	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "delete entity")
 	}
@@ -225,7 +228,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 	msgCtx.Headers.SetRequestID(reqID)
 	msgCtx.Headers.SetMessageID(msgID)
 	msgCtx.Headers.SetSender(CoreAPISender)
-	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "route entity")
 	}
@@ -280,7 +283,7 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 			msgCtx.Headers.SetSender(CoreAPISender)
 			msgCtx.Headers.SetRequestID(reqID)
 			msgCtx.Headers.SetMessageID(msgID)
-			if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+			if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 				log.Error("route message", zfield.Eid(en.ID), zap.Error(err))
 				return nil, errors.Wrap(err, "route message")
 			}
@@ -383,7 +386,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 	msgCtx.Headers.SetRequestID(reqID)
 	msgCtx.Headers.SetMessageID(msgID)
 	msgCtx.Headers.SetSender(CoreAPISender)
-	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "route entity")
 	}
@@ -424,7 +427,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 	msgCtx.Headers.SetRequestID(reqID)
 	msgCtx.Headers.SetMessageID(msgID)
 	msgCtx.Headers.SetSender(CoreAPISender)
-	if err = m.stateManager.RouteMessage(ctx, msgCtx); nil != err {
+	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "route entity")
 	}

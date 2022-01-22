@@ -39,7 +39,7 @@ type EntityManager interface {
 	// Start start Entity manager.
 	Start() error
 	// OnMessage handle message.
-	OnMessage(ctx context.Context, msgCtx statem.MessageContext)
+	OnMessage(context.Context, statem.MessageContext) error
 	// CreateEntity create entity.
 	CreateEntity(ctx context.Context, base *Base) (*Base, error)
 	// DeleteEntity delete entity.

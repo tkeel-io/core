@@ -21,8 +21,9 @@ func NewEntityManagerMock() entities.EntityManager {
 func (m *EntityManagerMock) Start() error { return nil }
 
 // OnMessage handle message.
-func (m *EntityManagerMock) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
+func (m *EntityManagerMock) OnMessage(ctx context.Context, msgCtx statem.MessageContext) error {
 	log.Debug("handle message", zap.Any("headers", msgCtx.Headers), zap.Any("message", msgCtx.Message))
+	return nil
 }
 
 // CreateEntity create entity.
