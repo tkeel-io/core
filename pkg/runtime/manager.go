@@ -24,7 +24,6 @@ import (
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
@@ -34,12 +33,12 @@ import (
 )
 
 type Manager struct {
-	coroutinePool *ants.Pool
-	containers    map[string]*Container
-	msgCh         chan statem.MessageContext
-	disposeCh     chan statem.MessageContext
-	actorEnv      environment.IEnvironment
-	repository    repository.IRepository
+	coroutinePool   *ants.Pool
+	containers      map[string]*Container
+	msgCh           chan statem.MessageContext
+	disposeCh       chan statem.MessageContext
+	actorEnv        environment.IEnvironment
+	resourceManager statem.ResourceManager
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -47,7 +46,7 @@ type Manager struct {
 	cancel   context.CancelFunc
 }
 
-func NewManager(ctx context.Context, repo repository.IRepository) (statem.StateManager, error) {
+func NewManager(ctx context.Context, resourceManager statem.ResourceManager) (statem.StateManager, error) {
 	coroutinePool, err := ants.NewPool(5000)
 	if err != nil {
 		return nil, errors.Wrap(err, "new coroutine pool")
@@ -55,15 +54,15 @@ func NewManager(ctx context.Context, repo repository.IRepository) (statem.StateM
 
 	ctx, cancel := context.WithCancel(ctx)
 	stateManager := &Manager{
-		ctx:           ctx,
-		cancel:        cancel,
-		repository:    repo,
-		actorEnv:      environment.NewEnvironment(),
-		containers:    make(map[string]*Container),
-		msgCh:         make(chan statem.MessageContext, 10),
-		disposeCh:     make(chan statem.MessageContext, 10),
-		coroutinePool: coroutinePool,
-		lock:          sync.RWMutex{},
+		ctx:             ctx,
+		cancel:          cancel,
+		actorEnv:        environment.NewEnvironment(),
+		containers:      make(map[string]*Container),
+		msgCh:           make(chan statem.MessageContext, 10),
+		disposeCh:       make(chan statem.MessageContext, 10),
+		resourceManager: resourceManager,
+		coroutinePool:   coroutinePool,
+		lock:            sync.RWMutex{},
 	}
 
 	// set default container.
@@ -94,13 +93,13 @@ func (m *Manager) Start() error {
 					var err error
 					en := &dao.Entity{
 						ID:     eid,
+						Type:   msgCtx.Headers.GetType(),
 						Owner:  msgCtx.Headers.GetOwner(),
 						Source: msgCtx.Headers.GetSource(),
-						Type:   msgCtx.Headers.Get(statem.MsgCtxHeaderType),
 					}
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
-						log.Error("dispatching message", zap.Error(err),
+						log.Error("disposing message", zap.Error(err),
 							zfield.ID(eid), zap.String("channel", channelID), zfield.Message(msgCtx))
 						continue
 					}
@@ -150,7 +149,7 @@ func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContex
 
 // Resource return resource manager.
 func (m *Manager) Resource() statem.ResourceManager {
-	panic("implement me")
+	return m.resourceManager
 }
 
 func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) {
@@ -222,7 +221,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 		zap.String("type", base.Type), zap.String("owner", base.Owner), zap.String("source", base.Source))
 
 	var en *dao.Entity
-	if en, err = m.repository.GetEntity(ctx, base); nil != err {
+	if en, err = m.repo().GetEntity(ctx, base); nil == err {
 		base = en
 	} else {
 		log.Warn("load or create actor", zap.Error(err),

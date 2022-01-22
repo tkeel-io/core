@@ -16,9 +16,9 @@ var GlobalService *Service
 func Init() *Service {
 	defaultRegistered := map[driver.Type]driver.SearchEngine{
 		// Add other drivers to SearchService here.
-		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().SearchEngine.ES),
+		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().Components.SearchEngine.ES),
 	}
-	return NewService(defaultRegistered).Use(driver.Parse(config.Get().SearchEngine.Use))
+	return NewService(defaultRegistered).Use(driver.Parse(config.Get().Components.SearchEngine.Use))
 }
 
 var _ pb.SearchHTTPServer = &Service{}

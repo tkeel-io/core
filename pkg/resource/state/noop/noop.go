@@ -23,5 +23,7 @@ func (n *noopStore) Del(ctx context.Context, key string) error {
 }
 
 func init() {
-	state.Register("noop", func(properties map[string]interface{}) (state.Store, error) { return &noopStore{}, nil })
+	state.Register("noop", func(properties map[string]interface{}) (state.Store, error) {
+		return &noopStore{}, nil
+	})
 }

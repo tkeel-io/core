@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -38,9 +39,10 @@ func NewStore(metadata resource.Metadata) Store {
 	var storeClient Store
 	if generator, has := registeredStores[metadata.Name]; has {
 		if storeClient, err = generator(metadata.Properties); nil == err {
+			log.Debug("new Store instance", zfield.Type(metadata.Name))
 			return storeClient
 		}
-		log.Error("Generate store", zap.Error(err),
+		log.Error("new Store instance", zap.Error(err),
 			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
 	storeClient, _ = registeredStores["noop"](metadata.Properties)

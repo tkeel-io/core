@@ -54,9 +54,9 @@ var (
 	}
 	_defaultUseSearchEngine = "elasticsearch"
 	_defaultESConfig        = ESConfig{
-		Address:  []string{"http://localhost:9200"},
-		Username: "admin",
-		Password: "admin",
+		Endpoints: []string{"http://localhost:9200"},
+		Username:  "admin",
+		Password:  "admin",
 	}
 	_defaultEtcdConfig = EtcdConfig{
 		DialTimeout: 3,
@@ -65,8 +65,12 @@ var (
 )
 
 type Configuration struct {
-	Server       Server       `mapstructure:"server"`
-	Logger       LogConfig    `mapstructure:"logger"`
+	Server     Server     `mapstructure:"server"`
+	Logger     LogConfig  `mapstructure:"logger"`
+	Components Components `mapstructure:"components"`
+}
+
+type Components struct {
 	Etcd         EtcdConfig   `mapstructure:"etcd"`
 	Store        Metadata     `mapstructure:"store"`
 	TimeSeries   Metadata     `mapstructure:"time_series"`
@@ -94,9 +98,9 @@ type SearchEngine struct {
 }
 
 type ESConfig struct {
-	Address  []string `yaml:"address"`
-	Username string   `yaml:"username"`
-	Password string   `yaml:"password"`
+	Endpoints []string `yaml:"endpoints"`
+	Username  string   `yaml:"username"`
+	Password  string   `yaml:"password"`
 }
 
 type LogConfig struct {
@@ -133,12 +137,12 @@ func Init(cfgFile string) {
 	viper.SetDefault("server.app_id", DefaultAppID)
 	viper.SetDefault("server.coroutine_pool_size", _defaultAppServer.CoroutinePoolSize)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)
-	viper.SetDefault("etcd.endpoints", _defaultEtcdConfig.Endpoints)
-	viper.SetDefault("etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
-	viper.SetDefault("search_engine.use", _defaultUseSearchEngine)
-	viper.SetDefault("search_engine.elasticsearch.address", _defaultESConfig.Address)
-	viper.SetDefault("search_engine.elasticsearch.username", _defaultESConfig.Username)
-	viper.SetDefault("search_engine.elasticsearch.password", _defaultESConfig.Password)
+	viper.SetDefault("components.etcd.endpoints", _defaultEtcdConfig.Endpoints)
+	viper.SetDefault("components.etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
+	viper.SetDefault("components.search_engine.use", _defaultUseSearchEngine)
+	viper.SetDefault("components.search_engine.elasticsearch.endpoints", _defaultESConfig.Endpoints)
+	viper.SetDefault("components.search_engine.elasticsearch.username", _defaultESConfig.Username)
+	viper.SetDefault("components.search_engine.elasticsearch.password", _defaultESConfig.Password)
 
 	if err := viper.ReadInConfig(); nil != err {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) { //nolint
@@ -160,7 +164,7 @@ func SetEtcdBrokers(brokers []string) {
 	for i := 0; i < len(brokers); i++ {
 		brokers[i] = addHTTPScheme(brokers[i])
 	}
-	_config.Etcd.Endpoints = brokers
+	_config.Components.Etcd.Endpoints = brokers
 }
 
 func SetSearchEngineElasticsearchConfig(username, password string, urls []string) {
@@ -168,13 +172,13 @@ func SetSearchEngineElasticsearchConfig(username, password string, urls []string
 		urls[i] = addHTTPScheme(urls[i])
 	}
 
-	_config.SearchEngine.ES.Address = urls
-	_config.SearchEngine.ES.Username = username
-	_config.SearchEngine.ES.Password = password
+	_config.Components.SearchEngine.ES.Endpoints = urls
+	_config.Components.SearchEngine.ES.Username = username
+	_config.Components.SearchEngine.ES.Password = password
 }
 
 func SetSearchEngineUseDrive(drive string) {
-	_config.SearchEngine.Use = drive
+	_config.Components.SearchEngine.Use = drive
 }
 
 func onConfigChanged(in fsnotify.Event) {
@@ -184,14 +188,16 @@ func onConfigChanged(in fsnotify.Event) {
 }
 
 func formatEtcdConfigAddr() {
-	for i := 0; i < len(_config.Etcd.Endpoints); i++ {
-		_config.Etcd.Endpoints[i] = addHTTPScheme(_config.Etcd.Endpoints[i])
+	for i := 0; i < len(_config.Components.Etcd.Endpoints); i++ {
+		_config.Components.Etcd.Endpoints[i] =
+			addHTTPScheme(_config.Components.Etcd.Endpoints[i])
 	}
 }
 
 func formatESAddress() {
-	for i := 0; i < len(_config.SearchEngine.ES.Address); i++ {
-		_config.SearchEngine.ES.Address[i] = addHTTPScheme(_config.SearchEngine.ES.Address[i])
+	for i := 0; i < len(_config.Components.SearchEngine.ES.Endpoints); i++ {
+		_config.Components.SearchEngine.ES.Endpoints[i] =
+			addHTTPScheme(_config.Components.SearchEngine.ES.Endpoints[i])
 	}
 }
 

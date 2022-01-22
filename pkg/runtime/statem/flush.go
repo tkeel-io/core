@@ -26,10 +26,9 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
-	"github.com/tkeel-io/core/pkg/resource/state"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -77,7 +76,7 @@ func (s *statem) flushState(ctx context.Context) error {
 		zfield.Template(s.TemplateID),
 		zap.String("state", s.Entity.JSON()))
 
-	err := s.Dao().Put(ctx, &s.Entity)
+	err := s.Repo().PutEntity(ctx, &s.Entity)
 	return errors.Wrap(err, "flush entity state")
 }
 
@@ -201,10 +200,6 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 	return ct, nil
 }
 
-func (s *statem) Store() state.Store {
-	return s.stateManager.Resource().StateClient()
-}
-
 func (s *statem) TSeries() tseries.TimeSerier {
 	return s.stateManager.Resource().TSeriesClient()
 }
@@ -217,8 +212,8 @@ func (s *statem) Search() *search.Service {
 	return s.stateManager.Resource().SearchClient()
 }
 
-func (s *statem) Dao() dao.IDao {
-	return s.stateManager.Resource().Dao()
+func (s *statem) Repo() repository.IRepository {
+	return s.stateManager.Resource().Repository()
 }
 
 func convertPoints(points []tseries.TSeriesData) *tseries.TSeriesRequest {

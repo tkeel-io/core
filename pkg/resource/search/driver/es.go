@@ -40,22 +40,22 @@ type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
+func NewElasticsearchEngine(cfg config.ESConfig) SearchEngine {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // nolint
 	client, err := elastic.NewClient(
-		elastic.SetURL(config.Address...),
+		elastic.SetURL(cfg.Endpoints...),
 		elastic.SetSniff(false),
-		elastic.SetBasicAuth(config.Username, config.Password),
+		elastic.SetBasicAuth(cfg.Username, cfg.Password),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// ping connection.
-	if len(config.Address) == 0 {
+	if len(cfg.Endpoints) == 0 {
 		log.Fatal("please check your configuration with elasticsearch")
 	}
-	info, _, err := client.Ping(config.Address[0]).Do(context.Background())
+	info, _, err := client.Ping(cfg.Endpoints[0]).Do(context.Background())
 	if nil != err {
 		log.Fatal(err)
 	}

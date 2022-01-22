@@ -5,10 +5,15 @@ import (
 	"time"
 
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
+
+func (m *Manager) repo() repository.IRepository {
+	return m.resourceManager.Repository()
+}
 
 // initialize runtime environments.
 func (m *Manager) initialize() {
@@ -17,7 +22,7 @@ func (m *Manager) initialize() {
 	defer cancel()
 
 	log.Info("initialize actor manager, mapper loadding...")
-	m.repository.RangeMapper(ctx, 0, func(mappers []dao.Mapper) {
+	m.repo().RangeMapper(ctx, 0, func(mappers []dao.Mapper) {
 		for _, info := range m.actorEnv.StoreMappers(mappers) {
 			log.Debug("load actor", zfield.ID(info.ID), zfield.Name(info.Name), zfield.TQL(info.TQL),
 				zfield.Eid(info.EntityID), zfield.Type(info.EntityType), zfield.Desc(info.Description))
@@ -33,7 +38,7 @@ func (m *Manager) initialize() {
 
 // watchResource watch resources.
 func (m *Manager) watchResource() {
-	m.repository.WatchMapper(context.Background(), 0,
+	m.repo().WatchMapper(context.Background(), 0,
 		func(et dao.EnventType, mp dao.Mapper) {
 			effects, _ := m.actorEnv.OnMapperChanged(et, mp)
 			m.reloadActor(effects)

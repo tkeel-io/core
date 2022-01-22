@@ -3,7 +3,10 @@ package tseries
 import (
 	"context"
 
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 var registeredTS = make(map[string]TSGenerator)
@@ -27,17 +30,26 @@ type TSeriesResponse struct { //nolint
 }
 
 type TimeSerier interface {
-	Init(resource.Metadata) error
-	Write(ctx context.Context, req *TSeriesRequest) (*TSeriesResponse, error)
+	Write(context.Context, *TSeriesRequest) (*TSeriesResponse, error)
 }
 
-type TSGenerator func() TimeSerier
+type TSGenerator func(map[string]interface{}) (TimeSerier, error)
 
-func NewTimeSerier(name string) TimeSerier {
-	if generator, has := registeredTS[name]; has {
-		return generator()
+func NewTimeSerier(metadata resource.Metadata) TimeSerier {
+	var err error
+	var tsClient TimeSerier
+	if generator, has := registeredTS[metadata.Name]; has {
+		if tsClient, err = generator(metadata.Properties); nil != err {
+			log.Debug("new TSDB instance", zfield.Type(metadata.Name))
+			return tsClient
+		}
+		log.Error("new TSDB instance", zap.Error(err),
+			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
-	return registeredTS["noop"]()
+
+	log.Warn("new TSDB.noop instance")
+	tsClient, _ = registeredTS["noop"](metadata.Properties)
+	return tsClient
 }
 
 func Register(name string, handler TSGenerator) {

@@ -28,13 +28,17 @@ import (
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/state/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/state/noop"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
+	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/util"
@@ -133,7 +137,7 @@ func core(cmd *cobra.Command, args []string) {
 	// Start Search Service.
 	search.GlobalService = search.Init()
 	// logger started Info.
-	switch config.Get().SearchEngine.Use {
+	switch config.Get().Components.SearchEngine.Use {
 	case string(driver.ElasticsearchDriver):
 		logger.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
 	}
@@ -156,13 +160,14 @@ func core(cmd *cobra.Command, args []string) {
 	var err error
 	var coreDao *dao.Dao
 	var coreRepo repository.IRepository
-	coreDao, err = dao.New(context.Background(), config.Get().Store, config.Get().Etcd)
+	coreDao, err = dao.New(context.Background(),
+		config.Get().Components.Store, config.Get().Components.Etcd)
 	if nil != err {
 		log.Fatal(err)
 	}
 
 	coreRepo = repository.New(coreDao)
-	stateManager, err := runtime.NewManager(context.Background(), coreRepo)
+	stateManager, err := runtime.NewManager(context.Background(), newResourceManager(coreRepo))
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -222,4 +227,13 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	SearchSrv := service.NewSearchService(search.GlobalService)
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+}
+
+func newResourceManager(coreRepo repository.IRepository) statem.ResourceManager {
+	// default pubsub.
+	var pubsubClient pubsub.Pubsub
+	// default time series.
+	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries))
+
+	return runtime.NewResources(pubsubClient, search.GlobalService, tsdbClient, coreRepo)
 }

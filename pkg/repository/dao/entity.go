@@ -94,6 +94,10 @@ func (d *Dao) GetEntity(ctx context.Context, id string) (en *Entity, err error) 
 	var item *state.StateItem
 	item, err = d.stateClient.Get(ctx, d.entityCodec.Key(id))
 	if nil == err {
+		if len(item.Value) == 0 {
+			return nil, xerrors.ErrEntityNotFound
+		}
+
 		en = new(Entity)
 		err = d.entityCodec.Decode(item.Value, en)
 	}

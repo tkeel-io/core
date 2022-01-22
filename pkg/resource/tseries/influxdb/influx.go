@@ -2,12 +2,11 @@ package influxdb
 
 import (
 	"context"
-	"encoding/json"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb-client-go/api"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -21,63 +20,10 @@ type Influx struct {
 }
 
 type InfluxConfig struct {
-	URL    string `json:"url"`
-	Token  string `json:"token"`
-	Org    string `json:"org"`
-	Bucket string `json:"bucket"`
-}
-
-// NewInflux returns a new kafka binding instance.
-func newInflux() tseries.TimeSerier {
-	return &Influx{}
-}
-
-// Init does metadata parsing and connection establishment.
-func (i *Influx) Init(metadata resource.Metadata) error {
-	influxMeta, err := i.getInfluxMetadata(metadata)
-	if err != nil {
-		return err
-	}
-
-	i.cfg = influxMeta
-	if i.cfg.URL == "" {
-		return ErrInfluxRequiredURL
-	}
-
-	if i.cfg.Token == "" {
-		return ErrInfluxRequiredToken
-	}
-
-	if i.cfg.Org == "" {
-		return ErrInfluxRequiredOrg
-	}
-
-	if i.cfg.Bucket == "" {
-		return ErrInfluxRequiredBucket
-	}
-
-	log.Info("initialize timeseries.Influxdb", zap.String("url", i.cfg.URL))
-
-	client := influxdb2.NewClient(i.cfg.URL, i.cfg.Token)
-	i.client = client
-	i.writeAPI = i.client.WriteAPIBlocking(i.cfg.Org, i.cfg.Bucket)
-
-	return nil
-}
-
-// GetInfluxMetadata returns new Influx metadata.
-func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, error) {
-	b, err := json.Marshal(metadata.Properties)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse influx configurations")
-	}
-
-	var iMetadata InfluxConfig
-	if err = json.Unmarshal(b, &iMetadata); err != nil {
-		return nil, errors.Wrap(err, "parse influx configurations")
-	}
-
-	return &iMetadata, nil
+	URL    string `mapstructure:"url"`
+	Token  string `mapstructure:"token"`
+	Org    string `mapstructure:"org"`
+	Bucket string `mapstructure:"bucket"`
 }
 
 // Invoke called on supported operations.
@@ -97,5 +43,38 @@ func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseri
 }
 
 func init() {
-	tseries.Register("influxdb", newInflux)
+	tseries.Register("influxdb", func(properties map[string]interface{}) (tseries.TimeSerier, error) {
+		var err error
+		var influxMeta InfluxConfig
+		if err = mapstructure.Decode(properties, &influxMeta); err != nil {
+			return nil, errors.Wrap(err, "mapstructure decode")
+		}
+
+		if influxMeta.URL == "" {
+			return nil, ErrInfluxRequiredURL
+		}
+
+		if influxMeta.Token == "" {
+			return nil, ErrInfluxRequiredToken
+		}
+
+		if influxMeta.Org == "" {
+			return nil, ErrInfluxRequiredOrg
+		}
+
+		if influxMeta.Bucket == "" {
+			return nil, ErrInfluxRequiredBucket
+		}
+
+		log.Info("initialize timeseries.Influxdb", zap.String("url", influxMeta.URL))
+
+		client := influxdb2.NewClient(influxMeta.URL, influxMeta.Token)
+		writeAPI := client.WriteAPIBlocking(influxMeta.Org, influxMeta.Bucket)
+
+		return &Influx{
+			cfg:      &influxMeta,
+			client:   client,
+			writeAPI: writeAPI,
+		}, nil
+	})
 }
