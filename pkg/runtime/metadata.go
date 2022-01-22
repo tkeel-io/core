@@ -28,7 +28,7 @@ func (m *Manager) initialize() {
 		}
 	})
 
-	log.Debug("initialize runtime.Environment", zfield.Elapsed(elapsedTime.Elapsed()))
+	log.Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.Elapsed()))
 }
 
 // watchResource watch resources.

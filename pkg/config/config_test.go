@@ -15,7 +15,7 @@ func TestInitConfig(t *testing.T) {
 	Init("")
 	assert.Equal(t, DefaultAppID, _config.Server.AppID)
 	assert.Equal(t, _defaultUseSearchEngine, _config.SearchEngine.Use)
-	assert.Equal(t, _defaultEtcdConfig.Address, _config.Etcd.Address)
+	assert.Equal(t, _defaultEtcdConfig.Endpoints, _config.Etcd.Endpoints)
 	assert.Equal(t, _defaultESConfig.Username, _config.SearchEngine.ES.Username)
 	assert.Equal(t, _defaultESConfig.Password, _config.SearchEngine.ES.Password)
 	assert.Equal(t, _defaultESConfig.Address, _config.SearchEngine.ES.Address)

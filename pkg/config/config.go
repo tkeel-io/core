@@ -58,20 +58,24 @@ var (
 		Username: "admin",
 		Password: "admin",
 	}
-	_defaultEtcdConfig = EtcdConfig{[]string{"http://localhost:2379"}}
+	_defaultEtcdConfig = EtcdConfig{
+		DialTimeout: 3,
+		Endpoints:   []string{"http://localhost:2379"},
+	}
 )
 
 type Configuration struct {
 	Server       Server       `mapstructure:"server"`
 	Logger       LogConfig    `mapstructure:"logger"`
 	Etcd         EtcdConfig   `mapstructure:"etcd"`
+	Store        Metadata     `mapstructure:"store"`
 	TimeSeries   Metadata     `mapstructure:"time_series"`
 	SearchEngine SearchEngine `mapstructure:"search_engine"`
 }
 
 type Pair struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
+	Key   string      `yaml:"key"`
+	Value interface{} `yaml:"value"`
 }
 
 type Metadata struct {
@@ -80,7 +84,8 @@ type Metadata struct {
 }
 
 type EtcdConfig struct {
-	Address []string `yaml:"address"`
+	Endpoints   []string `yaml:"endpoints"`
+	DialTimeout int64    `yaml:"dial_timeout"`
 }
 
 type SearchEngine struct {
@@ -128,7 +133,8 @@ func Init(cfgFile string) {
 	viper.SetDefault("server.app_id", DefaultAppID)
 	viper.SetDefault("server.coroutine_pool_size", _defaultAppServer.CoroutinePoolSize)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)
-	viper.SetDefault("etcd.address", _defaultEtcdConfig.Address)
+	viper.SetDefault("etcd.endpoints", _defaultEtcdConfig.Endpoints)
+	viper.SetDefault("etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
 	viper.SetDefault("search_engine.use", _defaultUseSearchEngine)
 	viper.SetDefault("search_engine.elasticsearch.address", _defaultESConfig.Address)
 	viper.SetDefault("search_engine.elasticsearch.username", _defaultESConfig.Username)
@@ -154,7 +160,7 @@ func SetEtcdBrokers(brokers []string) {
 	for i := 0; i < len(brokers); i++ {
 		brokers[i] = addHTTPScheme(brokers[i])
 	}
-	_config.Etcd.Address = brokers
+	_config.Etcd.Endpoints = brokers
 }
 
 func SetSearchEngineElasticsearchConfig(username, password string, urls []string) {
@@ -178,8 +184,8 @@ func onConfigChanged(in fsnotify.Event) {
 }
 
 func formatEtcdConfigAddr() {
-	for i := 0; i < len(_config.Etcd.Address); i++ {
-		_config.Etcd.Address[i] = addHTTPScheme(_config.Etcd.Address[i])
+	for i := 0; i < len(_config.Etcd.Endpoints); i++ {
+		_config.Etcd.Endpoints[i] = addHTTPScheme(_config.Etcd.Endpoints[i])
 	}
 }
 

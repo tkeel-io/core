@@ -7,37 +7,41 @@ type ElapsedTime struct {
 }
 
 // NewElapsed returns ElapsedTime.
-func NewElapsed() ElapsedTime {
-	return ElapsedTime{start: time.Now()}
+func NewElapsed() *ElapsedTime {
+	return &ElapsedTime{start: time.Now()}
 }
 
 // NewElapsedFrom construct ElapsedTime from t.
-func NewElapsedFrom(t time.Time) ElapsedTime {
-	return ElapsedTime{start: t}
+func NewElapsedFrom(t time.Time) *ElapsedTime {
+	return &ElapsedTime{start: t}
+}
+
+func (et *ElapsedTime) Reset() *ElapsedTime {
+	return &ElapsedTime{start: time.Now()}
 }
 
 // Elapsed returns elapsed duration.
-func (et ElapsedTime) Elapsed() time.Duration {
+func (et *ElapsedTime) Elapsed() time.Duration {
 	return time.Since(et.start)
 }
 
 // ElapsedSecond returns elapsed seconds.
-func (et ElapsedTime) ElapsedSecond() int64 {
+func (et *ElapsedTime) ElapsedSecond() int64 {
 	return int64(time.Since(et.start).Seconds())
 }
 
 // ElapsedMill returns elapsed milliseconds.
-func (et ElapsedTime) ElapsedMilli() int64 {
+func (et *ElapsedTime) ElapsedMilli() int64 {
 	return time.Since(et.start).Milliseconds()
 }
 
 // ElapsedMicro returns elapsed microseconds.
-func (et ElapsedTime) ElapsedMicro() int64 {
+func (et *ElapsedTime) ElapsedMicro() int64 {
 	return time.Since(et.start).Microseconds()
 }
 
 // ElapsedNano returns elapsed nanoseconds.
-func (et ElapsedTime) ElapsedNano() int64 {
+func (et *ElapsedTime) ElapsedNano() int64 {
 	return time.Since(et.start).Nanoseconds()
 }
 

@@ -4,10 +4,15 @@ import (
 	"context"
 
 	daprSDK "github.com/dapr/go-sdk/client"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/resource/state"
 )
+
+type daprMetadata struct {
+	StoreName string `mapstructure:"store_name"`
+}
 
 type daprStore struct {
 	storeName  string
@@ -42,8 +47,16 @@ func (d *daprStore) Del(ctx context.Context, key string) error {
 }
 
 func init() {
-	state.Register("dapr", func(storeName string) (state.Store, error) {
+	state.Register("dapr", func(properties map[string]interface{}) (state.Store, error) {
+		var daprMeta daprMetadata
+		if err := mapstructure.Decode(properties, &daprMeta); nil != err {
+			return nil, errors.Wrap(err, "decode store.dapr configuration")
+		}
+
 		daprClient, err := daprSDK.NewClient()
-		return &daprStore{daprClient: daprClient}, errors.Wrap(err, "new dapr store")
+		return &daprStore{
+			storeName:  daprMeta.StoreName,
+			daprClient: daprClient,
+		}, errors.Wrap(err, "new dapr store")
 	})
 }

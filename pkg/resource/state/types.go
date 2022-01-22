@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 
+	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -26,21 +27,22 @@ type Store interface {
 
 var registeredStores = make(map[string]StoreGenerator)
 
-type StoreGenerator func(storeName string) (Store, error)
+type StoreGenerator func(map[string]interface{}) (Store, error)
 
 func Register(name string, handler StoreGenerator) {
 	registeredStores[name] = handler
 }
 
-func NewStore(storeType, storeName string) Store {
+func NewStore(metadata resource.Metadata) Store {
 	var err error
-	if generator, has := registeredStores[storeType]; has {
-		var s Store
-		if s, err = generator(storeName); nil == err {
-			return s
+	var storeClient Store
+	if generator, has := registeredStores[metadata.Name]; has {
+		if storeClient, err = generator(metadata.Properties); nil == err {
+			return storeClient
 		}
-		log.Error("Generate store", zap.String("type", storeType), zap.String("name", storeName), zap.Error(err))
+		log.Error("Generate store", zap.Error(err),
+			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
-	s, _ := registeredStores["noop"](storeName)
-	return s
+	storeClient, _ = registeredStores["noop"](metadata.Properties)
+	return storeClient
 }

@@ -27,8 +27,11 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
+	_ "github.com/tkeel-io/core/pkg/resource/state/dapr"
+	_ "github.com/tkeel-io/core/pkg/resource/state/noop"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -150,14 +153,21 @@ func core(cmd *cobra.Command, args []string) {
 		serverList...,
 	)
 
-	// create coroutine pool.
-	var repo repository.IRepository
-	stateManager, err := runtime.NewManager(context.Background(), repo)
+	var err error
+	var coreDao *dao.Dao
+	var coreRepo repository.IRepository
+	coreDao, err = dao.New(context.Background(), config.Get().Store, config.Get().Etcd)
 	if nil != err {
 		log.Fatal(err)
 	}
 
-	_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
+	coreRepo = repository.New(coreDao)
+	stateManager, err := runtime.NewManager(context.Background(), coreRepo)
+	if nil != err {
+		log.Fatal(err)
+	}
+
+	_entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager, search.GlobalService)
 	if nil != err {
 		log.Fatal(err)
 	}

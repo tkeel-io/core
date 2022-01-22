@@ -105,7 +105,7 @@ func (ms MessageBase) Promised(v interface{}) {
 	ms.PromiseHandler(v)
 }
 
-func (ms MessageBase) Elapsed() util.ElapsedTime {
+func (ms MessageBase) Elapsed() *util.ElapsedTime {
 	return util.NewElapsedFrom(ms.startTime)
 }
 

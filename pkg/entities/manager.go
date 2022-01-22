@@ -45,11 +45,16 @@ type entityManager struct {
 	cancel context.CancelFunc
 }
 
-func NewEntityManager(ctx context.Context, stateManager statem.StateManager, searchClient pb.SearchHTTPServer) (EntityManager, error) {
+func NewEntityManager(
+	ctx context.Context,
+	repo repository.IRepository,
+	stateManager statem.StateManager,
+	searchClient pb.SearchHTTPServer) (EntityManager, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &entityManager{
 		ctx:          ctx,
 		cancel:       cancel,
+		entityRepo:   repo,
 		searchClient: searchClient,
 		stateManager: stateManager,
 		lock:         sync.RWMutex{},

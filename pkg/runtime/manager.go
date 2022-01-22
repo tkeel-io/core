@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 
 	ants "github.com/panjf2000/ants/v2"
@@ -129,14 +128,22 @@ func (m *Manager) Shutdown() error {
 
 func (m *Manager) RouteMessage(ctx context.Context, msgCtx statem.MessageContext) error {
 	// assume single node.
+	log.Debug("route message",
+		zfield.ReqID(msgCtx.Headers.GetRequestID()),
+		zfield.MsgID(msgCtx.Headers.GetMessageID()),
+		zfield.Sender(msgCtx.Headers.GetSender()),
+		zfield.Receiver(msgCtx.Headers.GetReceiver()))
+
 	return m.HandleMessage(ctx, msgCtx)
 }
 
 func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContext) error {
-	bytes, _ := json.Marshal(msgCtx)
-	log.Debug("actor send message", zap.String("msg", string(bytes)))
+	log.Debug("handle message",
+		zfield.ReqID(msgCtx.Headers.GetRequestID()),
+		zfield.MsgID(msgCtx.Headers.GetMessageID()),
+		zfield.Sender(msgCtx.Headers.GetSender()),
+		zfield.Receiver(msgCtx.Headers.GetReceiver()))
 
-	// 解耦actor之间的直接调用
 	m.msgCh <- msgCtx
 	return nil
 }

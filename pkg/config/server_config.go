@@ -30,7 +30,6 @@ type Server struct {
 type TSeriesServer struct {
 	Name       string     `mapstructure:"name"`
 	Enabled    bool       `mapstructure:"enabled"`
-	Sources    []Source   `mapstructure:"sources"`
 	BatchQueue BatchQueue `mapstructure:"batch_queue"`
 }
 
@@ -42,10 +41,4 @@ type BatchQueue struct {
 	MaxPendingMessages uint `mapstructure:"max_pending_messages"`
 	// BatchingMaxFlushDelay set the time period within which the messages sent will be batched (default: 10ms).
 	BatchingMaxFlushDelay time.Duration `mapstructure:"batching_max_flush_delay"`
-}
-
-type Source struct {
-	Name       string            `mapstructure:"name"`
-	Type       string            `mapstructure:"type"`
-	Properties map[string]string `mapstructure:"properties"`
 }

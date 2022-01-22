@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Test_ZAP(t *testing.T) {
+func Test_Zap(t *testing.T) {
 	url := "Hello"
 	logger, _ := zap.NewProduction()
 	logger.Info("failed to fetch URL",

@@ -8,6 +8,6 @@ type repo struct {
 	dao *dao.Dao
 }
 
-func New() IRepository {
-	return &repo{}
+func New(dao *dao.Dao) IRepository {
+	return &repo{dao: dao}
 }
