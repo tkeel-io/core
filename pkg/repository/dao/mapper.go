@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
@@ -84,10 +85,18 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 	opts = append(opts, clientv3.WithRev(rev),
 		clientv3.WithRange(clientv3.GetPrefixRangeEnd(prefix)))
 
+	var count int64
+	var countFailure int64
+	var elapsedTime = util.NewElapsed()
 	for {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
-			log.Error("")
+			log.Error("range mapper failure", zap.Error(err), zfield.Prefix(prefix),
+				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
+			return
+		} else if len(resp.Kvs) == 0 {
+			log.Info("range mapper completed", zfield.Prefix(prefix), zfield.Count(count),
+				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
 			return
 		}
 
@@ -95,6 +104,7 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 		for _, kv := range resp.Kvs {
 			var mapper Mapper
 			if err := json.Unmarshal(kv.Value, &mapper); nil != err {
+				countFailure++
 				log.Error("unmarshal mapper", zap.Error(err),
 					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
 				continue
@@ -112,6 +122,8 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 		if !resp.More {
 			return
 		}
+		// count all.
+		count += int64(len(resp.Kvs))
 		// move to next prefix.
 		prefix = string(append(resp.Kvs[len(resp.Kvs)-1].Key, 0))
 	}

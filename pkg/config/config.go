@@ -29,40 +29,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	_httpScheme            = "http"
-	_schemeSpliterator     = "://"
-	_defaultConfigFilename = "config.yml"
-	_corePrefix            = "CORE"
-
-	DefaultAppPort = 6789
-	DefaultAppID   = "core"
-)
-
-var (
-	_config = defaultConfig()
-)
-
-var (
-	_defaultAppServer = Server{
-		AppID:             DefaultAppID,
-		AppPort:           DefaultAppPort,
-		CoroutinePoolSize: 500,
-	}
-	_defaultLogConfig = LogConfig{
-		Level: "info",
-	}
-	_defaultUseSearchEngine = "elasticsearch"
-	_defaultESConfig        = ESConfig{
-		Endpoints: []string{"http://localhost:9200"},
-		Username:  "admin",
-		Password:  "admin",
-	}
-	_defaultEtcdConfig = EtcdConfig{
-		DialTimeout: 3,
-		Endpoints:   []string{"http://localhost:2379"},
-	}
-)
+var _config = defaultConfig()
 
 type Configuration struct {
 	Server     Server     `yaml:"server" mapstructure:"server"`
@@ -105,13 +72,15 @@ type ESConfig struct {
 }
 
 type LogConfig struct {
-	Dev    bool     `yaml:"dev"`
-	Level  string   `yaml:"level"`
-	Output []string `yaml:"output"`
+	Dev      bool     `yaml:"dev"`
+	Level    string   `yaml:"level"`
+	Output   []string `yaml:"output"`
+	Encoding string   `yaml:"encoding"`
 }
 
 type Discovery struct {
 	Endpoints   []string `yaml:"endpoints"`
+	HeartTime   int64    `yaml:"heart_time"`
 	DialTimeout int64    `yaml:"dial_timeout"`
 }
 
@@ -139,10 +108,15 @@ func Init(cfgFile string) {
 	viper.AutomaticEnv()
 
 	// default.
-	viper.SetDefault("server.app_port", DefaultAppPort)
-	viper.SetDefault("server.app_id", DefaultAppID)
-	viper.SetDefault("server.coroutine_pool_size", _defaultAppServer.CoroutinePoolSize)
+	viper.SetDefault("server.name", _defaultAppServer.Name)
+	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
+	viper.SetDefault("server.app_port", _defaultAppServer.AppPort)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)
+	viper.SetDefault("logger.output", _defaultLogConfig.Output)
+	viper.SetDefault("logger.encoding", _defaultLogConfig.Encoding)
+	viper.SetDefault("discovery.endpoints", _defaultDiscovery.Endpoints)
+	viper.SetDefault("discovery.heart_time", _defaultDiscovery.HeartTime)
+	viper.SetDefault("discovery.dial_timeout", _defaultDiscovery.DialTimeout)
 	viper.SetDefault("components.etcd.endpoints", _defaultEtcdConfig.Endpoints)
 	viper.SetDefault("components.etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
 	viper.SetDefault("components.search_engine.use", _defaultUseSearchEngine)

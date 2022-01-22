@@ -21,24 +21,23 @@ import (
 )
 
 type Server struct {
-	AppID             string           `mapstructure:"app_id"`
-	AppPort           int              `mapstructure:"app_port"`
-	CoroutinePoolSize int              `mapstructure:"coroutine_pool_size"`
-	TSeriesServers    []*TSeriesServer `mapstructure:"tseries_servers"` //nolint
+	Name    string `yaml:"name" mapstructure:"name"`
+	AppID   string `yaml:"app_id" mapstructure:"app_id"`
+	AppPort int    `yaml:"app_port" mapstructure:"app_port"`
 }
 
 type TSeriesServer struct {
-	Name       string     `mapstructure:"name"`
-	Enabled    bool       `mapstructure:"enabled"`
-	BatchQueue BatchQueue `mapstructure:"batch_queue"`
+	Name       string     `yaml:"name" mapstructure:"name"`
+	Enabled    bool       `yaml:"enabled" mapstructure:"enabled"`
+	BatchQueue BatchQueue `yaml:"batch_queue" mapstructure:"batch_queue"`
 }
 
 type BatchQueue struct {
-	Name string `mapstructure:"name"`
+	Name string `yaml:"name" mapstructure:"name"`
 	// BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: 1000).
-	MaxBatching int `mapstructure:"max_batching"`
+	MaxBatching int `yaml:"max_batching" mapstructure:"max_batching"`
 	// MaxPendingMessages set the max size of the queue.
-	MaxPendingMessages uint `mapstructure:"max_pending_messages"`
+	MaxPendingMessages uint `yaml:"max_pending_messages" mapstructure:"max_pending_messages"`
 	// BatchingMaxFlushDelay set the time period within which the messages sent will be batched (default: 10ms).
-	BatchingMaxFlushDelay time.Duration `mapstructure:"batching_max_flush_delay"`
+	BatchingMaxFlushDelay time.Duration `yaml:"batching_max_flush_delay" mapstructure:"batching_max_flush_delay"`
 }

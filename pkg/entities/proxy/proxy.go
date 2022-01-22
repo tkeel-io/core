@@ -6,19 +6,24 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/util/discovery"
 )
 
 type Proxy struct {
 	host         string
 	grpcConns    map[string]pb.ProxyClient
 	stateManager statem.StateManager
+	coreResolver *discovery.Resolver
+	ctx          context.Context
 }
 
-func NewProxy(stateManager statem.StateManager) *Proxy {
+func NewProxy(ctx context.Context, stateManager statem.StateManager, resolver *discovery.Resolver) *Proxy {
 	return &Proxy{
+		ctx:          ctx,
 		host:         "",
 		grpcConns:    make(map[string]pb.ProxyClient),
 		stateManager: stateManager,
+		coreResolver: resolver,
 	}
 }
 

@@ -120,3 +120,35 @@ func Sender(sender string) zap.Field {
 func Receiver(receiver string) zap.Field {
 	return zap.String("receiver", receiver)
 }
+
+func Lease(lease int64) zap.Field {
+	return zap.Int64("lease", lease)
+}
+
+func Cluster(cid uint64) zap.Field {
+	return zap.Uint64("cluster", cid)
+}
+
+func Member(mid uint64) zap.Field {
+	return zap.Uint64("member", mid)
+}
+
+func Revision(revision uint64) zap.Field {
+	return zap.Uint64("revision", revision)
+}
+
+func Term(term int64) zap.Field {
+	return zap.Int64("term", term)
+}
+
+func Prefix(prefix string) zap.Field {
+	return zap.String("prefix", prefix)
+}
+
+func Count(n int64) zap.Field {
+	return zap.Int64("count", n)
+}
+
+func Endpoints(endpoints []string) zap.Field {
+	return zap.Strings("endpoints", endpoints)
+}

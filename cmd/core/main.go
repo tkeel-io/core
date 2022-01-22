@@ -42,6 +42,7 @@ import (
 	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/core/pkg/version"
 
 	"github.com/spf13/cobra"
@@ -157,7 +158,27 @@ func core(cmd *cobra.Command, args []string) {
 		serverList...,
 	)
 
+	// register core service.
 	var err error
+	var discoveryEnd *discovery.Discovery
+	if discoveryEnd, err = discovery.New(discovery.Config{
+		Endpoints:   config.Get().Discovery.Endpoints,
+		HeartTime:   config.Get().Discovery.HeartTime,
+		DialTimeout: config.Get().Discovery.DialTimeout,
+	}); nil != err {
+		log.Fatal(err)
+	}
+
+	// register service.
+	if err = discoveryEnd.Register(context.Background(), discovery.Service{
+		Name:     config.Get().Server.Name,
+		AppID:    config.Get().Server.AppID,
+		Host:     "",
+		Metadata: map[string]string{},
+	}); nil != err {
+		log.Fatal(err)
+	}
+
 	var coreDao *dao.Dao
 	var coreRepo repository.IRepository
 	coreDao, err = dao.New(context.Background(),
@@ -172,7 +193,7 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	_entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager, search.GlobalService)
+	_entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager)
 	if nil != err {
 		log.Fatal(err)
 	}

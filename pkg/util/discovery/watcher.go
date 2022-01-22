@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package discovery
 
 import (
 	"time"
@@ -54,9 +54,9 @@ func NewWatcher(ctx context.Context, brokers []string) (Watcher, error) {
 	}, errors.Wrap(err, "create watcher failed")
 }
 
-func NewWatcherWithClient(ctx context.Context, cli *clientv3.Client) (Watcher, error) {
+func NewWatcherWithClient(ctx context.Context, cli *clientv3.Client) Watcher {
 	ctx, cancel := context.WithCancel(ctx)
-	return &watcher{client: cli, ctx: ctx, cancel: cancel}, nil
+	return &watcher{client: cli, ctx: ctx, cancel: cancel}
 }
 
 func (w *watcher) Watch(key string, prefix bool, handler func(*clientv3.Event)) {

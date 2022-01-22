@@ -22,7 +22,7 @@ require (
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tkeel-io/collectjs v0.0.0-20211130035606-e8d64c4a2a39
-	github.com/tkeel-io/kit v0.0.0-20211122161648-31b3986683f2
+	github.com/tkeel-io/kit v0.0.0-20220120160441-cb2a03de1073
 	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730
 	go.etcd.io/etcd/api/v3 v3.5.1
 	go.etcd.io/etcd/client/v3 v3.5.1
