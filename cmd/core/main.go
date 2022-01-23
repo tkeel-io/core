@@ -39,7 +39,6 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
-	"github.com/tkeel-io/core/pkg/server"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
@@ -107,7 +106,7 @@ func main() {
 	})
 
 	if err := cmd.Execute(); err != nil {
-		log.Fatal(err.Error())
+		log.Fatalf("execute core service failed, %s", err.Error())
 	}
 }
 
@@ -144,8 +143,8 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	// new servers.
-	httpSrv := server.NewHTTPServer(_httpAddr)
-	grpcSrv := server.NewGRPCServer(_grpcAddr)
+	httpSrv := http.NewServer(_httpAddr)
+	grpcSrv := grpc.NewServer(_grpcAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
 	coreApp := app.New(config.Get().Server.AppID,
@@ -169,11 +168,16 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// core run context.Context.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// register service.
-	if err = discoveryEnd.Register(context.Background(), discovery.Service{
+	if err = discoveryEnd.Register(ctx, discovery.Service{
 		Name:     config.Get().Server.Name,
 		AppID:    config.Get().Server.AppID,
-		Host:     "",
+		Port:     config.Get().Server.AppPort,
+		Host:     util.ResolveAddr(),
 		Metadata: map[string]string{},
 	}); nil != err {
 		log.Fatal(err)
@@ -181,31 +185,27 @@ func core(cmd *cobra.Command, args []string) {
 
 	var coreDao *dao.Dao
 	var coreRepo repository.IRepository
-	coreDao, err = dao.New(context.Background(),
-		config.Get().Components.Store, config.Get().Components.Etcd)
-	if nil != err {
+	if coreDao, err = dao.New(ctx, config.Get().Components.Store, config.Get().Components.Etcd); nil != err {
 		log.Fatal(err)
 	}
 
 	coreRepo = repository.New(coreDao)
-	stateManager, err := runtime.NewManager(context.Background(), newResourceManager(coreRepo))
-	if nil != err {
+	var stateManager statem.StateManager
+	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo)); nil != err {
 		log.Fatal(err)
 	}
 
-	_entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager)
-	if nil != err {
+	if _entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager); nil != err {
 		log.Fatal(err)
 	}
 
-	serviceRegisterToCoreV1(httpSrv, grpcSrv)
+	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
 
 	logger.SuccessStatusEvent(os.Stdout, "all service registered.")
 	logger.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
 	if err = _entityManager.Start(); nil != err {
 		log.Fatal(err)
-	}
-	if err = coreApp.Run(context.TODO()); err != nil {
+	} else if err = coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
 	}
 
@@ -219,9 +219,9 @@ func core(cmd *cobra.Command, args []string) {
 }
 
 // serviceRegisterToCoreV1 register your services here.
-func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
+func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(context.Background(), _entityManager, search.GlobalService)
+	EntitySrv, err := service.NewEntityService(ctx, _entityManager, search.GlobalService)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -229,7 +229,7 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	corev1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
 
 	// register subscription service.
-	SubscriptionSrv, err := service.NewSubscriptionService(context.Background(), _entityManager)
+	SubscriptionSrv, err := service.NewSubscriptionService(ctx, _entityManager)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -237,7 +237,7 @@ func serviceRegisterToCoreV1(httpSrv *http.Server, grpcSrv *grpc.Server) {
 	corev1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
 
 	// register topic service.
-	TopicSrv, err := service.NewTopicService(context.Background(), _entityManager)
+	TopicSrv, err := service.NewTopicService(ctx, _entityManager)
 	if nil != err {
 		log.Fatal(err)
 	}

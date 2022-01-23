@@ -9,4 +9,5 @@ var (
 	ErrInternal          = errors.New("Core.Internal")
 	ErrEntityNotFound    = errors.New("Core.Entity.NotFound")
 	ErrMapperNotFound    = errors.New("Core.Mapper.NotFound")
+	ErrNodeNotExist      = errors.New("Core.Cluster.Node.NotExist")
 )

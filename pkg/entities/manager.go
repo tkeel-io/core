@@ -22,7 +22,6 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities/proxy"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -33,7 +32,6 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
-	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -52,31 +50,23 @@ func NewEntityManager(
 	ctx context.Context,
 	repo repository.IRepository,
 	stateManager statem.StateManager) (EntityManager, error) {
-	var (
-		err      error
-		resolver discovery.Resolver
-		cfg      = discovery.Config{
-			Endpoints:   config.Get().Discovery.Endpoints,
-			HeartTime:   config.Get().Discovery.HeartTime,
-			DialTimeout: config.Get().Discovery.DialTimeout,
-		}
-	)
-
-	if resolver, err = discovery.New(cfg); nil != err {
-		log.Error("new Resolver instance", zap.Error(err), zfield.Endpoints(cfg.Endpoints))
-		return nil, errors.Wrap(err, "new Resolver instance")
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
-	coreProxy := proxy.NewProxy(ctx, stateManager, &resolver)
-	return &entityManager{
+	entityManager := &entityManager{
 		ctx:          ctx,
 		cancel:       cancel,
 		entityRepo:   repo,
-		coreProxy:    coreProxy,
 		stateManager: stateManager,
 		lock:         sync.RWMutex{},
-	}, nil
+	}
+
+	coreProxy, err := proxy.NewProxy(ctx, stateManager)
+	if nil != err {
+		log.Error("new Proxy instance", zap.Error(err))
+		return nil, errors.Wrap(err, "new EntityManager")
+	}
+
+	entityManager.coreProxy = coreProxy
+	return entityManager, nil
 }
 
 func (m *entityManager) Start() error {

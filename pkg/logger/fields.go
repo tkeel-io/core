@@ -152,3 +152,15 @@ func Count(n int64) zap.Field {
 func Endpoints(endpoints []string) zap.Field {
 	return zap.Strings("endpoints", endpoints)
 }
+
+func App(appID string) zap.Field {
+	return zap.String("app_id", appID)
+}
+
+func Host(host string) zap.Field {
+	return zap.String("host", host)
+}
+
+func Port(port int) zap.Field {
+	return zap.Int("port", port)
+}
