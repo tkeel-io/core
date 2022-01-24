@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
@@ -85,6 +86,8 @@ func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicE
 	lock.RLock()
 	for _, consumer := range consumers[groupName] {
 		consumer.handler(ctx, msgCtx)
+		log.Debug("handle event", zfield.ReqID(req.Id),
+			zfield.Type(req.Type), zfield.Topic(req.Topic), zfield.Source(req.Source))
 	}
 	lock.RUnlock()
 

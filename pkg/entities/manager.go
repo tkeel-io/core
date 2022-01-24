@@ -19,15 +19,19 @@ package entities
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities/proxy"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
@@ -41,6 +45,7 @@ type entityManager struct {
 	entityRepo   repository.IRepository
 	stateManager state.Manager
 	coreProxy    *proxy.Proxy
+	receivers    map[string]pubsub.Receiver
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -70,7 +75,70 @@ func NewEntityManager(
 	return entityManager, nil
 }
 
+func (m *entityManager) initialize() {
+	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
+	defer cancel()
+	revision := m.entityRepo.GetLastRevision(ctx)
+	coreNodeName := config.Get().Server.Name
+	m.entityRepo.RangeQueue(context.Background(), revision, func(queues []dao.Queue) {
+		// create receiver.
+		for _, queue := range queues {
+			if coreNodeName == queue.ID {
+				log.Info("append queue", zfield.ID(queue.ID))
+				// create receiver instance.
+				receiver := pubsub.NewPubsub(resource.Metadata{
+					Name:       queue.Type.String(),
+					Properties: queue.Metadata,
+				})
+
+				if _, has := m.receivers[queue.ID]; has {
+					m.receivers[queue.ID].Close()
+				}
+				m.receivers[queue.ID] = receiver
+			}
+		}
+	})
+}
+
+func (m *entityManager) watchQueue() {
+	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
+	defer cancel()
+	revision := m.entityRepo.GetLastRevision(ctx)
+
+	coreNodeName := config.Get().Server.Name
+	ctx, cancel1 := context.WithCancel(m.ctx)
+	defer cancel1()
+	m.entityRepo.WatchQueue(ctx, revision, func(et dao.EnventType, queue dao.Queue) {
+		switch et {
+		case dao.PUT:
+			// create receiver.
+			if coreNodeName == queue.ID {
+				log.Info("upsert queue", zfield.ID(queue.ID))
+				// create receiver instance.
+				receiver := pubsub.NewPubsub(resource.Metadata{
+					Name:       queue.Type.String(),
+					Properties: queue.Metadata,
+				})
+
+				if _, has := m.receivers[queue.ID]; has {
+					m.receivers[queue.ID].Close()
+				}
+				m.receivers[queue.ID] = receiver
+			}
+		case dao.DELETE:
+			log.Info("remove queue", zfield.ID(queue.ID))
+			if _, has := m.receivers[queue.ID]; has {
+				log.Error("catch Queue event", zfield.ID(queue.ID),
+					zfield.Type(queue.Type.String()), zfield.Name(queue.Name))
+			}
+		default:
+		}
+	})
+}
+
 func (m *entityManager) Start() error {
+	m.initialize()
+	m.watchQueue()
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
 }
 

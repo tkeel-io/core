@@ -16,6 +16,16 @@ type Pubsub interface {
 	Close() error
 }
 
+type Sender interface {
+	Send(ctx context.Context, event interface{}) error
+	Close() error
+}
+
+type Receiver interface {
+	Received(ctx context.Context, receiver MessageHandler) error
+	Close() error
+}
+
 var registeredPubsubs = make(map[string]Generator)
 
 type Generator func(map[string]interface{}) (Pubsub, error) //
