@@ -64,7 +64,7 @@ func (d *dispatcher) Run() error {
 		if err = pubsubInstance.Received(context.Background(),
 			func(ctx context.Context, msg interface{}) error {
 				msgCtx, _ := msg.(message.MessageContext)
-				entityID := msgCtx.Headers.GetReceiver()
+				entityID := msgCtx.GetReceiver()
 
 				selectQueue := placement.Global().Select(entityID)
 				selectConn := d.downstreamConnections[selectQueue.ID]

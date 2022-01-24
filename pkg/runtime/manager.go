@@ -86,17 +86,17 @@ func (m *Manager) Start() error {
 				m.disposeCh <- msgCtx
 
 			case msgCtx := <-m.disposeCh:
-				eid := msgCtx.Headers.GetReceiver()
-				channelID := msgCtx.Headers.Get(message.MsgCtxHeaderChannelID)
+				eid := msgCtx.GetReceiver()
+				channelID := msgCtx.Get(message.MsgCtxHeaderChannelID)
 				log.Debug("dispose message", zfield.ID(eid), zfield.Message(msgCtx))
 				channelID, stateMachine := m.getMachiner(channelID, eid)
 				if nil == stateMachine {
 					var err error
 					en := &dao.Entity{
 						ID:     eid,
-						Type:   msgCtx.Headers.GetType(),
-						Owner:  msgCtx.Headers.GetOwner(),
-						Source: msgCtx.Headers.GetSource(),
+						Type:   msgCtx.GetType(),
+						Owner:  msgCtx.GetOwner(),
+						Source: msgCtx.GetSource(),
 					}
 					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
@@ -129,20 +129,20 @@ func (m *Manager) Shutdown() error {
 func (m *Manager) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	// assume single node.
 	log.Debug("route message",
-		zfield.ReqID(msgCtx.Headers.GetRequestID()),
-		zfield.MsgID(msgCtx.Headers.GetMessageID()),
-		zfield.Sender(msgCtx.Headers.GetSender()),
-		zfield.Receiver(msgCtx.Headers.GetReceiver()))
+		zfield.ReqID(msgCtx.GetRequestID()),
+		zfield.MsgID(msgCtx.GetMessageID()),
+		zfield.Sender(msgCtx.GetSender()),
+		zfield.Receiver(msgCtx.GetReceiver()))
 
 	return m.HandleMessage(ctx, msgCtx)
 }
 
 func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	log.Debug("handle message",
-		zfield.ReqID(msgCtx.Headers.GetRequestID()),
-		zfield.MsgID(msgCtx.Headers.GetMessageID()),
-		zfield.Sender(msgCtx.Headers.GetSender()),
-		zfield.Receiver(msgCtx.Headers.GetReceiver()))
+		zfield.ReqID(msgCtx.GetRequestID()),
+		zfield.MsgID(msgCtx.GetMessageID()),
+		zfield.Sender(msgCtx.GetSender()),
+		zfield.Receiver(msgCtx.GetReceiver()))
 
 	m.msgCh <- msgCtx
 	return nil

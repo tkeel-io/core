@@ -23,6 +23,10 @@ import (
 type Method string
 
 const (
+	// enumerate message type.
+	MessageTypeState         = "MessageState"
+	MessageTypeProperty      = "MessageProperty"
+	MessageTypeFlushProperty = "MessageFlushProperty"
 	// enumerate method.
 	SMMethodSetConfigs   Method = "SetConfigs"
 	SMMethodPatchConfigs Method = "PatchConfigs"
@@ -65,3 +69,7 @@ type Flusher interface{ viod() }
 
 func (s StateMessage) viod()         {}
 func (f FlushPropertyMessage) viod() {}
+
+func (s StateMessage) String() string         { return "StateMessage" }
+func (s PropertyMessage) String() string      { return "PropertyMessage" }
+func (f FlushPropertyMessage) String() string { return "FlushPropertyMessage" }

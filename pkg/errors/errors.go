@@ -13,4 +13,5 @@ var (
 	ErrNodeNotExist             = errors.New("Core.Cluster.Node.NotExist")
 	ErrInvalidQueueType         = errors.New("Core.Queue.Type.Invalid")
 	ErrInvalidQueueConsumerType = errors.New("Core.Queue.Consumer.Type.Invalid")
+	ErrMessageTypeInvalid       = errors.New("Core.Message.Type.Invalid")
 )

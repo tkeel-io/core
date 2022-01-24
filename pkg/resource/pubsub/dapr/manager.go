@@ -74,10 +74,10 @@ func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicE
 		},
 	}
 
-	msgCtx.Headers.SetReceiver(interface2string(values["id"]))
-	msgCtx.Headers.SetOwner(interface2string(values["owner"]))
-	msgCtx.Headers.SetOwner(interface2string(values["type"]))
-	msgCtx.Headers.SetOwner(interface2string(values["source"]))
+	msgCtx.SetReceiver(interface2string(values["id"]))
+	msgCtx.SetOwner(interface2string(values["owner"]))
+	msgCtx.SetOwner(interface2string(values["type"]))
+	msgCtx.SetOwner(interface2string(values["source"]))
 
 	// dispatch message.
 	groupName := consumerGroup(req.Pubsubname, req.Topic)

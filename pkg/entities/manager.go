@@ -132,13 +132,13 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base
 		},
 	}
 
-	msgCtx.Headers.SetType(base.Type)
-	msgCtx.Headers.SetOwner(base.Owner)
-	msgCtx.Headers.SetReceiver(base.ID)
-	msgCtx.Headers.SetTemplate(templateID)
-	msgCtx.Headers.SetRequestID(reqID)
-	msgCtx.Headers.SetMessageID(msgID)
-	msgCtx.Headers.SetSender(CoreAPISender)
+	msgCtx.SetType(base.Type)
+	msgCtx.SetOwner(base.Owner)
+	msgCtx.SetReceiver(base.ID)
+	msgCtx.SetTemplate(templateID)
+	msgCtx.SetRequestID(reqID)
+	msgCtx.SetMessageID(msgID)
+	msgCtx.SetSender(CoreAPISender)
 	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("create entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "create entity")
@@ -173,12 +173,12 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 		},
 	}
 
-	msgCtx.Headers.SetType(base.Type)
-	msgCtx.Headers.SetOwner(base.Owner)
-	msgCtx.Headers.SetReceiver(base.ID)
-	msgCtx.Headers.SetRequestID(reqID)
-	msgCtx.Headers.SetMessageID(msgID)
-	msgCtx.Headers.SetSender(CoreAPISender)
+	msgCtx.SetType(base.Type)
+	msgCtx.SetOwner(base.Owner)
+	msgCtx.SetReceiver(base.ID)
+	msgCtx.SetRequestID(reqID)
+	msgCtx.SetMessageID(msgID)
+	msgCtx.SetSender(CoreAPISender)
 	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "delete entity")
@@ -229,12 +229,12 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 		},
 	}
 
-	msgCtx.Headers.SetType(base.Type)
-	msgCtx.Headers.SetOwner(base.Owner)
-	msgCtx.Headers.SetReceiver(base.ID)
-	msgCtx.Headers.SetRequestID(reqID)
-	msgCtx.Headers.SetMessageID(msgID)
-	msgCtx.Headers.SetSender(CoreAPISender)
+	msgCtx.SetType(base.Type)
+	msgCtx.SetOwner(base.Owner)
+	msgCtx.SetReceiver(base.ID)
+	msgCtx.SetRequestID(reqID)
+	msgCtx.SetMessageID(msgID)
+	msgCtx.SetSender(CoreAPISender)
 	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "route entity")
@@ -283,13 +283,13 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 			}
 
 			// set headers.
-			msgCtx.Headers.SetType(en.Type)
-			msgCtx.Headers.SetOwner(en.Owner)
-			msgCtx.Headers.SetReceiver(en.ID)
-			msgCtx.Headers.SetSource(en.Source)
-			msgCtx.Headers.SetSender(CoreAPISender)
-			msgCtx.Headers.SetRequestID(reqID)
-			msgCtx.Headers.SetMessageID(msgID)
+			msgCtx.SetType(en.Type)
+			msgCtx.SetOwner(en.Owner)
+			msgCtx.SetReceiver(en.ID)
+			msgCtx.SetSource(en.Source)
+			msgCtx.SetSender(CoreAPISender)
+			msgCtx.SetRequestID(reqID)
+			msgCtx.SetMessageID(msgID)
 			if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 				log.Error("route message", zfield.Eid(en.ID), zap.Error(err))
 				return nil, errors.Wrap(err, "route message")
@@ -387,12 +387,12 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 		},
 	}
 
-	msgCtx.Headers.SetType(base.Type)
-	msgCtx.Headers.SetOwner(base.Owner)
-	msgCtx.Headers.SetReceiver(base.ID)
-	msgCtx.Headers.SetRequestID(reqID)
-	msgCtx.Headers.SetMessageID(msgID)
-	msgCtx.Headers.SetSender(CoreAPISender)
+	msgCtx.SetType(base.Type)
+	msgCtx.SetOwner(base.Owner)
+	msgCtx.SetReceiver(base.ID)
+	msgCtx.SetRequestID(reqID)
+	msgCtx.SetMessageID(msgID)
+	msgCtx.SetSender(CoreAPISender)
 	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(base.ID))
 		return nil, errors.Wrap(err, "route entity")
@@ -428,12 +428,12 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 		},
 	}
 
-	msgCtx.Headers.SetType(en.Type)
-	msgCtx.Headers.SetOwner(en.Owner)
-	msgCtx.Headers.SetReceiver(en.ID)
-	msgCtx.Headers.SetRequestID(reqID)
-	msgCtx.Headers.SetMessageID(msgID)
-	msgCtx.Headers.SetSender(CoreAPISender)
+	msgCtx.SetType(en.Type)
+	msgCtx.SetOwner(en.Owner)
+	msgCtx.SetReceiver(en.ID)
+	msgCtx.SetRequestID(reqID)
+	msgCtx.SetMessageID(msgID)
+	msgCtx.SetSender(CoreAPISender)
 	if err = m.coreProxy.RouteMessage(ctx, msgCtx); nil != err {
 		log.Error("route entity", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "route entity")

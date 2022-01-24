@@ -7,7 +7,7 @@ import (
 )
 
 type Message interface {
-	Message()
+	String() string
 	Promised(interface{})
 }
 
@@ -25,7 +25,7 @@ func NewBase(promise PromiseFunc) MessageBase {
 	}
 }
 
-func (ms MessageBase) Message() {}
+func (ms MessageBase) String() string { return "MessageBase" }
 func (ms MessageBase) Promised(v interface{}) {
 	if nil == ms.PromiseHandler {
 		return

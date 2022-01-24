@@ -74,7 +74,7 @@ func NewProxy(ctx context.Context, stateManager state.Manager) (*Proxy, error) {
 func (p *Proxy) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	var err error
 
-	entityID := msgCtx.Headers.GetReceiver()
+	entityID := msgCtx.GetReceiver()
 	selectQueue := placement.Global().Select(entityID)
 	nodeName := selectQueue.NodeName
 
