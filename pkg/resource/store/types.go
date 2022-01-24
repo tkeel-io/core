@@ -1,4 +1,4 @@
-package state
+package store
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 // StateItem represents a single state item.
-type StateItem struct { //nolint
+type StateItem struct {
 	Key      string
 	Value    []byte
 	Etag     string
@@ -27,7 +27,7 @@ type Store interface {
 
 var registeredStores = make(map[string]StoreGenerator)
 
-type StoreGenerator func(map[string]interface{}) (Store, error)
+type StoreGenerator func(map[string]interface{}) (Store, error) //nolint
 
 func Register(name string, handler StoreGenerator) {
 	registeredStores[name] = handler

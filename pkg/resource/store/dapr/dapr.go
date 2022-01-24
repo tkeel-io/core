@@ -8,9 +8,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/resource/store"
 
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/resource/state"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
@@ -26,7 +26,7 @@ type daprStore struct {
 }
 
 // Get returns state.
-func (d *daprStore) Get(ctx context.Context, key string) (*state.StateItem, error) {
+func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, error) {
 	item, err := d.daprClient.GetState(ctx, d.storeName, key)
 	if nil != err {
 		if len(item.Value) == 0 {
@@ -34,7 +34,7 @@ func (d *daprStore) Get(ctx context.Context, key string) (*state.StateItem, erro
 		}
 		return nil, errors.Wrap(err, "dapr store get")
 	}
-	return &state.StateItem{
+	return &store.StateItem{
 		Key:      item.Key,
 		Etag:     item.Etag,
 		Value:    item.Value,
@@ -53,7 +53,7 @@ func (d *daprStore) Del(ctx context.Context, key string) error {
 
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.dapr> successful")
-	state.Register("dapr", func(properties map[string]interface{}) (state.Store, error) {
+	store.Register("dapr", func(properties map[string]interface{}) (store.Store, error) {
 		var daprMeta daprMetadata
 		if err := mapstructure.Decode(properties, &daprMeta); nil != err {
 			return nil, errors.Wrap(err, "decode store.dapr configuration")

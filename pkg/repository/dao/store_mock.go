@@ -5,7 +5,7 @@ package dao
 
 // 	"github.com/pkg/errors"
 // 	"github.com/tkeel-io/core/pkg/constraint"
-// 	"github.com/tkeel-io/core/pkg/resource/state"
+// 	"github.com/tkeel-io/core/pkg/resource/store"
 // )
 
 // type storeMock struct {

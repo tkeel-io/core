@@ -9,7 +9,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/state"
+	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ import (
 type Dao struct {
 	storeCfg     config.Metadata
 	etcdCfg      config.EtcdConfig
-	stateClient  state.Store
+	stateClient  store.Store
 	etcdEndpoint *clientv3.Client
 	entityCodec  entityCodec
 }
@@ -40,7 +40,7 @@ func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfi
 		storeCfg:     storeCfg,
 		etcdEndpoint: etcdEndpoint,
 		entityCodec:  entityCodec{},
-		stateClient:  state.NewStore(storeMeta),
+		stateClient:  store.NewStore(storeMeta),
 	}, nil
 }
 

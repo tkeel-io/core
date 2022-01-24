@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/resource/state"
+	"github.com/tkeel-io/core/pkg/resource/store"
 )
 
 type Entity struct {
@@ -91,7 +91,7 @@ func (d *Dao) PutEntity(ctx context.Context, en *Entity) error {
 }
 
 func (d *Dao) GetEntity(ctx context.Context, id string) (en *Entity, err error) {
-	var item *state.StateItem
+	var item *store.StateItem
 	item, err = d.stateClient.Get(ctx, d.entityCodec.Key(id))
 	if nil == err {
 		if len(item.Value) == 0 {
