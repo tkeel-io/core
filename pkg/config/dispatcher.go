@@ -11,6 +11,7 @@ type QueueConfig struct {
 	Name         string   `yaml:"name" mapstructure:"name"`
 	Type         string   `yaml:"type" mapstructure:"type"`
 	Version      int64    `yaml:"version" mapstructure:"version"`
+	NodeName     int64    `yaml:"node_name" mapstructure:"node_name"`
 	Consumers    []string `yaml:"consumers" mapstructure:"consumers"`
 	ConsumerType string   `yaml:"consumer_type" mapstructure:"consumer_type"`
 	Description  string   `yaml:"description" mapstructure:"description"`

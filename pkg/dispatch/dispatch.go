@@ -2,11 +2,11 @@ package dispatch
 
 import (
 	"context"
-	"sort"
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
@@ -25,7 +25,6 @@ type dispatcher struct {
 	upstreamConnections   map[string]pubsub.Pubsub
 	downstreamConnections map[string]pubsub.Pubsub
 	coreRepository        repository.IRepository
-	hashTable             sort.StringSlice
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -67,10 +66,9 @@ func (d *dispatcher) Run() error {
 				msgCtx, _ := message.(statem.MessageContext)
 				entityID := msgCtx.Headers.GetReceiver()
 
-				selector := util.Hash32(entityID)
-				selectIndex := selector % uint32(d.hashTable.Len())
+				selectQueue := placement.Global().Select(entityID)
 
-				log.Debug("dispatch pubsub message", zfield.Eid(entityID), zap.String("select_queue", d.hashTable[selectIndex]))
+				log.Debug("dispatch pubsub message", zfield.Eid(entityID), zap.String("select_queue", selectQueue.ID))
 				return nil
 			}); nil != err {
 			log.Error("start receive pubsub", zfield.ID(id),
@@ -96,7 +94,6 @@ func (d *dispatcher) Stop() error {
 	}
 
 	// reset.
-	d.hashTable = sort.StringSlice{}
 	d.upstreamQueues = make(map[string]*dao.Queue)
 	d.upstreamConnections = make(map[string]pubsub.Pubsub)
 	d.downstreamQueues = make(map[string]*dao.Queue)
@@ -116,12 +113,12 @@ func (d *dispatcher) constructQueue(queue *dao.Queue) {
 	switch queue.ConsumerType {
 	case dao.ConsumerTypeCore:
 		fmtString = "initialize downstream queue"
-		d.appendDownstream(queue.ID)
+		placement.Global().AppendQueue(*queue)
 		d.downstreamQueues[queue.ID] = queue
 		d.downstreamConnections[queue.ID] = pubsubInst
 	case dao.ConsumerTypeDispatch:
 		fmtString = "initialize upstream queue"
-		d.removeDownstream(queue.ID)
+		placement.Global().RemoveQueue(*queue)
 		d.upstreamQueues[queue.ID] = queue
 		d.upstreamConnections[queue.ID] = pubsubInst
 	default:
@@ -213,16 +210,4 @@ func (d *dispatcher) setup() error {
 	})
 
 	return nil
-}
-
-func (d *dispatcher) appendDownstream(queueID string) {
-	d.hashTable = append(d.hashTable, queueID)
-	sort.Sort(d.hashTable)
-}
-
-func (d *dispatcher) removeDownstream(queueID string) {
-	index := d.hashTable.Search(queueID)
-	if index < d.hashTable.Len() && queueID == d.hashTable[index] {
-		d.hashTable = append(d.hashTable[:index], d.hashTable[index+1:]...)
-	}
 }

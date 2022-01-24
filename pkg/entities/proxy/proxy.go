@@ -9,6 +9,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
@@ -71,16 +72,19 @@ func NewProxy(ctx context.Context, stateManager statem.StateManager) (*Proxy, er
 
 func (p *Proxy) RouteMessage(ctx context.Context, msgCtx statem.MessageContext) error {
 	var err error
-	name := ""
 
-	switch name {
+	entityID := msgCtx.Headers.GetReceiver()
+	selectQueue := placement.Global().Select(entityID)
+	nodeName := selectQueue.NodeName
+
+	switch nodeName {
 	case p.info.Name:
 		err = p.stateManager.HandleMessage(ctx, msgCtx)
 	default:
 		// select proxy client.
 		var proxyClient pb.ProxyClient
-		if proxyClient, err = p.selectConn(name); nil != err {
-			log.Error("select proxy client", zap.Error(err), zfield.Name(name))
+		if proxyClient, err = p.selectConn(nodeName); nil != err {
+			log.Error("select proxy client", zap.Error(err), zfield.Name(nodeName))
 			return errors.Wrap(err, "select proxy client")
 		}
 

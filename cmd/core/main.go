@@ -27,6 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
@@ -117,6 +118,9 @@ func main() {
 func core(cmd *cobra.Command, args []string) {
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
 	config.Init(_cfgFile)
+
+	// init gllbal placement.
+	placement.Initialize()
 
 	// user flags input recover config file content.
 	if _etcdBrokers != nil {

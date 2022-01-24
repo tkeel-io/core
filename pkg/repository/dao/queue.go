@@ -46,7 +46,8 @@ type Queue struct {
 	Name         string
 	Type         QueueType
 	Version      int64
-	Consumers    []string
+	NodeName     string   // NodeName for core.
+	Consumers    []string // Consumers for dispatcher.
 	ConsumerType ConsumerType
 	Description  string
 	Metadata     map[string]interface{}
