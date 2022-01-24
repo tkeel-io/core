@@ -17,9 +17,12 @@ import (
 const (
 	// store mapper prefix key.
 	MapperPrefix = "CORE.MAPPER"
-	// core.mapper.{type}.{entityID}.{name}.
+	// CORE.MAPPER.{type}.{entityID}.{name}.
 	fmtMapperString = "%s.%s.%s.%s"
 )
+
+type MapperHandler func([]Mapper)
+type WatchMapperHandler func(EnventType, Mapper)
 
 type Mapper struct {
 	ID          string
@@ -129,7 +132,7 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 	}
 }
 
-func (d *Dao) WatchRoute(ctx context.Context, rev int64, handler WatchHandler) {
+func (d *Dao) WatchMapper(ctx context.Context, rev int64, handler WatchMapperHandler) {
 	opts := make([]clientv3.OpOption, 0)
 	opts = append(opts, clientv3.WithPrefix(), clientv3.WithRev(rev+1))
 	resp := d.etcdEndpoint.Watch(ctx, MapperPrefix, opts...)

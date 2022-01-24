@@ -30,6 +30,8 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	_ "github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
+	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/state/dapr"

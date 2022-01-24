@@ -164,3 +164,15 @@ func Host(host string) zap.Field {
 func Port(port int) zap.Field {
 	return zap.Int("port", port)
 }
+
+func Version(version int64) zap.Field {
+	return zap.Int64("version", version)
+}
+
+func DispatcherID(id string) zap.Field {
+	return zap.String("dispatcher_id", id)
+}
+
+func DispatcherName(name string) zap.Field {
+	return zap.String("dispatcher_name", name)
+}

@@ -29,6 +29,6 @@ func (r *repo) RangeMapper(ctx context.Context, rev int64, handler dao.MapperHan
 	r.dao.RangeMapper(ctx, rev, handler)
 }
 
-func (r *repo) WatchMapper(ctx context.Context, rev int64, handler dao.WatchHandler) {
-	go r.dao.WatchRoute(ctx, rev, handler)
+func (r *repo) WatchMapper(ctx context.Context, rev int64, handler dao.WatchMapperHandler) {
+	go r.dao.WatchMapper(ctx, rev, handler)
 }

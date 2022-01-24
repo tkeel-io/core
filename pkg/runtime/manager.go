@@ -72,7 +72,7 @@ func NewManager(ctx context.Context, resourceManager statem.ResourceManager) (st
 
 func (m *Manager) Start() error {
 	m.initialize()
-	m.watchResource()
+	go m.watchResource()
 
 	go func() {
 		for {

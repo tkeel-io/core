@@ -19,9 +19,6 @@ func (et EnventType) String() string {
 	return mvccpb.Event_EventType(et).String()
 }
 
-type MapperHandler func([]Mapper)
-type WatchHandler func(EnventType, Mapper)
-
 type IDao interface {
 	Get(ctx context.Context, id string) (en *Entity, err error)
 	Put(ctx context.Context, en *Entity) error

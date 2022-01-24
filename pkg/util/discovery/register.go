@@ -51,9 +51,9 @@ func (d *Discovery) Register(ctx context.Context, node Service) error {
 			select {
 			case <-ctx.Done():
 				log.Info("delete lease", zfield.Lease(int64(leaseID)))
-			case leaseMsg := <-leaseMessageCh:
-				log.Debug("lease keepalive respose", zfield.Lease(int64(leaseID)), zfield.Cluster(leaseMsg.ClusterId),
-					zfield.Member(leaseMsg.MemberId), zfield.Revision(uint64(leaseMsg.Revision)), zfield.Term(int64(leaseMsg.RaftTerm)))
+			case <-leaseMessageCh:
+				// log.Debug("lease keepalive respose", zfield.Lease(int64(leaseID)), zfield.Cluster(leaseMsg.ClusterId),
+				// 	zfield.Member(leaseMsg.MemberId), zfield.Revision(uint64(leaseMsg.Revision)), zfield.Term(int64(leaseMsg.RaftTerm)))
 			}
 		}
 	}()

@@ -74,7 +74,7 @@ func (m *entityManager) Start() error {
 }
 
 func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) error {
-	err := m.stateManager.HandleMessage(ctx, msgCtx)
+	err := m.coreProxy.RouteMessage(ctx, msgCtx)
 	return errors.Wrap(err, "core consume message")
 }
 

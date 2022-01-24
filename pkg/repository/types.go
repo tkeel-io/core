@@ -16,5 +16,11 @@ type IRepository interface {
 	DelMapper(context.Context, *dao.Mapper) error
 	HasMapper(context.Context, *dao.Mapper) (bool, error)
 	RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler)
-	WatchMapper(ctx context.Context, rev int64, handler dao.WatchHandler)
+	WatchMapper(ctx context.Context, rev int64, handler dao.WatchMapperHandler)
+	PutQueue(context.Context, *dao.Queue) error
+	GetQueue(context.Context, *dao.Queue) (*dao.Queue, error)
+	DelQueue(context.Context, *dao.Queue) error
+	HasQueue(context.Context, *dao.Queue) (bool, error)
+	RangeQueue(ctx context.Context, rev int64, handler dao.QueueHandler)
+	WatchQueue(ctx context.Context, rev int64, handler dao.WatchQueueHandler)
 }
