@@ -38,7 +38,7 @@ const (
 
 	// enumerate consumer type.
 	ConsumerTypeCore     ConsumerType = "core"
-	ConsumerTypeDispatch ConsumerType = "dispatch"
+	ConsumerTypeDispatch ConsumerType = "dispatcher"
 )
 
 type Queue struct {

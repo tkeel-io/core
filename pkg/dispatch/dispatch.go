@@ -99,7 +99,7 @@ func (d *dispatcher) Stop() error {
 
 func (d *dispatcher) constructQueue(queue *dao.Queue) {
 	pubsubInst := pubsub.NewPubsub(resource.Metadata{
-		Name:       queue.ConsumerType.String(),
+		Name:       queue.Type.String(),
 		Properties: queue.Metadata,
 	})
 

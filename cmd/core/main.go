@@ -24,6 +24,7 @@ import (
 
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/dispatch"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -45,6 +46,7 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/core/pkg/version"
+	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 	"github.com/tkeel-io/kit/app"
@@ -201,6 +203,9 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// create message dispatcher.
+	loadDispatcher(context.Background(), coreRepo)
+
 	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
 
 	logger.SuccessStatusEvent(os.Stdout, "all service registered.")
@@ -264,4 +269,38 @@ func newResourceManager(coreRepo repository.IRepository) statem.ResourceManager 
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries))
 
 	return runtime.NewResources(pubsubClient, search.GlobalService, tsdbClient, coreRepo)
+}
+
+func loadDispatcher(ctx context.Context, repo repository.IRepository) {
+	log.Info("load local Queues.")
+	// load loacal Queues.
+	for _, queue := range config.Get().Dispatcher.Queues {
+		properties := make(map[string]interface{})
+		for _, pair := range queue.Metadata {
+			properties[pair.Key] = pair.Value
+		}
+
+		repo.PutQueue(ctx, &dao.Queue{
+			ID:           queue.ID,
+			Name:         queue.Name,
+			Type:         dao.QueueType(queue.Type),
+			Version:      queue.Version,
+			Consumers:    queue.Consumers,
+			ConsumerType: dao.ConsumerType(queue.ConsumerType),
+			Description:  queue.Description,
+			Metadata:     properties,
+		})
+		log.Info("load local Queue", logger.ID(queue.ID),
+			zap.String("consumer_type", queue.ConsumerType),
+			logger.Type(queue.Type), logger.Version(queue.Version),
+			logger.Name(queue.Name), logger.Desc(queue.Description),
+			zap.Any("metadata", queue.Metadata), zap.Strings("consumers", queue.Consumers))
+	}
+
+	dispatcher := dispatch.NewDispatcher(context.Background(),
+		config.Get().Dispatcher.ID, config.Get().Dispatcher.Name, repo)
+
+	if err := dispatcher.Run(); nil != err {
+		log.Fatal(err)
+	}
 }

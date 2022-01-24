@@ -32,10 +32,11 @@ import (
 var _config = defaultConfig()
 
 type Configuration struct {
-	Server     Server     `yaml:"server" mapstructure:"server"`
-	Logger     LogConfig  `yaml:"logger" mapstructure:"logger"`
-	Discovery  Discovery  `yaml:"discovery" mapstructure:"discovery"`
-	Components Components `yaml:"components" mapstructure:"components"`
+	Server     Server         `yaml:"server" mapstructure:"server"`
+	Logger     LogConfig      `yaml:"logger" mapstructure:"logger"`
+	Discovery  Discovery      `yaml:"discovery" mapstructure:"discovery"`
+	Components Components     `yaml:"components" mapstructure:"components"`
+	Dispatcher DispatchConfig `yaml:"dispatcher" mapstructure:"dispatcher"`
 }
 
 type Components struct {
