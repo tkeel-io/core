@@ -17,10 +17,12 @@ limitations under the License.
 package constraint
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
 )
 
 func TestNewNode(t *testing.T) {
@@ -39,4 +41,205 @@ func TestNewNode(t *testing.T) {
 	t.Log(NewNode(-22.1).To(String).String())
 
 	time.Sleep(time.Second)
+}
+
+func TestEncodeJSON(t *testing.T) {
+	kvalues := map[string]Node{
+		"id":         NewNode("iotd-device123"),
+		"name":       NewNode("device123"),
+		"type":       NewNode("DEVICE"),
+		"temp":       NewNode(25),
+		"cpu_used":   NewNode(0.25),
+		"interfaces": NewNode([]string{"eth0"}),
+		"conns": NewNode(map[string]interface{}{
+			"hello": "world",
+		}),
+	}
+
+	bytes, err := EncodeJSON(kvalues)
+	assert.Nil(t, err)
+	t.Log(string(bytes))
+}
+
+func BenchmarkMarshalJson(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		json.Marshal(map[string]interface{}{
+			"id":         "iotd-device123",
+			"name":       "device123",
+			"type":       "DEVICE",
+			"temp":       25,
+			"cpu_used":   0.25,
+			"interfaces": []string{"eth0"},
+			"conns": map[string]interface{}{
+				"hello":     "world",
+				"helloss":   "world",
+				"hellosss":  "world",
+				"hellossss": "world",
+				"hellosx":   "world",
+				"test": map[string]interface{}{
+					"conns": map[string]interface{}{
+						"hello": "world",
+					},
+					"id":         "iotd-device123",
+					"name":       "device123",
+					"type":       "DEVICE",
+					"temp":       25,
+					"cpu_used":   0.25,
+					"interfaces": []string{"eth888", "xxxx"},
+				},
+			},
+			"conns1": map[string]interface{}{
+				"hello":     "world",
+				"helloss":   "world",
+				"hellosss":  "world",
+				"hellossss": "world",
+				"hellosx":   "world",
+				"test": map[string]interface{}{
+					"conns": map[string]interface{}{
+						"hello": "world",
+					},
+					"id":         "iotd-device123",
+					"name":       "device123",
+					"type":       "DEVICE",
+					"temp":       25,
+					"cpu_used":   0.25,
+					"interfaces": []string{"eth888", "xxxx"},
+				},
+			},
+			"conns2": map[string]interface{}{
+				"hello":     "world",
+				"helloss":   "world",
+				"hellosss":  "world",
+				"hellossss": "world",
+				"hellosx":   "world",
+				"test": map[string]interface{}{
+					"conns": map[string]interface{}{
+						"hello": "world",
+					},
+					"id":         "iotd-device123",
+					"name":       "device123",
+					"type":       "DEVICE",
+					"temp":       25,
+					"cpu_used":   0.25,
+					"interfaces": []string{"eth888", "xxxx"},
+				},
+			},
+			"conns3": map[string]interface{}{
+				"hello":     "world",
+				"helloss":   "world",
+				"hellosss":  "world",
+				"hellossss": "world",
+				"hellosx":   "world",
+				"test": map[string]interface{}{
+					"conns": map[string]interface{}{
+						"hello": "world",
+					},
+					"id":         "iotd-device123",
+					"name":       "device123",
+					"type":       "DEVICE",
+					"temp":       25,
+					"cpu_used":   0.25,
+					"interfaces": []string{"eth888", "xxxx"},
+				},
+			},
+		})
+	}
+}
+
+func BenchmarkCollectJson(b *testing.B) {
+	kvalues := map[string]Node{
+		"id":         NewNode("iotd-device123"),
+		"name":       NewNode("device123"),
+		"type":       NewNode("DEVICE"),
+		"temp":       NewNode(25),
+		"cpu_used":   NewNode(0.25),
+		"interfaces": NewNode([]string{"eth0"}),
+		"conns": NewNode(map[string]interface{}{
+			"hello":     "world",
+			"helloss":   "world",
+			"hellosss":  "world",
+			"hellossss": "world",
+			"hellosx":   "world",
+			"test": map[string]interface{}{
+				"conns":      map[string]interface{}{"hello": "world"},
+				"id":         "iotd-device123",
+				"name":       "device123",
+				"type":       "DEVICE",
+				"temp":       25,
+				"cpu_used":   0.25,
+				"interfaces": []string{"eth888", "xxxx"},
+			},
+		}),
+		"conns1": NewNode(map[string]interface{}{
+			"hello":     "world",
+			"helloss":   "world",
+			"hellosss":  "world",
+			"hellossss": "world",
+			"hellosx":   "world",
+			"test": map[string]interface{}{
+				"conns":      map[string]interface{}{"hello": "world"},
+				"id":         "iotd-device123",
+				"name":       "device123",
+				"type":       "DEVICE",
+				"temp":       25,
+				"cpu_used":   0.25,
+				"interfaces": []string{"eth888", "xxxx"},
+			},
+		}),
+		"conns2": NewNode(map[string]interface{}{
+			"hello":     "world",
+			"helloss":   "world",
+			"hellosss":  "world",
+			"hellossss": "world",
+			"hellosx":   "world",
+			"test": map[string]interface{}{
+				"conns":      map[string]interface{}{"hello": "world"},
+				"id":         "iotd-device123",
+				"name":       "device123",
+				"type":       "DEVICE",
+				"temp":       25,
+				"cpu_used":   0.25,
+				"interfaces": []string{"eth888", "xxxx"},
+			},
+		}),
+		"conns3": NewNode(map[string]interface{}{
+			"hello":     "world",
+			"helloss":   "world",
+			"hellosss":  "world",
+			"hellossss": "world",
+			"hellosx":   "world",
+			"test": map[string]interface{}{
+				"conns":      map[string]interface{}{"hello": "world"},
+				"id":         "iotd-device123",
+				"name":       "device123",
+				"type":       "DEVICE",
+				"temp":       25,
+				"cpu_used":   0.25,
+				"interfaces": []string{"eth888", "xxxx"},
+			},
+		}),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		EncodeJSON(kvalues)
+	}
+
+	bytes, err := EncodeJSON(kvalues)
+	assert.Nil(b, err)
+	b.Log(string(bytes))
+	assert.Equal(b, true, gjson.Valid(string(bytes)))
+}
+
+func TestDecodeJson(t *testing.T) {
+	jsonText := `{
+		"a":"b",
+		"arr": [1,2,3],
+		"xxx": {"a":"c", "x":20}
+	}`
+
+	res, err := DecodeJSON([]byte(jsonText))
+	assert.Nil(t, err)
+	t.Log("decode result: ", res)
 }

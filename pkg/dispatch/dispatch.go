@@ -68,6 +68,9 @@ func (d *dispatcher) Run() error {
 
 				selectQueue := placement.Global().Select(entityID)
 				selectConn := d.downstreamConnections[selectQueue.ID]
+
+				// encode MessageContext.
+				message.Encode(&msgCtx)
 				if err = selectConn.Send(ctx, msgCtx); nil != err {
 					log.Error("dispatch message", zfield.Eid(entityID),
 						zap.String("select_queue", selectQueue.ID))

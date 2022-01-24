@@ -23,6 +23,12 @@ import (
 
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 var (
@@ -158,7 +164,7 @@ func (r FloatNode) To(typ Type) Node {
 type StringNode string
 
 func (r StringNode) Type() Type         { return String }
-func (r StringNode) String() string     { return string(r) }
+func (r StringNode) String() string     { return "\"" + string(r) + "\"" }
 func (r StringNode) Value() interface{} { return string(r) }
 func (r StringNode) Copy() Node         { return r }
 func (r StringNode) To(typ Type) Node {
@@ -274,7 +280,8 @@ func NewNode(v interface{}) Node {
 		return FloatNode(val)
 	case float64:
 		return FloatNode(val)
-	case uint8, int8, uint16, int16, uint, int, uint32, int32, int64, uint64:
+	case uint8, int8, uint16, int16, uint,
+		int, uint32, int32, int64, uint64:
 		return StringNode(fmt.Sprintf("%v", val)).To(Integer)
 	case string:
 		return StringNode(val)
@@ -315,4 +322,40 @@ func ToBytesWithWrapString(val Node) []byte {
 	default:
 		return []byte(val.String())
 	}
+}
+
+func EncodeJSON(kvalues map[string]Node) ([]byte, error) {
+	collect := collectjs.New("{}")
+	for key, val := range kvalues {
+		collect.Append(key, []byte(val.String()))
+	}
+	return collect.GetRaw(), errors.Wrap(collect.GetError(), "Encode Json")
+}
+
+func DecodeJSON(values []byte) (map[string]Node, error) {
+	var result = make(map[string]Node)
+	collect := collectjs.ByteNew(values)
+	collect.Foreach(func(key, value []byte) {
+		keyString := string(key)
+		ct := collectjs.ByteNew(value)
+		switch ct.GetDataType() {
+		case jsonparser.String.String():
+			result[keyString] = StringNode("\"" + string(value) + "\"")
+		case jsonparser.Number.String():
+			result[keyString] = StringNode(value)
+		case jsonparser.Object.String():
+			result[keyString] = JSONNode(value)
+		case jsonparser.Array.String():
+			result[keyString] = ArrayNode(value)
+		case jsonparser.Boolean.String():
+			flag, _ := jsonparser.ParseBoolean(value)
+			result[keyString] = NewNode(flag)
+		case jsonparser.Null.String():
+			result[keyString] = NullNode{}
+		default:
+			log.Error("invalid json type",
+				zap.Error(jsonparser.UnknownValueTypeError))
+		}
+	})
+	return result, nil
 }
