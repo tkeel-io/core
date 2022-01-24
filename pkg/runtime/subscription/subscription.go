@@ -27,7 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -49,16 +49,16 @@ const (
 // subscription subscription actor based entity.
 type subscription struct {
 	pubsubClient pubsub.Pubsub
-	stateMachine statem.StateMachiner
-	stateManager statem.StateManager
+	stateMachine state.Machiner
+	stateManager state.Manager
 }
 
 // NewSubscription returns a subscription.
-func NewSubscription(ctx context.Context, mgr statem.StateManager, in *dao.Entity) (stateM statem.StateMachiner, err error) {
+func NewSubscription(ctx context.Context, mgr state.Manager, in *dao.Entity) (stateM state.Machiner, err error) {
 	subsc := subscription{stateManager: mgr}
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
 
-	if stateM, err = statem.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
+	if stateM, err = state.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
 		return nil, errFunc(err)
 	}
 
@@ -94,7 +94,7 @@ func (s *subscription) GetMode() string {
 	return s.Mode()
 }
 
-func (s *subscription) GetStatus() statem.Status {
+func (s *subscription) GetStatus() state.Status {
 	return s.stateMachine.GetStatus()
 }
 
@@ -102,7 +102,7 @@ func (s *subscription) GetEntity() *dao.Entity {
 	return s.stateMachine.GetEntity()
 }
 
-func (s *subscription) WithContext(sCtx statem.StateContext) statem.StateMachiner {
+func (s *subscription) WithContext(sCtx state.StateContext) state.Machiner {
 	return s.stateMachine.WithContext(sCtx)
 }
 

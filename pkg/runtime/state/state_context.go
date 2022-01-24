@@ -1,4 +1,4 @@
-package statem
+package state
 
 import (
 	"github.com/tkeel-io/core/pkg/logger"
@@ -8,13 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-type StateContext struct {
-	stateMachine StateMachiner
+type StateContext struct { //nolint
+	stateMachine Machiner
 	mappers      map[string]mapper.Mapper
 	tentacles    map[string][]mapper.Tentacler
 }
 
-func NewContext(sm StateMachiner, mappers map[string]mapper.Mapper, tentacles []mapper.Tentacler) StateContext {
+func NewContext(sm Machiner, mappers map[string]mapper.Mapper, tentacles []mapper.Tentacler) StateContext {
 	stateCtx := StateContext{
 		stateMachine: sm,
 		mappers:      mappers,

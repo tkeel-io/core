@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package statem
+package state
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
-type StateManager interface {
+type Manager interface {
 	// start manager.
 	Start() error
 	// shutdown manager.
@@ -49,7 +49,7 @@ type ResourceManager interface {
 	Repository() repository.IRepository
 }
 
-type StateMachiner interface {
+type Machiner interface {
 	// GetID return state machine id.
 	GetID() string
 	// GetStatus returns actor status.
@@ -61,7 +61,7 @@ type StateMachiner interface {
 	// InvokeMsg dispose entity message.
 	HandleLoop()
 	// WithContext set actor context.
-	WithContext(StateContext) StateMachiner
+	WithContext(StateContext) Machiner
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
 }

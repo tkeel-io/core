@@ -42,7 +42,7 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
@@ -197,7 +197,7 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	coreRepo := repository.New(coreDao)
-	var stateManager statem.StateManager
+	var stateManager state.Manager
 	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo)); nil != err {
 		log.Fatal(err)
 	}
@@ -263,7 +263,7 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterProxyServer(grpcSrv.GetServe(), ProxyService)
 }
 
-func newResourceManager(coreRepo repository.IRepository) statem.ResourceManager {
+func newResourceManager(coreRepo repository.IRepository) state.ResourceManager {
 	log.Info("create core default resources")
 	// default pubsub.
 	pubsubClient := pubsub.NewPubsub(resource.ParseFrom(config.Get().Components.Pubsub))

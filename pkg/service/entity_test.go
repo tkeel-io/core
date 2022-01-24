@@ -9,7 +9,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service/mock"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -41,7 +41,7 @@ func Test_entity2EntityResponse(t *testing.T) {
 		Source:     "dm",
 		Version:    0,
 		LastTime:   util.UnixMilli(),
-		Mappers:    []statem.Mapper{{Name: "mapper123", TQL: "insert into device123 select device234.temp as temp"}},
+		Mappers:    []state.Mapper{{Name: "mapper123", TQL: "insert into device123 select device234.temp as temp"}},
 		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
 		ConfigFile: nil,
 	}

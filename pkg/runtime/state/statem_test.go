@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package statem
+package state
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestNewStatem(t *testing.T) {
-	stateManager := NewStateManagerMock()
+	stateManager := NewManagerMock()
 
 	base := dao.Entity{
 		ID:         "device123",

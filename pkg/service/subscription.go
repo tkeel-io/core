@@ -25,7 +25,7 @@ import (
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -106,7 +106,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set mapper.
-	entity.Mappers = []statem.Mapper{{
+	entity.Mappers = []state.Mapper{{
 		Name: "subscription",
 		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
@@ -151,7 +151,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set mapper.
-	entity.Mappers = []statem.Mapper{{
+	entity.Mappers = []state.Mapper{{
 		Name: "subscription",
 		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}

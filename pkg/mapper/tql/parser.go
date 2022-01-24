@@ -241,8 +241,8 @@ func computing(input string) string {
 	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
-func (l *Listener) GetParseConfigs() (TQLConfig, error) {
-	tqlConfig := TQLConfig{
+func (l *Listener) GetParseConfigs() (Config, error) {
+	tqlConfig := Config{
 		SourceEntities: l.sourceEntity,
 	}
 

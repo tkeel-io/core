@@ -27,7 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -39,7 +39,7 @@ type Manager struct {
 	msgCh           chan message.MessageContext
 	disposeCh       chan message.MessageContext
 	actorEnv        environment.IEnvironment
-	resourceManager statem.ResourceManager
+	resourceManager state.ResourceManager
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -47,7 +47,7 @@ type Manager struct {
 	cancel   context.CancelFunc
 }
 
-func NewManager(ctx context.Context, resourceManager statem.ResourceManager) (statem.StateManager, error) {
+func NewManager(ctx context.Context, resourceManager state.ResourceManager) (state.Manager, error) {
 	coroutinePool, err := ants.NewPool(5000)
 	if err != nil {
 		return nil, errors.Wrap(err, "new coroutine pool")
@@ -89,7 +89,7 @@ func (m *Manager) Start() error {
 				eid := msgCtx.Headers.GetReceiver()
 				channelID := msgCtx.Headers.Get(message.MsgCtxHeaderChannelID)
 				log.Debug("dispose message", zfield.ID(eid), zfield.Message(msgCtx))
-				channelID, stateMachine := m.getStateMachine(channelID, eid)
+				channelID, stateMachine := m.getMachiner(channelID, eid)
 				if nil == stateMachine {
 					var err error
 					en := &dao.Entity{
@@ -149,18 +149,18 @@ func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.MessageConte
 }
 
 // Resource return resource manager.
-func (m *Manager) Resource() statem.ResourceManager {
+func (m *Manager) Resource() state.ResourceManager {
 	return m.resourceManager
 }
 
-func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) {
+func (m *Manager) getMachiner(cid, eid string) (string, state.Machiner) {
 	if cid == "" {
 		cid = "default"
 	}
 
 	if container, ok := m.containers[cid]; ok {
 		if sm := container.Get(eid); nil != sm {
-			if sm.GetStatus() == statem.SMStatusDeleted {
+			if sm.GetStatus() == state.SMStatusDeleted {
 				container.Remove(eid)
 				return cid, nil
 			}
@@ -170,7 +170,7 @@ func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
-			if sm.GetStatus() == statem.SMStatusDeleted {
+			if sm.GetStatus() == state.SMStatusDeleted {
 				container.Remove(eid)
 				return cid, nil
 			}
@@ -198,15 +198,15 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 	if m.isThisNode() {
 		var err error
 		for _, stateID := range stateIDs {
-			var stateMachine statem.StateMachiner
+			var stateMachine state.Machiner
 			base := &dao.Entity{ID: stateID, Type: SMTypeBasic}
-			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
+			if _, stateMachine = m.getMachiner("", stateID); nil != stateMachine {
 				log.Warn("load state machine", zfield.ID(stateID))
 			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
 				continue
 			}
 			actorEnv := m.actorEnv.GetActorEnv(stateID)
-			stateMachine.WithContext(statem.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
+			stateMachine.WithContext(state.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
 		}
 	}
 	return nil
@@ -217,7 +217,7 @@ func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
 	return errors.Wrap(err, "load entity")
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *dao.Entity) (sm statem.StateMachiner, err error) {
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *dao.Entity) (sm state.Machiner, err error) {
 	log.Debug("load or create actor", zfield.ID(base.ID),
 		zap.String("type", base.Type), zap.String("owner", base.Owner), zap.String("source", base.Source))
 
@@ -241,7 +241,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 		}
 	default:
 		// default base entity type.
-		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
+		if sm, err = state.NewState(ctx, m, base, nil); nil != err {
 			return nil, errors.Wrap(err, "load state machine")
 		}
 	}
@@ -255,7 +255,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 	}
 
 	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
-	sm.WithContext(statem.NewContext(sm, thisActorEnv.Mappers, thisActorEnv.Tentacles))
+	sm.WithContext(state.NewContext(sm, thisActorEnv.Mappers, thisActorEnv.Tentacles))
 
 	m.containers[channelID].Add(sm)
 	return sm, nil

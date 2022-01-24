@@ -41,7 +41,7 @@ type ESClient struct {
 }
 
 func NewElasticsearchEngine(cfg config.ESConfig) SearchEngine {
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // nolint
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(
 		elastic.SetURL(cfg.Endpoints...),
 		elastic.SetSniff(false),

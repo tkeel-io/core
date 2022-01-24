@@ -18,7 +18,7 @@ type MessageBase struct { //nolint
 	PromiseHandler PromiseFunc `json:"-"`
 }
 
-func NewMessageBase(promise PromiseFunc) MessageBase {
+func NewBase(promise PromiseFunc) MessageBase {
 	return MessageBase{
 		startTime:      time.Now(),
 		PromiseHandler: promise,

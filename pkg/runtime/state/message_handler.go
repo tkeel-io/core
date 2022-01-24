@@ -1,4 +1,4 @@
-package statem
+package state
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func (s *statem) invokePropertyMessage(msg message.PropertyMessage) []WatchKey {
 			log.Error("set state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 			continue
 		}
-		watchKeys = append(watchKeys, mapper.WatchKey{EntityId: setStateID, PropertyKey: key})
+		watchKeys = append(watchKeys, mapper.WatchKey{EntityID: setStateID, PropertyKey: key})
 	}
 
 	// set last active tims.
@@ -95,11 +95,11 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		} else {
 			// TODO...
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
-			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityID), zap.String("property-key", active.PropertyKey))
 			// match entityID.*   .
 			for watchKey, tentacles := range s.tentacles {
 				arr := strings.Split(watchKey, ".")
-				if len(arr) == 2 && arr[1] == "*" && arr[0] == active.EntityId {
+				if len(arr) == 2 && arr[1] == "*" && arr[0] == active.EntityID {
 					for _, tentacle := range tentacles {
 						targetID := tentacle.TargetID()
 						if mapper.TentacleTypeMapper == tentacle.Type() {
@@ -154,7 +154,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
 			for _, item := range tentacle.Items() {
 				var val constraint.Node
-				if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
+				if val, err = s.getProperty(s.cacheProps[item.EntityID], item.PropertyKey); nil != err {
 					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
 					continue
 				} else if nil != val {

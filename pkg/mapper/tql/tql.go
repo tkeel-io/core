@@ -23,12 +23,12 @@ import (
 
 type tql struct {
 	text     string
-	config   TQLConfig
+	config   Config
 	listener Listener
 }
 
 func NewTQL(tqlString string) (TQL, error) {
-	var cfg TQLConfig
+	var cfg Config
 	listener, err := Parse(tqlString)
 	if nil != err {
 		return nil, errors.Wrap(err, "parse TQL")

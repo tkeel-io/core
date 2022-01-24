@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"errors"
 	"io/fs"
 	"net/url"
 	"os"
@@ -25,7 +26,6 @@ import (
 	"github.com/tkeel-io/core/pkg/logger"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -64,7 +64,7 @@ type EtcdConfig struct {
 
 type SearchEngine struct {
 	Use string   `mapstructure:"use" yaml:"use"`
-	ES  ESConfig `mapstructure:"elasticsearch" yaml:"elasticsearch"` //nolint:tagliatelle
+	ES  ESConfig `mapstructure:"elasticsearch" yaml:"elasticsearch"` //nolint
 }
 
 type ESConfig struct {
@@ -127,7 +127,7 @@ func Init(cfgFile string) {
 	viper.SetDefault("components.search_engine.elasticsearch.password", _defaultESConfig.Password)
 
 	if err := viper.ReadInConfig(); nil != err {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) { //nolint
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.As(err, fs.ErrNotExist) { //nolint
 			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {

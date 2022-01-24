@@ -27,7 +27,7 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 
@@ -321,11 +321,11 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	entity.Source = req.Source
 
 	parseHeaderFrom(ctx, entity)
-	mapperDesc := statem.Mapper{}
+	mapperDesc := state.Mapper{}
 	if req.Mapper != nil {
 		mapperDesc.TQL = req.Mapper.Tql
 		mapperDesc.Name = req.Mapper.Name
-		entity.Mappers = []statem.Mapper{mapperDesc}
+		entity.Mappers = []state.Mapper{mapperDesc}
 	} else {
 		log.Error("append mapper failed.", logger.Eid(req.Id), zap.Error(err))
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
@@ -349,7 +349,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
-	entity.Mappers = []statem.Mapper{{Name: req.MapperName}}
+	entity.Mappers = []state.Mapper{{Name: req.MapperName}}
 	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
 		log.Error("remove mapper", logger.Eid(req.Id), zap.Error(err))
 		return
@@ -396,9 +396,9 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 		return out, err
 	}
 
-	pds := make([]*statem.PatchData, 0)
+	pds := make([]*state.PatchData, 0)
 	for key, cfg := range entity.Configs {
-		pds = append(pds, &statem.PatchData{
+		pds = append(pds, &state.PatchData{
 			Value:    cfg,
 			Path:     key,
 			Operator: constraint.PatchOpReplace,
@@ -425,9 +425,9 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
-	pds := make([]*statem.PatchData, 0)
+	pds := make([]*state.PatchData, 0)
 	for index := range propertyIDs {
-		pds = append(pds, &statem.PatchData{
+		pds = append(pds, &state.PatchData{
 			Path:     propertyIDs[index],
 			Operator: constraint.PatchOpRemove,
 		})
@@ -484,7 +484,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 			return nil, ErrEntityInvalidParams
 		}
 
-		var pds []*statem.PatchData
+		var pds []*state.PatchData
 		for _, pd := range patchData {
 			var cfg constraint.Config
 			switch value := pd.Value.AsInterface().(type) {
@@ -493,7 +493,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 					return out, errors.Wrap(err, "parse entity configs")
 				}
 			}
-			pds = append(pds, &statem.PatchData{Path: pd.Path, Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
+			pds = append(pds, &state.PatchData{Path: pd.Path, Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
 		}
 
 		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {

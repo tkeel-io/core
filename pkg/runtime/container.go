@@ -19,21 +19,21 @@ package runtime
 import (
 	"sync"
 
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
 type Container struct {
 	lock   sync.RWMutex
-	states map[string]statem.StateMachiner
+	states map[string]state.Machiner
 }
 
 func NewContainer() *Container {
 	return &Container{
-		states: make(map[string]statem.StateMachiner),
+		states: make(map[string]state.Machiner),
 	}
 }
 
-func (c *Container) Add(s statem.StateMachiner) {
+func (c *Container) Add(s state.Machiner) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.states[s.GetID()] = s
@@ -45,7 +45,7 @@ func (c *Container) Remove(id string) {
 	delete(c.states, id)
 }
 
-func (c *Container) Get(id string) statem.StateMachiner {
+func (c *Container) Get(id string) state.Machiner {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	return c.states[id]

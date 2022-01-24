@@ -7,10 +7,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
-// EntityBase statem basic informatinon.
+// EntityBase state basic informatinon.
 type Base struct {
 	ID         string                       `json:"id" msgpack:"id" mapstructure:"id"`
 	Type       string                       `json:"type" msgpack:"type" mapstructure:"type"`
@@ -18,7 +18,7 @@ type Base struct {
 	Source     string                       `json:"source" msgpack:"source" mapstructure:"source"`
 	Version    int64                        `json:"version" msgpack:"version" mapstructure:"version"`
 	LastTime   int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers    []statem.Mapper              `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	Mappers    []state.Mapper               `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
 	TemplateID string                       `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
 	Properties map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"`
 	Configs    map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`

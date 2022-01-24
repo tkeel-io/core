@@ -16,11 +16,11 @@ type Pubsub interface {
 	Close() error
 }
 
-var registeredPubsubs = make(map[string]PubsubGenerator)
+var registeredPubsubs = make(map[string]Generator)
 
-type PubsubGenerator func(map[string]interface{}) (Pubsub, error) // nolint
+type Generator func(map[string]interface{}) (Pubsub, error) //
 
-func Register(name string, handler PubsubGenerator) {
+func Register(name string, handler Generator) {
 	registeredPubsubs[name] = handler
 }
 

@@ -11,7 +11,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/kit/log"
@@ -26,12 +26,12 @@ type Proxy struct {
 	info         discovery.Service
 	grpcConns    map[string]pb.ProxyClient
 	serviceInfos map[string]discovery.Service
-	stateManager statem.StateManager
+	stateManager state.Manager
 	coreResolver discovery.Resolver
 	ctx          context.Context
 }
 
-func NewProxy(ctx context.Context, stateManager statem.StateManager) (*Proxy, error) {
+func NewProxy(ctx context.Context, stateManager state.Manager) (*Proxy, error) {
 	var (
 		err      error
 		resolver discovery.Resolver

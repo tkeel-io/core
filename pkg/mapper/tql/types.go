@@ -34,7 +34,7 @@ type TentacleConfig struct {
 	PropertyKeys []string
 }
 
-type TQLConfig struct { // nolint
+type Config struct {
 	TargetEntity   string
 	SourceEntities []string
 	Tentacles      []TentacleConfig

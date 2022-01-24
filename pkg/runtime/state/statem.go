@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package statem
+package state
 
 // statem: state machine.
 
@@ -69,7 +69,7 @@ type statem struct {
 	// state machine mailbox.
 	mailbox *mailbox
 	// state manager.
-	stateManager StateManager
+	stateManager Manager
 
 	status             Status
 	attached           int32
@@ -85,7 +85,7 @@ type statem struct {
 }
 
 // NewState create an statem object.
-func NewState(ctx context.Context, stateManager StateManager, in *dao.Entity, msgHandler MessageHandler) (StateMachiner, error) {
+func NewState(ctx context.Context, stateManager Manager, in *dao.Entity, msgHandler MessageHandler) (Machiner, error) {
 	if in.ID == "" {
 		in.ID = util.UUID()
 	}
@@ -139,7 +139,7 @@ func (s *statem) GetEntity() *dao.Entity {
 }
 
 // WithContext set state Context.
-func (s *statem) WithContext(ctx StateContext) StateMachiner {
+func (s *statem) WithContext(ctx StateContext) Machiner {
 	s.sCtx = ctx
 	return s
 }

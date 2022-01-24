@@ -82,7 +82,7 @@ func TestGetParseConfigs(t *testing.T) {
 	cfg, err := l.GetParseConfigs()
 	assert.Equal(t, nil, err)
 
-	expectCfg := TQLConfig{
+	expectCfg := Config{
 		TargetEntity:   "device123",
 		SourceEntities: []string{"device234"},
 		Tentacles:      []TentacleConfig{{SourceEntity: "device234", PropertyKeys: []string{"*"}}},

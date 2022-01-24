@@ -6,7 +6,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -73,7 +73,7 @@ func (m *EntityManagerMock) SetConfigs(ctx context.Context, en *entities.Base) (
 }
 
 // PatchConfigs patch entity configs.
-func (m *EntityManagerMock) PatchConfigs(ctx context.Context, en *entities.Base, patchData []*statem.PatchData) (base *entities.Base, err error) {
+func (m *EntityManagerMock) PatchConfigs(ctx context.Context, en *entities.Base, patchData []*state.PatchData) (base *entities.Base, err error) {
 	return en, nil
 }
 

@@ -23,7 +23,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
 const CoreAPISender = "core.api"
@@ -60,7 +60,7 @@ type EntityManager interface {
 	// SetConfigs set entity configs.
 	SetConfigs(ctx context.Context, en *Base) (base *Base, err error)
 	// PatchConfigs patch entity configs.
-	PatchConfigs(ctx context.Context, en *Base, patchData []*statem.PatchData) (base *Base, err error)
+	PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (base *Base, err error)
 	// QueryConfigs returns entity configs.
 	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
 }

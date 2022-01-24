@@ -14,7 +14,7 @@ const (
 
 type Header map[string]string
 
-type MessageContext struct { //nolint
+type MessageContext struct { // nolint
 	Headers Header
 	Message Message
 }

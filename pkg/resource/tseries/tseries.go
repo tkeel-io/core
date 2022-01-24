@@ -9,9 +9,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var registeredTS = make(map[string]TSGenerator)
+var registeredTS = make(map[string]Generator)
 
-type TSeriesData struct { //nolint
+type TSeriesData struct { // nolint
 	Measurement string
 	Tags        map[string]string
 	Fields      map[string]string
@@ -19,12 +19,12 @@ type TSeriesData struct { //nolint
 	Timestamp   int64
 }
 
-type TSeriesRequest struct { //nolint
+type TSeriesRequest struct { // nolint
 	Data     interface{}       `json:"data"`
 	Metadata map[string]string `json:"metadata"`
 }
 
-type TSeriesResponse struct { //nolint
+type TSeriesResponse struct { // nolint
 	Data     []byte            `json:"data"`
 	Metadata map[string]string `json:"metadata"`
 }
@@ -33,7 +33,7 @@ type TimeSerier interface {
 	Write(context.Context, *TSeriesRequest) (*TSeriesResponse, error)
 }
 
-type TSGenerator func(map[string]interface{}) (TimeSerier, error)
+type Generator func(map[string]interface{}) (TimeSerier, error)
 
 func NewTimeSerier(metadata resource.Metadata) TimeSerier {
 	var err error
@@ -52,6 +52,6 @@ func NewTimeSerier(metadata resource.Metadata) TimeSerier {
 	return tsClient
 }
 
-func Register(name string, handler TSGenerator) {
+func Register(name string, handler Generator) {
 	registeredTS[name] = handler
 }

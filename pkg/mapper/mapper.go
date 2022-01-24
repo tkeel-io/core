@@ -70,7 +70,7 @@ func (m *mapper) Tentacles() []Tentacler {
 		eItems := make([]WatchKey, len(tentacleConf.PropertyKeys))
 		for index, item := range tentacleConf.PropertyKeys {
 			watchKey := WatchKey{
-				EntityId:    tentacleConf.SourceEntity,
+				EntityID:    tentacleConf.SourceEntity,
 				PropertyKey: item,
 			}
 			eItems[index] = watchKey

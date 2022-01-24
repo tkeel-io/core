@@ -66,12 +66,12 @@ type Tentacler interface {
 }
 
 type WatchKey struct {
-	EntityId    string //nolint
+	EntityID    string
 	PropertyKey string
 }
 
 func (wk *WatchKey) String() string {
-	return wk.EntityId + WatchKeyDelimiter + wk.PropertyKey
+	return wk.EntityID + WatchKeyDelimiter + wk.PropertyKey
 }
 
 // uuid generate an uuid.

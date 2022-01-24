@@ -25,11 +25,11 @@ type Store interface {
 	Del(ctx context.Context, key string) error
 }
 
-var registeredStores = make(map[string]StoreGenerator)
+var registeredStores = make(map[string]Generator)
 
-type StoreGenerator func(map[string]interface{}) (Store, error) //nolint
+type Generator func(map[string]interface{}) (Store, error) //
 
-func Register(name string, handler StoreGenerator) {
+func Register(name string, handler Generator) {
 	registeredStores[name] = handler
 }
 

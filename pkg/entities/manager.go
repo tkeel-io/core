@@ -30,7 +30,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -39,7 +39,7 @@ import (
 
 type entityManager struct {
 	entityRepo   repository.IRepository
-	stateManager statem.StateManager
+	stateManager state.Manager
 	coreProxy    *proxy.Proxy
 
 	lock   sync.RWMutex
@@ -50,7 +50,7 @@ type entityManager struct {
 func NewEntityManager(
 	ctx context.Context,
 	repo repository.IRepository,
-	stateManager statem.StateManager) (EntityManager, error) {
+	stateManager state.Manager) (EntityManager, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	entityManager := &entityManager{
 		ctx:          ctx,
@@ -123,7 +123,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
-			MessageBase: message.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -164,7 +164,7 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 		Message: message.StateMessage{
 			StateID: base.ID,
 			Method:  message.SMMethodDeleteEntity,
-			MessageBase: message.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -220,7 +220,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
-			MessageBase: message.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -273,7 +273,7 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
-					MessageBase: message.NewMessageBase(func(v interface{}) {
+					MessageBase: message.NewBase(func(v interface{}) {
 						waitG.Done()
 						log.Debug("dispose message completed",
 							zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -378,7 +378,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 			StateID: base.ID,
 			Value:   en.Configs,
 			Method:  message.SMMethodSetConfigs,
-			MessageBase: message.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -403,7 +403,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 }
 
 // PatchConfigs patch properties into entity.
-func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []*statem.PatchData) (base *Base, err error) {
+func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (base *Base, err error) {
 	log.Info("entity.PatchConfigs",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -419,7 +419,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 			StateID: en.ID,
 			Value:   patchData,
 			Method:  message.SMMethodPatchConfigs,
-			MessageBase: message.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(en.ID), zfield.ReqID(reqID),
