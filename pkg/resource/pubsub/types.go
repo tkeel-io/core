@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 
-	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -30,7 +29,6 @@ func NewPubsub(metadata resource.Metadata) Pubsub {
 	var pubsubClient Pubsub
 	if generator, has := registeredPubsubs[metadata.Name]; has {
 		if pubsubClient, err = generator(metadata.Properties); nil == err {
-			log.Debug("new Pubsub instance", zfield.Type(metadata.Name))
 			return pubsubClient
 		}
 		log.Error("new Pubsub instance", zap.Error(err),

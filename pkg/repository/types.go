@@ -7,6 +7,7 @@ import (
 )
 
 type IRepository interface {
+	GetLastRevision(context.Context) int64
 	PutEntity(context.Context, *dao.Entity) error
 	GetEntity(context.Context, *dao.Entity) (*dao.Entity, error)
 	DelEntity(context.Context, *dao.Entity) error

@@ -2,13 +2,18 @@ package noop
 
 import (
 	"context"
+	"os"
 
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
-type noop struct{}
+type noop struct {
+	id string
+}
 
 func (n *noop) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
 	log.Debug("insert time series data, noop.", zap.Any("data", req.Data), zap.Any("metadata", req.Metadata))
@@ -16,7 +21,10 @@ func (n *noop) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries
 }
 
 func init() {
+	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<TSDB.noop> successful")
 	tseries.Register("noop", func(properties map[string]interface{}) (tseries.TimeSerier, error) {
-		return &noop{}, nil
+		id := util.UUID()
+		log.Info("create pubsub.noop instance", zfield.ID(id))
+		return &noop{id: id}, nil
 	})
 }

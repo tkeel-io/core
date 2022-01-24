@@ -19,12 +19,13 @@ package subscription
 import (
 	"context"
 
-	dapr "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -46,16 +47,16 @@ const (
 
 // subscription subscription actor based entity.
 type subscription struct {
-	// Base `mapstructure:",squash"`
-	daprClient   dapr.Client
-	stateMachine statem.StateMachiner `mapstructure:"-"`
+	pubsubClient pubsub.Pubsub
+	stateMachine statem.StateMachiner
+	stateManager statem.StateManager
 }
 
 // NewSubscription returns a subscription.
 func NewSubscription(ctx context.Context, mgr statem.StateManager, in *dao.Entity) (stateM statem.StateMachiner, err error) {
-	subsc := subscription{}
-
+	subsc := subscription{stateManager: mgr}
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
+
 	if stateM, err = statem.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
 		return nil, errFunc(err)
 	}
@@ -66,12 +67,14 @@ func NewSubscription(ctx context.Context, mgr statem.StateManager, in *dao.Entit
 		return nil, errFunc(err)
 	}
 
-	var daprClient dapr.Client
-	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, errFunc(err)
-	}
-
-	subsc.daprClient = daprClient
+	// create pubsub client.
+	subsc.pubsubClient = pubsub.NewPubsub(resource.Metadata{
+		Name: "dapr",
+		Properties: map[string]interface{}{
+			"pubsub_name": subsc.PubsubName(),
+			"topic_name":  subsc.Topic(),
+		},
+	})
 
 	return &subsc, nil
 }
@@ -150,7 +153,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.Watch
 	}
 
 	cp.Properties = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
+	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
 		log.Error("invoke realtime subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
@@ -172,7 +175,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKe
 	}
 
 	cp.Properties = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
+	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
 		log.Error("invoke period subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
@@ -194,7 +197,7 @@ func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchK
 	}
 
 	cp.Properties = msg.Properties
-	if err := s.daprClient.PublishEvent(context.Background(), s.Pubsub(), s.Topic(), cp); nil != err {
+	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
 		log.Error("invoke changed subscription failed.", logger.Message(msg), zap.Error(err))
 	}
 
@@ -225,7 +228,7 @@ func (s *subscription) Topic() string {
 	return sb.Topic
 }
 
-func (s *subscription) Pubsub() string {
+func (s *subscription) PubsubName() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return sb.PubsubName

@@ -2,18 +2,22 @@ package influxdb
 
 import (
 	"context"
+	"os"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb-client-go/api"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
 // Influx allows writing to InfluxDB.
 type Influx struct {
+	id       string
 	cfg      *InfluxConfig
 	client   influxdb2.Client
 	writeAPI api.WriteAPIBlocking
@@ -43,6 +47,7 @@ func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseri
 }
 
 func init() {
+	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<TSDB.influxdb> successful")
 	tseries.Register("influxdb", func(properties map[string]interface{}) (tseries.TimeSerier, error) {
 		var err error
 		var influxMeta InfluxConfig
@@ -71,7 +76,11 @@ func init() {
 		client := influxdb2.NewClient(influxMeta.URL, influxMeta.Token)
 		writeAPI := client.WriteAPIBlocking(influxMeta.Org, influxMeta.Bucket)
 
+		id := util.UUID()
+		log.Info("create pubsub.noop instance", zfield.ID(id))
+
 		return &Influx{
+			id:       id,
 			cfg:      &influxMeta,
 			client:   client,
 			writeAPI: writeAPI,

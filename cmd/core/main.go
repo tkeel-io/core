@@ -188,12 +188,11 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	var coreDao *dao.Dao
-	var coreRepo repository.IRepository
 	if coreDao, err = dao.New(ctx, config.Get().Components.Store, config.Get().Components.Etcd); nil != err {
 		log.Fatal(err)
 	}
 
-	coreRepo = repository.New(coreDao)
+	coreRepo := repository.New(coreDao)
 	var stateManager statem.StateManager
 	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo)); nil != err {
 		log.Fatal(err)
@@ -208,8 +207,6 @@ func core(cmd *cobra.Command, args []string) {
 
 	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
 
-	logger.SuccessStatusEvent(os.Stdout, "all service registered.")
-	logger.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
 	if err = _entityManager.Start(); nil != err {
 		log.Fatal(err)
 	} else if err = coreApp.Run(context.TODO()); err != nil {
@@ -263,8 +260,9 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 }
 
 func newResourceManager(coreRepo repository.IRepository) statem.ResourceManager {
+	log.Info("create core default resources")
 	// default pubsub.
-	var pubsubClient pubsub.Pubsub
+	pubsubClient := pubsub.NewPubsub(resource.ParseFrom(config.Get().Components.Pubsub))
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries))
 

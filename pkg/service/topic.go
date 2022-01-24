@@ -19,12 +19,10 @@ package service
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
+	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 )
 
 type TopicService struct {
@@ -54,45 +52,6 @@ func NewTopicService(ctx context.Context, entityManager entities.EntityManager) 
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	var values map[string]interface{}
-	var properties map[string]constraint.Node
-	switch kv := req.Data.AsInterface().(type) {
-	case map[string]interface{}:
-		values = kv
-
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
-	}
-
-	// parse data.
-	switch data := values["data"].(type) {
-	case map[string]interface{}:
-		if len(data) > 0 {
-			properties = make(map[string]constraint.Node)
-			for key, val := range data {
-				properties[key] = constraint.NewNode(val)
-			}
-		}
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
-	}
-
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
-			StateID:    interface2string(values["id"]),
-			Operator:   constraint.PatchOpReplace.String(),
-			Properties: properties,
-		},
-	}
-
-	msgCtx.Headers.SetReceiver(interface2string(values["id"]))
-	msgCtx.Headers.SetOwner(interface2string(values["owner"]))
-	msgCtx.Headers.SetOwner(interface2string(values["type"]))
-	msgCtx.Headers.SetOwner(interface2string(values["source"]))
-
-	s.entityManager.OnMessage(ctx, msgCtx)
-	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
+	res, err := dapr.HandleEvent(ctx, req)
+	return res, errors.Wrap(err, "handle event")
 }

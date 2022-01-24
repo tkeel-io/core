@@ -182,6 +182,7 @@ func (d *Dao) WatchQueue(ctx context.Context, rev int64, handler WatchQueueHandl
 						zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
 					continue
 				}
+
 				handler(EnventType(ev.Type), queue)
 			}
 		}

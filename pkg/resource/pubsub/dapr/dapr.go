@@ -54,6 +54,7 @@ func init() {
 		id := util.UUID()
 		log.Info("create pubsub.dapr instance", zfield.ID(id))
 
+		// TODO: 这里并非每一个 daprPubsub 实例都需要持有一个 client, 可以整个 core 节点持有一个连接池.
 		daprClient, err := daprSDK.NewClient()
 		return &daprPubsub{
 			id:         id,

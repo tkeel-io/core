@@ -60,7 +60,7 @@ func (d *dispatcher) Run() error {
 
 	// consume queues.
 	for id, pubsubInstance := range d.upstreamConnections {
-		log.Info("receive pubsub", zfield.ID(id),
+		log.Info("pubsub start receive", zfield.ID(id),
 			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
 		if err = pubsubInstance.Received(context.Background(),
 			func(ctx context.Context, message interface{}) error {
@@ -94,6 +94,13 @@ func (d *dispatcher) Stop() error {
 		log.Debug("stop downstream queue", zfield.ID(id),
 			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
 	}
+
+	// reset.
+	d.hashTable = sort.StringSlice{}
+	d.upstreamQueues = make(map[string]*dao.Queue)
+	d.upstreamConnections = make(map[string]pubsub.Pubsub)
+	d.downstreamQueues = make(map[string]*dao.Queue)
+	d.downstreamConnections = make(map[string]pubsub.Pubsub)
 	return nil
 }
 
@@ -172,18 +179,23 @@ func (d *dispatcher) closeQueue(queue *dao.Queue) {
 func (d *dispatcher) setup() error {
 	// list current queues.
 	elapsedTime := util.NewElapsed()
-	d.coreRepository.RangeQueue(context.Background(), 0, func(queues []dao.Queue) {
-		for index := range queues {
-			// construct queue.
-			d.constructQueue(&queues[index])
-		}
-	})
+	revision := d.coreRepository.GetLastRevision(context.Background())
+	d.coreRepository.RangeQueue(context.Background(), revision,
+		func(queues []dao.Queue) {
+			for index := range queues {
+				// construct queue.
+				d.constructQueue(&queues[index])
+			}
+		})
 
 	log.Info("initialize queues", zfield.ID(d.ID),
 		zfield.Name(d.Name), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	// watch queue modify.
-	go d.coreRepository.WatchQueue(context.Background(), 0, func(et dao.EnventType, queue dao.Queue) {
+	revision = d.coreRepository.GetLastRevision(context.Background())
+	go d.coreRepository.WatchQueue(context.Background(), revision, func(et dao.EnventType, queue dao.Queue) {
+		log.Info("catch an event", zfield.Type(et.String()),
+			zap.String("queue_id", queue.ID), zap.String("queue_name", queue.Name))
 		switch et {
 		case dao.PUT:
 			d.closeQueue(&queue)

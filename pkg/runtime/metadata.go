@@ -21,8 +21,9 @@ func (m *Manager) initialize() {
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
 	defer cancel()
 
+	revision := m.repo().GetLastRevision(context.Background())
 	log.Info("initialize actor manager, mapper loadding...")
-	m.repo().RangeMapper(ctx, 0, func(mappers []dao.Mapper) {
+	m.repo().RangeMapper(ctx, revision, func(mappers []dao.Mapper) {
 		for _, info := range m.actorEnv.StoreMappers(mappers) {
 			log.Debug("load actor", zfield.ID(info.ID), zfield.Name(info.Name), zfield.TQL(info.TQL),
 				zfield.Eid(info.EntityID), zfield.Type(info.EntityType), zfield.Desc(info.Description))
@@ -38,7 +39,8 @@ func (m *Manager) initialize() {
 
 // watchResource watch resources.
 func (m *Manager) watchResource() {
-	m.repo().WatchMapper(context.Background(), 0,
+	m.repo().WatchMapper(context.Background(),
+		m.repo().GetLastRevision(context.Background()),
 		func(et dao.EnventType, mp dao.Mapper) {
 			effects, _ := m.actorEnv.OnMapperChanged(et, mp)
 			m.reloadActor(effects)
