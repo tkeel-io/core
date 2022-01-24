@@ -26,6 +26,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -106,7 +107,7 @@ func (s *subscription) WithContext(sCtx statem.StateContext) statem.StateMachine
 }
 
 // OnMessage recv message from pubsub.
-func (s *subscription) OnMessage(msg statem.Message) bool {
+func (s *subscription) OnMessage(msg message.Message) bool {
 	return s.stateMachine.OnMessage(msg)
 }
 
@@ -115,11 +116,11 @@ func (s *subscription) HandleLoop() {
 	s.stateMachine.HandleLoop()
 }
 
-func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
-	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.Message(message))
+func (s *subscription) HandleMessage(m message.Message) []mapper.WatchKey {
+	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.Message(m))
 	var watchKeys []mapper.WatchKey
-	switch msg := message.(type) {
-	case statem.PropertyMessage:
+	switch msg := m.(type) {
+	case message.PropertyMessage:
 		switch s.Mode() {
 		case SubscriptionModeRealtime:
 			watchKeys = s.invokeRealtime(msg)
@@ -139,7 +140,7 @@ func (s *subscription) HandleMessage(message statem.Message) []mapper.WatchKey {
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.WatchKey {
+func (s *subscription) invokeRealtime(msg message.PropertyMessage) []mapper.WatchKey {
 	b := s.stateMachine.GetEntity()
 	cp := dao.Entity{
 		ID:         b.ID,
@@ -161,7 +162,7 @@ func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []mapper.Watch
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKey {
+func (s *subscription) invokePeriod(msg message.PropertyMessage) []mapper.WatchKey {
 	b := s.stateMachine.GetEntity()
 	cp := dao.Entity{
 		ID:         b.ID,
@@ -183,7 +184,7 @@ func (s *subscription) invokePeriod(msg statem.PropertyMessage) []mapper.WatchKe
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msg statem.PropertyMessage) []mapper.WatchKey {
+func (s *subscription) invokeChanged(msg message.PropertyMessage) []mapper.WatchKey {
 	b := s.stateMachine.GetEntity()
 	cp := dao.Entity{
 		ID:         b.ID,

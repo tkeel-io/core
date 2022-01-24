@@ -18,7 +18,6 @@ package statem
 
 import (
 	"context"
-	"time"
 
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -27,16 +26,8 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 )
-
-const (
-	SMMethodSetConfigs   Method = "SetConfigs"
-	SMMethodPatchConfigs Method = "PatchConfigs"
-	SMMethodDeleteEntity Method = "DeleteEntity"
-)
-
-type Method string
 
 type StateManager interface {
 	// start manager.
@@ -46,9 +37,9 @@ type StateManager interface {
 	// GetResource return resource manager.
 	Resource() ResourceManager
 	// route messages cluster.
-	RouteMessage(context.Context, MessageContext) error
+	RouteMessage(context.Context, message.MessageContext) error
 	// handle message on this node.
-	HandleMessage(context.Context, MessageContext) error
+	HandleMessage(context.Context, message.MessageContext) error
 }
 
 type ResourceManager interface {
@@ -66,46 +57,13 @@ type StateMachiner interface {
 	// GetEntity returns this.Entity.
 	GetEntity() *dao.Entity
 	// OnMessage recv message from pubsub.
-	OnMessage(ctx Message) bool
+	OnMessage(ctx message.Message) bool
 	// InvokeMsg dispose entity message.
 	HandleLoop()
 	// WithContext set actor context.
 	WithContext(StateContext) StateMachiner
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
-}
-
-type MessageHandler = func(Message) []WatchKey
-
-type PromiseFunc = func(interface{})
-
-type Message interface {
-	Message()
-	Promised(interface{})
-}
-
-type MessageBase struct {
-	startTime      time.Time
-	PromiseHandler PromiseFunc `json:"-"`
-}
-
-func NewMessageBase(promise PromiseFunc) MessageBase {
-	return MessageBase{
-		startTime:      time.Now(),
-		PromiseHandler: promise,
-	}
-}
-
-func (ms MessageBase) Message() {}
-func (ms MessageBase) Promised(v interface{}) {
-	if nil == ms.PromiseHandler {
-		return
-	}
-	ms.PromiseHandler(v)
-}
-
-func (ms MessageBase) Elapsed() *util.ElapsedTime {
-	return util.NewElapsedFrom(ms.startTime)
 }
 
 type WatchKey = mapper.WatchKey
@@ -117,3 +75,5 @@ type PatchData struct {
 	Operator constraint.PatchOperator
 	Value    interface{}
 }
+
+type MessageHandler = func(message.Message) []WatchKey

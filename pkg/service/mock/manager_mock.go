@@ -5,6 +5,7 @@ import (
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/entities"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -21,7 +22,7 @@ func NewEntityManagerMock() entities.EntityManager {
 func (m *EntityManagerMock) Start() error { return nil }
 
 // OnMessage handle message.
-func (m *EntityManagerMock) OnMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+func (m *EntityManagerMock) OnMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	log.Debug("handle message", zap.Any("headers", msgCtx.Headers), zap.Any("message", msgCtx.Message))
 	return nil
 }

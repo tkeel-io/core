@@ -8,7 +8,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -65,9 +65,9 @@ func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicE
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
 
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.PropertyMessage{
 			StateID:    interface2string(values["id"]),
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: properties,

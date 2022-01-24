@@ -19,13 +19,15 @@ package statem
 import (
 	"errors"
 	"sync"
+
+	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
 type mailbox struct {
 	size     int
 	headInx  int
 	capcity  int
-	msgQueue []Message
+	msgQueue []message.Message
 
 	lock *sync.Mutex
 }
@@ -41,12 +43,12 @@ func newMailbox(capcity int) *mailbox {
 		headInx:  0,
 		capcity:  capcity,
 		lock:     &sync.Mutex{},
-		msgQueue: make([]Message, capcity),
+		msgQueue: make([]message.Message, capcity),
 	}
 }
 
-func (mb *mailbox) Get() Message {
-	var msg Message
+func (mb *mailbox) Get() message.Message {
+	var msg message.Message
 
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
@@ -60,7 +62,7 @@ func (mb *mailbox) Get() Message {
 	return msg
 }
 
-func (mb *mailbox) Put(msg Message) error {
+func (mb *mailbox) Put(msg message.Message) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
 
@@ -101,7 +103,7 @@ func (mb *mailbox) Resize(capcity int) error {
 		return nil
 	}
 
-	msgs := make([]Message, mb.size, capcity)
+	msgs := make([]message.Message, mb.size, capcity)
 	for index := 0; index < mb.size; index++ {
 		msgs[index] = mb.msgQueue[(mb.headInx+index)%mb.capcity]
 	}

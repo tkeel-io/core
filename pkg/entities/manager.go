@@ -29,6 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
@@ -73,7 +74,7 @@ func (m *entityManager) Start() error {
 	return errors.Wrap(m.stateManager.Start(), "start entity manager")
 }
 
-func (m *entityManager) OnMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+func (m *entityManager) OnMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	err := m.coreProxy.RouteMessage(ctx, msgCtx)
 	return errors.Wrap(err, "core consume message")
 }
@@ -116,13 +117,13 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base
 	waitG.Add(1)
 	elapsedTime := util.NewElapsed()
 	reqID, msgID := util.UUID(), util.UUID()
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.FlushPropertyMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.FlushPropertyMessage{
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
-			MessageBase: statem.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewMessageBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -158,12 +159,12 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 	waitG.Add(1)
 	elapsedTime := util.NewElapsed()
 	reqID, msgID := util.UUID(), util.UUID()
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.StateMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.StateMessage{
 			StateID: base.ID,
-			Method:  statem.SMMethodDeleteEntity,
-			MessageBase: statem.NewMessageBase(func(v interface{}) {
+			Method:  message.SMMethodDeleteEntity,
+			MessageBase: message.NewMessageBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -213,13 +214,13 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 	waitG.Add(1)
 	elapsedTime := util.NewElapsed()
 	reqID, msgID := util.UUID(), util.UUID()
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.FlushPropertyMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.FlushPropertyMessage{
 			StateID:    base.ID,
 			Operator:   constraint.PatchOpReplace.String(),
 			Properties: base.Properties,
-			MessageBase: statem.NewMessageBase(func(v interface{}) {
+			MessageBase: message.NewMessageBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -266,13 +267,13 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 		if len(kvs) > 0 {
 			waitG.Add(1)
 			msgID := util.UUID()
-			msgCtx := statem.MessageContext{
-				Headers: statem.Header{},
-				Message: statem.FlushPropertyMessage{
+			msgCtx := message.MessageContext{
+				Headers: message.Header{},
+				Message: message.FlushPropertyMessage{
 					StateID:    en.ID,
 					Operator:   op,
 					Properties: kvs,
-					MessageBase: statem.NewMessageBase(func(v interface{}) {
+					MessageBase: message.NewMessageBase(func(v interface{}) {
 						waitG.Done()
 						log.Debug("dispose message completed",
 							zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -371,13 +372,13 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 	waitG.Add(1)
 	elapsedTime := util.NewElapsed()
 	reqID, msgID := util.UUID(), util.UUID()
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.StateMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.StateMessage{
 			StateID: base.ID,
 			Value:   en.Configs,
-			Method:  statem.SMMethodSetConfigs,
-			MessageBase: statem.NewMessageBase(func(v interface{}) {
+			Method:  message.SMMethodSetConfigs,
+			MessageBase: message.NewMessageBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(base.ID), zfield.ReqID(reqID),
@@ -412,13 +413,13 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 	waitG.Add(1)
 	elapsedTime := util.NewElapsed()
 	reqID, msgID := util.UUID(), util.UUID()
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.StateMessage{
+	msgCtx := message.MessageContext{
+		Headers: message.Header{},
+		Message: message.StateMessage{
 			StateID: en.ID,
 			Value:   patchData,
-			Method:  statem.SMMethodPatchConfigs,
-			MessageBase: statem.NewMessageBase(func(v interface{}) {
+			Method:  message.SMMethodPatchConfigs,
+			MessageBase: message.NewMessageBase(func(v interface{}) {
 				waitG.Done()
 				log.Debug("dispose message completed",
 					zfield.Eid(en.ID), zfield.ReqID(reqID),

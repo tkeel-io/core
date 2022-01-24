@@ -14,10 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package statem
+package message
 
 import (
 	"github.com/tkeel-io/core/pkg/constraint"
+)
+
+type Method string
+
+const (
+	// enumerate method.
+	SMMethodSetConfigs   Method = "SetConfigs"
+	SMMethodPatchConfigs Method = "PatchConfigs"
+	SMMethodDeleteEntity Method = "DeleteEntity"
 )
 
 func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {

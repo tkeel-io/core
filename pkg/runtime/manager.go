@@ -26,6 +26,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
@@ -35,8 +36,8 @@ import (
 type Manager struct {
 	coroutinePool   *ants.Pool
 	containers      map[string]*Container
-	msgCh           chan statem.MessageContext
-	disposeCh       chan statem.MessageContext
+	msgCh           chan message.MessageContext
+	disposeCh       chan message.MessageContext
 	actorEnv        environment.IEnvironment
 	resourceManager statem.ResourceManager
 
@@ -58,8 +59,8 @@ func NewManager(ctx context.Context, resourceManager statem.ResourceManager) (st
 		cancel:          cancel,
 		actorEnv:        environment.NewEnvironment(),
 		containers:      make(map[string]*Container),
-		msgCh:           make(chan statem.MessageContext, 10),
-		disposeCh:       make(chan statem.MessageContext, 10),
+		msgCh:           make(chan message.MessageContext, 10),
+		disposeCh:       make(chan message.MessageContext, 10),
 		resourceManager: resourceManager,
 		coroutinePool:   coroutinePool,
 		lock:            sync.RWMutex{},
@@ -86,7 +87,7 @@ func (m *Manager) Start() error {
 
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetReceiver()
-				channelID := msgCtx.Headers.Get(statem.MsgCtxHeaderChannelID)
+				channelID := msgCtx.Headers.Get(message.MsgCtxHeaderChannelID)
 				log.Debug("dispose message", zfield.ID(eid), zfield.Message(msgCtx))
 				channelID, stateMachine := m.getStateMachine(channelID, eid)
 				if nil == stateMachine {
@@ -125,7 +126,7 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
-func (m *Manager) RouteMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+func (m *Manager) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	// assume single node.
 	log.Debug("route message",
 		zfield.ReqID(msgCtx.Headers.GetRequestID()),
@@ -136,7 +137,7 @@ func (m *Manager) RouteMessage(ctx context.Context, msgCtx statem.MessageContext
 	return m.HandleMessage(ctx, msgCtx)
 }
 
-func (m *Manager) HandleMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	log.Debug("handle message",
 		zfield.ReqID(msgCtx.Headers.GetRequestID()),
 		zfield.MsgID(msgCtx.Headers.GetMessageID()),

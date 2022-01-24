@@ -176,3 +176,11 @@ func DispatcherID(id string) zap.Field {
 func DispatcherName(name string) zap.Field {
 	return zap.String("dispatcher_name", name)
 }
+
+func Topic(topic string) zap.Field {
+	return zap.String("topic", topic)
+}
+
+func Pubsub(pubsub string) zap.Field {
+	return zap.String("pubsub", pubsub)
+}

@@ -22,6 +22,7 @@ import (
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 )
 
@@ -39,7 +40,7 @@ type EntityManager interface {
 	// Start start Entity manager.
 	Start() error
 	// OnMessage handle message.
-	OnMessage(context.Context, statem.MessageContext) error
+	OnMessage(context.Context, message.MessageContext) error
 	// CreateEntity create entity.
 	CreateEntity(ctx context.Context, base *Base) (*Base, error)
 	// DeleteEntity delete entity.

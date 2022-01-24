@@ -28,6 +28,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -144,7 +145,7 @@ func (s *statem) WithContext(ctx StateContext) StateMachiner {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) OnMessage(msg Message) bool {
+func (s *statem) OnMessage(msg message.Message) bool {
 	var attachFlag bool
 	switch s.status {
 	case SMStatusDeleted:
@@ -172,7 +173,7 @@ func (s *statem) OnMessage(msg Message) bool {
 
 // HandleLoop run loopHandler.
 func (s *statem) HandleLoop() {
-	var message Message
+	var message message.Message
 	var ensureComsumeTimes = s.ensureComsumeTimes
 	log.Debug("actor attached", zfield.ID(s.ID))
 

@@ -10,6 +10,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/statem"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
@@ -70,7 +71,7 @@ func NewProxy(ctx context.Context, stateManager statem.StateManager) (*Proxy, er
 	return proxyInst, errors.Wrap(err, "new Proxy instance")
 }
 
-func (p *Proxy) RouteMessage(ctx context.Context, msgCtx statem.MessageContext) error {
+func (p *Proxy) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
 	var err error
 
 	entityID := msgCtx.Headers.GetReceiver()

@@ -11,7 +11,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/runtime/statem"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -62,13 +62,20 @@ func (d *dispatcher) Run() error {
 		log.Info("pubsub start receive", zfield.ID(id),
 			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
 		if err = pubsubInstance.Received(context.Background(),
-			func(ctx context.Context, message interface{}) error {
-				msgCtx, _ := message.(statem.MessageContext)
+			func(ctx context.Context, msg interface{}) error {
+				msgCtx, _ := msg.(message.MessageContext)
 				entityID := msgCtx.Headers.GetReceiver()
 
 				selectQueue := placement.Global().Select(entityID)
+				selectConn := d.downstreamConnections[selectQueue.ID]
+				if err = selectConn.Send(ctx, msgCtx); nil != err {
+					log.Error("dispatch message", zfield.Eid(entityID),
+						zap.String("select_queue", selectQueue.ID))
+				}
 
-				log.Debug("dispatch pubsub message", zfield.Eid(entityID), zap.String("select_queue", selectQueue.ID))
+				log.Debug("dispatch pubsub message", zfield.Eid(entityID),
+					zap.String("select_queue", selectQueue.ID))
+
 				return nil
 			}); nil != err {
 			log.Error("start receive pubsub", zfield.ID(id),

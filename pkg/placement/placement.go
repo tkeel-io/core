@@ -48,5 +48,9 @@ func (p *placement) Select(key string) dao.Queue {
 }
 
 func Initialize() {
-	globalPlacement = &placement{lock: sync.RWMutex{}}
+	globalPlacement = &placement{
+		lock:      sync.RWMutex{},
+		queues:    make(map[string]dao.Queue),
+		hashTable: sort.StringSlice{},
+	}
 }

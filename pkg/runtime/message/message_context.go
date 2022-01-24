@@ -1,4 +1,4 @@
-package statem
+package message
 
 const (
 	MsgCtxHeaderType      = "x-type"
@@ -14,7 +14,7 @@ const (
 
 type Header map[string]string
 
-type MessageContext struct {
+type MessageContext struct { //nolint
 	Headers Header
 	Message Message
 }

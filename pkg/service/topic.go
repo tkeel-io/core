@@ -22,7 +22,9 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/entities"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
+	"github.com/tkeel-io/kit/log"
 )
 
 type TopicService struct {
@@ -52,6 +54,7 @@ func NewTopicService(ctx context.Context, entityManager entities.EntityManager) 
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
+	log.Debug("catched event", zfield.Pubsub(req.Pubsubname), zfield.Topic(req.Topic), zfield.Source(req.Source))
 	res, err := dapr.HandleEvent(ctx, req)
 	return res, errors.Wrap(err, "handle event")
 }

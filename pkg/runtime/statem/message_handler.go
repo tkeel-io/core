@@ -9,20 +9,19 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
 // internelMessageHandler dispose statem input messages.
-func (s *statem) internelMessageHandler(message Message) []WatchKey {
-	switch msg := message.(type) {
-	case PropertyMessage:
+func (s *statem) internelMessageHandler(m message.Message) []WatchKey {
+	switch msg := m.(type) {
+	case message.PropertyMessage:
 		return s.invokePropertyMessage(msg)
-	case FlushPropertyMessage:
-		// convert msg type.
-		message := PropertyMessage(msg)
-		// handle property message.
-		watchKeys := s.internelMessageHandler(message)
+	case message.FlushPropertyMessage:
+		propMsg := message.PropertyMessage(msg)
+		watchKeys := s.internelMessageHandler(propMsg)
 		// flush state.
 		s.flush(context.Background())
 		return watchKeys
@@ -35,7 +34,7 @@ func (s *statem) internelMessageHandler(message Message) []WatchKey {
 }
 
 // invokePropertyMessage invoke property message.
-func (s *statem) invokePropertyMessage(msg PropertyMessage) []WatchKey {
+func (s *statem) invokePropertyMessage(msg message.PropertyMessage) []WatchKey {
 	setStateID := msg.StateID
 	watchKeys := make([]mapper.WatchKey, 0)
 	if _, has := s.cacheProps[setStateID]; !has {
@@ -127,12 +126,12 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 	for stateID, msg := range messages {
 		s.stateManager.RouteMessage(context.Background(),
-			MessageContext{
-				Headers: Header{
-					MsgCtxHeaderSender:   s.ID,
-					MsgCtxHeaderReceiver: stateID,
+			message.MessageContext{
+				Headers: message.Header{
+					message.MsgCtxHeaderSender:   s.ID,
+					message.MsgCtxHeaderReceiver: stateID,
 				},
-				Message: PropertyMessage{
+				Message: message.PropertyMessage{
 					StateID:    s.ID,
 					Properties: msg,
 				},

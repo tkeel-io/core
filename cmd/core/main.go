@@ -287,6 +287,7 @@ func loadDispatcher(ctx context.Context, repo repository.IRepository) {
 			Name:         queue.Name,
 			Type:         dao.QueueType(queue.Type),
 			Version:      queue.Version,
+			NodeName:     config.Get().Server.Name,
 			Consumers:    queue.Consumers,
 			ConsumerType: dao.ConsumerType(queue.ConsumerType),
 			Description:  queue.Description,
