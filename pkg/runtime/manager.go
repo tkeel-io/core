@@ -37,8 +37,8 @@ import (
 type Manager struct {
 	coroutinePool   *ants.Pool
 	containers      map[string]*Container
-	msgCh           chan cloudevents.Event
-	disposeCh       chan cloudevents.Event
+	msgCh           chan message.Context
+	disposeCh       chan message.Context
 	actorEnv        environment.IEnvironment
 	resourceManager state.ResourceManager
 
@@ -60,8 +60,8 @@ func NewManager(ctx context.Context, resourceManager state.ResourceManager) (sta
 		cancel:          cancel,
 		actorEnv:        environment.NewEnvironment(),
 		containers:      make(map[string]*Container),
-		msgCh:           make(chan cloudevents.Event, 10),
-		disposeCh:       make(chan cloudevents.Event, 10),
+		msgCh:           make(chan message.Context, 10),
+		disposeCh:       make(chan message.Context, 10),
 		resourceManager: resourceManager,
 		coroutinePool:   coroutinePool,
 		lock:            sync.RWMutex{},
@@ -82,56 +82,34 @@ func (m *Manager) Start() error {
 			case <-m.ctx.Done():
 				log.Info("entity manager exited.")
 				return
-			case ev := <-m.msgCh:
+			case msgCtx := <-m.msgCh:
 				// dispatch message. 将消息分发到不同的节点。
-				m.disposeCh <- ev
+				m.disposeCh <- msgCtx
 
-			case ev := <-m.disposeCh:
+			case msgCtx := <-m.disposeCh:
 				var err error
-				var entityID string
-				var channelID string
-				ev.ExtensionAs(message.ExtEntityID, &entityID)
-				ev.ExtensionAs(message.ExtChannelID, &channelID)
-				log.Debug("dispose message", zfield.ID(entityID), zfield.Message(ev))
+				entityID := msgCtx.Get(message.ExtEntityID)
+				channelID := msgCtx.Get(message.ExtChannelID)
+				log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
 				channelID, stateMachine := m.getMachiner(channelID, entityID)
 				if nil == stateMachine {
-					var (
-						entityType     string
-						entityOwner    string
-						entitySource   string
-						entityTemplate string
-					)
-
-					// parse fields from event.
-					ev.ExtensionAs(message.ExtEntityType, &entityType)
-					ev.ExtensionAs(message.ExtEntityOwner, &entityOwner)
-					ev.ExtensionAs(message.ExtEntitySource, &entitySource)
-					ev.ExtensionAs(message.ExtTemplateID, &entityTemplate)
-
 					en := &dao.Entity{
 						ID:         entityID,
-						Type:       entityType,
-						Owner:      entityOwner,
-						Source:     entitySource,
-						TemplateID: entityTemplate,
+						Type:       msgCtx.Get(message.ExtEntityType),
+						Owner:      msgCtx.Get(message.ExtEntityOwner),
+						Source:     msgCtx.Get(message.ExtEntitySource),
+						TemplateID: msgCtx.Get(message.ExtTemplateID),
 					}
 
 					// load entity, create if not exists.
 					if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en); nil != err {
 						log.Error("disposing message", zap.Error(err),
-							zfield.ID(entityID), zap.String("channel", channelID), zfield.Message(ev))
+							zfield.ID(entityID), zap.String("channel", channelID), zfield.Message(msgCtx))
 						continue
 					}
 				}
 
-				var msg message.Message
-				if msg, err = message.ParseMessage(ev); nil != err {
-					// TODO: 对于执行错误的消息不应该直接丢弃.
-					log.Error("parse message from event", zap.Error(err))
-					continue
-				}
-
-				if stateMachine.OnMessage(msg) {
+				if stateMachine.OnMessage(msgCtx) {
 					// attatch goroutine to entity.
 					m.coroutinePool.Submit(stateMachine.HandleLoop)
 				}
@@ -161,7 +139,16 @@ func (m *Manager) RouteMessage(ctx context.Context, ev cloudevents.Event) error 
 func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error {
 	log.Debug("handle event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
 
-	m.msgCh <- ev
+	var err error
+	var msgCtx message.Context
+	if msgCtx, err = message.From(ctx, ev); nil != err {
+		log.Error("parse event", zfield.ID(ev.ID()), zfield.Event(ev))
+		return errors.Wrap(err, "parse event")
+	}
+
+	m.msgCh <- msgCtx
+	msgCtx.Wait()
+
 	return nil
 }
 

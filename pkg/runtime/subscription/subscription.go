@@ -111,8 +111,8 @@ func (s *subscription) WithContext(sCtx state.StateContext) state.Machiner {
 }
 
 // OnMessage recv message from pubsub.
-func (s *subscription) OnMessage(msg message.Message) bool {
-	return s.stateMachine.OnMessage(msg)
+func (s *subscription) OnMessage(msgCtx message.Context) bool {
+	return s.stateMachine.OnMessage(msgCtx)
 }
 
 // InvokeMsg dispose entity message.

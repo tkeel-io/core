@@ -62,6 +62,7 @@ func NewEntityManager(
 		ctx:          ctx,
 		cancel:       cancel,
 		entityRepo:   repo,
+		receivers:    make(map[string]pubsub.Receiver),
 		stateManager: stateManager,
 		lock:         sync.RWMutex{},
 	}
@@ -84,7 +85,7 @@ func (m *entityManager) listQueue() {
 	m.entityRepo.RangeQueue(context.Background(), revision, func(queues []dao.Queue) {
 		// create receiver.
 		for _, queue := range queues {
-			if coreNodeName == queue.ID {
+			if coreNodeName == queue.NodeName {
 				log.Info("append queue", zfield.ID(queue.ID))
 				// create receiver instance.
 				receiver := pubsub.NewPubsub(resource.Metadata{
@@ -113,7 +114,7 @@ func (m *entityManager) watchQueue() {
 		switch et {
 		case dao.PUT:
 			// create receiver.
-			if coreNodeName == queue.ID {
+			if coreNodeName == queue.NodeName {
 				log.Info("upsert queue", zfield.ID(queue.ID))
 				// create receiver instance.
 				receiver := pubsub.NewPubsub(resource.Metadata{

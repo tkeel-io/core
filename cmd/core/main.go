@@ -22,6 +22,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/pkg/errors"
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
@@ -207,7 +208,9 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	// create message dispatcher.
-	loadDispatcher(context.Background(), coreRepo)
+	if err = loadDispatcher(context.Background(), coreRepo); nil != err {
+		log.Fatal(err)
+	}
 
 	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
 
@@ -273,13 +276,26 @@ func newResourceManager(coreRepo repository.IRepository) state.ResourceManager {
 	return runtime.NewResources(pubsubClient, search.GlobalService, tsdbClient, coreRepo)
 }
 
-func loadDispatcher(ctx context.Context, repo repository.IRepository) {
+func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
 	log.Info("load local Queues.")
 	// load loacal Queues.
 	for _, queue := range config.Get().Dispatcher.Queues {
 		properties := make(map[string]interface{})
 		for _, pair := range queue.Metadata {
 			properties[pair.Key] = pair.Value
+		}
+
+		if queue.Version > 0 {
+			// compare version.
+			remoteQueue, err := repo.GetQueue(context.Background(), &dao.Queue{ID: queue.ID})
+			if nil != err {
+				log.Error("query Queue", zap.Error(err), logger.ID(queue.ID))
+				return errors.Wrap(err, "query queue")
+			}
+
+			if remoteQueue.Version >= queue.Version {
+				continue
+			}
 		}
 
 		repo.PutQueue(ctx, &dao.Queue{
@@ -304,6 +320,9 @@ func loadDispatcher(ctx context.Context, repo repository.IRepository) {
 		config.Get().Dispatcher.ID, config.Get().Dispatcher.Name, repo)
 
 	if err := dispatcher.Run(); nil != err {
-		log.Fatal(err)
+		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
+		return errors.Wrap(err, "start dispatcher")
 	}
+
+	return nil
 }

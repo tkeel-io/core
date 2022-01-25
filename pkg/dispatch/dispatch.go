@@ -66,9 +66,11 @@ func (d *dispatcher) Run() error {
 			func(ctx context.Context, ev cloudevents.Event) error {
 				var entityID string
 				ev.ExtensionAs(message.ExtEntityID, &entityID)
-
 				selectQueue := placement.Global().Select(entityID)
 				selectConn := d.downstreamConnections[selectQueue.ID]
+
+				// append som attributes.
+				ev.SetExtension(message.ExtChannelID, id)
 
 				// send event.
 				if err = selectConn.Send(ctx, ev); nil != err {

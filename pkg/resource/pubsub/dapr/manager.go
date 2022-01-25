@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
@@ -41,14 +42,13 @@ type Consumer struct {
 
 func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
 	// parse CloudEvent from pb.TopicEventRequest.
-	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id), zfield.Spec(req.Meta.Specversion), zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
-		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname), zap.String("subject", req.Meta.Subject), zap.String("contenttype", req.Meta.Datacontenttype))
+	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id), zap.Any("meta", req.Meta))
 
 	ev := cloudevents.NewEvent()
 	err = ev.UnmarshalJSON(req.RawData)
 	if nil != err {
 		log.Warn("data must be CloudEvents spec", zap.String("id", req.Meta.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "unmarshal event")
 	}
 
 	// dispatch message.
@@ -57,7 +57,10 @@ func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicE
 	lock.RLock()
 	for _, consumer := range consumers[groupName] {
 		consumer.handler(ctx, ev)
-		log.Debug("handle event", zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
+		log.Debug("handle event",
+			zfield.Topic(req.Meta.Topic),
+			zfield.Pubsub(req.Meta.Pubsubname),
+			zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
 	}
 	lock.RUnlock()
 

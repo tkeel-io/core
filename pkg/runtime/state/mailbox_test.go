@@ -17,9 +17,11 @@ limitations under the License.
 package state
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
 func Test_newMailbox(t *testing.T) {
@@ -44,9 +46,10 @@ func Test_Resize(t *testing.T) {
 func Test_Put(t *testing.T) {
 	mb := newMailbox(5)
 
-	mb.Put(nil)
-	mb.Put(nil)
-	mb.Put(nil)
+	ctx := message.New(context.TODO())
+	mb.Put(ctx)
+	mb.Put(ctx)
+	mb.Put(ctx)
 	assert.Equal(t, 3, mb.Size())
 	assert.Equal(t, 5, mb.Capcity())
 }
@@ -54,6 +57,6 @@ func Test_Put(t *testing.T) {
 func Test_Get(t *testing.T) {
 	mb := newMailbox(5)
 
-	mb.Put(nil)
+	mb.Put(message.New(context.TODO()))
 	assert.Nil(t, mb.Get())
 }

@@ -27,7 +27,7 @@ type mailbox struct {
 	size     int
 	headInx  int
 	capcity  int
-	msgQueue []message.Message
+	msgQueue []message.Context
 
 	lock *sync.Mutex
 }
@@ -43,12 +43,12 @@ func newMailbox(capcity int) *mailbox {
 		headInx:  0,
 		capcity:  capcity,
 		lock:     &sync.Mutex{},
-		msgQueue: make([]message.Message, capcity),
+		msgQueue: make([]message.Context, capcity),
 	}
 }
 
-func (mb *mailbox) Get() message.Message {
-	var msg message.Message
+func (mb *mailbox) Get() message.Context {
+	var msg message.Context
 
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
@@ -62,7 +62,7 @@ func (mb *mailbox) Get() message.Message {
 	return msg
 }
 
-func (mb *mailbox) Put(msg message.Message) error {
+func (mb *mailbox) Put(msg message.Context) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()
 
@@ -103,7 +103,7 @@ func (mb *mailbox) Resize(capcity int) error {
 		return nil
 	}
 
-	msgs := make([]message.Message, mb.size, capcity)
+	msgs := make([]message.Context, mb.size, capcity)
 	for index := 0; index < mb.size; index++ {
 		msgs[index] = mb.msgQueue[(mb.headInx+index)%mb.capcity]
 	}

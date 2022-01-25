@@ -33,10 +33,12 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 		metadata = make(map[string]string)
 	)
 
-	log.Debug("pubsub.dapr send message", zfield.ID(d.id))
 	if bytes, err = event.MarshalJSON(); nil != err {
 		return errors.Wrap(err, "dapr send")
 	}
+
+	log.Debug("pubsub.dapr send message",
+		zfield.ID(d.id), zfield.Event(event))
 
 	err = d.daprClient.PublishEvent(
 		ctx, d.pubsubName, d.topicName, bytes,

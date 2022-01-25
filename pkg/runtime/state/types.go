@@ -58,7 +58,7 @@ type Machiner interface {
 	// GetEntity returns this.Entity.
 	GetEntity() *dao.Entity
 	// OnMessage recv message from pubsub.
-	OnMessage(ctx message.Message) bool
+	OnMessage(ctx message.Context) bool
 	// InvokeMsg dispose entity message.
 	HandleLoop()
 	// WithContext set actor context.

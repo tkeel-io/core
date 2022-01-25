@@ -10,7 +10,6 @@ import (
 )
 
 func TestSend(t *testing.T) {
-
 	// create dapr client.
 	daprClient, err := daprSDK.NewClient()
 	if nil != err {

@@ -6,6 +6,11 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 )
 
+const (
+	MessageTypeState MessageType = "state"
+	MessageTypeProps MessageType = "props"
+)
+
 type Message interface {
 	String() string
 	Promised(interface{})
@@ -35,4 +40,10 @@ func (ms MessageBase) Promised(v interface{}) {
 
 func (ms MessageBase) Elapsed() *util.ElapsedTime {
 	return util.NewElapsedFrom(ms.startTime)
+}
+
+type MessageType string //nolint
+
+func (mt MessageType) String() string {
+	return string(mt)
 }

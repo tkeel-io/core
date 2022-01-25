@@ -23,14 +23,15 @@ import (
 type Method string
 
 const (
-	// enumerate message type.
-	MessageTypeState         = "MessageState"
-	MessageTypeProperty      = "MessageProperty"
-	MessageTypeFlushProperty = "MessageFlushProperty"
 	// enumerate method.
 	SMMethodSetConfigs   Method = "SetConfigs"
 	SMMethodPatchConfigs Method = "PatchConfigs"
 	SMMethodDeleteEntity Method = "DeleteEntity"
+
+	// enumerate PropertyMessage fields.
+	FiledStateID    = "state_id"
+	FieldOperator   = "operator"
+	FieldProperties = "properties"
 )
 
 func NewPropertyMessage(id string, props map[string]constraint.Node) PropertyMessage {

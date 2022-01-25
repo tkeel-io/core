@@ -145,7 +145,7 @@ func (s *statem) WithContext(ctx StateContext) Machiner {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) OnMessage(msg message.Message) bool {
+func (s *statem) OnMessage(msgCtx message.Context) bool {
 	var attachFlag bool
 	switch s.status {
 	case SMStatusDeleted:
@@ -157,7 +157,7 @@ func (s *statem) OnMessage(msg message.Message) bool {
 
 	default:
 		for i := 0; i < defaultRetryPutMessageNum; i++ {
-			if err := s.mailbox.Put(msg); nil == err {
+			if err := s.mailbox.Put(msgCtx); nil == err {
 				if atomic.CompareAndSwapInt32(&s.attached,
 					StateRuntimeDetached, StateRuntimeAttached) {
 					attachFlag = true
@@ -173,7 +173,7 @@ func (s *statem) OnMessage(msg message.Message) bool {
 
 // HandleLoop run loopHandler.
 func (s *statem) HandleLoop() {
-	var message message.Message
+	var msgCtx message.Context
 	var ensureComsumeTimes = s.ensureComsumeTimes
 	log.Debug("actor attached", zfield.ID(s.ID))
 
@@ -207,16 +207,14 @@ func (s *statem) HandleLoop() {
 			break
 		}
 
-		message = s.mailbox.Get()
-		switch msg := message.(type) {
+		msgCtx = s.mailbox.Get()
+		switch msg := msgCtx.Message().(type) {
 		default:
 			// handle message.
 			watchKeys := s.msgHandler(msg)
 			// active tentacles.
 			s.activeTentacle(watchKeys)
 		}
-
-		message.Promised(s)
 
 		// reset be sure.
 		ensureComsumeTimes = s.ensureComsumeTimes
