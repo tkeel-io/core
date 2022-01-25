@@ -18,8 +18,11 @@ package subscription
 
 import (
 	"context"
+	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -28,6 +31,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -141,21 +145,35 @@ func (s *subscription) HandleMessage(m message.Message) []mapper.WatchKey {
 
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msg message.PropertyMessage) []mapper.WatchKey {
-	b := s.stateMachine.GetEntity()
-	cp := dao.Entity{
-		ID:         b.ID,
-		Type:       b.Type,
-		Owner:      b.Owner,
-		Source:     b.Source,
-		Version:    b.Version,
-		LastTime:   b.LastTime,
-		TemplateID: b.TemplateID,
-		Properties: make(map[string]constraint.Node),
-	}
+	reqID := util.UUID()
+	msgID := util.UUID()
+	eventID := util.UUID()
+	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
 
-	cp.Properties = msg.Properties
-	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
-		log.Error("invoke realtime subscription failed.", logger.Message(msg), zap.Error(err))
+	ev := cloudevents.NewEvent()
+	ev.SetID(eventID)
+	ev.SetType("core.APIs")
+	ev.SetSource(config.Get().Server.Name)
+	ev.SetExtension(message.ExtRequestID, reqID)
+	ev.SetExtension(message.ExtMessageID, msgID)
+	ev.SetExtension(message.ExtMessageSender, sender)
+	ev.SetExtension(message.ExtEntityID, msg.StateID)
+	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+
+	// set data.
+	ev.SetDataContentType(cloudevents.Binary)
+
+	bytes, err := constraint.EncodeJSON(msg.Properties)
+	if nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		return nil
+	}
+	ev.SetData(bytes)
+
+	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil
@@ -163,21 +181,35 @@ func (s *subscription) invokeRealtime(msg message.PropertyMessage) []mapper.Watc
 
 // invokePeriod.
 func (s *subscription) invokePeriod(msg message.PropertyMessage) []mapper.WatchKey {
-	b := s.stateMachine.GetEntity()
-	cp := dao.Entity{
-		ID:         b.ID,
-		Type:       b.Type,
-		Owner:      b.Owner,
-		Source:     b.Source,
-		Version:    b.Version,
-		LastTime:   b.LastTime,
-		TemplateID: b.TemplateID,
-		Properties: make(map[string]constraint.Node),
-	}
+	reqID := util.UUID()
+	msgID := util.UUID()
+	eventID := util.UUID()
+	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
 
-	cp.Properties = msg.Properties
-	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
-		log.Error("invoke period subscription failed.", logger.Message(msg), zap.Error(err))
+	ev := cloudevents.NewEvent()
+	ev.SetID(eventID)
+	ev.SetType("core.APIs")
+	ev.SetSource(config.Get().Server.Name)
+	ev.SetExtension(message.ExtRequestID, reqID)
+	ev.SetExtension(message.ExtMessageID, msgID)
+	ev.SetExtension(message.ExtMessageSender, sender)
+	ev.SetExtension(message.ExtEntityID, msg.StateID)
+	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+
+	// set data.
+	ev.SetDataContentType(cloudevents.Binary)
+
+	bytes, err := constraint.EncodeJSON(msg.Properties)
+	if nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		return nil
+	}
+	ev.SetData(bytes)
+
+	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil
@@ -185,21 +217,34 @@ func (s *subscription) invokePeriod(msg message.PropertyMessage) []mapper.WatchK
 
 // invokeChanged.
 func (s *subscription) invokeChanged(msg message.PropertyMessage) []mapper.WatchKey {
-	b := s.stateMachine.GetEntity()
-	cp := dao.Entity{
-		ID:         b.ID,
-		Type:       b.Type,
-		Owner:      b.Owner,
-		Source:     b.Source,
-		Version:    b.Version,
-		LastTime:   b.LastTime,
-		TemplateID: b.TemplateID,
-		Properties: make(map[string]constraint.Node),
-	}
+	reqID := util.UUID()
+	msgID := util.UUID()
+	eventID := util.UUID()
+	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
 
-	cp.Properties = msg.Properties
-	if err := s.pubsubClient.Send(context.Background(), cp); nil != err {
-		log.Error("invoke changed subscription failed.", logger.Message(msg), zap.Error(err))
+	ev := cloudevents.NewEvent()
+	ev.SetID(eventID)
+	ev.SetType("core.APIs")
+	ev.SetSource(config.Get().Server.Name)
+	ev.SetExtension(message.ExtRequestID, reqID)
+	ev.SetExtension(message.ExtMessageID, msgID)
+	ev.SetExtension(message.ExtMessageSender, sender)
+	ev.SetExtension(message.ExtEntityID, msg.StateID)
+	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+
+	// set data.
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	bytes, err := constraint.EncodeJSON(msg.Properties)
+	if nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		return nil
+	}
+	ev.SetData(bytes)
+
+	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+		// TODO: 对于发送失败的消息需要重新处理.
+		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
 	}
 
 	return nil

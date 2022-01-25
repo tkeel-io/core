@@ -5,11 +5,13 @@ import (
 	"strings"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/runtime/message"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -125,17 +127,20 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	}
 
 	for stateID, msg := range messages {
-		s.stateManager.RouteMessage(context.Background(),
-			message.MessageContext{
-				Headers: message.Header{
-					message.MsgCtxHeaderSender:   s.ID,
-					message.MsgCtxHeaderReceiver: stateID,
-				},
-				Message: message.PropertyMessage{
-					StateID:    s.ID,
-					Properties: msg,
-				},
-			})
+		ev := cloudevents.NewEvent()
+		ev.SetID(util.UUID())
+		ev.SetType("republish")
+		ev.SetSource("core.runtime")
+		ev.SetExtension(message.ExtMessageSender, s.ID)
+		ev.SetExtension(message.ExtMessageReceiver, stateID)
+		ev.SetData(message.PropertyMessage{
+			StateID:    s.ID,
+			Properties: msg,
+		})
+
+		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()))
+
+		s.stateManager.RouteMessage(context.Background(), ev)
 	}
 
 	// active mapper.

@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -41,69 +40,28 @@ type Consumer struct {
 }
 
 func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	var values map[string]interface{}
-	var properties map[string]constraint.Node
-	switch kv := req.Data.AsInterface().(type) {
-	case map[string]interface{}:
-		values = kv
+	// parse CloudEvent from pb.TopicEventRequest.
+	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id), zfield.Spec(req.Meta.Specversion), zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
+		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname), zap.String("subject", req.Meta.Subject), zap.String("contenttype", req.Meta.Datacontenttype))
 
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
+	ev := cloudevents.NewEvent()
+	err = ev.UnmarshalJSON(req.RawData)
+	if nil != err {
+		log.Warn("data must be CloudEvents spec", zap.String("id", req.Meta.Id), zap.Any("event", req))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
-
-	// parse data.
-	switch data := values["data"].(type) {
-	case map[string]interface{}:
-		if len(data) > 0 {
-			properties = make(map[string]constraint.Node)
-			for key, val := range data {
-				properties[key] = constraint.NewNode(val)
-			}
-		}
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
-	}
-
-	msgCtx := message.MessageContext{
-		Headers: message.Header{},
-		Message: message.PropertyMessage{
-			StateID:    interface2string(values["id"]),
-			Operator:   constraint.PatchOpReplace.String(),
-			Properties: properties,
-		},
-	}
-
-	msgCtx.SetReceiver(interface2string(values["id"]))
-	msgCtx.SetOwner(interface2string(values["owner"]))
-	msgCtx.SetOwner(interface2string(values["type"]))
-	msgCtx.SetOwner(interface2string(values["source"]))
 
 	// dispatch message.
-	groupName := consumerGroup(req.Pubsubname, req.Topic)
+	groupName := consumerGroup(req.Meta.Pubsubname, req.Meta.Topic)
 
 	lock.RLock()
 	for _, consumer := range consumers[groupName] {
-		consumer.handler(ctx, msgCtx)
-		log.Debug("handle event", zfield.ReqID(req.Id),
-			zfield.Type(req.Type), zfield.Topic(req.Topic), zfield.Source(req.Source))
+		consumer.handler(ctx, ev)
+		log.Debug("handle event", zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
 	}
 	lock.RUnlock()
 
 	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
-}
-
-func interface2string(in interface{}) (out string) {
-	switch inString := in.(type) {
-	case string:
-		out = inString
-	case constraint.Node:
-		out = inString.String()
-	default:
-		out = ""
-	}
-	return
 }
 
 func consumerGroup(pubsubName, topicName string) string {

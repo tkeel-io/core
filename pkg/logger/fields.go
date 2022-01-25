@@ -3,6 +3,7 @@ package logger
 import (
 	"time"
 
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"go.uber.org/zap"
 )
 
@@ -183,4 +184,12 @@ func Topic(topic string) zap.Field {
 
 func Pubsub(pubsub string) zap.Field {
 	return zap.String("pubsub", pubsub)
+}
+
+func Event(ev cloudevents.Event) zap.Field {
+	return zap.Any("event", ev)
+}
+
+func Spec(spec string) zap.Field {
+	return zap.String("spec", spec)
 }

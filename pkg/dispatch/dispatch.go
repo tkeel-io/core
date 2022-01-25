@@ -3,6 +3,7 @@ package dispatch
 import (
 	"context"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -62,16 +63,15 @@ func (d *dispatcher) Run() error {
 		log.Info("pubsub start receive", zfield.ID(id),
 			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
 		if err = pubsubInstance.Received(context.Background(),
-			func(ctx context.Context, msg interface{}) error {
-				msgCtx, _ := msg.(message.MessageContext)
-				entityID := msgCtx.GetReceiver()
+			func(ctx context.Context, ev cloudevents.Event) error {
+				var entityID string
+				ev.ExtensionAs(message.ExtEntityID, &entityID)
 
 				selectQueue := placement.Global().Select(entityID)
 				selectConn := d.downstreamConnections[selectQueue.ID]
 
-				// encode MessageContext.
-				message.Encode(&msgCtx)
-				if err = selectConn.Send(ctx, msgCtx); nil != err {
+				// send event.
+				if err = selectConn.Send(ctx, ev); nil != err {
 					log.Error("dispatch message", zfield.Eid(entityID),
 						zap.String("select_queue", selectQueue.ID))
 				}

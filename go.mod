@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211026222012-6af4c774c47b
-	github.com/buger/jsonparser v1.1.1
+	github.com/cloudevents/sdk-go v1.2.0
 	github.com/cloudevents/sdk-go/v2 v2.8.0
 	github.com/dapr/dapr v1.5.1 // indirect
 	github.com/dapr/go-sdk v1.3.0

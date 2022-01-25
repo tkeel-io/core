@@ -6,15 +6,19 @@ package v1
 
 import (
 	context "context"
+	"encoding/base64"
 	json "encoding/json"
-	go_restful "github.com/emicklei/go-restful"
-	errors "github.com/tkeel-io/kit/errors"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"io/ioutil"
 	http "net/http"
 	reflect "reflect"
-)
 
-import transportHTTP "github.com/tkeel-io/kit/transport/http"
+	go_restful "github.com/emicklei/go-restful"
+	"github.com/tidwall/gjson"
+	errors "github.com/tkeel-io/kit/errors"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+
+	transportHTTP "github.com/tkeel-io/kit/transport/http"
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
@@ -32,14 +36,40 @@ func newTopicHTTPHandler(s TopicHTTPServer) *TopicHTTPHandler {
 	return &TopicHTTPHandler{srv: s}
 }
 
+
+
+
 func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_restful.Response) {
-	in := TopicEventRequest{}
-	req.Request.Header.Set(go_restful.HEADER_ContentType, go_restful.MIME_JSON)
-	if err := transportHTTP.GetBody(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+	in := TopicEventRequest{} 
+	defer req.Request.Body.Close()
+	bytes,err:= ioutil.ReadAll(req.Request.Body)
+	if nil != err {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
 
+
+	res := gjson.GetBytes(bytes, "data")
+	in.RawData = []byte(res.String())
+
+	res =  gjson.GetBytes(bytes, "data_base64")
+	if res.Type != gjson.Null {
+		// decode base64.
+		base64.StdEncoding.Decode(in.RawData, []byte(res.String()))
+	}
+
+	meta := Metadata{}
+	if err = json.Unmarshal(bytes, &meta); nil != err {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+
+
+	in.Meta = &meta
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
 	out, err := h.srv.TopicEventHandler(ctx, &in)
@@ -64,6 +94,13 @@ func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_r
 		return
 	}
 }
+
+
+func isBase64() bool {
+	return false
+}
+
+
 
 func RegisterTopicHTTPServer(container *go_restful.Container, srv TopicHTTPServer) {
 	var ws *go_restful.WebService

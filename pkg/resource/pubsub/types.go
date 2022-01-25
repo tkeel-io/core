@@ -3,26 +3,27 @@ package pubsub
 import (
 	"context"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
-type MessageHandler func(ctx context.Context, message interface{}) error
+type MessageHandler func(context.Context, cloudevents.Event) error
 
 type Pubsub interface {
-	Send(ctx context.Context, event interface{}) error
-	Received(ctx context.Context, receiver MessageHandler) error
+	Send(context.Context, cloudevents.Event) error
+	Received(context.Context, MessageHandler) error
 	Close() error
 }
 
 type Sender interface {
-	Send(ctx context.Context, event interface{}) error
+	Send(context.Context, cloudevents.Event) error
 	Close() error
 }
 
 type Receiver interface {
-	Received(ctx context.Context, receiver MessageHandler) error
+	Received(context.Context, MessageHandler) error
 	Close() error
 }
 

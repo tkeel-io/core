@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -40,7 +40,7 @@ type EntityManager interface {
 	// Start start Entity manager.
 	Start() error
 	// OnMessage handle message.
-	OnMessage(context.Context, message.MessageContext) error
+	OnMessage(context.Context, cloudevents.Event) error
 	// CreateEntity create entity.
 	CreateEntity(ctx context.Context, base *Base) (*Base, error)
 	// DeleteEntity delete entity.

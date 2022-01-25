@@ -20,6 +20,7 @@ import (
 	"context"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -36,8 +37,8 @@ import (
 type Manager struct {
 	coroutinePool   *ants.Pool
 	containers      map[string]*Container
-	msgCh           chan message.MessageContext
-	disposeCh       chan message.MessageContext
+	msgCh           chan cloudevents.Event
+	disposeCh       chan cloudevents.Event
 	actorEnv        environment.IEnvironment
 	resourceManager state.ResourceManager
 
@@ -59,8 +60,8 @@ func NewManager(ctx context.Context, resourceManager state.ResourceManager) (sta
 		cancel:          cancel,
 		actorEnv:        environment.NewEnvironment(),
 		containers:      make(map[string]*Container),
-		msgCh:           make(chan message.MessageContext, 10),
-		disposeCh:       make(chan message.MessageContext, 10),
+		msgCh:           make(chan cloudevents.Event, 10),
+		disposeCh:       make(chan cloudevents.Event, 10),
 		resourceManager: resourceManager,
 		coroutinePool:   coroutinePool,
 		lock:            sync.RWMutex{},
@@ -81,32 +82,56 @@ func (m *Manager) Start() error {
 			case <-m.ctx.Done():
 				log.Info("entity manager exited.")
 				return
-			case msgCtx := <-m.msgCh:
+			case ev := <-m.msgCh:
 				// dispatch message. 将消息分发到不同的节点。
-				m.disposeCh <- msgCtx
+				m.disposeCh <- ev
 
-			case msgCtx := <-m.disposeCh:
-				eid := msgCtx.GetReceiver()
-				channelID := msgCtx.Get(message.MsgCtxHeaderChannelID)
-				log.Debug("dispose message", zfield.ID(eid), zfield.Message(msgCtx))
-				channelID, stateMachine := m.getMachiner(channelID, eid)
+			case ev := <-m.disposeCh:
+				var err error
+				var entityID string
+				var channelID string
+				ev.ExtensionAs(message.ExtEntityID, &entityID)
+				ev.ExtensionAs(message.ExtChannelID, &channelID)
+				log.Debug("dispose message", zfield.ID(entityID), zfield.Message(ev))
+				channelID, stateMachine := m.getMachiner(channelID, entityID)
 				if nil == stateMachine {
-					var err error
+					var (
+						entityType     string
+						entityOwner    string
+						entitySource   string
+						entityTemplate string
+					)
+
+					// parse fields from event.
+					ev.ExtensionAs(message.ExtEntityType, &entityType)
+					ev.ExtensionAs(message.ExtEntityOwner, &entityOwner)
+					ev.ExtensionAs(message.ExtEntitySource, &entitySource)
+					ev.ExtensionAs(message.ExtTemplateID, &entityTemplate)
+
 					en := &dao.Entity{
-						ID:     eid,
-						Type:   msgCtx.GetType(),
-						Owner:  msgCtx.GetOwner(),
-						Source: msgCtx.GetSource(),
+						ID:         entityID,
+						Type:       entityType,
+						Owner:      entityOwner,
+						Source:     entitySource,
+						TemplateID: entityTemplate,
 					}
-					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
-					if nil != err {
+
+					// load entity, create if not exists.
+					if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en); nil != err {
 						log.Error("disposing message", zap.Error(err),
-							zfield.ID(eid), zap.String("channel", channelID), zfield.Message(msgCtx))
+							zfield.ID(entityID), zap.String("channel", channelID), zfield.Message(ev))
 						continue
 					}
 				}
 
-				if stateMachine.OnMessage(msgCtx.Message) {
+				var msg message.Message
+				if msg, err = message.ParseMessage(ev); nil != err {
+					// TODO: 对于执行错误的消息不应该直接丢弃.
+					log.Error("parse message from event", zap.Error(err))
+					continue
+				}
+
+				if stateMachine.OnMessage(msg) {
 					// attatch goroutine to entity.
 					m.coroutinePool.Submit(stateMachine.HandleLoop)
 				}
@@ -126,25 +151,17 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
-func (m *Manager) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
+func (m *Manager) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
 	// assume single node.
-	log.Debug("route message",
-		zfield.ReqID(msgCtx.GetRequestID()),
-		zfield.MsgID(msgCtx.GetMessageID()),
-		zfield.Sender(msgCtx.GetSender()),
-		zfield.Receiver(msgCtx.GetReceiver()))
+	log.Debug("route event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
 
-	return m.HandleMessage(ctx, msgCtx)
+	return m.HandleMessage(ctx, ev)
 }
 
-func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.MessageContext) error {
-	log.Debug("handle message",
-		zfield.ReqID(msgCtx.GetRequestID()),
-		zfield.MsgID(msgCtx.GetMessageID()),
-		zfield.Sender(msgCtx.GetSender()),
-		zfield.Receiver(msgCtx.GetReceiver()))
+func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error {
+	log.Debug("handle event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
 
-	m.msgCh <- msgCtx
+	m.msgCh <- ev
 	return nil
 }
 

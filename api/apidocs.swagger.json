@@ -1309,39 +1309,6 @@
           "Subscription"
         ]
       }
-    },
-    "/topic": {
-      "post": {
-        "summary": "TopicEvent handler",
-        "operationId": "topicEventHandler",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1TopicEventResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1TopicEventRequest"
-            }
-          }
-        ],
-        "tags": [
-          "TopicEvent"
-        ]
-      }
     }
   },
   "definitions": {
@@ -1548,6 +1515,35 @@
         }
       }
     },
+    "v1Metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "specversion": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "datacontenttype": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "pubsubname": {
+          "type": "string"
+        }
+      }
+    },
     "v1Pager": {
       "type": "object",
       "properties": {
@@ -1694,41 +1690,6 @@
         "subscription": {
           "$ref": "#/definitions/v1SubscriptionObject",
           "description": "subscription object"
-        }
-      }
-    },
-    "v1TopicEventRequest": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "specversion": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "source": {
-          "type": "string"
-        },
-        "datacontenttype": {
-          "type": "string"
-        },
-        "data": {
-          "type": "object"
-        },
-        "data_base64": {
-          "type": "string"
-        },
-        "subject": {
-          "type": "string"
-        },
-        "topic": {
-          "type": "string"
-        },
-        "pubsubname": {
-          "type": "string"
         }
       }
     },

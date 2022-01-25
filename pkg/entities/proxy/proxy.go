@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
@@ -71,16 +72,19 @@ func NewProxy(ctx context.Context, stateManager state.Manager) (*Proxy, error) {
 	return proxyInst, errors.Wrap(err, "new Proxy instance")
 }
 
-func (p *Proxy) RouteMessage(ctx context.Context, msgCtx message.MessageContext) error {
-	var err error
+func (p *Proxy) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
+	var (
+		err      error
+		entityID string
+	)
 
-	entityID := msgCtx.GetReceiver()
+	ev.ExtensionAs(message.ExtEntityID, &entityID)
 	selectQueue := placement.Global().Select(entityID)
 	nodeName := selectQueue.NodeName
 
 	switch nodeName {
 	case p.info.Name:
-		err = p.stateManager.HandleMessage(ctx, msgCtx)
+		err = p.stateManager.HandleMessage(ctx, ev)
 	default:
 		// select proxy client.
 		var proxyClient pb.ProxyClient

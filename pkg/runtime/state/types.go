@@ -19,6 +19,7 @@ package state
 import (
 	"context"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -37,9 +38,9 @@ type Manager interface {
 	// GetResource return resource manager.
 	Resource() ResourceManager
 	// route messages cluster.
-	RouteMessage(context.Context, message.MessageContext) error
+	RouteMessage(context.Context, cloudevents.Event) error
 	// handle message on this node.
-	HandleMessage(context.Context, message.MessageContext) error
+	HandleMessage(context.Context, cloudevents.Event) error
 }
 
 type ResourceManager interface {

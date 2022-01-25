@@ -14,10 +14,7 @@ option java_package = "api.core.v1";
 
 service Topic {
     rpc TopicEventHandler(TopicEventRequest) returns(TopicEventResponse) {
-		option (google.api.http) = {
-			post : "/topic"
-			body : "*"
-		};
+
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "TopicEvent handler";
             operation_id: "topicEventHandler";
@@ -32,18 +29,29 @@ service Topic {
     }
 }
 
+
+
 message TopicEventRequest {
+    Metadata meta = 1;
+    google.protobuf.Value data = 6;
+    string data_base64 = 7;
+    bytes  raw_data = 8; 
+}
+
+
+message Metadata {
     string id = 1;
     string specversion = 2;
     string type = 3;
     string source = 4;
     string datacontenttype = 5;
-    google.protobuf.Value data = 6;
-    string data_base64 = 7;
-    string subject = 8;
-    string topic = 9;
-    string pubsubname = 10;
+    string subject = 9;
+    string topic = 10;
+    string pubsubname = 11;
 }
+
+
+
 
 message TopicEventResponse {
     string status = 1;

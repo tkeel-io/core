@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -25,9 +26,22 @@ type daprPubsub struct {
 	daprClient daprSDK.Client
 }
 
-func (d *daprPubsub) Send(ctx context.Context, event interface{}) error {
+func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
+	var (
+		err      error
+		bytes    []byte
+		metadata = make(map[string]string)
+	)
+
 	log.Debug("pubsub.dapr send message", zfield.ID(d.id))
-	err := d.daprClient.PublishEvent(ctx, d.pubsubName, d.topicName, event)
+	if bytes, err = event.MarshalJSON(); nil != err {
+		return errors.Wrap(err, "dapr send")
+	}
+
+	err = d.daprClient.PublishEvent(
+		ctx, d.pubsubName, d.topicName, bytes,
+		daprSDK.PublishEventWithMetadata(metadata),
+		daprSDK.PublishEventWithContentType(cloudevents.ApplicationJSON))
 	return errors.Wrap(err, "dapr send")
 }
 
