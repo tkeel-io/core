@@ -15,4 +15,5 @@ var (
 	ErrInvalidQueueConsumerType = errors.New("Core.Queue.Consumer.Type.Invalid")
 	ErrInvalidMessageType       = errors.New("Core.Message.Type.Invalid")
 	ErrInvalidMessageField      = errors.New("Core.Message.Field.Invalid")
+	ErrInvalidSubscriptionMode  = errors.New("Core.Message.Mode.Invalid")
 )

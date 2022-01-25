@@ -24,7 +24,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/logger"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
@@ -52,9 +53,10 @@ const (
 
 // subscription subscription actor based entity.
 type subscription struct {
-	pubsubClient pubsub.Pubsub
-	stateMachine state.Machiner
-	stateManager state.Manager
+	pubsubClient     pubsub.Pubsub
+	stateMachine     state.Machiner
+	stateManager     state.Manager
+	republishHandler state.MessageHandler
 }
 
 // NewSubscription returns a subscription.
@@ -72,14 +74,30 @@ func NewSubscription(ctx context.Context, mgr state.Manager, in *dao.Entity) (st
 		return nil, errFunc(err)
 	}
 
+	// bind republish handler.
+	switch subsc.Mode() {
+	case SubscriptionModeRealtime:
+		subsc.republishHandler = subsc.invokeRealtime
+	case SubscriptionModePeriod:
+		subsc.republishHandler = subsc.invokePeriod
+	case SubscriptionModeChanged:
+		subsc.republishHandler = subsc.invokeChanged
+	default:
+		// invalid subscription mode.
+		log.Error("undefine subscription mode, mode.",
+			zap.String("mode", subsc.Mode()), zap.Any("entity", in))
+		return nil, errFunc(xerrors.ErrInvalidSubscriptionMode)
+	}
+
 	// create pubsub client.
-	subsc.pubsubClient = pubsub.NewPubsub(resource.Metadata{
-		Name: "dapr",
-		Properties: map[string]interface{}{
-			"pubsub_name": subsc.PubsubName(),
-			"topic_name":  subsc.Topic(),
-		},
-	})
+	subsc.pubsubClient = pubsub.NewPubsub(
+		resource.Metadata{
+			Name: "dapr",
+			Properties: map[string]interface{}{
+				"pubsub_name": subsc.PubsubName(),
+				"topic_name":  subsc.Topic(),
+			},
+		})
 
 	return &subsc, nil
 }
@@ -120,131 +138,174 @@ func (s *subscription) HandleLoop() {
 	s.stateMachine.HandleLoop()
 }
 
-func (s *subscription) HandleMessage(m message.Message) []mapper.WatchKey {
-	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.Message(m))
-	var watchKeys []mapper.WatchKey
-	switch msg := m.(type) {
-	case message.PropertyMessage:
-		switch s.Mode() {
-		case SubscriptionModeRealtime:
-			watchKeys = s.invokeRealtime(msg)
-		case SubscriptionModePeriod:
-			watchKeys = s.invokePeriod(msg)
-		case SubscriptionModeChanged:
-			watchKeys = s.invokeChanged(msg)
-		default:
-			// invalid subscription mode.
-			log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode()))
-		}
-	default:
-		// invalid msg typs.
-		log.Error("undefine message type.", logger.Message(msg))
-	}
-	return watchKeys
+func (s *subscription) HandleMessage(msgCtx message.Context) []mapper.WatchKey {
+	log.Debug("on subscribe", zfield.ID(s.GetID()), zfield.Message(msgCtx))
+	return s.republishHandler(msgCtx)
+}
+
+const eventType = "Core.Subscription"
+
+func eventSender(sender string) string {
+	return fmt.Sprintf("%s.%s", eventType, sender)
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg message.PropertyMessage) []mapper.WatchKey {
-	reqID := util.UUID()
-	msgID := util.UUID()
-	eventID := util.UUID()
-	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
+func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey {
+	var (
+		err     error
+		bytes   []byte
+		eventID = util.UUID()
+		entity  = s.GetEntity()
+		ev      = cloudevents.NewEvent()
+	)
+	msg, _ := msgCtx.Message().(message.PropertyMessage)
 
-	ev := cloudevents.NewEvent()
 	ev.SetID(eventID)
-	ev.SetType("core.APIs")
+	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtRequestID, reqID)
-	ev.SetExtension(message.ExtMessageID, msgID)
-	ev.SetExtension(message.ExtMessageSender, sender)
 	ev.SetExtension(message.ExtEntityID, msg.StateID)
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtEntityType, entity.Type)
+	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
+	ev.SetExtension(message.ExtEntitySource, entity.Source)
+	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
 	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
 
-	// set data.
-	ev.SetDataContentType(cloudevents.Binary)
+	// tiled entity.
+	entityID := msgCtx.Get(message.ExtEntityID)
+	entityType := msgCtx.Get(message.ExtEntityType)
+	entityOwner := msgCtx.Get(message.ExtEntityOwner)
+	entitySource := msgCtx.Get(message.ExtEntitySource)
+	entityTemplate := msgCtx.Get(message.ExtTemplateID)
 
-	bytes, err := constraint.EncodeJSON(msg.Properties)
-	if nil != err {
+	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+
+	// encode properties.
+	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		log.Error("encode properties", zfield.Message(msg), zap.Error(err))
 		return nil
 	}
+
 	ev.SetData(bytes)
 
 	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
+		log.Error("invoke realtime subscription",
+			zfield.Message(msg), zap.Error(err))
 	}
 
 	return nil
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msg message.PropertyMessage) []mapper.WatchKey {
-	reqID := util.UUID()
-	msgID := util.UUID()
-	eventID := util.UUID()
-	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
+func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
+	var (
+		err     error
+		bytes   []byte
+		eventID = util.UUID()
+		entity  = s.GetEntity()
+		ev      = cloudevents.NewEvent()
+	)
+	msg, _ := msgCtx.Message().(message.PropertyMessage)
 
-	ev := cloudevents.NewEvent()
 	ev.SetID(eventID)
-	ev.SetType("core.APIs")
+	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtRequestID, reqID)
-	ev.SetExtension(message.ExtMessageID, msgID)
-	ev.SetExtension(message.ExtMessageSender, sender)
 	ev.SetExtension(message.ExtEntityID, msg.StateID)
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtEntityType, entity.Type)
+	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
+	ev.SetExtension(message.ExtEntitySource, entity.Source)
+	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
 	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
 
-	// set data.
-	ev.SetDataContentType(cloudevents.Binary)
+	// tiled entity.
+	entityID := msgCtx.Get(message.ExtEntityID)
+	entityType := msgCtx.Get(message.ExtEntityType)
+	entityOwner := msgCtx.Get(message.ExtEntityOwner)
+	entitySource := msgCtx.Get(message.ExtEntitySource)
+	entityTemplate := msgCtx.Get(message.ExtTemplateID)
 
-	bytes, err := constraint.EncodeJSON(msg.Properties)
-	if nil != err {
+	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+
+	// encode properties.
+	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		log.Error("encode properties", zfield.Message(msg), zap.Error(err))
 		return nil
 	}
+
 	ev.SetData(bytes)
 
 	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
+		log.Error("invoke period subscription",
+			zfield.Message(msg), zap.Error(err))
 	}
 
 	return nil
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msg message.PropertyMessage) []mapper.WatchKey {
-	reqID := util.UUID()
-	msgID := util.UUID()
-	eventID := util.UUID()
-	sender := fmt.Sprintf("Core.Subscription.%s", s.GetID())
+func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
+	var (
+		err     error
+		bytes   []byte
+		eventID = util.UUID()
+		entity  = s.GetEntity()
+		ev      = cloudevents.NewEvent()
+	)
+	msg, _ := msgCtx.Message().(message.PropertyMessage)
 
-	ev := cloudevents.NewEvent()
 	ev.SetID(eventID)
-	ev.SetType("core.APIs")
+	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtRequestID, reqID)
-	ev.SetExtension(message.ExtMessageID, msgID)
-	ev.SetExtension(message.ExtMessageSender, sender)
 	ev.SetExtension(message.ExtEntityID, msg.StateID)
-	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
-
-	// set data.
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
-	bytes, err := constraint.EncodeJSON(msg.Properties)
-	if nil != err {
+	ev.SetExtension(message.ExtEntityType, entity.Type)
+	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
+	ev.SetExtension(message.ExtEntitySource, entity.Source)
+	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
+	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
+	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
+
+	// tiled entity.
+	entityID := msgCtx.Get(message.ExtEntityID)
+	entityType := msgCtx.Get(message.ExtEntityType)
+	entityOwner := msgCtx.Get(message.ExtEntityOwner)
+	entitySource := msgCtx.Get(message.ExtEntitySource)
+	entityTemplate := msgCtx.Get(message.ExtTemplateID)
+
+	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+
+	// encode properties.
+	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("encode properties", logger.Message(msg), zap.Error(err))
+		log.Error("encode properties", zfield.Message(msg), zap.Error(err))
 		return nil
 	}
+
 	ev.SetData(bytes)
 
 	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke realtime subscription", logger.Message(msg), zap.Error(err))
+		log.Error("invoke onchanged subscription",
+			zfield.Message(msg), zap.Error(err))
 	}
 
 	return nil

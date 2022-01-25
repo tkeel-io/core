@@ -9,9 +9,18 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
+type PropsMessageCodec interface {
+	Encode(PropertyMessage) ([]byte, error)
+	Decode([]byte) (PropertyMessage, error)
+}
+
 type propsMessageCodec struct{}
 
 var defaultPropsCodec = propsMessageCodec{}
+
+func GetPropsCodec() PropsMessageCodec {
+	return &defaultPropsCodec
+}
 
 func (c *propsMessageCodec) Encode(msg PropertyMessage) ([]byte, error) {
 	var err error

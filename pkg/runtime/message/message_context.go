@@ -24,7 +24,6 @@ const (
 	ExtMessageType     = "extmsgtype"
 	ExtMessageSender   = "extsender"
 	ExtMessageReceiver = "extreceiver"
-	ExtRequestID       = "extreqid"
 	ExtChannelID       = "extchid"
 	ExtPromise         = "extpromise"
 	ExtSyncFlag        = "extsync"
@@ -37,7 +36,7 @@ const (
 	ExtCloudEventDataSchema  = "exteventschema"
 	ExtCloudEventContentType = "exteventcontenttype"
 
-	ExtValueSync = "sync"
+	Sync = "sync"
 )
 
 func GetAttributes(event cloudevents.Event) map[string]string {
@@ -78,7 +77,7 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 	msgCtx := Context{ctx: ctx}
 	waiter := util.NewWaiter()
 	attributes := GetAttributes(ev)
-	if ExtValueSync == attributes[ExtSyncFlag] {
+	if Sync == attributes[ExtSyncFlag] {
 		waiter = &sync.WaitGroup{}
 		waiter.Add(1)
 	}
@@ -135,7 +134,7 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 	}, nil
 }
 
-func (ctx *Context) Value(key string) interface{} {
+func (ctx *Context) value(key string) interface{} {
 	if val, ok := ctx.attributes[key]; ok {
 		return val
 	}
@@ -145,7 +144,7 @@ func (ctx *Context) Value(key string) interface{} {
 }
 
 func (ctx *Context) Get(key string) string {
-	val := ctx.Value(key)
+	val := ctx.value(key)
 	valStr, _ := val.(string)
 	return valStr
 }
@@ -168,4 +167,16 @@ func (ctx *Context) Message() Message {
 
 func (ctx *Context) Wait() {
 	ctx.waiter.Wait()
+}
+
+func (ctx *Context) Sync() bool {
+	return ctx.value(ExtSyncFlag) == Sync
+}
+
+func (ctx *Context) Context() context.Context {
+	return ctx.ctx
+}
+
+func (ctx *Context) Done() {
+	ctx.waiter.Done()
 }

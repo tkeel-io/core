@@ -77,4 +77,4 @@ type PatchData struct {
 	Value    interface{}
 }
 
-type MessageHandler = func(message.Message) []WatchKey
+type MessageHandler = func(message.Context) []WatchKey

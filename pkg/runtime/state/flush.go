@@ -76,7 +76,11 @@ func (s *statem) flushState(ctx context.Context) error {
 		zfield.Template(s.TemplateID),
 		zap.String("state", s.Entity.JSON()))
 
-	err := s.Repo().PutEntity(ctx, &s.Entity)
+	var err error
+	if err = s.Repo().PutEntity(ctx, &s.Entity); nil == err {
+		log.Debug("entity flush state", zap.Error(err), zfield.Eid(s.ID))
+	}
+
 	return errors.Wrap(err, "flush entity state")
 }
 

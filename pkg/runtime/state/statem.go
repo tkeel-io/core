@@ -48,6 +48,19 @@ const (
 	SMStatusActive   Status = "active"
 	SMStatusInactive Status = "inactive"
 	SMStatusDeleted  Status = "deleted"
+
+	// required property field.
+	RequiredFieldID         = "id"
+	RequiredFieldType       = "type"
+	RequiredFieldOwner      = "owner"
+	RequiredFieldSource     = "source"
+	RequiredFieldVersion    = "version"
+	RequiredFieldConfigs    = "configs"
+	RequiredFieldMappers    = "mappers"
+	RequiredFieldLastTime   = "last_time"
+	RequiredFieldTemplate   = "template"
+	RequiredFieldProperties = "properties"
+	RequiredFieldConfigFile = "config_file"
 )
 
 // statem state marchins.
@@ -118,7 +131,7 @@ func NewState(ctx context.Context, stateManager Manager, in *dao.Entity, msgHand
 
 	if nil == msgHandler {
 		// use default message handler.
-		state.msgHandler = state.internelMessageHandler
+		state.msgHandler = state.invokePropertyMessage
 	}
 
 	return state, nil
@@ -208,10 +221,11 @@ func (s *statem) HandleLoop() {
 		}
 
 		msgCtx = s.mailbox.Get()
-		switch msg := msgCtx.Message().(type) {
+		switch msgCtx.Message().(type) {
+		case message.StateMessage:
 		default:
 			// handle message.
-			watchKeys := s.msgHandler(msg)
+			watchKeys := s.msgHandler(msgCtx)
 			// active tentacles.
 			s.activeTentacle(watchKeys)
 		}

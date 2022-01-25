@@ -16,27 +16,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// internelMessageHandler dispose statem input messages.
-func (s *statem) internelMessageHandler(m message.Message) []WatchKey {
-	switch msg := m.(type) {
-	case message.PropertyMessage:
-		return s.invokePropertyMessage(msg)
-	case message.FlushPropertyMessage:
-		propMsg := message.PropertyMessage(msg)
-		watchKeys := s.internelMessageHandler(propMsg)
-		// flush state.
-		s.flush(context.Background())
-		return watchKeys
-	default:
-		// invalid msg typs.
-		log.Error("undefine message type", zfield.ID(s.ID), zfield.Message(msg))
-	}
-
-	return nil
-}
-
 // invokePropertyMessage invoke property message.
-func (s *statem) invokePropertyMessage(msg message.PropertyMessage) []WatchKey {
+func (s *statem) invokePropertyMessage(msgCtx message.Context) []WatchKey {
+	msg, _ := msgCtx.Message().(message.PropertyMessage)
+
 	setStateID := msg.StateID
 	watchKeys := make([]mapper.WatchKey, 0)
 	if _, has := s.cacheProps[setStateID]; !has {
@@ -52,10 +35,16 @@ func (s *statem) invokePropertyMessage(msg message.PropertyMessage) []WatchKey {
 		watchKeys = append(watchKeys, mapper.WatchKey{EntityID: setStateID, PropertyKey: key})
 	}
 
+	// flush entity state.
+	if msgCtx.Sync() {
+		s.flushState(msgCtx.Context())
+		msgCtx.Done()
+	}
+
 	// set last active tims.
 	if setStateID == s.ID {
 		s.Version++
-		s.LastTime = time.Now().UnixNano() / 1e6
+		s.LastTime = util.UnixMilli()
 	}
 
 	return watchKeys
