@@ -106,6 +106,10 @@ jobs:
         with:
           name: core
           path: dist/archivers
+          
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: dist/archivers
 
       - name: Upload release binaries
         uses: alexellis/upload-assets@0.2.2

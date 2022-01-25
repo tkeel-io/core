@@ -17,9 +17,11 @@ limitations under the License.
 package constraint
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 )
 
 type PatchOperator int
@@ -90,7 +92,7 @@ func IsValidPath(path string) bool {
 	return true
 }
 
-func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) { //nolint
+func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) {
 	bytes := ToBytesWithWrapString(destNode)
 	if nil != bytes {
 		collect := collectjs.ByteNew(bytes)
@@ -99,7 +101,8 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 			collect.Del(path)
 			return JSONNode(collect.GetRaw()), collect.GetError()
 		case PatchOpCopy:
-			if collect = collect.Get(path); nil == collect {
+			if collect = collect.Get(path); nil == collect ||
+				errors.Is(collect.GetError(), jsonparser.KeyPathNotFoundError) {
 				return nil, ErrPatchNotFound
 			}
 			return JSONNode(collect.GetRaw()), collect.GetError()
@@ -119,7 +122,6 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 			}
 			return JSONNode(collect.GetRaw()), collect.GetError()
 		}
-
 		return destNode, ErrEmptyParam
 	}
 	return destNode, ErrInvalidNodeType

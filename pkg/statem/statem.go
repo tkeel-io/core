@@ -30,8 +30,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -72,29 +74,78 @@ type MapperDesc struct {
 
 // EntityBase statem basic informatinon.
 type Base struct {
-	ID       string                       `json:"id" mapstructure:"id"`
-	Type     string                       `json:"type" mapstructure:"type"`
-	Owner    string                       `json:"owner" mapstructure:"owner"`
-	Source   string                       `json:"source" mapstructure:"source"`
-	Version  int64                        `json:"version" mapstructure:"version"`
-	LastTime int64                        `json:"last_time" mapstructure:"last_time"`
-	Mappers  []MapperDesc                 `json:"mappers" mapstructure:"mappers"`
-	KValues  map[string]constraint.Node   `json:"properties" mapstructure:"-"` //nolint
-	Configs  map[string]constraint.Config `json:"configs" mapstructure:"configs"`
+	ID           string                       `json:"id" msgpack:"id" mapstructure:"id"`
+	Type         string                       `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner        string                       `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source       string                       `json:"source" msgpack:"source" mapstructure:"source"`
+	Version      int64                        `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime     int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers      []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	KValues      map[string]constraint.Node   `json:"properties" msgpack:"properties" mapstructure:"-"` //nolint
+	Configs      map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
+	ConfigsBytes []byte                       `json:"-" msgpack:"configs_bytes" mapstructure:"-"`
 }
 
 func (b *Base) Copy() Base {
-	return Base{
+	bytes, _ := EncodeBase(b)
+	bb, _ := DecodeBase(bytes)
+	return *bb
+}
+
+func (b *Base) DuplicateExpectValue() Base {
+	cp := Base{
 		ID:       b.ID,
 		Type:     b.Type,
 		Owner:    b.Owner,
 		Source:   b.Source,
 		Version:  b.Version,
 		LastTime: b.LastTime,
-		Mappers:  b.Mappers,
-		KValues:  b.KValues,
-		Configs:  b.Configs,
+		KValues:  make(map[string]constraint.Node),
+		Configs:  make(map[string]constraint.Config),
 	}
+
+	cp.Mappers = append(cp.Mappers, b.Mappers...)
+	return cp
+}
+
+func (b *Base) GetProperty(path string) (constraint.Node, error) {
+	if !strings.ContainsAny(path, ".[") {
+		if _, has := b.KValues[path]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
+		return b.KValues[path], nil
+	}
+
+	// patch copy property.
+	arr := strings.SplitN(path, ".", 2)
+	res, err := constraint.Patch(b.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+	return res, errors.Wrap(err, "patch copy")
+}
+
+func (b *Base) GetConfig(path string) (cfg constraint.Config, err error) {
+	segs := strings.Split(strings.TrimSpace(path), ".")
+	if len(segs) > 1 {
+		// check path.
+		for _, seg := range segs {
+			if strings.TrimSpace(seg) == "" {
+				return cfg, constraint.ErrPatchPathInvalid
+			}
+		}
+
+		rootCfg, ok := b.Configs[segs[0]]
+		if !ok {
+			return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "root config not found")
+		}
+
+		_, pcfg, err := rootCfg.GetConfig(segs, 1)
+		return *pcfg, errors.Wrap(err, "prev config not found")
+	} else if len(segs) == 1 {
+		if _, ok := b.Configs[segs[0]]; !ok {
+			return cfg, ErrPropertyNotFound
+		}
+		return b.Configs[segs[0]], nil
+	}
+	return cfg, errors.Wrap(constraint.ErrPatchPathInvalid, "copy config")
 }
 
 // statem state marchins.
@@ -107,8 +158,9 @@ type statem struct {
 	cacheProps     map[string]map[string]constraint.Node // cache other property.
 	indexTentacles map[string][]mapper.Tentacler         // key=targetId(mapperId/Sid)
 
-	constraints       map[string]*constraint.Constraint
-	searchConstraints sort.StringSlice
+	constraints        map[string]*constraint.Constraint
+	searchConstraints  sort.StringSlice
+	tseriesConstraints sort.StringSlice
 
 	// mailbox & state runtime status.
 	mailBox      *mailbox
@@ -125,7 +177,7 @@ type statem struct {
 }
 
 // newEntity create an statem object.
-func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMarchiner, error) {
+func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler MessageHandler) (StateMachiner, error) {
 	if in.ID == "" {
 		in.ID = uuid()
 	}
@@ -133,26 +185,30 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := &statem{
-		Base: Base{
-			ID:      in.ID,
-			Type:    in.Type,
-			Owner:   in.Owner,
-			Source:  in.Source,
-			KValues: make(map[string]constraint.Node),
-			Configs: make(map[string]constraint.Config),
-		},
+		Base: in.Copy(),
 
 		ctx:            ctx,
 		cancel:         cancel,
 		stateManager:   stateMgr,
 		msgHandler:     msgHandler,
 		mailBox:        newMailbox(10),
+		status:         SMStatusActive,
 		disposing:      StateDisposingIdle,
 		nextFlushNum:   StateFlushPeried,
 		mappers:        make(map[string]mapper.Mapper),
 		cacheProps:     make(map[string]map[string]constraint.Node),
 		indexTentacles: make(map[string][]mapper.Tentacler),
 		constraints:    make(map[string]*constraint.Constraint),
+	}
+
+	// initialize KValues.
+	if nil == state.Base.KValues {
+		state.KValues = make(map[string]constraint.Node)
+	}
+
+	// initialize Configs.
+	if nil == state.Configs {
+		state.Configs = make(map[string]constraint.Config)
 	}
 
 	// set KValues into cacheProps.
@@ -167,11 +223,6 @@ func NewState(ctx context.Context, stateMgr StateManager, in *Base, msgHandler M
 }
 
 func (s *statem) Setup() error {
-	descs := s.Mappers
-	s.Mappers = make([]MapperDesc, 0)
-	for _, desc := range descs {
-		s.appendMapper(desc)
-	}
 	return nil
 }
 
@@ -191,20 +242,240 @@ func (s *statem) SetStatus(status Status) {
 	s.status = status
 }
 
+func (s *statem) LoadEnvironments(env environment.ActorEnv) {
+	s.tentacles = make(map[string][]mapper.Tentacler)
+
+	// load actor mappers.
+	for _, m := range env.Mappers {
+		s.mappers[m.ID()] = m
+		log.Debug("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
+	}
+
+	// load actor tentacles.
+	for _, t := range env.Tentacles {
+		for _, item := range t.Items() {
+			s.tentacles[item.String()] = append(s.tentacles[item.String()], t)
+			log.Debug("load environments, watching ", logger.EntityID(s.ID), zap.String("WatchKey", item.String()))
+		}
+		log.Debug("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+	}
+}
+
 func (s *statem) GetManager() StateManager {
 	return s.stateManager
 }
 
-func (s *statem) SetConfig(configs map[string]constraint.Config) error {
-	for k, c := range configs {
-		s.Configs[k] = c
-		if ct := constraint.NewConstraintsFrom(c); nil != ct {
+// SetConfigs set entity configs.
+func (s *statem) SetConfigs(configs map[string]constraint.Config) error {
+	// reset state machine configs.
+	s.Configs = make(map[string]constraint.Config)
+	s.constraints = make(map[string]*constraint.Constraint)
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
 			s.constraints[ct.ID] = ct
-			searchIndexes := ct.GenSearchIndex()
-			if len(searchIndexes) > 0 {
-				s.searchConstraints =
-					SliceAppend(s.searchConstraints, searchIndexes)
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
 			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *statem) getParent(segs []string) (*constraint.Config, int, error) {
+	if len(segs) == 0 {
+		return nil, 0, constraint.ErrPatchPathInvalid
+	}
+
+	// check patch path.
+	for index, seg := range segs {
+		if strings.TrimSpace(seg) == "" {
+			return nil, index, constraint.ErrPatchPathInvalid
+		}
+	}
+
+	var ok bool
+	var cfg constraint.Config
+	if cfg, ok = s.Configs[segs[0]]; !ok {
+		return nil, 0, constraint.ErrPatchPathRoot
+	}
+
+	index, preCfg, err := cfg.GetConfig(segs, 1)
+	return preCfg, index, errors.Wrap(err, "prev config not found")
+}
+
+func (s *statem) makePath(segs []string, cfg *constraint.Config) (cc constraint.Config, err error) {
+	c := constraint.Config{
+		ID:                segs[0],
+		Type:              constraint.PropertyTypeStruct,
+		Enabled:           true,
+		EnabledSearch:     true,
+		EnabledTimeSeries: true,
+		Define:            make(map[string]interface{}),
+		LastTime:          util.UnixMilli(),
+	}
+
+	if len(segs) > 1 {
+		if cc, err = s.makePath(segs[1:], cfg); nil != err {
+			return c, errors.Wrap(err, "make patch")
+		} else if err = c.AppendField(cc); nil != err {
+			return c, errors.Wrap(err, "make patch")
+		}
+	} else if err = c.AppendField(*cfg); nil != err {
+		return c, errors.Wrap(err, "make patch")
+	}
+
+	return c, nil
+}
+
+// PatchConfigs set entity configs.
+func (s *statem) PatchConfigs(patchData []*PatchData) error { //nolint
+	for _, pd := range patchData {
+		var segment string
+		cfg, _ := pd.Value.(constraint.Config)
+		segs := strings.Split(strings.TrimSpace(pd.Path), ".")
+
+		// set values.
+		cfg.ID = segs[len(segs)-1]
+		cfg.LastTime = util.UnixMilli()
+
+		if len(segs) > 1 {
+			segment = segs[len(segs)-1]
+			parentCfg, index, err := s.getParent(segs[:len(segs)-1])
+			if errors.Is(err, constraint.ErrPatchPathRoot) {
+				segment = segs[0]
+				if cfg, err = s.makePath(segs[:len(segs)-1], &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+			} else if errors.Is(err, constraint.ErrPatchPathLack) {
+				segment = segs[index]
+				if cfg, err = s.makePath(segs[index:len(segs)-1], &cfg); nil != err {
+					log.Error("make patch path",
+						zap.Error(err),
+						logger.EntityID(s.ID),
+						zap.Any("config", pd.Value),
+						zap.String("path", pd.Path))
+					return errors.Wrap(err, "make patch path")
+				}
+			} else if nil != err {
+				log.Error("get parent config",
+					zap.Error(err),
+					logger.EntityID(s.ID),
+					zap.Any("config", pd.Value),
+					zap.String("path", pd.Path))
+				return errors.Wrap(err, "state machine patch configs")
+			}
+
+			log.Debug("patch state machine configs", logger.EntityID(s.ID), zap.Strings("segments", segs), zap.Any("value", cfg), zap.Int("index", index))
+
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				if index == 0 {
+					s.Configs[segment] = cfg
+				} else if err = parentCfg.AppendField(cfg); nil != err {
+					return errors.Wrap(err, "upsert state machine configs")
+				}
+			case constraint.PatchOpRemove:
+				if index == len(segs)-1 || nil != parentCfg {
+					if err = parentCfg.RemoveField(segment); nil != err {
+						return errors.Wrap(err, "remove state machine configs")
+					}
+				}
+			case constraint.PatchOpCopy:
+				// TODO: 在这里处理的时候，sync-actor-loop, 以消息的形式，返回值是难处理的.
+			}
+		} else if len(segs) == 1 {
+			switch pd.Operator {
+			case constraint.PatchOpAdd:
+				fallthrough
+			case constraint.PatchOpReplace:
+				s.Configs[cfg.ID] = cfg
+			case constraint.PatchOpRemove:
+				delete(s.Configs, segs[0])
+			}
+		}
+		log.Debug("patch state machine config", zap.String("path", pd.Path), zap.Any("value", pd.Value))
+	}
+
+	s.constraints = make(map[string]*constraint.Constraint)
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	for key, cfg := range s.Configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+
+	log.Debug("patch state machine configs", zap.Any("value", patchData))
+
+	return nil
+}
+
+// AppendConfigs append entity configs.
+func (s *statem) AppendConfigs(configs map[string]constraint.Config) error {
+	for key, cfg := range configs {
+		s.Configs[key] = cfg
+		if ct := constraint.NewConstraintsFrom(cfg); nil != ct {
+			s.constraints[ct.ID] = ct
+			// generate search indexes.
+			if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+				s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+			}
+			// generate time-series indexes.
+			if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+				s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
+			}
+		}
+	}
+	return nil
+}
+
+// RemoveConfigs remove entity property config.
+func (s *statem) RemoveConfigs(propertyIDs []string) error {
+	// delete property config.
+	for _, propertyID := range propertyIDs {
+		delete(s.Configs, propertyID)
+		delete(s.constraints, propertyID)
+	}
+
+	// reset indexes.
+	s.searchConstraints = make(sort.StringSlice, 0)
+	s.tseriesConstraints = make(sort.StringSlice, 0)
+
+	// reparse property configs.
+	for _, ct := range s.constraints {
+		// generate search indexes.
+		if searchIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagSearch); len(searchIndexes) > 0 {
+			s.searchConstraints = SliceAppend(s.searchConstraints, searchIndexes)
+		}
+		// generate time-series indexes.
+		if tseriesIndexes := ct.GenEnabledIndexes(constraint.EnabledFlagTimeSeries); len(tseriesIndexes) > 0 {
+			s.tseriesConstraints = SliceAppend(s.tseriesConstraints, tseriesIndexes)
 		}
 	}
 	return nil
@@ -222,6 +493,10 @@ func (s *statem) OnMessage(msg Message) bool {
 	)
 
 	log.Debug("statem.OnMessage", logger.EntityID(s.ID), logger.RequestID(reqID))
+
+	if s.status == SMStatusDeleted {
+		return false
+	}
 
 	for {
 		// 如果只有一条投递线程，那么会导致Dispatcher上的所有Entity都依赖于Message Queue中的消息的均匀性.
@@ -241,13 +516,20 @@ func (s *statem) OnMessage(msg Message) bool {
 }
 
 // InvokeMsg run loopHandler.
-func (s *statem) HandleLoop() { //nolint
+func (s *statem) HandleLoop() {
 	var (
 		Ensure  = 3
 		message Message
 	)
 
 	for {
+		if s.nextFlushNum == 0 {
+			// flush properties.
+			if err := s.flush(s.ctx); nil != err {
+				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
+			}
+		}
+
 		// consume message from mailbox.
 		if message = s.mailBox.Get(); nil == message {
 			if Ensure > 0 {
@@ -264,18 +546,10 @@ func (s *statem) HandleLoop() { //nolint
 
 			// flush properties.
 			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties failed",
-					logger.EntityID(s.ID), zap.Error(err))
+				log.Error("flush state properties failed", logger.EntityID(s.ID), zap.Error(err))
 			}
 			// detach coroutins.
 			break
-		}
-
-		if s.nextFlushNum == 0 {
-			// flush properties.
-			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties", logger.EntityID(s.ID), zap.Error(err))
-			}
 		}
 
 		switch msg := message.(type) {
@@ -285,7 +559,7 @@ func (s *statem) HandleLoop() { //nolint
 			s.invokeTentacleMsg(msg)
 		default:
 			// dispose message.
-			watchKeys := s.internelMessageHandler(message)
+			watchKeys := s.msgHandler(message)
 			// active tentacles.
 			s.activeTentacle(watchKeys)
 		}
@@ -347,7 +621,11 @@ func (s *statem) invokePropertyMsg(msg PropertyMessage) []WatchKey {
 }
 
 // activeTentacle active tentacles.
-func (s *statem) activeTentacle(actives []mapper.WatchKey) {
+func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
+	if len(actives) == 0 {
+		return
+	}
+
 	var (
 		messages        = make(map[string]map[string]constraint.Node)
 		activeTentacles = make(map[string][]mapper.Tentacler)
@@ -355,6 +633,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 
 	thisStateProps := s.cacheProps[s.ID]
 	for _, active := range actives {
+		// full match.
 		if tentacles, exists := s.tentacles[active.String()]; exists {
 			for _, tentacle := range tentacles {
 				targetID := tentacle.TargetID()
@@ -374,9 +653,35 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 					log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
 				}
 			}
-		} else { //nolint
+		} else {
 			// TODO...
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
+			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+			// match entityID.*   .
+			for watchKey, tentacles := range s.tentacles {
+				arr := strings.Split(watchKey, ".")
+				if len(arr) == 2 && arr[1] == "*" && arr[0] == active.EntityId {
+					for _, tentacle := range tentacles {
+						targetID := tentacle.TargetID()
+						if mapper.TentacleTypeMapper == tentacle.Type() {
+							activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
+						} else if mapper.TentacleTypeEntity == tentacle.Type() {
+							// make if not exists.
+							if _, exists := messages[targetID]; !exists {
+								messages[targetID] = make(map[string]constraint.Node)
+							}
+
+							segments := strings.Split(active.PropertyKey, ".")
+							// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
+							// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
+							messages[targetID][segments[0]] = thisStateProps[segments[0]]
+						} else {
+							// undefined tentacle typs.
+							log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -398,7 +703,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) {
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
+func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	if len(actives) == 0 {
 		return
 	}
@@ -445,12 +750,15 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) { //nolint
 }
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	if !strings.Contains(propertyKey, ".[") {
+	if !strings.ContainsAny(propertyKey, ".[") {
+		if _, has := s.KValues[propertyKey]; !has {
+			return constraint.NullNode{}, ErrPropertyNotFound
+		}
 		return s.KValues[propertyKey], nil
 	}
 
-	arr := strings.Split(propertyKey, ".")
 	// patch property.
+	arr := strings.SplitN(propertyKey, ".", 2)
 	res, err := constraint.Patch(properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
 	return res, errors.Wrap(err, "get patch failed")
 }
@@ -515,12 +823,12 @@ func (s *statem) invokeMapperMsg(msg MapperMessage) {
 			zap.Error(err),
 			logger.EntityID(s.ID),
 			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
 	} else {
 		log.Debug("invoke mapper",
 			logger.EntityID(s.ID),
 			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(s.ID+"#"+msg.Mapper.Name))
+			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
 	}
 	log.Info("recv mapper message", logger.EntityID(s.GetID()), zap.Any("mapper", msg.Mapper))
 }
@@ -530,10 +838,13 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 	reqID := uuid()
 
 	// checked befors.
-	m, _ := mapper.NewMapper(s.ID+"#"+desc.Name, desc.TQLString)
+	m, _ := mapper.NewMapper(util.FormatMapper(s.Type, s.ID, desc.Name), desc.TQLString)
 
-	log.Info("append mapper",
-		logger.EntityID(s.ID), logger.RequestID(reqID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
+	log.Debug("append mapper",
+		logger.EntityID(s.ID),
+		logger.RequestID(reqID),
+		logger.MapperID(m.ID()),
+		logger.TQLString(m.String()))
 
 	position, length := 0, len(s.Mappers)
 	for ; position < length; position++ {
@@ -568,10 +879,8 @@ func (s *statem) appendMapper(desc MapperDesc) error {
 			s.stateManager.EscapedEntities(expr)...)
 	}
 
-	log.Info("source entities", zap.Any("entities", sourceEntities))
 	for _, entityID := range sourceEntities {
 		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-		log.Info("record tentacle", logger.EntityID(s.ID), zap.String("target", entityID), zap.Any("tentacle", tentacle))
 		if nil != tentacle {
 			// send tentacle msg.
 			s.stateManager.SendMsg(MessageContext{
@@ -603,10 +912,8 @@ func (s *statem) removeMapper(desc MapperDesc) error {
 		return nil
 	}
 
-	m := s.mappers[s.ID+"#"+s.Mappers[position].Name]
-
-	log.Info("remove mapper",
-		logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
+	m := s.mappers[util.FormatMapper(s.Type, s.ID, s.Mappers[position].Name)]
+	log.Info("remove mapper", logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
 
 	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
 	// 如果是动态生成的，那么前后两次生成可能不一致.
@@ -668,8 +975,10 @@ func (s *statem) generateTentacles() {
 	for _, tentacles := range s.indexTentacles {
 		for _, tentacle := range tentacles {
 			if mapper.TentacleTypeMapper == tentacle.Type() || tentacle.IsRemote() {
-				log.Info("setup tentacle",
-					logger.EntityID(s.ID), logger.Type(tentacle.Type()), logger.Target(tentacle.TargetID()))
+				log.Debug("setup tentacle",
+					logger.EntityID(s.ID),
+					logger.Type(tentacle.Type()),
+					logger.Target(tentacle.TargetID()))
 				for _, item := range tentacle.Items() {
 					s.tentacles[item.String()] = append(s.tentacles[item.String()], tentacle)
 				}

@@ -112,7 +112,6 @@ func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
 
 // ExitTargetEntity is called when production entity is exited.
 func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
-	log.Info("ExitTargetEntity", c.GetText())
 	if text := c.GetText(); strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
 		l.pushT(arr[0])
@@ -145,9 +144,10 @@ func (l *Listener) ExitFields(c *parser.FieldsContext) {
 	fields := c.GetText()
 	fieldArr := strings.Split(fields, ",")
 	for ind, f := range fieldArr {
-		field := strings.Split(f, "as")[0]
-		e := l.execs[ind]
-		e.Field = field
+		if arr := strings.Split(f, "as"); len(arr) > 1 {
+			e := l.execs[ind]
+			e.Field = arr[0]
+		}
 	}
 }
 
@@ -241,7 +241,7 @@ func computing(input string) string {
 	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
-func (l *Listener) GetParseConfigs() TQLConfig {
+func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 	tqlConfig := TQLConfig{
 		SourceEntities: l.sourceEntity,
 	}
@@ -262,8 +262,8 @@ func (l *Listener) GetParseConfigs() TQLConfig {
 			TentacleConfig{SourceEntity: entityID, PropertyKeys: propertyKeys})
 	}
 
-	log.Info("parse tql", zap.Any("result", tqlConfig))
-	return tqlConfig
+	log.Debug("result of TQL", zap.Any("result", tqlConfig))
+	return tqlConfig, nil
 }
 
 func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
@@ -276,7 +276,7 @@ func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
 }
 
 // Parse takes a tql string expression and returns a parsed dict.
-func Parse(input string) Listener {
+func Parse(input string) (Listener, error) {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -290,5 +290,5 @@ func Parse(input string) Listener {
 	// Finally parse the expression (by walking the tree)
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Root())
-	return listener
+	return listener, nil
 }

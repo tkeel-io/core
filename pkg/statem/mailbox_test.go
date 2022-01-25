@@ -17,34 +17,43 @@ limitations under the License.
 package statem
 
 import (
-	"math/rand"
-	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestMailBox(t *testing.T) {
+func Test_newMailbox(t *testing.T) {
 	mb := newMailbox(5)
-	wg := sync.WaitGroup{}
 
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		go func(num int) {
-			op := "PUT"
-			if num%2 == 0 {
-				for j := 0; j < num; j++ {
-					mb.Put(nil)
-				}
-			} else {
-				op = "GET"
-				for j := 0; j < num; j++ {
-					mb.Get()
-				}
-			}
+	assert.Equal(t, 5, mb.Capcity())
+}
 
-			t.Logf("%s messages %d.", op, num)
-			wg.Done()
-		}(rand.Intn(100 * 10000)) //nolint
-	}
+func Test_Resize(t *testing.T) {
+	mb := newMailbox(5)
+	assert.Equal(t, 5, mb.Capcity())
 
-	wg.Wait()
+	mb.Resize(20)
+	assert.Equal(t, 20, mb.Capcity())
+	err := mb.Resize(10)
+	assert.NotNil(t, err)
+	assert.Equal(t, 20, mb.Capcity())
+	mb.Resize(30)
+	assert.Equal(t, 30, mb.Capcity())
+}
+
+func Test_Put(t *testing.T) {
+	mb := newMailbox(5)
+
+	mb.Put(nil)
+	mb.Put(nil)
+	mb.Put(nil)
+	assert.Equal(t, 3, mb.Size())
+	assert.Equal(t, 5, mb.Capcity())
+}
+
+func Test_Get(t *testing.T) {
+	mb := newMailbox(5)
+
+	mb.Put(nil)
+	assert.Nil(t, mb.Get())
 }

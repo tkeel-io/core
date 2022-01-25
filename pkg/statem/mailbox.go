@@ -80,6 +80,10 @@ func (mb *mailbox) Size() int {
 	return mb.size
 }
 
+func (mb *mailbox) Capcity() int {
+	return mb.capcity
+}
+
 func (mb *mailbox) Resize(capcity int) error {
 	mb.lock.Lock()
 	defer mb.lock.Unlock()

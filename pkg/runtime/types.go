@@ -26,18 +26,19 @@ import (
 
 const EntityStateName = "core-state"
 const SubscriptionPrefix = "core.subsc."
-const TQLEtcdPrefix = "core.tql."
+const EtcdMapperPrefix = "core.mapper."
 
 type WatchKey = mapper.WatchKey
 
 const (
-	StateMarchineTypeBasic        = "BASIC"
-	StateMarchineTypeSubscription = "SUBSCRIPTION"
+	StateMachineTypeBasic        = "BASIC"
+	StateMachineTypeSubscription = "SUBSCRIPTION"
 )
 
 var (
 	ErrInvalidParams       = errors.New("invalid params")
+	ErrInvalidTQLKey       = errors.New("invalid TQL key")
 	ErrSubscriptionInvalid = errors.New("invalid subscription")
 )
 
-type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMarchiner, error)
+type SMGenerator func(ctx context.Context, base *statem.Base) (statem.StateMachiner, error)

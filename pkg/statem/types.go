@@ -23,7 +23,9 @@ import (
 
 	dapr "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
 
 const (
@@ -44,8 +46,10 @@ const (
 )
 
 var (
-	errInvalidMapperOp = errors.New("invalid mapper operator")
-	errInvalidJSONPath = errors.New("invalid JSONPath")
+	errInvalidMapperOp   = errors.New("invalid mapper operator")
+	errInvalidJSONPath   = errors.New("invalid JSONPath")
+	ErrInvalidProperties = errors.New("statem invalid properties")
+	ErrPropertyNotFound  = errors.New("property not found")
 )
 
 type StateManager interface {
@@ -55,21 +59,34 @@ type StateManager interface {
 	HandleMsg(ctx context.Context, msgCtx MessageContext)
 	EscapedEntities(expression string) []string
 	SearchFlush(context.Context, map[string]interface{}) error
+	TimeSeriesFlush(context.Context, []tseries.TSeriesData) error
+	SetConfigs(context.Context, *Base) error
+	PatchConfigs(context.Context, *Base, []*PatchData) error
+	AppendConfigs(context.Context, *Base) error
+	RemoveConfigs(context.Context, *Base, []string) error
 }
 
-type StateMarchiner interface {
-	// GetID return state marchine id.
+type StateMachiner interface {
+	// GetID return state machine id.
 	GetID() string
 	// GetBase returns state.Base
 	GetBase() *Base
-	// Setup state marchine setup.
+	// Setup state machine setup.
 	Setup() error
-	// SetStatus set state-marchine status.
+	// SetStatus set state-machine status.
 	SetStatus(Status)
-	// GetStatus returns state-marchine status.
+	// GetStatus returns state-machine status.
 	GetStatus() Status
-	// SetConfig set configs.
-	SetConfig(map[string]constraint.Config) error
+	// SetConfig set entity configs.
+	SetConfigs(map[string]constraint.Config) error
+	// PatchConfigs patch configs.
+	PatchConfigs(patchDatas []*PatchData) error
+	// AppendConfig append entity property config.
+	AppendConfigs(map[string]constraint.Config) error
+	// RemoveConfig remove entity property configs.
+	RemoveConfigs(propertyIDs []string) error
+	// LoadEnvironments load environments.
+	LoadEnvironments(environment.ActorEnv)
 	// OnMessage recv message from pubsub.
 	OnMessage(ctx Message) bool
 	// InvokeMsg dispose entity message.
@@ -117,7 +134,7 @@ type MessageContext struct {
 // GetTargetID returns message target id.
 func (h Header) GetTargetID() string { return h[MessageCtxHeaderTargetID] }
 
-// SetTargetID set target state marchine id.
+// SetTargetID set target state machine id.
 func (h Header) SetTargetID(targetID string) { h[MessageCtxHeaderTargetID] = targetID }
 
 // GetOwner returns message owner.
@@ -177,3 +194,9 @@ const (
 	SMStatusInactive Status = "inactive"
 	SMStatusDeleted  Status = "deleted"
 )
+
+type PatchData struct {
+	Path     string
+	Operator constraint.PatchOperator
+	Value    interface{}
+}

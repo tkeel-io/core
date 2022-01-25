@@ -19,6 +19,7 @@ package mapper
 import "log"
 
 type tentacle struct {
+	id       string
 	tp       TentacleType
 	remote   bool
 	targetID string
@@ -27,6 +28,7 @@ type tentacle struct {
 
 func NewTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
 	return &tentacle{
+		id:       uuid(),
 		tp:       tp,
 		items:    items,
 		targetID: targetID,
@@ -35,11 +37,16 @@ func NewTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
 
 func NewRemoteTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
 	return &tentacle{
+		id:       uuid(),
 		tp:       tp,
 		items:    items,
 		remote:   true,
 		targetID: targetID,
 	}
+}
+
+func (t *tentacle) ID() string {
+	return t.id
 }
 
 // Type returns tentacle type.
@@ -64,6 +71,7 @@ func (t *tentacle) Copy() Tentacler {
 	}
 
 	return &tentacle{
+		id:       t.id,
 		tp:       t.tp,
 		items:    items,
 		targetID: t.targetID,

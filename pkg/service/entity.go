@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -37,18 +38,18 @@ type EntityService struct {
 	pb.UnimplementedEntityServer
 	ctx           context.Context
 	cancel        context.CancelFunc
-	entityManager *entities.EntityManager
+	entityManager entities.EntityManager
 	searchClient  pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, mgr *entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
+func NewEntityService(ctx context.Context, entityManager entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
 		ctx:           ctx,
 		cancel:        cancel,
-		entityManager: mgr,
 		searchClient:  searchClient,
+		entityManager: entityManager,
 	}, nil
 }
 
@@ -83,10 +84,12 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		return out, ErrEntityPropertyIDEmpty
 	}
 
+	// set template entity id.
+	ctx = context.WithValue(ctx, entities.TemplateEntityID{}, req.From)
+
 	// set properties.
-	if _, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create entity failed",
-			logger.EntityID(req.Id), zap.Error(err))
+	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+		log.Error("create entity failed", logger.EntityID(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
@@ -97,8 +100,10 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
+
 	parseHeaderFrom(ctx, entity)
 	entity.KValues = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -133,6 +138,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -187,6 +193,7 @@ func checkPatchData(patchData *pb.PatchData) error {
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -203,9 +210,58 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	return
 }
 
+func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	pids := strings.Split(strings.TrimSpace(in.Pids), ",")
+	if len(pids) == 0 {
+		log.Error("patch entity properties, empty property ids.", logger.EntityID(in.Id))
+		return out, ErrEntityInvalidParams
+	}
+
+	// get entity from entity manager.
+	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+		log.Error("patch entity failed.", logger.EntityID(in.Id), zap.Error(err))
+		return
+	}
+
+	props := make(map[string]constraint.Node)
+	// patch copy.
+	for _, pid := range pids {
+		props[pid] = constraint.NewNode(nil)
+		if !strings.ContainsAny(pid, ".[") {
+			if val, exists := entity.KValues[pid]; exists {
+				props[pid] = val
+			}
+			continue
+		}
+
+		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
+		if props[pid], err = constraint.Patch(entity.KValues[arr[0]], nil, arr[1], constraint.PatchOpCopy); nil != err {
+			if !errors.Is(err, constraint.ErrPatchNotFound) {
+				log.Error("patch entity", logger.EntityID(in.Id), zap.Error(err))
+				return out, errors.Wrap(err, "patch entity properties")
+			}
+			err = nil
+			props[pid] = constraint.NewNode(nil)
+			log.Warn("patch entity", logger.EntityID(in.Id), zap.Error(err))
+		}
+	}
+
+	entity.KValues = props
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "patch entity properties")
+}
+
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
 	entity.ID = req.Id
+	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -238,12 +294,23 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
+			id := interface2string(kv["id"])
+			source := interface2string(kv["source"])
+			owner := interface2string(kv["owner"])
+			entityType := interface2string(kv["type"])
+
+			delete(kv, "id")
+			delete(kv, "source")
+			delete(kv, "owner")
+			delete(kv, "type")
+			delete(kv, "version")
+			delete(kv, "last_time")
 			properties, _ := structpb.NewValue(kv)
 			entityItem := &pb.EntityResponse{
-				Id:         interface2string(kv["id"]),
-				Source:     req.Source,
-				Owner:      req.Owner,
-				Type:       "",
+				Id:         id,
+				Source:     source,
+				Owner:      owner,
+				Type:       entityType,
 				Properties: properties,
 				Mappers:    []*pb.MapperDesc{},
 			}
@@ -255,6 +322,234 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil
+}
+
+func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Type = req.Type
+	entity.Owner = req.Owner
+	entity.Source = req.Source
+
+	parseHeaderFrom(ctx, entity)
+	mapperDesc := statem.MapperDesc{}
+	if req.Mapper != nil {
+		mapperDesc.Name = req.Mapper.Name
+		mapperDesc.TQLString = req.Mapper.Tql
+		entity.Mappers = []statem.MapperDesc{mapperDesc}
+	} else {
+		log.Error("append mapper failed.", logger.EntityID(req.Id), zap.Error(err))
+		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
+	}
+
+	// set properties.
+	entity, err = s.entityManager.AppendMapper(ctx, entity)
+	if nil != err {
+		return
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return
+}
+
+func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Type = req.Type
+	entity.Owner = req.Owner
+	entity.Source = req.Source
+	parseHeaderFrom(ctx, entity)
+
+	entity.Mappers = []statem.MapperDesc{{Name: req.MapperName}}
+	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
+		log.Error("remove mapper", logger.EntityID(req.Id), zap.Error(err))
+		return
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return
+}
+
+// SetConfigs set entity configs.
+func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	if entity.Configs, err = parseConfigFrom(ctx, in.Configs.AsInterface()); nil != err {
+		log.Error("set entity configs", logger.EntityID(in.Id), zap.Error(err))
+		return out, err
+	}
+
+	// set properties.
+	if entity, err = s.entityManager.SetConfigs(ctx, entity); nil != err {
+		log.Error("set entity configs", logger.EntityID(in.Id), zap.Error(err))
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "set entity configs")
+}
+
+// AppendConfigs append entity configs.
+func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	if entity.Configs, err = parseConfigFrom(ctx, in.Configs.AsInterface()); nil != err {
+		log.Error("append entity configs", logger.EntityID(in.Id), zap.Error(err))
+		return out, err
+	}
+
+	// set properties.
+	if entity, err = s.entityManager.AppendConfigs(ctx, entity); nil != err {
+		log.Error("append entity configs", logger.EntityID(in.Id), zap.Error(err))
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "append entity configs")
+}
+
+// RemoveConfigs remove entity configs.
+func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	// set properties.
+	propertyIDs := strings.Split(in.PropertyIds, ",")
+	if entity, err = s.entityManager.RemoveConfigs(ctx, entity, propertyIDs); nil != err {
+		log.Error("remove entity configs", logger.EntityID(in.Id), zap.Error(err))
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "remove entity configs")
+}
+
+// QueryConfigs query entity configs.
+func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	// set properties.
+	propertyIDs := strings.Split(in.PropertyIds, ",")
+	if entity, err = s.entityManager.QueryConfigs(ctx, entity, propertyIDs); nil != err {
+		log.Error("query entity configs", logger.EntityID(in.Id), zap.Error(err))
+	}
+
+	configs := make(map[string]constraint.Config)
+	for key, cfg := range entity.Configs {
+		configs[key] = cfg
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "query entity configs")
+}
+
+func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsRequest) (out *pb.EntityResponse, err error) {
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+	entity.KValues = make(map[string]constraint.Node)
+
+	switch kv := in.Configs.AsInterface().(type) {
+	case []interface{}:
+		patchData := make([]*pb.PatchData, 0)
+		data, _ := json.Marshal(kv)
+		if err = json.Unmarshal(data, &patchData); nil != err {
+			log.Error("patch entity  configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+			return nil, ErrEntityInvalidParams
+		}
+
+		var pds []*statem.PatchData
+		for _, pd := range patchData {
+			var cfg constraint.Config
+			switch value := pd.Value.AsInterface().(type) {
+			case map[string]interface{}:
+				if cfg, err = constraint.ParseConfigsFrom(value); nil != err {
+					return out, errors.Wrap(err, "parse entity configs")
+				}
+			}
+			pds = append(pds, &statem.PatchData{Path: pd.Path, Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
+		}
+
+		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+			log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(err))
+			return nil, errors.Wrap(err, "patch entity failed")
+		}
+	case nil:
+		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityEmptyRequest))
+		return nil, ErrEntityEmptyRequest
+	default:
+		log.Error("patch entity configs", logger.EntityID(in.Id), zap.Error(ErrEntityInvalidParams))
+		return nil, ErrEntityInvalidParams
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, nil
+}
+
+// parseConfigFrom parse config.
+func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
+	// parse configs from.
+	out = make(map[string]constraint.Config)
+	switch configs := data.(type) {
+	case []interface{}:
+		for _, cfg := range configs {
+			if c, ok := cfg.(map[string]interface{}); ok {
+				var cfgRet constraint.Config
+				if cfgRet, err = constraint.ParseConfigsFrom(c); nil != err {
+					return out, errors.Wrap(err, "parse entity config failed")
+				}
+				out[cfgRet.ID] = cfgRet
+				continue
+			}
+			return out, ErrEntityConfigInvalid
+		}
+	case nil:
+		log.Error("set entity configs failed.", zap.Error(ErrEntityEmptyRequest))
+		return nil, ErrEntityEmptyRequest
+	default:
+		log.Error("set entity configs failed.", zap.Error(ErrEntityInvalidParams))
+		return nil, ErrEntityConfigInvalid
+	}
+	return out, errors.Wrap(err, "parse entity config failed")
+}
+
+// parseHeaderFrom parse headers.
+func parseHeaderFrom(ctx context.Context, en *statem.Base) {
+	if header := ctx.Value(struct{}{}); nil != header {
+		switch h := header.(type) {
+		case http.Header:
+			if en.Type == "" {
+				en.Type = h.Get(HeaderType)
+			}
+			if en.Owner == "" {
+				en.Owner = h.Get(HeaderOwner)
+			}
+			if en.Source == "" {
+				en.Source = h.Get(HeaderSource)
+			}
+		default:
+			panic("invalid HEADERS")
+		}
+	}
 }
 
 func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityResponse) {
@@ -285,105 +580,10 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 		out.Mappers = append(out.Mappers, &pb.MapperDesc{Name: mapper.Name, Tql: mapper.TQLString})
 	}
 
-	out.Source = entity.Source
-	out.Owner = entity.Owner
 	out.Id = entity.ID
 	out.Type = entity.Type
+	out.Owner = entity.Owner
+	out.Source = entity.Source
 
 	return out
-}
-
-func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.EntityResponse, err error) {
-	var entity = new(Entity)
-	entity.ID = req.Id
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-	parseHeaderFrom(ctx, entity)
-
-	mapperDesc := statem.MapperDesc{}
-	if req.Mapper != nil {
-		mapperDesc.Name = req.Mapper.Name
-		mapperDesc.TQLString = req.Mapper.Tql
-		entity.Mappers = []statem.MapperDesc{mapperDesc}
-	} else {
-		log.Error("append mapper failed.", logger.EntityID(req.Id), zap.Error(err))
-		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
-	}
-
-	// set properties.
-	entity, err = s.entityManager.AppendMapper(ctx, entity)
-	if nil != err {
-		return
-	}
-
-	out = s.entity2EntityResponse(entity)
-	return
-}
-
-func (s *EntityService) SetEntityConfigs(ctx context.Context, req *pb.SetEntityConfigRequest) (out *pb.EntityResponse, err error) {
-	var entity = new(Entity)
-	entity.ID = req.Id
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-	parseHeaderFrom(ctx, entity)
-
-	entity.Configs, err = parseConfigFrom(ctx, req.Configs.AsInterface())
-	if nil != err {
-		log.Error("set entity config failed.", logger.EntityID(req.Id), zap.Error(err))
-		return out, err
-	}
-
-	// set properties.
-	entity, err = s.entityManager.SetConfigs(ctx, entity)
-	if nil != err {
-		log.Error("set entity config failed.", logger.EntityID(req.Id), zap.Error(err))
-	}
-
-	out = s.entity2EntityResponse(entity)
-	return out, errors.Wrap(err, "entity set config failed")
-}
-
-func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]constraint.Config, err error) {
-	// parse configs from.
-	out = make(map[string]constraint.Config)
-	switch configs := data.(type) {
-	case []interface{}:
-		for _, cfg := range configs {
-			if c, ok := cfg.(map[string]interface{}); ok {
-				var cfgRet constraint.Config
-				if cfgRet, err = constraint.ParseConfigsFrom(c); nil != err {
-					return out, errors.Wrap(err, "parse entity config failed")
-				}
-				out[cfgRet.ID] = cfgRet
-				continue
-			}
-			return out, ErrEntityConfigInvalid
-		}
-	case nil:
-		log.Error("set entity configs failed.", zap.Error(ErrEntityEmptyRequest))
-		return nil, ErrEntityEmptyRequest
-	default:
-		log.Error("set entity configs failed.", zap.Error(ErrEntityInvalidParams))
-		return nil, ErrEntityConfigInvalid
-	}
-	return out, errors.Wrap(err, "parse entity config failed")
-}
-
-func parseHeaderFrom(ctx context.Context, en *statem.Base) {
-	if header := ctx.Value(struct{}{}); nil != header {
-		switch h := header.(type) {
-		case http.Header:
-			if en.Type == "" {
-				en.Type = h.Get(HeaderType)
-			}
-			if en.Owner == "" {
-				en.Owner = h.Get(HeaderOwner)
-			}
-			if en.Source == "" {
-				en.Source = h.Get(HeaderSource)
-			}
-		default:
-			panic("invalid HEADERS")
-		}
-	}
 }

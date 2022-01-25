@@ -19,6 +19,7 @@ package runtime
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -29,7 +30,10 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/environment"
 	"github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/statem"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -43,11 +47,12 @@ type Manager struct {
 	msgCh         chan statem.MessageContext
 	disposeCh     chan statem.MessageContext
 	coroutinePool *ants.Pool
-	actorEnv      *Environment
+	actorEnv      environment.IEnvironment
 
-	daprClient   dapr.Client
-	etcdClient   *clientv3.Client
-	searchClient pb.SearchHTTPServer
+	daprClient    dapr.Client
+	etcdClient    *clientv3.Client
+	searchClient  pb.SearchHTTPServer
+	tseriesClient tseries.TimeSerier
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -57,18 +62,24 @@ type Manager struct {
 
 func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.SearchHTTPServer) (*Manager, error) {
 	var (
-		err        error
 		daprClient dapr.Client
 		etcdClient *clientv3.Client
+		err        error
 	)
 
+	expireTime := 3 * time.Second
+	etcdAddr := config.Get().Etcd.Address
+	tseriesClient := tseries.NewTimeSerier(config.Get().TimeSeries.Name)
+	returnErr := func(err error) error { return errors.Wrap(err, "create manager failed") }
+
 	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
-	} else if etcdClient, err = clientv3.New(clientv3.Config{
-		Endpoints:   config.GetConfig().Etcd.Address,
-		DialTimeout: 3 * time.Second,
-	}); nil != err {
-		return nil, errors.Wrap(err, "create manager failed")
+		return nil, returnErr(err)
+	}
+	if err = tseriesClient.Init(resource.ParseFrom(config.Get().TimeSeries)); nil != err {
+		return nil, returnErr(err)
+	}
+	if etcdClient, err = clientv3.New(clientv3.Config{Endpoints: etcdAddr, DialTimeout: expireTime}); nil != err {
+		return nil, returnErr(err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -76,10 +87,11 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 	mgr := &Manager{
 		ctx:           ctx,
 		cancel:        cancel,
-		actorEnv:      NewEnv(),
 		daprClient:    daprClient,
 		etcdClient:    etcdClient,
 		searchClient:  searchClient,
+		tseriesClient: tseriesClient,
+		actorEnv:      environment.NewEnvironment(),
 		containers:    make(map[string]*Container),
 		msgCh:         make(chan statem.MessageContext, 10),
 		disposeCh:     make(chan statem.MessageContext, 10),
@@ -93,44 +105,75 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 }
 
 func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
+	bytes, _ := json.Marshal(msgCtx)
+	log.Debug("actor send message", zap.String("msg", string(bytes)))
+
 	// 解耦actor之间的直接调用
 	m.msgCh <- msgCtx
 }
 
 func (m *Manager) init() error {
-	// load all subcriptions.
+	// load all subscriptions.
 	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
 	defer cancel()
 
 	log.Info("initialize actor manager, tql loadding...")
-	res, err := m.etcdClient.Get(ctx, TQLEtcdPrefix, clientv3.WithPrefix())
+	res, err := m.etcdClient.Get(ctx, util.EtcdMapperPrefix, clientv3.WithPrefix())
 	if nil != err {
 		return errors.Wrap(err, "load all tql")
 	}
 
-	descs := make([]EtcdPair, len(res.Kvs))
+	pairs := make([]environment.EtcdPair, len(res.Kvs))
 	for index, kv := range res.Kvs {
-		descs[index] = EtcdPair{Key: string(kv.Key), Value: kv.Value}
-		log.Info("load tql", zap.String("key", string(kv.Key)), zap.String("tql", string(kv.Value)))
+		pairs[index] = environment.EtcdPair{Key: string(kv.Key), Value: kv.Value}
 	}
 
-	m.actorEnv.LoadMapper(descs)
+	for _, info := range m.actorEnv.StoreMappers(pairs) {
+		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
+		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
+			log.Error("load state machine", zap.Error(err),
+				zap.String("type", info.Type), logger.EntityID(info.EntityID))
+		}
+	}
 
 	return nil
 }
 
 func (m *Manager) watchResource() error {
 	// watch tqls.
-	tqlWatcher, err := util.NewWatcher(m.ctx, config.GetConfig().Etcd.Address)
+	tqlWatcher, err := util.NewWatcher(m.ctx, config.Get().Etcd.Address)
 	if nil != err {
 		return errors.Wrap(err, "create tql watcher failed")
 	}
 
-	tqlWatcher.Watch(TQLEtcdPrefix, true, func(ev *clientv3.Event) {
-		// on changed.
-		m.actorEnv.OnMapperChanged(ev.Type, EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value})
+	tqlWatcher.Watch(util.EtcdMapperPrefix, true, func(ev *clientv3.Event) {
+		pair := environment.EtcdPair{Key: string(ev.Kv.Key), Value: ev.Kv.Value}
+		effects, _ := m.actorEnv.OnMapperChanged(ev.Type, pair)
+		m.reloadActor(effects)
 	})
 
+	return nil
+}
+
+func (m *Manager) isThisNode() bool {
+	return true
+}
+
+func (m *Manager) reloadActor(stateIDs []string) error {
+	// 判断 actor 是否在当前节点.
+	if m.isThisNode() {
+		var err error
+		for _, stateID := range stateIDs {
+			var stateMachine statem.StateMachiner
+			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
+			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
+				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+				stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
+				continue
+			}
+		}
+	}
 	return nil
 }
 
@@ -153,9 +196,9 @@ func (m *Manager) Start() error {
 			case msgCtx := <-m.disposeCh:
 				eid := msgCtx.Headers.GetTargetID()
 				channelID := msgCtx.Headers.Get(statem.MessageCtxHeaderChannelID)
-				log.Info("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
-				channelID, stateMarchine := m.getStateMarchine(channelID, eid)
-				if nil == stateMarchine {
+				log.Debug("dispose message", logger.EntityID(eid), logger.MessageInst(msgCtx))
+				channelID, stateMachine := m.getStateMachine(channelID, eid)
+				if nil == stateMachine {
 					var err error
 					en := &statem.Base{
 						ID:     eid,
@@ -163,7 +206,7 @@ func (m *Manager) Start() error {
 						Source: msgCtx.Headers.GetSource(),
 						Type:   msgCtx.Headers.Get(statem.MessageCtxHeaderType),
 					}
-					stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en)
+					stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en)
 					if nil != err {
 						log.Error("dispatching message", zap.Error(err),
 							logger.EntityID(eid), zap.String("channel", channelID), logger.MessageInst(msgCtx))
@@ -171,12 +214,12 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				if stateMarchine.OnMessage(msgCtx.Message) {
+				if stateMachine.OnMessage(msgCtx.Message) {
 					// attatch goroutine to entity.
-					m.coroutinePool.Submit(stateMarchine.HandleLoop)
+					m.coroutinePool.Submit(stateMachine.HandleLoop)
 				}
 			case <-m.shutdown:
-				log.Info("state marchine manager exit.")
+				log.Info("state machine manager exit.")
 				return
 			}
 		}
@@ -194,19 +237,28 @@ func (m *Manager) GetDaprClient() dapr.Client {
 	return m.daprClient
 }
 
-func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchiner) {
+func (m *Manager) getStateMachine(cid, eid string) (string, statem.StateMachiner) {
 	if cid == "" {
 		cid = "default"
 	}
 
 	if container, ok := m.containers[cid]; ok {
 		if sm := container.Get(eid); nil != sm {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
 			return cid, sm
 		}
 	}
 
 	for channelID, container := range m.containers {
 		if sm := container.Get(eid); sm != nil {
+			if sm.GetStatus() == statem.SMStatusDeleted {
+				container.Remove(eid)
+				return cid, nil
+			}
+
 			if channelID == "default" && cid != channelID {
 				container.Remove(sm.GetID())
 				if _, ok := m.containers[cid]; !ok {
@@ -221,32 +273,40 @@ func (m *Manager) getStateMarchine(cid, eid string) (string, statem.StateMarchin
 	return cid, nil
 }
 
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *statem.Base) (sm statem.StateMarchiner, err error) {
+func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
+	_, err := m.loadOrCreate(ctx, "", false, &statem.Base{ID: id, Type: typ})
+	return errors.Wrap(err, "load entity")
+}
+
+func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *statem.Base) (sm statem.StateMachiner, err error) {
+	var en *statem.Base
 	var res *dapr.StateItem
-	switch base.Type {
-	case StateMarchineTypeSubscription:
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			// TODO: 订阅不存在，所以应该通知被订阅方取消订阅.
-			return nil, errors.Wrap(err, "load subscription")
-		} else if base, err = statem.DecodeBase(res.Value); nil != err {
-			return nil, errors.Wrap(err, "load subscription")
-		}
-		sm, err = newSubscription(ctx, m, base)
-	default:
-		// default base entity type.
-		if res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID); nil != err {
-			log.Warn("load state", zap.Error(err), logger.EntityID(base.ID))
-		} else if en, errr := statem.DecodeBase(res.Value); nil == errr {
-			base = en
-		} else {
-			log.Error("load or create state",
-				zap.String("channel", channelID), logger.EntityID(base.ID), zap.Error(err))
-		}
-		sm, err = statem.NewState(ctx, m, base, nil)
+	res, err = m.daprClient.GetState(ctx, EntityStateName, base.ID)
+
+	if nil != err && !flagCreate {
+		return nil, errors.Wrap(err, "load state machine")
+	} else if en, err = statem.DecodeBase(res.Value); nil == err {
+		base = en // decode value to statem.Base.
+	} else if !flagCreate {
+		return nil, errors.Wrap(err, "load state machine, state not found")
 	}
 
-	if nil != err {
-		return nil, errors.Wrap(err, "create state runtime")
+	log.Debug("load or create state machiner",
+		logger.EntityID(base.ID),
+		zap.String("type", base.Type),
+		zap.String("owner", base.Owner),
+		zap.String("source", base.Source))
+
+	switch base.Type {
+	case StateMachineTypeSubscription:
+		if sm, err = newSubscription(ctx, m, base); nil != err {
+			return nil, errors.Wrap(err, "load subscription")
+		}
+	default:
+		// default base entity type.
+		if sm, err = statem.NewState(ctx, m, base, nil); nil != err {
+			return nil, errors.Wrap(err, "load state machine")
+		}
 	}
 
 	if channelID == "" {
@@ -256,6 +316,9 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, base *stat
 	if _, has := m.containers[channelID]; !has {
 		m.containers[channelID] = NewContainer()
 	}
+
+	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
+	sm.LoadEnvironments(thisActorEnv)
 
 	sm.Setup()
 	m.containers[channelID].Add(sm)
@@ -333,36 +396,138 @@ func (m *Manager) PatchEntity(ctx context.Context, en *statem.Base, patchData []
 	return nil
 }
 
-// SetProperties set properties into entity.
+// SetConfigs set entity configs.
 func (m *Manager) SetConfigs(ctx context.Context, en *statem.Base) error {
-	if en.ID == "" {
-		en.ID = uuid()
-	}
+	var (
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
+	)
 
-	channelID, stateMarchine := m.getStateMarchine("", en.ID)
-	if nil == stateMarchine {
-		var err error
-		if stateMarchine, err = m.loadOrCreate(m.ctx, channelID, en); nil != err {
-			log.Error("dispatching message", logger.EntityID(en.ID), zap.String("channel", channelID), zap.Any("entity", en))
-			return errors.Wrap(err, "runtime.setconfigs")
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+			log.Error("set configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "set entity configs")
 		}
 	}
 
-	err := stateMarchine.SetConfig(en.Configs)
-	return errors.Wrap(err, "runtime.setconfigs")
-}
-
-func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
-	sm, err := m.loadOrCreate(ctx, "", base)
-	if nil != err {
-		return nil, errors.Wrap(err, "runtime.delete state marchine")
+	// set entity configs.
+	if err = stateMachine.SetConfigs(en.Configs); nil != err {
+		return errors.Wrap(err, "set entity configs")
 	}
-	sm.SetStatus(statem.SMStatusDeleted)
-	return sm.GetBase(), nil
+
+	// flush entity configs.
+	return errors.Wrap(stateMachine.Flush(ctx), "set entity configs")
 }
 
+// PatchConfigs patch entity configs.
+func (m *Manager) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) error {
+	var (
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
+	)
+
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+			log.Error("set configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "set entity configs")
+		}
+	}
+
+	// set entity configs.
+	if err = stateMachine.PatchConfigs(patchData); nil != err {
+		return errors.Wrap(err, "set entity configs")
+	}
+
+	// flush entity configs.
+	return errors.Wrap(stateMachine.Flush(ctx), "set entity configs")
+}
+
+// AppendConfigs append entity configs.
+func (m *Manager) AppendConfigs(ctx context.Context, en *statem.Base) error {
+	var (
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
+	)
+
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+			log.Error("append configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "append entity configs")
+		}
+	}
+
+	// append entity configs.
+	if err = stateMachine.AppendConfigs(en.Configs); nil != err {
+		return errors.Wrap(err, "append entity configs")
+	}
+
+	// flush entity configs.
+	return errors.Wrap(stateMachine.Flush(ctx), "append entity configs")
+}
+
+// RemoveConfigs remove entity configs.
+func (m *Manager) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) error {
+	var (
+		err          error
+		channelID    string
+		stateMachine statem.StateMachiner
+	)
+
+	// load state machine.
+	if channelID, stateMachine = m.getStateMachine("", en.ID); nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(ctx, channelID, false, en); nil != err {
+			log.Error("remove configs",
+				logger.EntityID(en.ID),
+				zap.Any("entity", en),
+				zap.String("channel", channelID))
+			return errors.Wrap(err, "remove entity configs")
+		}
+	}
+
+	// remove entity configs.
+	if err = stateMachine.RemoveConfigs(propertyIDs); nil != err {
+		return errors.Wrap(err, "remove entity configs")
+	}
+
+	// flush entity configs.
+	return errors.Wrap(stateMachine.Flush(ctx), "remove entity configs")
+}
+
+// DeleteStateMachine delete runtime.Entity.
+func (m *Manager) DeleteStateMarchin(ctx context.Context, base *statem.Base) (*statem.Base, error) {
+	var err error
+	channelID, stateMachine := m.getStateMachine("", base.ID)
+	if nil == stateMachine {
+		if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, base); nil != err {
+			log.Error("remove configs",
+				logger.EntityID(base.ID),
+				zap.Any("entity", base),
+				zap.String("channel", channelID))
+			return nil, errors.Wrap(err, "remove entity configs")
+		}
+	}
+	stateMachine.SetStatus(statem.SMStatusDeleted)
+	return stateMachine.GetBase(), nil
+}
+
+// CleanEntity clean entity.
 func (m *Manager) CleanEntity(ctx context.Context, id string) error {
-	channelID, sm := m.getStateMarchine("", id)
+	channelID, sm := m.getStateMachine("", id)
 	if nil != sm {
 		m.containers[channelID].Remove(id)
 	}
@@ -424,6 +589,26 @@ func (m *Manager) SearchFlush(ctx context.Context, values map[string]interface{}
 		log.Error("search index failed.", zap.Error(err))
 	}
 	return errors.Wrap(err, "SearchFlushfailed")
+}
+
+func (m *Manager) TimeSeriesFlush(ctx context.Context, tds []tseries.TSeriesData) error {
+	var err error
+	for _, data := range tds {
+		data.Fields["value"] = data.Value
+		line := fmt.Sprintf("%s,%s %s", data.Measurement, util.ExtractMap(data.Tags), util.ExtractMap(data.Fields))
+
+		_, err = m.tseriesClient.Write(ctx, &tseries.TSeriesRequest{
+			Data:     []string{line},
+			Metadata: map[string]string{},
+		})
+
+		if nil != err {
+			// 这里其实是有问题的, 如果没写成功，怎么处理，和MQ的ack相关，考虑放到batch_queue处理.
+			log.Error("flush time series data failed", zap.Error(err), zap.Any("data", data))
+		}
+	}
+
+	return errors.Wrap(err, "TimeSeriesFlush")
 }
 
 // uuid generate an uuid.

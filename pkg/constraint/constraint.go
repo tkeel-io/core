@@ -20,6 +20,12 @@ import (
 	"errors"
 )
 
+const (
+	EnabledFlagSelf = 1 << iota
+	EnabledFlagSearch
+	EnabledFlagTimeSeries
+)
+
 var (
 	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
 	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")
@@ -27,6 +33,9 @@ var (
 	ErrEmptyParam          = errors.New("empty params")
 	ErrPatchNotFound       = errors.New("patch not found")
 	ErrPatchPathInvalid    = errors.New("invalid patch path")
+	ErrPatchPathLack       = errors.New("patch path lack")
+	ErrPatchPathRoot       = errors.New("patch path lack root")
+	ErrPatchTypeInvalid    = errors.New("patch config type invalid")
 )
 
 var callbacks = map[string]func(op Operator, val Node) (Node, error){
@@ -62,32 +71,27 @@ func newConstraint() *Constraint {
 	return &Constraint{EnableFlag: NewBitBucket(8)}
 }
 
-func (ct *Constraint) GenSearchIndex() []string {
-	return genSearchIndex("", ct)
+func (ct *Constraint) GenEnabledIndexes(enabledFlag int) []string {
+	return genEnabledIndexes("", enabledFlag, ct)
 }
 
-func genSearchIndex(prefix string, ct *Constraint) []string {
+func genEnabledIndexes(prefix string, enabledFlag int, ct *Constraint) []string {
 	var searchIndexes []string
 	if !ct.EnableFlag.Enabled(EnabledFlagSelf) {
 		return []string{}
 	}
 
-	if ct.EnableFlag.Enabled(EnabledFlagSearch) {
+	if ct.EnableFlag.Enabled(enabledFlag) {
 		searchIndexes = append(searchIndexes, prefix+ct.ID)
 	}
 
 	for _, childCt := range ct.ChildNodes {
-		searchIndexes = append(searchIndexes, genSearchIndex(ct.ID+".", childCt)...)
+		searchIndexes = append(searchIndexes, genEnabledIndexes(ct.ID+".", enabledFlag, childCt)...)
 	}
 	return searchIndexes
 }
 
 func NewConstraintsFrom(cfg Config) *Constraint {
-	// current latyer.
-	if !cfg.Enabled {
-		return nil
-	}
-
 	return parseConstraintFrom(cfg)
 }
 

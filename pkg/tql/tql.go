@@ -17,6 +17,7 @@ limitations under the License.
 package tql
 
 import (
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 )
 
@@ -26,13 +27,15 @@ type tql struct {
 	listener Listener
 }
 
-func NewTQL(tqlString string) TQL {
-	listener := Parse(tqlString)
-	return &tql{
-		text:     tqlString,
-		listener: listener,
-		config:   listener.GetParseConfigs(),
+func NewTQL(tqlString string) (TQL, error) {
+	var cfg TQLConfig
+	listener, err := Parse(tqlString)
+	if nil != err {
+		return nil, errors.Wrap(err, "parse TQL")
+	} else if cfg, err = listener.GetParseConfigs(); nil != err {
+		return nil, errors.Wrap(err, "parse TQL and get configurations")
 	}
+	return &tql{text: tqlString, listener: listener, config: cfg}, nil
 }
 
 // Target returns target entity.
