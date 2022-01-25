@@ -75,7 +75,7 @@ func NewEntityManager(
 	return entityManager, nil
 }
 
-func (m *entityManager) initialize() {
+func (m *entityManager) listQueue() {
 	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
 	defer cancel()
 	revision := m.entityRepo.GetLastRevision(ctx)
@@ -124,6 +124,12 @@ func (m *entityManager) watchQueue() {
 					m.receivers[queue.ID].Close()
 				}
 				m.receivers[queue.ID] = receiver
+				// start consumer queue.
+				receiver.Received(context.Background(), func(ctx context.Context, msg interface{}) error {
+					msgCtx, _ := msg.(message.MessageContext)
+					log.Debug("received message", zap.String("queue", queue.ID), zfield.Message(msgCtx))
+					return nil
+				})
 			}
 		case dao.DELETE:
 			log.Info("remove queue", zfield.ID(queue.ID))
@@ -137,9 +143,23 @@ func (m *entityManager) watchQueue() {
 }
 
 func (m *entityManager) Start() error {
-	m.initialize()
-	m.watchQueue()
-	return errors.Wrap(m.stateManager.Start(), "start entity manager")
+	// start runtime.
+	if err := m.stateManager.Start(); nil != err {
+		log.Error("start state manager")
+		return errors.Wrap(err, "start state manager")
+	}
+
+	m.listQueue()
+	go m.watchQueue()
+	for id, receiver := range m.receivers {
+		receiver.Received(context.Background(), func(ctx context.Context, msg interface{}) error {
+			msgCtx, _ := msg.(message.MessageContext)
+			log.Debug("received message", zap.String("queue", id), zfield.Message(msgCtx))
+			return nil
+		})
+	}
+
+	return nil
 }
 
 func (m *entityManager) OnMessage(ctx context.Context, msgCtx message.MessageContext) error {

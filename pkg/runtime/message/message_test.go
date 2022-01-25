@@ -9,7 +9,7 @@ import (
 func TestEvent(t *testing.T) {
 	ev := cloudevents.NewEvent()
 	ev.SetID("test-event123")
-	ev.SetData(cloudevents.EncodingBinary.String(), map[string]interface{}{
+	ev.SetData(cloudevents.ApplicationJSON, map[string]interface{}{
 		"metrics": map[string]interface{}{
 			"cpu_used": 0.3,
 			"mem_used": 0.4,
