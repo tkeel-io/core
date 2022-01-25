@@ -8,15 +8,13 @@ image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.2.0"
+  tag: "v0.3.0"
 
 nameOverride: "core"
 fullnameOverride: "core"
 
 daprConfig: core
 appPort: 6789
-middleware:
-  name: tkeel-middleware
 
 resources:
   {}
@@ -44,12 +42,35 @@ tolerations: []
 
 affinity: {}
 
-elasticsearch:
-  replicas: 1
-  minimumMasterNodes: 1
-
-etcd:
-  auth:
-    rbac:
-      enabled: false
-  fullnameOverride: etcd
+# middleware configuration
+middleware:
+  mysql:
+    host: tkeel-middleware-mysql
+    port: 3306
+    dbname: tkeelauth
+    user: root
+    password: a3fks=ixmeb82a
+  redis:
+    addr: tkeel-middleware-redis-master:6379
+    db: 0
+    password: Biz0P8Xoup
+  elasticsearch:
+    addrs:
+      - es0:8086
+      - es1:8086
+    user: admin
+    password: admin
+  etcd:
+    addrs:
+      - etcd0:2379
+      - etcd1:2379
+  kafka:
+    addrs:
+      - kafka0:9092
+      - kafak1:9092
+  clickhouse:
+    addrs:
+      - clickhouse0:9090
+      - clickhouse1:9090
+    user: admin
+    password: admin
