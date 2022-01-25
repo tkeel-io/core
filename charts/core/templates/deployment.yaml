@@ -36,11 +36,6 @@ spec:
             - name: http
               containerPort: {{.Values.appPort}}
               protocol: TCP
-          env:
-            - name: KEEL_PRIVATE_STORE
-              value: {{ printf "%s-redis-private-store" .Values.middleware.name }}
-            - name: KEEL_PUBLIC_STORE
-              value: {{ printf "%s-redis-public-store" .Values.middleware.name }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
