@@ -6,7 +6,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -36,7 +35,7 @@ const (
 	ExtCloudEventDataSchema  = "exteventschema"
 	ExtCloudEventContentType = "exteventcontenttype"
 
-	Sync = "sync"
+	Sync = "SYNC"
 )
 
 func GetAttributes(event cloudevents.Event) map[string]string {
@@ -52,6 +51,7 @@ func GetAttributes(event cloudevents.Event) map[string]string {
 	for key, val := range event.Extensions() {
 		if value, ok := val.(string); ok {
 			attributes[key] = value
+			continue
 		}
 		log.Warn("missing attributes field", zfield.Key(key), zfield.Value(val))
 	}
@@ -74,12 +74,17 @@ func New(ctx context.Context) Context {
 }
 
 func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
-	msgCtx := Context{ctx: ctx}
-	waiter := util.NewWaiter()
-	attributes := GetAttributes(ev)
-	if Sync == attributes[ExtSyncFlag] {
+	var waiter util.Waiter
+	msgCtx := Context{
+		ctx:        ctx,
+		waiter:     util.NewWaiter(),
+		attributes: GetAttributes(ev),
+	}
+
+	if Sync == msgCtx.attributes[ExtSyncFlag] {
 		waiter = &sync.WaitGroup{}
-		waiter.Add(1)
+		msgCtx.waiter = waiter
+		msgCtx.waiter.Add(1)
 	}
 
 	var err error
@@ -99,7 +104,7 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 		})
 
 		msgCtx.message = msg
-	case MessageTypeProps:
+	default:
 		var rawData []byte
 		if rawData, err = ev.DataBytes(); nil != err {
 			log.Error("parse props message", zap.Error(err), zfield.Event(ev))
@@ -120,18 +125,10 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 		})
 
 		msgCtx.message = msg
-	default:
-		waiter.Done()
-		log.Error("invalid message type", zfield.Event(ev))
-		return Context{}, xerrors.ErrInvalidMessageType
+		msgCtx.Set(ExtMessageType, MessageTypeProps.String())
 	}
 
-	return Context{
-		ctx:        ctx,
-		waiter:     waiter,
-		message:    msgCtx.message,
-		attributes: attributes,
-	}, nil
+	return msgCtx, nil
 }
 
 func (ctx *Context) value(key string) interface{} {

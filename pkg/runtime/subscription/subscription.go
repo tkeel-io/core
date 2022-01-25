@@ -179,11 +179,11 @@ func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey 
 	entitySource := msgCtx.Get(message.ExtEntitySource)
 	entityTemplate := msgCtx.Get(message.ExtTemplateID)
 
-	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
-	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
-	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
-	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
-	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+	msg.Properties[state.ReservedFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.ReservedFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.ReservedFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.ReservedFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.ReservedFieldTemplate] = constraint.NewNode(entityTemplate)
 
 	// encode properties.
 	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {
@@ -233,11 +233,11 @@ func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
 	entitySource := msgCtx.Get(message.ExtEntitySource)
 	entityTemplate := msgCtx.Get(message.ExtTemplateID)
 
-	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
-	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
-	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
-	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
-	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+	msg.Properties[state.ReservedFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.ReservedFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.ReservedFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.ReservedFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.ReservedFieldTemplate] = constraint.NewNode(entityTemplate)
 
 	// encode properties.
 	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {
@@ -287,11 +287,11 @@ func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
 	entitySource := msgCtx.Get(message.ExtEntitySource)
 	entityTemplate := msgCtx.Get(message.ExtTemplateID)
 
-	msg.Properties[state.RequiredFieldID] = constraint.NewNode(entityID)
-	msg.Properties[state.RequiredFieldType] = constraint.NewNode(entityType)
-	msg.Properties[state.RequiredFieldOwner] = constraint.NewNode(entityOwner)
-	msg.Properties[state.RequiredFieldSource] = constraint.NewNode(entitySource)
-	msg.Properties[state.RequiredFieldTemplate] = constraint.NewNode(entityTemplate)
+	msg.Properties[state.ReservedFieldID] = constraint.NewNode(entityID)
+	msg.Properties[state.ReservedFieldType] = constraint.NewNode(entityType)
+	msg.Properties[state.ReservedFieldOwner] = constraint.NewNode(entityOwner)
+	msg.Properties[state.ReservedFieldSource] = constraint.NewNode(entitySource)
+	msg.Properties[state.ReservedFieldTemplate] = constraint.NewNode(entityTemplate)
 
 	// encode properties.
 	if bytes, err = constraint.EncodeJSON(msg.Properties); nil != err {

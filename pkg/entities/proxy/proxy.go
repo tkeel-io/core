@@ -89,13 +89,21 @@ func (p *Proxy) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
 		// select proxy client.
 		var proxyClient pb.ProxyClient
 		if proxyClient, err = p.selectConn(nodeName); nil != err {
-			log.Error("select proxy client", zap.Error(err), zfield.Name(nodeName))
-			return errors.Wrap(err, "select proxy client")
+			log.Error("select proxy server", zap.Error(err),
+				zfield.Name(nodeName), zfield.Event(ev))
+			return errors.Wrap(err, "select proxy server")
+		}
+
+		var bytes []byte
+		if bytes, err = ev.DataBytes(); nil != err {
+			log.Error("encode event data",
+				zap.Error(err), zfield.Event(ev))
+			return errors.Wrap(err, "encode event data")
 		}
 
 		_, err = proxyClient.Route(ctx, &pb.RouteRequest{
-			Header: make(map[string]string),
-			Data:   []byte{},
+			Header: message.GetAttributes(ev),
+			Data:   bytes,
 		})
 	}
 

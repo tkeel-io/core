@@ -164,7 +164,7 @@ func (r FloatNode) To(typ Type) Node {
 type StringNode string
 
 func (r StringNode) Type() Type         { return String }
-func (r StringNode) String() string     { return "\"" + string(r) + "\"" }
+func (r StringNode) String() string     { return string(r) }
 func (r StringNode) Value() interface{} { return string(r) }
 func (r StringNode) Copy() Node         { return r }
 func (r StringNode) To(typ Type) Node {

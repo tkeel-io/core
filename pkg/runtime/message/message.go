@@ -29,8 +29,8 @@ const (
 	SMMethodDeleteEntity Method = "DeleteEntity"
 
 	// enumerate PropertyMessage fields.
-	FiledStateID    = "state_id"
-	FieldOperator   = "operator"
+	FiledStateID    = "id"
+	FieldOperator   = "reversed_core_entity_field_operator"
 	FieldProperties = "properties"
 )
 

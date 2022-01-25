@@ -146,6 +146,27 @@ func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error
 		return errors.Wrap(err, "parse event")
 	}
 
+	// squash properties.
+	switch msg := msgCtx.Message().(type) {
+	case message.StateMessage:
+		// ignore this type.
+	case message.PropertyMessage:
+		requireds := make(map[string]string)
+		for name, reserved := range state.RequiredFields {
+			if reserved {
+				if prop, has := msg.Properties[name]; has {
+					requireds[name] = unwrapString(prop.String())
+				}
+			}
+			delete(msg.Properties, name)
+		}
+
+		// squash fields.
+		for key, val := range state.SquashFields(requireds) {
+			msgCtx.Set(key, val)
+		}
+	}
+
 	m.msgCh <- msgCtx
 	msgCtx.Wait()
 

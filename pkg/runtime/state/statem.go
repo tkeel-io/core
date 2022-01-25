@@ -49,19 +49,48 @@ const (
 	SMStatusInactive Status = "inactive"
 	SMStatusDeleted  Status = "deleted"
 
-	// required property field.
-	RequiredFieldID         = "id"
-	RequiredFieldType       = "type"
-	RequiredFieldOwner      = "owner"
-	RequiredFieldSource     = "source"
-	RequiredFieldVersion    = "version"
-	RequiredFieldConfigs    = "configs"
-	RequiredFieldMappers    = "mappers"
-	RequiredFieldLastTime   = "last_time"
-	RequiredFieldTemplate   = "template"
-	RequiredFieldProperties = "properties"
-	RequiredFieldConfigFile = "config_file"
+	// reserved property field.
+	ReservedFieldID         = "id"
+	ReservedFieldType       = "type"
+	ReservedFieldOwner      = "owner"
+	ReservedFieldSource     = "source"
+	ReservedFieldVersion    = "version"
+	ReservedFieldConfigs    = "configs"
+	ReservedFieldMappers    = "mappers"
+	ReservedFieldLastTime   = "last_time"
+	ReservedFieldTemplate   = "template"
+	ReservedFieldProperties = "properties"
+	ReservedFieldConfigFile = "config_file"
 )
+
+var RequiredFields = map[string]bool{
+	ReservedFieldID:         true,
+	ReservedFieldType:       true,
+	ReservedFieldOwner:      true,
+	ReservedFieldSource:     true,
+	ReservedFieldVersion:    false,
+	ReservedFieldConfigs:    false,
+	ReservedFieldMappers:    false,
+	ReservedFieldLastTime:   false,
+	ReservedFieldTemplate:   false,
+	ReservedFieldProperties: false,
+	ReservedFieldConfigFile: false,
+}
+
+var squashFields = map[string]string{
+	ReservedFieldID:     message.ExtEntityID,
+	ReservedFieldType:   message.ExtEntityType,
+	ReservedFieldOwner:  message.ExtEntityOwner,
+	ReservedFieldSource: message.ExtEntitySource,
+}
+
+func SquashFields(header map[string]string) map[string]string {
+	ret := make(map[string]string)
+	for key, value := range header {
+		ret[squashFields[key]] = value
+	}
+	return ret
+}
 
 // statem state marchins.
 type statem struct {

@@ -62,6 +62,7 @@ func (d *dispatcher) Run() error {
 	for id, pubsubInstance := range d.upstreamConnections {
 		log.Info("pubsub start receive", zfield.ID(id),
 			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
+
 		if err = pubsubInstance.Received(context.Background(),
 			func(ctx context.Context, ev cloudevents.Event) error {
 				var entityID string

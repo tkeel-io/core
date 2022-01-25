@@ -19,7 +19,9 @@ package runtime
 import (
 	"errors"
 
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/kit/log"
 )
 
 type WatchKey = mapper.WatchKey
@@ -40,3 +42,11 @@ var (
 	ErrInvalidTQLKey       = errors.New("invalid TQL key")
 	ErrSubscriptionInvalid = errors.New("invalid subscription")
 )
+
+func unwrapString(str string) string {
+	if len(str) > 2 {
+		return str[1 : len(str)-1]
+	}
+	log.Warn("unwrap string failed", zfield.Value(str))
+	return str
+}

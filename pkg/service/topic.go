@@ -54,7 +54,7 @@ func NewTopicService(ctx context.Context, entityManager entities.EntityManager) 
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	log.Debug("catched event", zfield.ReqID(req.Meta.Id), zfield.Type(req.Meta.Type),
+	log.Debug("received event", zfield.ReqID(req.Meta.Id), zfield.Type(req.Meta.Type),
 		zfield.Pubsub(req.Meta.Pubsubname), zfield.Topic(req.Meta.Topic), zfield.Source(req.Meta.Source))
 	res, err := dapr.HandleEvent(ctx, req)
 	return res, errors.Wrap(err, "handle event")

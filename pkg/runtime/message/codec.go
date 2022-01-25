@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 )
@@ -45,6 +44,7 @@ func (c *propsMessageCodec) Encode(msg PropertyMessage) ([]byte, error) {
 }
 
 func (c *propsMessageCodec) Decode(bytes []byte) (msg PropertyMessage, err error) {
+	msg.Properties = make(map[string]constraint.Node)
 	cc := collectjs.ByteNew(bytes)
 	cc.Foreach(func(key []byte, value []byte) {
 		switch string(key) {
@@ -54,14 +54,19 @@ func (c *propsMessageCodec) Decode(bytes []byte) (msg PropertyMessage, err error
 			msg.Operator = unwrapString(value)
 		case FieldProperties:
 			ccc := collectjs.ByteNew(value)
-			msg.Properties = make(map[string]constraint.Node)
 			ccc.Foreach(func(key []byte, value []byte) {
 				msg.Properties[string(key)] = constraint.NewNode(value)
 			})
 		default:
-			err = xerrors.ErrInvalidMessageField
+			msg.Properties[string(key)] = constraint.NewNode(value)
 		}
 	})
+
+	if msg.Operator == "" {
+		// default operator for pubsub.
+		msg.Operator = constraint.PatchOpReplace.String()
+	}
+
 	return msg, errors.Wrap(err, "decode property message")
 }
 
