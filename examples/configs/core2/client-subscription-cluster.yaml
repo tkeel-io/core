@@ -1,0 +1,10 @@
+apiVersion: dapr.io/v1alpha1
+kind: Subscription
+metadata:
+  name: cluster-subscriber2
+spec:
+  topic: core-pub1
+  route: /v1/topic
+  pubsubname: core-pubsub-cluster1
+scopes:
+  - core

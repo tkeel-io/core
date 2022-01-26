@@ -30,6 +30,10 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
+type Republisher interface {
+	RouteMessage(ctx context.Context, ev cloudevents.Event) error
+}
+
 type Manager interface {
 	// start manager.
 	Start() error
@@ -41,6 +45,7 @@ type Manager interface {
 	RouteMessage(context.Context, cloudevents.Event) error
 	// handle message on this node.
 	HandleMessage(context.Context, cloudevents.Event) error
+	SetRepublisher(republisher Republisher)
 }
 
 type ResourceManager interface {

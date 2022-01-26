@@ -122,10 +122,21 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		ev.SetSource("core.runtime")
 		ev.SetExtension(message.ExtMessageSender, s.ID)
 		ev.SetExtension(message.ExtMessageReceiver, stateID)
-		ev.SetData(message.PropertyMessage{
+		ev.SetDataContentType(cloudevents.ApplicationJSON)
+
+		var err error
+		var bytes []byte
+		// encode message.
+		if bytes, err = message.GetPropsCodec().Encode(message.PropertyMessage{
 			StateID:    s.ID,
 			Properties: msg,
-		})
+			Operator:   constraint.PatchOpReplace.String(),
+		}); nil != err {
+			log.Error("encode props message", zap.Error(err), zfield.Eid(s.ID))
+			return
+		}
+
+		ev.SetData(bytes)
 
 		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()))
 

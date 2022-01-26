@@ -22,3 +22,5 @@ func (s *ManagerMock) RouteMessage(ctx context.Context, e cloudevents.Event) err
 func (s *ManagerMock) HandleMessage(ctx context.Context, e cloudevents.Event) error {
 	return nil
 }
+
+func (s *ManagerMock) SetRepublisher(republisher Republisher) {}

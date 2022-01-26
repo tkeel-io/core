@@ -22,7 +22,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -63,18 +62,4 @@ type EntityManager interface {
 	PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (base *Base, err error)
 	// QueryConfigs returns entity configs.
 	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
-}
-
-func convert(en *dao.Entity) *Base {
-	return &Base{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Version:    en.Version,
-		LastTime:   en.LastTime,
-		TemplateID: en.TemplateID,
-		Properties: en.Properties,
-		ConfigFile: en.ConfigFile,
-	}
 }

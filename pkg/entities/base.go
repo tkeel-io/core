@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -104,4 +105,20 @@ func (b *Base) JSON() map[string]interface{} {
 	info["config_file"] = string(b.ConfigFile)
 
 	return info
+}
+
+func entityToBase(en *dao.Entity) *Base {
+	base := &Base{
+		ID:         en.ID,
+		Type:       en.Type,
+		Owner:      en.Owner,
+		Source:     en.Source,
+		Version:    en.Version,
+		LastTime:   en.LastTime,
+		TemplateID: en.TemplateID,
+		Properties: en.Properties,
+		ConfigFile: en.ConfigFile,
+	}
+
+	return base
 }

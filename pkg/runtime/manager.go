@@ -41,6 +41,7 @@ type Manager struct {
 	disposeCh       chan message.Context
 	actorEnv        environment.IEnvironment
 	resourceManager state.ResourceManager
+	republisher     state.Republisher
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -129,11 +130,14 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
+func (m *Manager) SetRepublisher(republisher state.Republisher) {
+	m.republisher = republisher
+}
+
 func (m *Manager) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
 	// assume single node.
 	log.Debug("route event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
-
-	return m.HandleMessage(ctx, ev)
+	return errors.Wrap(m.republisher.RouteMessage(ctx, ev), "route message")
 }
 
 func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error {

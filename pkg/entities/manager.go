@@ -74,6 +74,9 @@ func NewEntityManager(
 		lock:         sync.RWMutex{},
 	}
 
+	// set state manager Republisher.
+	stateManager.SetRepublisher(entityManager.coreProxy)
+
 	coreProxy, err := proxy.NewProxy(ctx, stateManager)
 	if nil != err {
 		log.Error("new Proxy instance", zap.Error(err))
@@ -259,7 +262,13 @@ func (m *entityManager) CreateEntity(ctx context.Context, base *Base) (out *Base
 	log.Debug("process message completed", zfield.Eid(base.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, errors.Wrap(err, "create entity")
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("create entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "create entity")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "create entity")
 }
 
 // DeleteEntity delete an entity from manager.
@@ -300,7 +309,13 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (base *Base,
 	log.Debug("dispose message completed", zfield.Eid(base.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, errors.Wrap(err, "delete entity")
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("delete entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "delete entity")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "delete entity")
 }
 
 // GetProperties returns Base.
@@ -315,7 +330,7 @@ func (m *entityManager) GetProperties(ctx context.Context, en *Base) (base *Base
 		return nil, errors.Wrap(err, "get entity")
 	}
 
-	return convert(res), errors.Wrap(err, "get entity")
+	return entityToBase(res), errors.Wrap(err, "get entity")
 }
 
 // SetProperties set properties into entity.
@@ -364,7 +379,13 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (base *Base
 	log.Debug("process message completed", zfield.Eid(base.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, errors.Wrap(err, "set entity properties")
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("set entity properties", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "set entity properties")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "set entity properties")
 }
 
 func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error) {
@@ -430,7 +451,13 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 	log.Debug("dispose message completed", zfield.Eid(base.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, errors.Wrap(err, "patch entity properties")
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("patch entity", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "patch entity")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "patch entity")
 }
 
 // AppendMapper append a mapper into entity.
@@ -532,7 +559,13 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (base *Base, e
 	log.Debug("dispose message completed", zfield.Eid(base.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, errors.Wrap(err, "set entity configs")
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("set entity configs", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "set entity configs")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "set entity configs")
 }
 
 // PatchConfigs patch properties into entity.
@@ -574,7 +607,13 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 	log.Debug("dispose message completed", zfield.Eid(base.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return base, nil
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("patch entity configs", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "patch entity configs")
+	}
+
+	return entityToBase(entity), errors.Wrap(err, "patch entity configs")
 }
 
 // QueryConfigs query entity configs.
@@ -584,10 +623,16 @@ func (m *entityManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs 
 		zfield.Owner(base.Owner), zfield.Source(base.Source), zfield.Base(en.JSON()))
 
 	// get entity config file.
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: base.ID}); nil != err {
+		log.Error("patch entity configs", zap.Error(err), zfield.Eid(base.ID))
+		return nil, errors.Wrap(err, "patch entity configs")
+	}
 
 	// get properties by ids.
+	// TODO: 实现对ConfigFile的patch.copy操作.
 
-	return base, nil
+	return entityToBase(entity), nil
 }
 
 func checkTQLs(en *Base) error {
