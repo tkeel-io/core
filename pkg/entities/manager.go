@@ -165,6 +165,9 @@ func (m *entityManager) Start() error {
 		return errors.Wrap(err, "start state manager")
 	}
 
+	// start state manager.
+	go m.stateManager.Start()
+
 	m.listQueue()
 	go m.watchQueue()
 	for id, receiver := range m.receivers {
@@ -178,7 +181,7 @@ func (m *entityManager) Start() error {
 		})
 	}
 
-	return nil
+	return errors.Wrap(nil, "start entity manager")
 }
 
 func (m *entityManager) OnMessage(ctx context.Context, e cloudevents.Event) error {
