@@ -56,7 +56,6 @@ func Test_Put(t *testing.T) {
 
 func Test_Get(t *testing.T) {
 	mb := newMailbox(5)
-
 	mb.Put(message.New(context.TODO()))
-	assert.Nil(t, mb.Get())
+	assert.NotNil(t, mb.Get())
 }

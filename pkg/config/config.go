@@ -127,7 +127,7 @@ func Init(cfgFile string) {
 	viper.SetDefault("components.search_engine.elasticsearch.password", _defaultESConfig.Password)
 
 	if err := viper.ReadInConfig(); nil != err {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.As(err, fs.ErrNotExist) { //nolint
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.As(err, &fs.ErrNotExist) { //nolint
 			// Config file not found.
 			defer writeDefault(cfgFile)
 		} else {
