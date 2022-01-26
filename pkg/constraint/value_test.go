@@ -50,7 +50,7 @@ func TestParseConfigsFrom(t *testing.T) {
 		},
 	}
 
-	result, err := ParseConfigsFrom(data)
+	result, err := ParseConfigFrom(data)
 	assert.Nilf(t, err, "parse successful.")
 	assert.Equal(t, cfg, result)
 }

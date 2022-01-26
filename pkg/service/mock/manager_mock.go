@@ -33,8 +33,8 @@ func (m *EntityManagerMock) CreateEntity(ctx context.Context, en *entities.Base)
 }
 
 // DeleteEntity delete entity.
-func (m *EntityManagerMock) DeleteEntity(ctx context.Context, en *entities.Base) (base *entities.Base, err error) {
-	return en, nil
+func (m *EntityManagerMock) DeleteEntity(ctx context.Context, en *entities.Base) (err error) {
+	return nil
 }
 
 // GetProperties returns entity properties.

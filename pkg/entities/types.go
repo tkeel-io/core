@@ -41,25 +41,25 @@ type EntityManager interface {
 	// OnMessage handle message.
 	OnMessage(context.Context, cloudevents.Event) error
 	// CreateEntity create entity.
-	CreateEntity(ctx context.Context, base *Base) (*Base, error)
+	CreateEntity(context.Context, *Base) (*Base, error)
 	// DeleteEntity delete entity.
-	DeleteEntity(ctx context.Context, en *Base) (base *Base, err error)
+	DeleteEntity(context.Context, *Base) error
 	// GetProperties returns entity properties.
-	GetProperties(ctx context.Context, en *Base) (base *Base, err error)
+	GetProperties(context.Context, *Base) (*Base, error)
 	// SetProperties set entity properties.
-	SetProperties(ctx context.Context, en *Base) (base *Base, err error)
+	SetProperties(context.Context, *Base) (*Base, error)
 	// PatchEntity patch entity properties.
-	PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (base *Base, err error)
+	PatchEntity(context.Context, *Base, []*pb.PatchData) (*Base, error)
 	// AppendMapper append entity mapper.
-	AppendMapper(ctx context.Context, en *Base) (base *Base, err error)
+	AppendMapper(context.Context, *Base) (*Base, error)
 	// RemoveMapper remove entity mapper.
-	RemoveMapper(ctx context.Context, en *Base) (base *Base, err error)
+	RemoveMapper(context.Context, *Base) (*Base, error)
 	// CheckSubscription check subscription.
-	CheckSubscription(ctx context.Context, en *Base) (err error)
+	CheckSubscription(context.Context, *Base) error
 	// SetConfigs set entity configs.
-	SetConfigs(ctx context.Context, en *Base) (base *Base, err error)
+	SetConfigs(context.Context, *Base) (*Base, error)
 	// PatchConfigs patch entity configs.
-	PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (base *Base, err error)
+	PatchConfigs(context.Context, *Base, []*state.PatchData) (*Base, error)
 	// QueryConfigs returns entity configs.
-	QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (base *Base, err error)
+	QueryConfigs(context.Context, *Base, []string) (*Base, error)
 }

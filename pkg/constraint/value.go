@@ -17,9 +17,12 @@ limitations under the License.
 package constraint
 
 import (
+	"encoding/json"
+
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -116,7 +119,18 @@ type DefineArray struct {
 	ElemType Config `json:"elem_type" mapstructure:"elem_type"`
 }
 
-func ParseConfigsFrom(data interface{}) (cfg Config, err error) {
+func ParseFrom(bytes []byte) (*Config, error) {
+	var v = new(interface{})
+	if err := json.Unmarshal(bytes, v); nil != err {
+		log.Error("unmarshal Config", zap.Error(err))
+		return nil, errors.Wrap(err, "unmarshal Config")
+	}
+
+	cfg, err := ParseConfigFrom(v)
+	return &cfg, errors.Wrap(err, "parse Config")
+}
+
+func ParseConfigFrom(data interface{}) (cfg Config, err error) {
 	cfgRequest := Config{}
 	if err = mapstructure.Decode(data, &cfgRequest); nil != err {
 		return cfg, errors.Wrap(err, "parse property config failed")
@@ -158,7 +172,6 @@ func parseField(in Config) (out Config, err error) {
 
 		in.Define["fields"] = jsonDefine2.Fields
 	default:
-		log.Info("===================", in)
 		return out, ErrEntityConfigInvalid
 	}
 

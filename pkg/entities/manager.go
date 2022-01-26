@@ -24,6 +24,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
@@ -215,8 +216,8 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 
 	// 2. check template entity.
 	if templateID, _ = ctx.Value(TemplateEntityID{}).(string); templateID != "" {
-		has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: templateID})
-		if nil != err && has {
+		en.TemplateID = templateID
+		if has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: templateID}); nil != err && has {
 			log.Error("check template", zap.Error(err), zfield.Eid(templateID))
 			return nil, errors.Wrap(err, "create entity")
 		}
@@ -268,7 +269,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	log.Debug("process message completed", zfield.Eid(en.ID),
+	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var entity *dao.Entity
@@ -281,7 +282,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 }
 
 // DeleteEntity delete an entity from manager.
-func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (*Base, error) {
+func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) error {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.DeleteEntity",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -290,6 +291,7 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (*Base, erro
 	msgID := util.UUID()
 	eventID := util.UUID()
 	ev := cloudevents.NewEvent()
+
 	ev.SetID(eventID)
 	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
@@ -313,19 +315,13 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) (*Base, erro
 	var err error
 	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "delete entity")
+		return errors.Wrap(err, "delete entity")
 	}
 
-	log.Debug("dispose message completed", zfield.Eid(en.ID),
+	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	var entity *dao.Entity
-	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
-		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "delete entity")
-	}
-
-	return entityToBase(entity), errors.Wrap(err, "delete entity")
+	return errors.Wrap(err, "delete entity")
 }
 
 // GetProperties returns Base.
@@ -335,13 +331,13 @@ func (m *entityManager) GetProperties(ctx context.Context, en *Base) (*Base, err
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
 	var err error
-	var res *dao.Entity
-	if res, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
+	var entity *dao.Entity
+	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "get entity")
 	}
 
-	return entityToBase(res), errors.Wrap(err, "get entity")
+	return entityToBase(entity), errors.Wrap(err, "get entity")
 }
 
 // SetProperties set properties into entity.
@@ -353,6 +349,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (*Base, err
 	msgID := util.UUID()
 	eventID := util.UUID()
 	ev := cloudevents.NewEvent()
+
 	ev.SetID(eventID)
 	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
@@ -457,10 +454,13 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 				log.Error("patch entity", zap.Error(err), zfield.Eid(en.ID))
 				return nil, errors.Wrap(err, "patch entity")
 			}
+
+			log.Debug("processing message completed", zfield.Eid(en.ID),
+				zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 		}
 	}
 
-	log.Debug("dispose message completed", zfield.Eid(en.ID),
+	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var entity *dao.Entity
@@ -589,7 +589,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (*Base, error)
 		return nil, errors.Wrap(err, "set entity configs")
 	}
 
-	log.Debug("dispose message completed", zfield.Eid(en.ID),
+	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var entity *dao.Entity
@@ -638,7 +638,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
-	log.Debug("dispose message completed", zfield.Eid(en.ID),
+	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var entity *dao.Entity
@@ -665,9 +665,22 @@ func (m *entityManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs 
 	}
 
 	// get properties by ids.
-	// TODO: 实现对ConfigFile的patch.copy操作.
+	cc := collectjs.ByteNew(entity.ConfigFile)
+	configs := make(map[string]*constraint.Config)
+	for _, propertyID := range propertyIDs {
+		var cfg *constraint.Config
+		bytes := cc.Get(propertyID).GetRaw()
+		if cfg, err = constraint.ParseFrom(bytes); nil != err {
+			log.Error("parse entity configs", zap.Error(err), zfield.Eid(en.ID))
+			return nil, errors.Wrap(err, "parse entity configs")
+		}
+		configs[propertyID] = cfg
+	}
 
-	return entityToBase(entity), nil
+	base := entityToBase(entity)
+	base.Configs = configs
+
+	return base, nil
 }
 
 func checkTQLs(en *Base) error {

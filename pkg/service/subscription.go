@@ -119,7 +119,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
-		if _, err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
+		if err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
 			log.Error("destroy subscription", zap.Error(err0), logger.Eid(req.Id))
 		}
 		return
@@ -174,7 +174,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if _, err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
+	if err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
 		log.Error("delete subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
