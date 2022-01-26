@@ -177,3 +177,7 @@ func (ctx *Context) Context() context.Context {
 func (ctx *Context) Done() {
 	ctx.waiter.Done()
 }
+
+func (ctx *Context) Attributes() map[string]string {
+	return ctx.attributes
+}

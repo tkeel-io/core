@@ -225,6 +225,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 	msgID := util.UUID()
 	eventID := util.UUID()
 	ev := cloudevents.NewEvent()
+
 	ev.SetID(eventID)
 	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
@@ -236,16 +237,17 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps)
-	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
+	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
 
 	// encode message.
-	bytes, err := message.GetPropsCodec().Encode(message.PropertyMessage{
-		StateID:    en.ID,
-		Properties: en.Properties,
-		Operator:   constraint.PatchOpReplace.String(),
-	})
+	bytes, err := message.GetPropsCodec().Encode(
+		message.PropertyMessage{
+			StateID:    en.ID,
+			Properties: en.Properties,
+			Operator:   constraint.PatchOpReplace.String(),
+		})
 
 	if nil != err {
 		log.Error("encode props message", zap.Error(err),
@@ -253,7 +255,13 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 		return nil, errors.Wrap(err, "encode props message")
 	}
 
-	ev.SetData(bytes)
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "encode props message")
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "validate event")
+	}
 
 	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
 		log.Error("create entity", zap.Error(err), zfield.Eid(en.ID))
@@ -355,9 +363,9 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (*Base, err
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps)
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetProperties"))
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode message.
 	bytes, err := message.GetPropsCodec().Encode(message.PropertyMessage{

@@ -23,6 +23,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -159,7 +160,7 @@ func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error
 		for name, reserved := range state.RequiredFields {
 			if reserved {
 				if prop, has := msg.Properties[name]; has {
-					requireds[name] = unwrapString(prop.String())
+					requireds[name] = constraint.Unwrap(prop)
 				}
 			}
 			delete(msg.Properties, name)

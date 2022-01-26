@@ -42,7 +42,8 @@ type Consumer struct {
 
 func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
 	// parse CloudEvent from pb.TopicEventRequest.
-	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id), zap.Any("meta", req.Meta))
+	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id),
+		zap.String("raw_data", string(req.RawData)), zap.Any("meta", req.Meta))
 
 	ev := cloudevents.NewEvent()
 	err = ev.UnmarshalJSON(req.RawData)

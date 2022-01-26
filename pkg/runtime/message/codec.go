@@ -4,8 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
-	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/core/pkg/util"
 )
 
 type PropsMessageCodec interface {
@@ -32,12 +31,12 @@ func (c *propsMessageCodec) Encode(msg PropertyMessage) ([]byte, error) {
 	}
 
 	// construct message fields.
-	if bytes, err = collectjs.Set(bytes, FiledStateID, wrapString(msg.StateID)); nil != err {
+	if bytes, err = collectjs.Set(bytes, FiledStateID, util.WrapS(msg.StateID)); nil != err {
 		return bytes, errors.Wrap(err, "encode entity state_id")
-	} else if bytes, err = collectjs.Set(bytes, FieldOperator, wrapString(msg.Operator)); nil != err {
+	} else if bytes, err = collectjs.Set(bytes, FieldOperator, util.WrapS(msg.Operator)); nil != err {
 		return bytes, errors.Wrap(err, "encode entity operator")
 	} else if bytes, err = collectjs.Set(bytes, FieldProperties, propBytes); nil != err {
-		return bytes, errors.Wrap(err, "encode entity operator")
+		return bytes, errors.Wrap(err, "encode entity properties")
 	}
 
 	return bytes, nil
@@ -49,9 +48,9 @@ func (c *propsMessageCodec) Decode(bytes []byte) (msg PropertyMessage, err error
 	cc.Foreach(func(key []byte, value []byte) {
 		switch string(key) {
 		case FiledStateID:
-			msg.StateID = unwrapString(value)
+			msg.StateID = util.UnwrapS(value)
 		case FieldOperator:
-			msg.Operator = unwrapString(value)
+			msg.Operator = util.UnwrapS(value)
 		case FieldProperties:
 			ccc := collectjs.ByteNew(value)
 			ccc.Foreach(func(key []byte, value []byte) {
@@ -68,16 +67,4 @@ func (c *propsMessageCodec) Decode(bytes []byte) (msg PropertyMessage, err error
 	}
 
 	return msg, errors.Wrap(err, "decode property message")
-}
-
-func wrapString(s string) []byte {
-	return []byte("\"" + s + "\"")
-}
-
-func unwrapString(bytes []byte) string {
-	if len(bytes) > 2 {
-		return string(bytes[1 : len(bytes)-1])
-	}
-	log.Warn("unwrap string failed", zfield.Value(string(bytes)))
-	return string(bytes)
 }

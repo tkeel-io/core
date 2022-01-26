@@ -165,7 +165,7 @@ type StringNode string
 
 func (r StringNode) Type() Type         { return String }
 func (r StringNode) String() string     { return string(r) }
-func (r StringNode) Value() interface{} { return string(r) }
+func (r StringNode) Value() interface{} { return r[1 : len(r)-1] }
 func (r StringNode) Copy() Node         { return r }
 func (r StringNode) To(typ Type) Node {
 	switch typ {
@@ -196,6 +196,16 @@ func (r StringNode) To(typ Type) Node {
 		return FloatNode(b)
 	default:
 		return UndefineResult
+	}
+}
+
+func Unwrap(s Node) string {
+	switch s.Type() {
+	case String:
+		ss, _ := s.Value().(string)
+		return ss
+	default:
+		return s.String()
 	}
 }
 
@@ -284,7 +294,7 @@ func NewNode(v interface{}) Node {
 		int, uint32, int32, int64, uint64:
 		return StringNode(fmt.Sprintf("%v", val)).To(Integer)
 	case string:
-		return StringNode(val)
+		return StringNode("\"" + val + "\"")
 	case []byte:
 		return JSONNode(val)
 	case bool:
@@ -318,7 +328,7 @@ func ToBytesWithWrapString(val Node) []byte {
 		jsonVal, _ := val.(JSONNode)
 		return []byte(jsonVal)
 	case String:
-		return []byte("\"" + val.String() + "\"")
+		return []byte(val.String())
 	default:
 		return []byte(val.String())
 	}
@@ -327,7 +337,7 @@ func ToBytesWithWrapString(val Node) []byte {
 func EncodeJSON(kvalues map[string]Node) ([]byte, error) {
 	collect := collectjs.New("{}")
 	for key, val := range kvalues {
-		collect.Append(key, []byte(val.String()))
+		collect.Set(key, []byte(val.String()))
 	}
 	return collect.GetRaw(), errors.Wrap(collect.GetError(), "Encode Json")
 }
