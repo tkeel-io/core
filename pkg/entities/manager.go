@@ -29,6 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/entities/proxy"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -212,16 +213,19 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
 	// 1. check entity exists.
-	if has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: en.ID}); nil != err && has {
-		log.Error("check entity", zap.Error(err), zfield.Eid(en.ID))
+	if has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
+		log.Error("check entity exists", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "create entity")
+	} else if has {
+		log.Error("check entity exists", zap.Error(err), zfield.Eid(en.ID))
+		return nil, errors.Wrap(xerrors.ErrEntityAleadyExists, "create entity")
 	}
 
 	// 2. check template entity.
 	if templateID, _ = ctx.Value(TemplateEntityID{}).(string); templateID != "" {
 		en.TemplateID = templateID
 		if has, err = m.entityRepo.HasEntity(ctx, &dao.Entity{ID: templateID}); nil != err && has {
-			log.Error("check template", zap.Error(err), zfield.Eid(templateID))
+			log.Error("check template entity", zap.Error(err), zfield.Eid(templateID))
 			return nil, errors.Wrap(err, "create entity")
 		}
 	}
@@ -291,31 +295,38 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) error {
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	msgID := util.UUID()
-	eventID := util.UUID()
 	ev := cloudevents.NewEvent()
+	msgID, eventID := util.UUID(), util.UUID()
 
 	ev.SetID(eventID)
 	ev.SetType(eventType)
 	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityID, en.ID)
+	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
-	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
+	ev.SetExtension(message.ExtSyncFlag, message.Sync)
+	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtMessageSender, CoreAPISender)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState)
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("DeleteEntity"))
 
+	var err error
+	if err = ev.Validate(); nil != err {
+		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
+		return errors.Wrap(err, "delete entity")
+	}
+
 	// encode message.
-	ev.SetData(message.StateMessage{
+	if err = ev.SetData(message.StateMessage{
 		StateID: en.ID,
 		Method:  message.SMMethodDeleteEntity,
-	})
+	}); nil != err {
+		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
+		return errors.Wrap(err, "delete entity")
+	}
 
-	var err error
 	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
 		return errors.Wrap(err, "delete entity")
@@ -364,7 +375,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (*Base, err
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps)
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetProperties"))
 
 	// encode message.
@@ -433,7 +444,7 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 			ev.SetExtension(message.ExtEntityOwner, en.Owner)
 			ev.SetExtension(message.ExtMessageReceiver, en.ID)
 			ev.SetExtension(message.ExtEntitySource, en.Source)
-			ev.SetExtension(message.ExtMessageType, message.MessageTypeProps)
+			ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
 			ev.SetExtension(message.ExtMessageSender, eventSender("PatchEntity"))
 			ev.SetDataContentType(cloudevents.ApplicationJSON)
 
@@ -576,7 +587,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (*Base, error)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState)
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetConfigs"))
 
 	// encode message.
@@ -624,7 +635,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState)
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("PatchConfigs"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
@@ -641,6 +652,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
+	// debug informations.
 	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 

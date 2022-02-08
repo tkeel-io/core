@@ -77,9 +77,9 @@ type WatchKey = mapper.WatchKey
 type Status string
 
 type PatchData struct {
-	Path     string
-	Operator constraint.PatchOperator
-	Value    interface{}
+	Path     string                   `json:"path"`
+	Operator constraint.PatchOperator `json:"operator"`
+	Value    interface{}              `json:"value"`
 }
 
 type MessageHandler = func(message.Context) []WatchKey

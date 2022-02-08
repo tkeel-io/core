@@ -154,7 +154,7 @@ func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error
 	// squash properties.
 	switch msg := msgCtx.Message().(type) {
 	case message.StateMessage:
-		// ignore this type.
+		// ignore this message.
 	case message.PropertyMessage:
 		requireds := make(map[string]string)
 		for name, reserved := range state.RequiredFields {
@@ -170,6 +170,9 @@ func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error
 		for key, val := range state.SquashFields(requireds) {
 			msgCtx.Set(key, val)
 		}
+	default:
+		log.Error("invalid message type",
+			zfield.Header(msgCtx.Attributes()))
 	}
 
 	m.msgCh <- msgCtx

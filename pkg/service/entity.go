@@ -385,7 +385,7 @@ func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest
 		return out, err
 	}
 
-	// set properties.
+	// set entity configs.
 	if entity, err = s.entityManager.SetConfigs(ctx, entity); nil != err {
 		log.Error("set entity configs", zfield.Eid(in.Id), zap.Error(err))
 	}

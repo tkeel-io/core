@@ -114,7 +114,6 @@ func (d *Dao) HasEntity(ctx context.Context, id string) (bool, error) {
 		if len(res.Value) > 0 {
 			return true, nil
 		}
-		err = xerrors.ErrEntityNotFound
 	}
 
 	return false, errors.Wrap(err, "repo exists entity")

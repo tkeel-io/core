@@ -22,6 +22,10 @@ import (
 
 type Method string
 
+func (m Method) String() string {
+	return string(m)
+}
+
 const (
 	// enumerate method.
 	SMMethodSetConfigs   Method = "SetConfigs"

@@ -88,15 +88,16 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 	}
 
 	var err error
-	var msgType MessageType
+	var msgType string
 	ev.ExtensionAs(ExtMessageType, &msgType)
-	switch msgType {
+	switch MessageType(msgType) {
 	case MessageTypeState:
 		var msg StateMessage
 		if err = ev.DataAs(&msg); nil != err {
 			log.Error("parse state message", zap.Error(err), zfield.Event(ev))
 			return msgCtx, errors.Wrap(err, "parse state message")
 		}
+
 		// set promise handler.
 		msg.MessageBase = NewBase(func(v interface{}) {
 			log.Debug("process message successed")

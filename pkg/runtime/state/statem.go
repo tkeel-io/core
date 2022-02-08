@@ -252,6 +252,9 @@ func (s *statem) HandleLoop() {
 		msgCtx = s.mailbox.Get()
 		switch msgCtx.Message().(type) {
 		case message.StateMessage:
+			if err := s.callAPIs(context.Background(), msgCtx); nil != err {
+				log.Error("call core.APIs", zap.Error(err), zfield.Header(msgCtx.Attributes()))
+			}
 		default:
 			// handle message.
 			watchKeys := s.msgHandler(msgCtx)

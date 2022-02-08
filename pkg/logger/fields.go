@@ -193,3 +193,11 @@ func Event(ev cloudevents.Event) zap.Field {
 func Spec(spec string) zap.Field {
 	return zap.String("spec", spec)
 }
+
+func Method(method string) zap.Field {
+	return zap.String("method", method)
+}
+
+func Header(header map[string]string) zap.Field {
+	return zap.Any("header", header)
+}

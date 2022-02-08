@@ -42,6 +42,7 @@ const (
 type Config struct {
 	ID                string                 `json:"id" mapstructure:"id"`
 	Type              string                 `json:"type" mapstructure:"type"`
+	Name              string                 `json:"name" mapstructure:"name"`
 	Weight            int                    `json:"weight" mapstructure:"weight"`
 	Enabled           bool                   `json:"enabled" mapstructure:"enabled"`
 	EnabledSearch     bool                   `json:"enabled_search" mapstructure:"enabled_search"`
