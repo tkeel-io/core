@@ -20,10 +20,9 @@ package state
 
 import (
 	"context"
-	"runtime"
 	"sort"
-	"sync/atomic"
 
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -42,7 +41,6 @@ const (
 	// state machine default configurations.
 	defaultEnsureConsumeTimes int32 = 3
 	defaultStateFlushPeried   int32 = 10
-	defaultRetryPutMessageNum int   = 5
 
 	// statem status enumerates.
 	SMStatusActive   Status = "active"
@@ -108,13 +106,10 @@ type statem struct {
 	searchConstraints  sort.StringSlice
 	tseriesConstraints sort.StringSlice
 
-	// state machine mailbox.
-	mailbox *mailbox
 	// state manager.
 	stateManager Manager
 
 	status             Status
-	attached           int32
 	nextFlushNum       int32
 	ensureComsumeTimes int32
 	// state machine message handler.
@@ -139,7 +134,6 @@ func NewState(ctx context.Context, stateManager Manager, in *dao.Entity, msgHand
 
 		ctx:                ctx,
 		cancel:             cancel,
-		mailbox:            newMailbox(20),
 		status:             SMStatusActive,
 		msgHandler:         msgHandler,
 		stateManager:       stateManager,
@@ -187,108 +181,29 @@ func (s *statem) WithContext(ctx StateContext) Machiner {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) OnMessage(msgCtx message.Context) bool {
-	var attachFlag bool
-	switch s.status {
-	case SMStatusDeleted:
-		log.Info("statem.OnMessage",
-			zfield.Eid(s.ID),
-			zfield.Status(string(s.status)),
-			zfield.Reason("state machine deleted"))
-		return false
+func (s *statem) Invoke(msgCtx message.Context) error {
+	switch msgCtx.Message().(type) {
+	case message.StateMessage:
 
+		if err := s.callAPIs(context.Background(), msgCtx); nil != err {
+			log.Error("call core.APIs", zap.Error(err), zfield.Header(msgCtx.Attributes()))
+			return errors.Wrap(err, "call core.APIs")
+		}
+
+		// flush state.
+		if err := s.flush(s.ctx); nil != err {
+			log.Error("flush state", zfield.ID(s.ID), zap.Error(err))
+			return errors.Wrap(err, "flush state")
+		}
+
+		msgCtx.Done()
 	default:
-		for i := 0; i < defaultRetryPutMessageNum; i++ {
-			if err := s.mailbox.Put(msgCtx); nil == err {
-				if atomic.CompareAndSwapInt32(&s.attached,
-					StateRuntimeDetached, StateRuntimeAttached) {
-					attachFlag = true
-				}
-				break
-			}
-			runtime.Gosched()
-		}
+		// handle message.
+		watchKeys := s.msgHandler(msgCtx)
+		// active tentacles.
+		s.activeTentacle(watchKeys)
 	}
-
-	return attachFlag
-}
-
-// HandleLoop run loopHandler.
-func (s *statem) HandleLoop() {
-	var msgCtx message.Context
-	var ensureComsumeTimes = s.ensureComsumeTimes
-	log.Debug("actor attached", zfield.ID(s.ID))
-
-	for {
-		if s.nextFlushNum == 0 {
-			// flush properties.
-			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties", zfield.ID(s.ID), zap.Error(err))
-			}
-		}
-
-		// consume message from mailbox.
-		if s.mailbox.Empty() {
-			if ensureComsumeTimes > 0 {
-				ensureComsumeTimes--
-				runtime.Gosched()
-				continue
-			}
-
-			// detach this statem.
-			if !atomic.CompareAndSwapInt32(&s.attached, StateRuntimeAttached, StateRuntimeDetached) {
-				log.Error("exception occurred, mismatched statem runtime status.",
-					zfield.Status(stateRuntimeStatusString(atomic.LoadInt32(&s.attached))))
-			}
-
-			// flush properties.
-			if err := s.flush(s.ctx); nil != err {
-				log.Error("flush state properties failed", zfield.ID(s.ID), zap.Error(err))
-			}
-			// detaching.
-			break
-		}
-
-		msgCtx = s.mailbox.Get()
-		switch msgCtx.Message().(type) {
-		case message.StateMessage:
-
-			if err := s.callAPIs(context.Background(), msgCtx); nil != err {
-				log.Error("call core.APIs", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-				return
-			}
-
-			// flush state.
-			if err := s.flushState(s.ctx); nil != err {
-				log.Error("flush state", zfield.ID(s.ID), zap.Error(err))
-			}
-
-			msgCtx.Done()
-		default:
-			// handle message.
-			watchKeys := s.msgHandler(msgCtx)
-			// active tentacles.
-			s.activeTentacle(watchKeys)
-		}
-
-		// reset be sure.
-		ensureComsumeTimes = s.ensureComsumeTimes
-		s.nextFlushNum = (s.nextFlushNum + defaultStateFlushPeried - 1) % defaultStateFlushPeried
-	}
-
-	log.Info("detached statem.", zfield.ID(s.ID), zfield.Type(s.Type))
-}
-
-// stateRuntimeStatusString convert actor status.
-func stateRuntimeStatusString(statusNum int32) string {
-	switch statusNum {
-	case StateRuntimeDetached:
-		return "detached"
-	case StateRuntimeAttached:
-		return "attached"
-	default:
-		return "undefine"
-	}
+	return nil
 }
 
 type Mapper struct {

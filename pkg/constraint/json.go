@@ -260,7 +260,7 @@ func (r ArrayNode) To(typ Type) Node {
 type JSONNode []byte
 
 func (r JSONNode) Type() Type     { return JSON }
-func (r JSONNode) String() string { return string(r) }
+func (r JSONNode) String() string { return "\"" + string(r) + "\"" }
 func (r JSONNode) Value() interface{} {
 	var data interface{}
 	_ = json.Unmarshal(r, &data)
@@ -294,7 +294,7 @@ func NewNode(v interface{}) Node {
 		int, uint32, int32, int64, uint64:
 		return StringNode(fmt.Sprintf("%v", val)).To(Integer)
 	case string:
-		return StringNode("\"" + val + "\"")
+		return StringNode(val)
 	case []byte:
 		return JSONNode(val)
 	case bool:

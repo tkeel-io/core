@@ -84,7 +84,13 @@ func (p *Proxy) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
 
 	switch nodeName {
 	case p.info.Name:
-		err = p.stateManager.HandleMessage(ctx, ev)
+		var msgCtx message.Context
+		if msgCtx, err = message.From(ctx, ev); nil != err {
+			log.Error("parse event", zfield.ID(ev.ID()), zfield.Event(ev))
+			return errors.Wrap(err, "parse event")
+		}
+
+		err = p.stateManager.HandleMessage(ctx, msgCtx)
 	default:
 		// select proxy client.
 		var proxyClient pb.ProxyClient

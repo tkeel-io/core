@@ -111,9 +111,9 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				if stateMachine.OnMessage(msgCtx) {
-					// attatch goroutine to entity.
-					m.coroutinePool.Submit(stateMachine.HandleLoop)
+				if err = stateMachine.Invoke(msgCtx); nil != err {
+					log.Error("invoke message", zfield.Header(msgCtx.Attributes()))
+					// TODO: invoke message failed, then...
 				}
 			case <-m.shutdown:
 				log.Info("state machine manager exit.")
@@ -141,16 +141,7 @@ func (m *Manager) RouteMessage(ctx context.Context, ev cloudevents.Event) error 
 	return errors.Wrap(m.republisher.RouteMessage(ctx, ev), "route message")
 }
 
-func (m *Manager) HandleMessage(ctx context.Context, ev cloudevents.Event) error {
-	log.Debug("handle event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
-
-	var err error
-	var msgCtx message.Context
-	if msgCtx, err = message.From(ctx, ev); nil != err {
-		log.Error("parse event", zfield.ID(ev.ID()), zfield.Event(ev))
-		return errors.Wrap(err, "parse event")
-	}
-
+func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.Context) error {
 	// squash properties.
 	switch msg := msgCtx.Message().(type) {
 	case message.StateMessage:

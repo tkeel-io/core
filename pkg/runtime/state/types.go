@@ -44,7 +44,7 @@ type Manager interface {
 	// route messages cluster.
 	RouteMessage(context.Context, cloudevents.Event) error
 	// handle message on this node.
-	HandleMessage(context.Context, cloudevents.Event) error
+	HandleMessage(context.Context, message.Context) error
 	SetRepublisher(republisher Republisher)
 }
 
@@ -63,9 +63,7 @@ type Machiner interface {
 	// GetEntity returns this.Entity.
 	GetEntity() *dao.Entity
 	// OnMessage recv message from pubsub.
-	OnMessage(ctx message.Context) bool
-	// InvokeMsg dispose entity message.
-	HandleLoop()
+	Invoke(ctx message.Context) error
 	// WithContext set actor context.
 	WithContext(StateContext) Machiner
 	// Flush flush entity data.

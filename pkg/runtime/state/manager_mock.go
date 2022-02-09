@@ -4,6 +4,7 @@ import (
 	"context"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
 type ManagerMock struct {
@@ -19,7 +20,7 @@ func (s *ManagerMock) Resource() ResourceManager { return nil }
 func (s *ManagerMock) RouteMessage(ctx context.Context, e cloudevents.Event) error {
 	return nil
 }
-func (s *ManagerMock) HandleMessage(ctx context.Context, e cloudevents.Event) error {
+func (s *ManagerMock) HandleMessage(ctx context.Context, msgCtx message.Context) error {
 	return nil
 }
 

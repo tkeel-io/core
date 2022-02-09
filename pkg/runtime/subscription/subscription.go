@@ -129,13 +129,8 @@ func (s *subscription) WithContext(sCtx state.StateContext) state.Machiner {
 }
 
 // OnMessage recv message from pubsub.
-func (s *subscription) OnMessage(msgCtx message.Context) bool {
-	return s.stateMachine.OnMessage(msgCtx)
-}
-
-// InvokeMsg dispose entity message.
-func (s *subscription) HandleLoop() {
-	s.stateMachine.HandleLoop()
+func (s *subscription) Invoke(msgCtx message.Context) error {
+	return errors.Wrap(s.stateMachine.Invoke(msgCtx), "subscription invoke message")
 }
 
 func (s *subscription) HandleMessage(msgCtx message.Context) []mapper.WatchKey {
