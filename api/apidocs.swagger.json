@@ -601,7 +601,7 @@
       }
     },
     "/entities/{id}/configs/patch": {
-      "post": {
+      "put": {
         "summary": "patch entity configs",
         "operationId": "PatchConfigs",
         "responses": {
