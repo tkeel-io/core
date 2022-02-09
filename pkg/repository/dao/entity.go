@@ -19,7 +19,7 @@ type Entity struct {
 	LastTime   int64                      `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
 	TemplateID string                     `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
 	Properties map[string]constraint.Node `json:"properties" msgpack:"properties" mapstructure:"-"`
-	ConfigFile []byte                     `json:"-" msgpack:"config_file" mapstructure:"-"`
+	ConfigFile []byte                     `json:"-" msgpack:"config_file" mapstructure:"config_file"`
 }
 
 func (e *Entity) Copy() Entity {
@@ -83,8 +83,9 @@ func (e *Entity) JSON() string {
 
 // dao interfaces.
 func (d *Dao) PutEntity(ctx context.Context, en *Entity) error {
-	bytes, err := d.entityCodec.Encode(en)
-	if nil == err {
+	var err error
+	var bytes []byte
+	if bytes, err = d.entityCodec.Encode(en); nil == err {
 		err = d.stateClient.Set(ctx, d.entityCodec.Key(en.ID), bytes)
 	}
 	return errors.Wrap(err, "repo put entity")

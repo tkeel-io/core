@@ -582,8 +582,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	configs := make(map[string]interface{})
-	bytes, _ := json.Marshal(entity.Configs)
-	json.Unmarshal(bytes, &configs)
+	json.Unmarshal(entity.ConfigFile, &configs)
 
 	if out.Properties, err = structpb.NewValue(kv); nil != err {
 		log.Error("convert entity failed", zap.Error(err))

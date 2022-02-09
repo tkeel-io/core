@@ -120,6 +120,29 @@ type DefineArray struct {
 	ElemType Config `json:"elem_type" mapstructure:"elem_type"`
 }
 
+func Parse(bytes []byte) (map[string]*Config, error) {
+	// parse state config again.
+	configs := make(map[string]interface{})
+	if err := json.Unmarshal(bytes, &configs); nil != err {
+		log.Error("json unmarshal", zap.Error(err), zap.String("configs", string(bytes)))
+		return nil, errors.Wrap(err, "json unmarshal")
+	}
+
+	var err error
+	var cfg Config
+	cfgs := make(map[string]*Config)
+	for key, val := range configs {
+		if cfg, err = ParseConfigFrom(val); nil != err {
+			// TODO: dispose error.
+			log.Error("parse configs", zap.Error(err))
+			continue
+		}
+		cfgs[key] = &cfg
+	}
+
+	return cfgs, nil
+}
+
 func ParseFrom(bytes []byte) (*Config, error) {
 	var v = new(interface{})
 	if err := json.Unmarshal(bytes, v); nil != err {
