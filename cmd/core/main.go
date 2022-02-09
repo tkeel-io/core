@@ -170,10 +170,12 @@ func core(cmd *cobra.Command, args []string) {
 
 	print.SuccessStatusEvent(os.Stdout, "all service registered.")
 	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
-	if err = _entityManager.Start(); nil != err {
+	if err = coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
 	}
-	if err = coreApp.Run(context.TODO()); err != nil {
+
+	// start enity manager.
+	if err = _entityManager.Start(); nil != err {
 		log.Fatal(err)
 	}
 
