@@ -27,6 +27,10 @@ type Receiver interface {
 	Close() error
 }
 
+type Commiter interface {
+	Commit(v interface{}) error
+}
+
 var registeredPubsubs = make(map[string]Generator)
 
 type Generator func(map[string]interface{}) (Pubsub, error) //
