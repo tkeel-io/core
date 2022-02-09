@@ -251,14 +251,17 @@ func (s *statem) LoadEnvironments(env environment.ActorEnv) {
 		log.Debug("load environments, mapper ", logger.EntityID(s.ID), zap.String("TQL", m.String()))
 	}
 
+	var watchKeys []mapper.WatchKey
 	// load actor tentacles.
 	for _, t := range env.Tentacles {
 		for _, item := range t.Items() {
+			watchKeys = append(watchKeys, item)
 			s.tentacles[item.String()] = append(s.tentacles[item.String()], t)
 			log.Debug("load environments, watching ", logger.EntityID(s.ID), zap.String("WatchKey", item.String()))
 		}
 		log.Debug("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
+	s.activeTentacle(watchKeys)
 }
 
 func (s *statem) GetManager() StateManager {
@@ -697,7 +700,6 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 			},
 		})
 	}
-
 	// active mapper.
 	s.activeMapper(activeTentacles)
 }

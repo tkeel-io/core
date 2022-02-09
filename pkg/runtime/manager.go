@@ -93,8 +93,8 @@ func NewManager(ctx context.Context, coroutinePool *ants.Pool, searchClient pb.S
 		tseriesClient: tseriesClient,
 		actorEnv:      environment.NewEnvironment(),
 		containers:    make(map[string]*Container),
-		msgCh:         make(chan statem.MessageContext, 10),
-		disposeCh:     make(chan statem.MessageContext, 10),
+		msgCh:         make(chan statem.MessageContext, 10000),
+		disposeCh:     make(chan statem.MessageContext, 1000),
 		coroutinePool: coroutinePool,
 		lock:          sync.RWMutex{},
 	}
@@ -114,12 +114,13 @@ func (m *Manager) SendMsg(msgCtx statem.MessageContext) {
 
 func (m *Manager) init() error {
 	// load all subscriptions.
-	ctx, cancel := context.WithTimeout(m.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
 	defer cancel()
 
 	log.Info("initialize actor manager, tql loadding...")
 	res, err := m.etcdClient.Get(ctx, util.EtcdMapperPrefix, clientv3.WithPrefix())
 	if nil != err {
+		log.Error("pull mapper from etcd", zap.Error(err))
 		return errors.Wrap(err, "load all tql")
 	}
 
@@ -127,7 +128,6 @@ func (m *Manager) init() error {
 	for index, kv := range res.Kvs {
 		pairs[index] = environment.EtcdPair{Key: string(kv.Key), Value: kv.Value}
 	}
-
 	for _, info := range m.actorEnv.StoreMappers(pairs) {
 		log.Debug("load state machine", logger.EntityID(info.EntityID), zap.String("type", info.Type))
 		if err = m.loadActor(context.Background(), info.Type, info.EntityID); nil != err {
@@ -135,7 +135,6 @@ func (m *Manager) init() error {
 				zap.String("type", info.Type), logger.EntityID(info.EntityID))
 		}
 	}
-
 	return nil
 }
 
@@ -182,7 +181,6 @@ func (m *Manager) Start() error {
 	m.init()
 	// watch resource.
 	m.watchResource()
-
 	go func() {
 		for {
 			select {
@@ -551,9 +549,7 @@ func (m *Manager) AppendMapper(ctx context.Context, en *statem.Base) error {
 
 	msgCtx.Headers.SetOwner(en.Owner)
 	msgCtx.Headers.SetTargetID(en.ID)
-
 	m.SendMsg(msgCtx)
-
 	return nil
 }
 
