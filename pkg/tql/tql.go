@@ -24,7 +24,7 @@ import (
 type tql struct {
 	text     string
 	config   TQLConfig
-	listener Listener
+	listener *Listener
 }
 
 func NewTQL(tqlString string) (TQL, error) {

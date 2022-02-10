@@ -24,9 +24,9 @@ import (
 
 func TestMapper(t *testing.T) {
 	input := map[string]constraint.Node{
-		"entity1.property1":      constraint.NewNode("123"),
-		"entity2.property2.name": constraint.NewNode("123"),
-		"entity2.property3":      constraint.NewNode("123"),
+		"entity1.property1":      constraint.NewNode(123),
+		"entity2.property2.name": constraint.NewNode("tomas"),
+		"entity2.property3":      constraint.NewNode(123),
 	}
 
 	tqlTexts := []struct {
@@ -35,10 +35,9 @@ func TestMapper(t *testing.T) {
 		input    map[string]constraint.Node
 		computed bool
 	}{
-		{"tql1", "insert into device1 select *", map[string]constraint.Node{}, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
-		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
-		{"tql4", "insert into sub123 select test123.temp", nil, false},
+		{"tql1", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
+		{"tql2", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
+		{"tql3", "insert into sub123 select test123.temp", nil, false},
 	}
 
 	for _, tqlInst := range tqlTexts {
@@ -76,7 +75,9 @@ func TestExec(t *testing.T) {
 
 	t.Log("target: ", mInstance.TargetEntity())
 	t.Log("sources: ", mInstance.SourceEntities())
-	t.Log("tentacles: ", mInstance.Tentacles())
+	for _, tentacle := range mInstance.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
 
 	result, err := mInstance.Exec(map[string]constraint.Node{
 		"f8f0327b-51e4-400a-a2e1-c95e371ec99d.path": constraint.NewNode("test"),
