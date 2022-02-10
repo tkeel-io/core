@@ -19,8 +19,10 @@ package tql
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 
+	"github.com/dop251/goja"
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
@@ -58,7 +60,7 @@ func TestParserAndComputing(t *testing.T) {
 	t.Log("in: ", in)
 	out2 := l.GetComputeResults(in)
 	for key, val := range out2 {
-		t.Log(key, ":", string(val))
+		t.Log(key, ":", val)
 	}
 }
 
@@ -141,4 +143,14 @@ func TestExec(t *testing.T) {
 
 	t.Log(err)
 	t.Log(result)
+}
+
+func TestGoja(t *testing.T) {
+	vm := goja.New()
+	v, err := vm.RunString(`2+222.3`)
+	if err != nil {
+		panic(err)
+	}
+	t.Log(v)
+	t.Log(reflect.ValueOf(v).Kind().String())
 }

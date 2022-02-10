@@ -21,67 +21,70 @@ var _ = reflect.Copy
 var _ = strconv.Itoa
 
 var parserATN = []uint16{
-	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 52, 111,
+	3, 24715, 42794, 33075, 47597, 16764, 15335, 30598, 22884, 3, 53, 114,
 	4, 2, 9, 2, 4, 3, 9, 3, 4, 4, 9, 4, 4, 5, 9, 5, 4, 6, 9, 6, 4, 7, 9, 7,
 	4, 8, 9, 8, 4, 9, 9, 9, 4, 10, 9, 10, 4, 11, 9, 11, 4, 12, 9, 12, 4, 13,
 	9, 13, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 2, 3, 3, 3, 3, 3, 3, 7, 3,
 	37, 10, 3, 12, 3, 14, 3, 40, 11, 3, 3, 4, 3, 4, 3, 4, 5, 4, 45, 10, 4,
 	3, 5, 3, 5, 3, 6, 3, 6, 3, 6, 5, 6, 52, 10, 6, 3, 6, 3, 6, 3, 6, 3, 6,
 	3, 6, 3, 6, 3, 6, 3, 6, 3, 6, 7, 6, 63, 10, 6, 12, 6, 14, 6, 66, 11, 6,
-	3, 7, 3, 7, 3, 8, 3, 8, 3, 8, 3, 9, 3, 9, 3, 10, 3, 10, 6, 10, 77, 10,
-	10, 13, 10, 14, 10, 78, 3, 11, 3, 11, 3, 11, 7, 11, 84, 10, 11, 12, 11,
-	14, 11, 87, 11, 11, 3, 12, 3, 12, 3, 12, 3, 13, 3, 13, 3, 13, 5, 13, 95,
-	10, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13,
-	7, 13, 106, 10, 13, 12, 13, 14, 13, 109, 11, 13, 3, 13, 2, 4, 10, 24, 14,
-	2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 2, 6, 3, 2, 36, 38, 3, 2, 39,
-	40, 4, 2, 11, 11, 13, 17, 3, 2, 36, 37, 2, 110, 2, 26, 3, 2, 2, 2, 4, 33,
-	3, 2, 2, 2, 6, 41, 3, 2, 2, 2, 8, 46, 3, 2, 2, 2, 10, 51, 3, 2, 2, 2, 12,
-	67, 3, 2, 2, 2, 14, 69, 3, 2, 2, 2, 16, 72, 3, 2, 2, 2, 18, 76, 3, 2, 2,
-	2, 20, 80, 3, 2, 2, 2, 22, 88, 3, 2, 2, 2, 24, 94, 3, 2, 2, 2, 26, 27,
-	7, 4, 2, 2, 27, 28, 7, 5, 2, 2, 28, 29, 5, 8, 5, 2, 29, 30, 7, 21, 2, 2,
-	30, 31, 5, 4, 3, 2, 31, 32, 7, 2, 2, 3, 32, 3, 3, 2, 2, 2, 33, 38, 5, 6,
-	4, 2, 34, 35, 7, 3, 2, 2, 35, 37, 5, 6, 4, 2, 36, 34, 3, 2, 2, 2, 37, 40,
-	3, 2, 2, 2, 38, 36, 3, 2, 2, 2, 38, 39, 3, 2, 2, 2, 39, 5, 3, 2, 2, 2,
-	40, 38, 3, 2, 2, 2, 41, 44, 5, 10, 6, 2, 42, 43, 7, 6, 2, 2, 43, 45, 5,
-	20, 11, 2, 44, 42, 3, 2, 2, 2, 44, 45, 3, 2, 2, 2, 45, 7, 3, 2, 2, 2, 46,
-	47, 7, 44, 2, 2, 47, 9, 3, 2, 2, 2, 48, 49, 8, 6, 1, 2, 49, 52, 5, 12,
-	7, 2, 50, 52, 5, 14, 8, 2, 51, 48, 3, 2, 2, 2, 51, 50, 3, 2, 2, 2, 52,
-	64, 3, 2, 2, 2, 53, 54, 12, 6, 2, 2, 54, 55, 9, 2, 2, 2, 55, 63, 5, 10,
-	6, 7, 56, 57, 12, 5, 2, 2, 57, 58, 9, 3, 2, 2, 58, 63, 5, 10, 6, 6, 59,
-	60, 12, 4, 2, 2, 60, 61, 9, 4, 2, 2, 61, 63, 5, 10, 6, 5, 62, 53, 3, 2,
-	2, 2, 62, 56, 3, 2, 2, 2, 62, 59, 3, 2, 2, 2, 63, 66, 3, 2, 2, 2, 64, 62,
-	3, 2, 2, 2, 64, 65, 3, 2, 2, 2, 65, 11, 3, 2, 2, 2, 66, 64, 3, 2, 2, 2,
-	67, 68, 7, 51, 2, 2, 68, 13, 3, 2, 2, 2, 69, 70, 5, 16, 9, 2, 70, 71, 5,
-	18, 10, 2, 71, 15, 3, 2, 2, 2, 72, 73, 7, 44, 2, 2, 73, 17, 3, 2, 2, 2,
-	74, 75, 7, 41, 2, 2, 75, 77, 7, 44, 2, 2, 76, 74, 3, 2, 2, 2, 77, 78, 3,
-	2, 2, 2, 78, 76, 3, 2, 2, 2, 78, 79, 3, 2, 2, 2, 79, 19, 3, 2, 2, 2, 80,
-	85, 7, 44, 2, 2, 81, 82, 7, 41, 2, 2, 82, 84, 7, 44, 2, 2, 83, 81, 3, 2,
-	2, 2, 84, 87, 3, 2, 2, 2, 85, 83, 3, 2, 2, 2, 85, 86, 3, 2, 2, 2, 86, 21,
-	3, 2, 2, 2, 87, 85, 3, 2, 2, 2, 88, 89, 5, 24, 13, 2, 89, 90, 7, 2, 2,
-	3, 90, 23, 3, 2, 2, 2, 91, 92, 8, 13, 1, 2, 92, 95, 7, 48, 2, 2, 93, 95,
-	7, 51, 2, 2, 94, 91, 3, 2, 2, 2, 94, 93, 3, 2, 2, 2, 95, 107, 3, 2, 2,
-	2, 96, 97, 12, 7, 2, 2, 97, 98, 9, 5, 2, 2, 98, 106, 5, 24, 13, 8, 99,
-	100, 12, 6, 2, 2, 100, 101, 9, 3, 2, 2, 101, 106, 5, 24, 13, 7, 102, 103,
-	12, 5, 2, 2, 103, 104, 9, 4, 2, 2, 104, 106, 5, 24, 13, 6, 105, 96, 3,
-	2, 2, 2, 105, 99, 3, 2, 2, 2, 105, 102, 3, 2, 2, 2, 106, 109, 3, 2, 2,
-	2, 107, 105, 3, 2, 2, 2, 107, 108, 3, 2, 2, 2, 108, 25, 3, 2, 2, 2, 109,
-	107, 3, 2, 2, 2, 12, 38, 44, 51, 62, 64, 78, 85, 94, 105, 107,
+	3, 7, 3, 7, 3, 8, 3, 8, 3, 8, 3, 9, 3, 9, 3, 10, 3, 10, 3, 10, 6, 10, 78,
+	10, 10, 13, 10, 14, 10, 79, 5, 10, 82, 10, 10, 3, 11, 3, 11, 3, 11, 7,
+	11, 87, 10, 11, 12, 11, 14, 11, 90, 11, 11, 3, 12, 3, 12, 3, 12, 3, 13,
+	3, 13, 3, 13, 5, 13, 98, 10, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3, 13, 3,
+	13, 3, 13, 3, 13, 3, 13, 7, 13, 109, 10, 13, 12, 13, 14, 13, 112, 11, 13,
+	3, 13, 2, 4, 10, 24, 14, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 2,
+	6, 3, 2, 37, 39, 3, 2, 40, 41, 4, 2, 12, 12, 14, 18, 3, 2, 37, 38, 2, 114,
+	2, 26, 3, 2, 2, 2, 4, 33, 3, 2, 2, 2, 6, 41, 3, 2, 2, 2, 8, 46, 3, 2, 2,
+	2, 10, 51, 3, 2, 2, 2, 12, 67, 3, 2, 2, 2, 14, 69, 3, 2, 2, 2, 16, 72,
+	3, 2, 2, 2, 18, 81, 3, 2, 2, 2, 20, 83, 3, 2, 2, 2, 22, 91, 3, 2, 2, 2,
+	24, 97, 3, 2, 2, 2, 26, 27, 7, 5, 2, 2, 27, 28, 7, 6, 2, 2, 28, 29, 5,
+	8, 5, 2, 29, 30, 7, 22, 2, 2, 30, 31, 5, 4, 3, 2, 31, 32, 7, 2, 2, 3, 32,
+	3, 3, 2, 2, 2, 33, 38, 5, 6, 4, 2, 34, 35, 7, 3, 2, 2, 35, 37, 5, 6, 4,
+	2, 36, 34, 3, 2, 2, 2, 37, 40, 3, 2, 2, 2, 38, 36, 3, 2, 2, 2, 38, 39,
+	3, 2, 2, 2, 39, 5, 3, 2, 2, 2, 40, 38, 3, 2, 2, 2, 41, 44, 5, 10, 6, 2,
+	42, 43, 7, 7, 2, 2, 43, 45, 5, 20, 11, 2, 44, 42, 3, 2, 2, 2, 44, 45, 3,
+	2, 2, 2, 45, 7, 3, 2, 2, 2, 46, 47, 7, 45, 2, 2, 47, 9, 3, 2, 2, 2, 48,
+	49, 8, 6, 1, 2, 49, 52, 5, 12, 7, 2, 50, 52, 5, 14, 8, 2, 51, 48, 3, 2,
+	2, 2, 51, 50, 3, 2, 2, 2, 52, 64, 3, 2, 2, 2, 53, 54, 12, 6, 2, 2, 54,
+	55, 9, 2, 2, 2, 55, 63, 5, 10, 6, 7, 56, 57, 12, 5, 2, 2, 57, 58, 9, 3,
+	2, 2, 58, 63, 5, 10, 6, 6, 59, 60, 12, 4, 2, 2, 60, 61, 9, 4, 2, 2, 61,
+	63, 5, 10, 6, 5, 62, 53, 3, 2, 2, 2, 62, 56, 3, 2, 2, 2, 62, 59, 3, 2,
+	2, 2, 63, 66, 3, 2, 2, 2, 64, 62, 3, 2, 2, 2, 64, 65, 3, 2, 2, 2, 65, 11,
+	3, 2, 2, 2, 66, 64, 3, 2, 2, 2, 67, 68, 7, 52, 2, 2, 68, 13, 3, 2, 2, 2,
+	69, 70, 5, 16, 9, 2, 70, 71, 5, 18, 10, 2, 71, 15, 3, 2, 2, 2, 72, 73,
+	7, 45, 2, 2, 73, 17, 3, 2, 2, 2, 74, 82, 7, 4, 2, 2, 75, 76, 7, 42, 2,
+	2, 76, 78, 7, 45, 2, 2, 77, 75, 3, 2, 2, 2, 78, 79, 3, 2, 2, 2, 79, 77,
+	3, 2, 2, 2, 79, 80, 3, 2, 2, 2, 80, 82, 3, 2, 2, 2, 81, 74, 3, 2, 2, 2,
+	81, 77, 3, 2, 2, 2, 82, 19, 3, 2, 2, 2, 83, 88, 7, 45, 2, 2, 84, 85, 7,
+	42, 2, 2, 85, 87, 7, 45, 2, 2, 86, 84, 3, 2, 2, 2, 87, 90, 3, 2, 2, 2,
+	88, 86, 3, 2, 2, 2, 88, 89, 3, 2, 2, 2, 89, 21, 3, 2, 2, 2, 90, 88, 3,
+	2, 2, 2, 91, 92, 5, 24, 13, 2, 92, 93, 7, 2, 2, 3, 93, 23, 3, 2, 2, 2,
+	94, 95, 8, 13, 1, 2, 95, 98, 7, 49, 2, 2, 96, 98, 7, 52, 2, 2, 97, 94,
+	3, 2, 2, 2, 97, 96, 3, 2, 2, 2, 98, 110, 3, 2, 2, 2, 99, 100, 12, 7, 2,
+	2, 100, 101, 9, 5, 2, 2, 101, 109, 5, 24, 13, 8, 102, 103, 12, 6, 2, 2,
+	103, 104, 9, 3, 2, 2, 104, 109, 5, 24, 13, 7, 105, 106, 12, 5, 2, 2, 106,
+	107, 9, 4, 2, 2, 107, 109, 5, 24, 13, 6, 108, 99, 3, 2, 2, 2, 108, 102,
+	3, 2, 2, 2, 108, 105, 3, 2, 2, 2, 109, 112, 3, 2, 2, 2, 110, 108, 3, 2,
+	2, 2, 110, 111, 3, 2, 2, 2, 111, 25, 3, 2, 2, 2, 112, 110, 3, 2, 2, 2,
+	13, 38, 44, 51, 62, 64, 79, 81, 88, 97, 108, 110,
 }
 var deserializer = antlr.NewATNDeserializer(nil)
 var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
-	"", "','", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
-	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "'*'",
-	"'/'", "'%'", "'+'", "'-'", "'.'",
+	"", "','", "'.*'", "", "", "", "", "", "", "", "", "", "", "", "", "",
+	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+	"", "'*'", "'/'", "'%'", "'+'", "'-'", "'.'",
 }
 var symbolicNames = []string{
-	"", "", "INSERT", "INTO", "AS", "AND", "CASE", "ELSE", "END", "EQ", "FROM",
-	"GT", "GTE", "LT", "LTE", "NE", "NOT", "NULL", "OR", "SELECT", "THEN",
-	"WHERE", "WHEN", "GROUP", "BY", "TUMBLINGWINDOW", "HOPPINGWINDOW", "SLIDINGWINDOW",
-	"SESSIONWINDOW", "DD", "HH", "MI", "SS", "MS", "MUL", "DIV", "MOD", "ADD",
-	"SUB", "DOT", "TRUE", "FALSE", "INDENTIFIER", "ENTITYNAME", "PROPERTYNAME",
-	"TARGETENTITY", "NUMBER", "INTEGER", "FLOAT", "STRING", "WHITESPACE",
+	"", "", "", "INSERT", "INTO", "AS", "AND", "CASE", "ELSE", "END", "EQ",
+	"FROM", "GT", "GTE", "LT", "LTE", "NE", "NOT", "NULL", "OR", "SELECT",
+	"THEN", "WHERE", "WHEN", "GROUP", "BY", "TUMBLINGWINDOW", "HOPPINGWINDOW",
+	"SLIDINGWINDOW", "SESSIONWINDOW", "DD", "HH", "MI", "SS", "MS", "MUL",
+	"DIV", "MOD", "ADD", "SUB", "DOT", "TRUE", "FALSE", "INDENTIFIER", "ENTITYNAME",
+	"PROPERTYNAME", "TARGETENTITY", "NUMBER", "INTEGER", "FLOAT", "STRING",
+	"WHITESPACE",
 }
 
 var ruleNames = []string{
@@ -118,55 +121,56 @@ func NewTQLParser(input antlr.TokenStream) *TQLParser {
 const (
 	TQLParserEOF            = antlr.TokenEOF
 	TQLParserT__0           = 1
-	TQLParserINSERT         = 2
-	TQLParserINTO           = 3
-	TQLParserAS             = 4
-	TQLParserAND            = 5
-	TQLParserCASE           = 6
-	TQLParserELSE           = 7
-	TQLParserEND            = 8
-	TQLParserEQ             = 9
-	TQLParserFROM           = 10
-	TQLParserGT             = 11
-	TQLParserGTE            = 12
-	TQLParserLT             = 13
-	TQLParserLTE            = 14
-	TQLParserNE             = 15
-	TQLParserNOT            = 16
-	TQLParserNULL           = 17
-	TQLParserOR             = 18
-	TQLParserSELECT         = 19
-	TQLParserTHEN           = 20
-	TQLParserWHERE          = 21
-	TQLParserWHEN           = 22
-	TQLParserGROUP          = 23
-	TQLParserBY             = 24
-	TQLParserTUMBLINGWINDOW = 25
-	TQLParserHOPPINGWINDOW  = 26
-	TQLParserSLIDINGWINDOW  = 27
-	TQLParserSESSIONWINDOW  = 28
-	TQLParserDD             = 29
-	TQLParserHH             = 30
-	TQLParserMI             = 31
-	TQLParserSS             = 32
-	TQLParserMS             = 33
-	TQLParserMUL            = 34
-	TQLParserDIV            = 35
-	TQLParserMOD            = 36
-	TQLParserADD            = 37
-	TQLParserSUB            = 38
-	TQLParserDOT            = 39
-	TQLParserTRUE           = 40
-	TQLParserFALSE          = 41
-	TQLParserINDENTIFIER    = 42
-	TQLParserENTITYNAME     = 43
-	TQLParserPROPERTYNAME   = 44
-	TQLParserTARGETENTITY   = 45
-	TQLParserNUMBER         = 46
-	TQLParserINTEGER        = 47
-	TQLParserFLOAT          = 48
-	TQLParserSTRING         = 49
-	TQLParserWHITESPACE     = 50
+	TQLParserT__1           = 2
+	TQLParserINSERT         = 3
+	TQLParserINTO           = 4
+	TQLParserAS             = 5
+	TQLParserAND            = 6
+	TQLParserCASE           = 7
+	TQLParserELSE           = 8
+	TQLParserEND            = 9
+	TQLParserEQ             = 10
+	TQLParserFROM           = 11
+	TQLParserGT             = 12
+	TQLParserGTE            = 13
+	TQLParserLT             = 14
+	TQLParserLTE            = 15
+	TQLParserNE             = 16
+	TQLParserNOT            = 17
+	TQLParserNULL           = 18
+	TQLParserOR             = 19
+	TQLParserSELECT         = 20
+	TQLParserTHEN           = 21
+	TQLParserWHERE          = 22
+	TQLParserWHEN           = 23
+	TQLParserGROUP          = 24
+	TQLParserBY             = 25
+	TQLParserTUMBLINGWINDOW = 26
+	TQLParserHOPPINGWINDOW  = 27
+	TQLParserSLIDINGWINDOW  = 28
+	TQLParserSESSIONWINDOW  = 29
+	TQLParserDD             = 30
+	TQLParserHH             = 31
+	TQLParserMI             = 32
+	TQLParserSS             = 33
+	TQLParserMS             = 34
+	TQLParserMUL            = 35
+	TQLParserDIV            = 36
+	TQLParserMOD            = 37
+	TQLParserADD            = 38
+	TQLParserSUB            = 39
+	TQLParserDOT            = 40
+	TQLParserTRUE           = 41
+	TQLParserFALSE          = 42
+	TQLParserINDENTIFIER    = 43
+	TQLParserENTITYNAME     = 44
+	TQLParserPROPERTYNAME   = 45
+	TQLParserTARGETENTITY   = 46
+	TQLParserNUMBER         = 47
+	TQLParserINTEGER        = 48
+	TQLParserFLOAT          = 49
+	TQLParserSTRING         = 50
+	TQLParserWHITESPACE     = 51
 )
 
 // TQLParser rules.
@@ -1092,7 +1096,7 @@ func (p *TQLParser) expr(_p int) (localctx IExprContext) {
 
 				_la = p.GetTokenStream().LA(1)
 
-				if !(((_la-34)&-(0x1f+1)) == 0 && ((1<<uint((_la-34)))&((1<<(TQLParserMUL-34))|(1<<(TQLParserDIV-34))|(1<<(TQLParserMOD-34)))) != 0) {
+				if !(((_la-35)&-(0x1f+1)) == 0 && ((1<<uint((_la-35)))&((1<<(TQLParserMUL-35))|(1<<(TQLParserDIV-35))|(1<<(TQLParserMOD-35)))) != 0) {
 					var _ri = p.GetErrorHandler().RecoverInline(p)
 
 					localctx.(*DummyMulDivContext).op = _ri
@@ -1578,29 +1582,45 @@ func (p *TQLParser) PropertyEntity() (localctx IPropertyEntityContext) {
 
 	var _alt int
 
-	p.EnterOuterAlt(localctx, 1)
-	p.SetState(74)
+	p.SetState(79)
 	p.GetErrorHandler().Sync(p)
-	_alt = 1
-	for ok := true; ok; ok = _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
-		switch _alt {
-		case 1:
-			{
-				p.SetState(72)
-				p.Match(TQLParserDOT)
-			}
-			{
-				p.SetState(73)
-				p.Match(TQLParserINDENTIFIER)
-			}
 
-		default:
-			panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
+	switch p.GetTokenStream().LA(1) {
+	case TQLParserT__1:
+		p.EnterOuterAlt(localctx, 1)
+		{
+			p.SetState(72)
+			p.Match(TQLParserT__1)
 		}
 
-		p.SetState(76)
+	case TQLParserDOT:
+		p.EnterOuterAlt(localctx, 2)
+		p.SetState(75)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 5, p.GetParserRuleContext())
+		_alt = 1
+		for ok := true; ok; ok = _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
+			switch _alt {
+			case 1:
+				{
+					p.SetState(73)
+					p.Match(TQLParserDOT)
+				}
+				{
+					p.SetState(74)
+					p.Match(TQLParserINDENTIFIER)
+				}
+
+			default:
+				panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
+			}
+
+			p.SetState(77)
+			p.GetErrorHandler().Sync(p)
+			_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 5, p.GetParserRuleContext())
+		}
+
+	default:
+		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 
 	return localctx
@@ -1695,24 +1715,24 @@ func (p *TQLParser) TargetProperty() (localctx ITargetPropertyContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(78)
+		p.SetState(81)
 		p.Match(TQLParserINDENTIFIER)
 	}
-	p.SetState(83)
+	p.SetState(86)
 	p.GetErrorHandler().Sync(p)
 	_la = p.GetTokenStream().LA(1)
 
 	for _la == TQLParserDOT {
 		{
-			p.SetState(79)
+			p.SetState(82)
 			p.Match(TQLParserDOT)
 		}
 		{
-			p.SetState(80)
+			p.SetState(83)
 			p.Match(TQLParserINDENTIFIER)
 		}
 
-		p.SetState(85)
+		p.SetState(88)
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 	}
@@ -1814,11 +1834,11 @@ func (p *TQLParser) Computing() (localctx IComputingContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(86)
+		p.SetState(89)
 		p.numExp(0)
 	}
 	{
-		p.SetState(87)
+		p.SetState(90)
 		p.Match(TQLParserEOF)
 	}
 
@@ -2174,7 +2194,7 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(92)
+	p.SetState(95)
 	p.GetErrorHandler().Sync(p)
 
 	switch p.GetTokenStream().LA(1) {
@@ -2184,7 +2204,7 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 		_prevctx = localctx
 
 		{
-			p.SetState(90)
+			p.SetState(93)
 			p.Match(TQLParserNUMBER)
 		}
 
@@ -2193,7 +2213,7 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 		p.SetParserRuleContext(localctx)
 		_prevctx = localctx
 		{
-			p.SetState(91)
+			p.SetState(94)
 			p.Match(TQLParserSTRING)
 		}
 
@@ -2201,9 +2221,9 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 		panic(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(105)
+	p.SetState(108)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 10, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -2211,18 +2231,18 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			p.SetState(103)
+			p.SetState(106)
 			p.GetErrorHandler().Sync(p)
-			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 8, p.GetParserRuleContext()) {
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewMulDivContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(94)
+				p.SetState(97)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 5)) {
 					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 5)", ""))
 				}
-				p.SetState(95)
+				p.SetState(98)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -2239,19 +2259,19 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(96)
+					p.SetState(99)
 					p.numExp(6)
 				}
 
 			case 2:
 				localctx = NewAddSubContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(97)
+				p.SetState(100)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 4)) {
 					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 4)", ""))
 				}
-				p.SetState(98)
+				p.SetState(101)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -2268,19 +2288,19 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(99)
+					p.SetState(102)
 					p.numExp(5)
 				}
 
 			case 3:
 				localctx = NewCompareValueContext(p, NewNumExpContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, TQLParserRULE_numExp)
-				p.SetState(100)
+				p.SetState(103)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 3)) {
 					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 3)", ""))
 				}
-				p.SetState(101)
+				p.SetState(104)
 
 				var _lt = p.GetTokenStream().LT(1)
 
@@ -2297,16 +2317,16 @@ func (p *TQLParser) numExp(_p int) (localctx INumExpContext) {
 					p.Consume()
 				}
 				{
-					p.SetState(102)
+					p.SetState(105)
 					p.numExp(4)
 				}
 
 			}
 
 		}
-		p.SetState(107)
+		p.SetState(110)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 9, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 10, p.GetParserRuleContext())
 	}
 
 	return localctx

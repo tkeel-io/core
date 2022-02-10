@@ -127,7 +127,8 @@ sourceEntity
     ;
 
 propertyEntity
-    :('.' INDENTIFIER)+
+    : '.*'
+    | ('.' INDENTIFIER)+
     ;
 
 

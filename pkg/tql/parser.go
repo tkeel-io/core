@@ -22,6 +22,8 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/dop251/goja"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/tql/parser"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -47,7 +49,6 @@ type Listener struct {
 	// output       map[string]interface{}
 
 	opKind OpKind
-	execs  []*Exec
 	// computing results
 	stack    []int
 	strStack []string
@@ -62,8 +63,9 @@ func newListener() *Listener {
 }
 
 type EvalContext struct {
-	Field        string
-	TargetEntity string
+	Field             string
+	ParamKeys         []string
+	TargetPropertyKey string
 }
 
 type Exec struct {
@@ -119,18 +121,6 @@ func (l *Listener) ExitSource(c *parser.SourceContext) {
 	PropertyEntity := c.PropertyEntity().GetText()
 	l.pushS(SourceEntity)
 	l.AddTentacle(SourceEntity, strings.TrimPrefix(PropertyEntity, Sep))
-	// record SourceEntities
-	if len(l.execs) > 0 {
-		e := l.execs[len(l.execs)-1]
-		if len(e.SourceEntities)-len(e.TargetProperty) == 1 {
-			e.SourceEntities = append(e.SourceEntities, SourceEntity)
-			return
-		}
-	}
-
-	var ne Exec
-	ne.SourceEntities = append(ne.SourceEntities, SourceEntity)
-	l.execs = append(l.execs, &ne)
 }
 
 // ExitSourceEntity is called when production entity is exited.
@@ -151,39 +141,34 @@ func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
 // ExitTargeProperty is called when production entity is exited.
 func (l *Listener) ExitTargetProperty(c *parser.TargetPropertyContext) {
 	log.Info("ExitTargetProperty", c.GetText())
-	tp := c.GetText()
-	// record TargetProperty
-	e := l.execs[len(l.execs)-1]
-	e.TargetProperty = tp
 }
 
 func (l *Listener) ExitField(c *parser.FieldContext) {
-	e := l.execs[len(l.execs)-1]
-	e.Field = c.GetText()
-
-	fieldtext := c.GetText()
-	evalCtx := EvalContext{Field: fieldtext}
+	evalCtx := EvalContext{Field: c.Expr().GetText()}
 	if c.TargetProperty() != nil {
-		evalCtx.TargetEntity = c.TargetProperty().GetText()
+		evalCtx.TargetPropertyKey = c.TargetProperty().GetText()
 	}
-	l.evalContexts[fieldtext] = evalCtx
+
+	evalCtx.ParamKeys = getParamKeys(c.Expr().GetChildren())
+	l.evalContexts[c.GetText()] = evalCtx
+}
+
+func getParamKeys(nodes []antlr.Tree) []string {
+	var sources []string
+	for _, node := range nodes {
+		if sourceContext, ok := node.(*parser.SourceContext); ok {
+			sources = append(sources, sourceContext.GetText())
+			continue
+		}
+		sources = append(sources, getParamKeys(node.GetChildren())...)
+	}
+
+	return sources
 }
 
 // ExitRoot is called when production root is exited.
 func (l *Listener) ExitRoot(c *parser.RootContext) {
 	log.Info("ExitRoot", c.GetText())
-}
-
-func (l *Listener) GetExpression(index int, in map[string][]byte) string {
-	e := l.execs[index]
-	field := e.Field
-	for k, v := range in {
-		// convert to string, need to add space otherwise "expecting <EOF>" error
-		nk := " " + fmt.Sprintf("%v", string(v)) + " "
-		field = strings.ReplaceAll(field, k, nk)
-	}
-	e.Expression = field
-	return e.Expression
 }
 
 func (l *Listener) push(i int) {
@@ -262,32 +247,6 @@ func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
 	}
 }
 
-// Computing takes a number expression and returns results.
-func computing(input string) string {
-	// Setup the input
-	is := antlr.NewInputStream(input)
-
-	// Create the Lexer
-	lexer := parser.NewTQLLexer(is)
-	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
-
-	// Create the Parser
-	p := parser.NewTQLParser(stream)
-
-	// Finally parse the expression (by walking the tree)
-	var resString string
-	var listener Listener
-	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
-	switch listener.opKind {
-	case OpKindNumber:
-		resString = strconv.FormatInt(int64(listener.pop()), 10)
-	case OpKindString:
-		val := listener.strStack[0]
-		resString = "\"" + val[1:len(val)-1] + "\""
-	}
-	return resString
-}
-
 func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 	tqlConfig := TQLConfig{
 		SourceEntities: l.sourceEntity,
@@ -313,12 +272,29 @@ func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 	return tqlConfig, nil
 }
 
-func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
-	out := make(map[string][]byte)
-	for ind, e := range l.execs {
-		numExpr := l.GetExpression(ind, in)
-		out[e.TargetProperty] = []byte(computing(numExpr))
+func (l *Listener) GetComputeResults(in map[string][]byte) map[string]constraint.Node {
+	out := make(map[string]constraint.Node)
+	for _, evalCtx := range l.evalContexts {
+		params := make(map[string][]byte)
+		for _, propertyKey := range evalCtx.ParamKeys {
+			if val, ok := in[propertyKey]; ok {
+				params[propertyKey] = val
+				continue
+			}
+			break
+		}
+
+		if len(params) == len(evalCtx.ParamKeys) {
+			evalExpr := evalCtx.Field
+			for key, val := range params {
+				evalExpr = strings.ReplaceAll(
+					evalExpr, key, " "+string(val)+" ")
+			}
+			val, _ := goja.New().RunString(evalExpr)
+			out[evalCtx.TargetPropertyKey] = constraint.NewNode(val.Export())
+		}
 	}
+
 	return out
 }
 

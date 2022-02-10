@@ -67,10 +67,5 @@ func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, e
 
 	ret := t.listener.GetComputeResults(input)
 
-	out := make(map[string]constraint.Node)
-	for key, val := range ret {
-		out[key] = constraint.NewNode(val)
-	}
-
-	return out, nil
+	return ret, nil
 }

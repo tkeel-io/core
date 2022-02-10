@@ -6,6 +6,7 @@ require (
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211026222012-6af4c774c47b
 	github.com/dapr/dapr v1.5.1 // indirect
 	github.com/dapr/go-sdk v1.3.0
+	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/golang/protobuf v1.5.2
