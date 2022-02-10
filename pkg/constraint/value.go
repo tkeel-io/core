@@ -19,7 +19,6 @@ package constraint
 import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/kit/log"
 )
 
 const (
@@ -39,6 +38,7 @@ const (
 type Config struct {
 	ID                string                 `json:"id" mapstructure:"id"`
 	Type              string                 `json:"type" mapstructure:"type"`
+	Name              string                 `json:"name" mapstructure:"name"`
 	Weight            int                    `json:"weight" mapstructure:"weight"`
 	Enabled           bool                   `json:"enabled" mapstructure:"enabled"`
 	EnabledSearch     bool                   `json:"enabled_search" mapstructure:"enabled_search"`
@@ -158,7 +158,6 @@ func parseField(in Config) (out Config, err error) {
 
 		in.Define["fields"] = jsonDefine2.Fields
 	default:
-		log.Info("===================", in)
 		return out, ErrEntityConfigInvalid
 	}
 

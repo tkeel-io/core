@@ -62,6 +62,14 @@ func (s *statem) flush(ctx context.Context) error {
 }
 
 func (s *statem) flushState(ctx context.Context) error {
+	s.Mappers = []MapperDesc{}
+	for _, m := range s.mappers {
+		s.Mappers = append(s.Mappers, MapperDesc{
+			Name:      m.Name(),
+			TQLString: m.String(),
+		})
+	}
+
 	bytes, err := EncodeBase(&s.Base)
 	if nil != err {
 		log.Error("encode Entity", zap.Error(err), logger.EntityID(s.ID))
