@@ -109,3 +109,9 @@ func (s *BaseTQLListener) EnterAddSub(ctx *AddSubContext) {}
 
 // ExitAddSub is called when production AddSub is exited.
 func (s *BaseTQLListener) ExitAddSub(ctx *AddSubContext) {}
+
+// EnterString is called when production String is entered.
+func (s *BaseTQLListener) EnterString(ctx *StringContext) {}
+
+// ExitString is called when production String is exited.
+func (s *BaseTQLListener) ExitString(ctx *StringContext) {}

@@ -94,6 +94,7 @@ targetEntity
 expr
     : sourceEntity                                  # Expression
     | sourceEntity+ AS targetProperty+              # Expression
+    | expr  AS targetProperty+                      # Expression
     | expr op=('*'|'/'|'%') expr                    # DummyMulDiv
     | expr op=('+'|'-') expr                        # DummyAddSub
     | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # DummyCompareValue
@@ -120,6 +121,7 @@ numExp
    | numExp op=('+'|'-') numExp # AddSub
    | numExp op=(EQ | GT | LT | GTE | LTE | NE) numExp  # CompareValue
    | NUMBER                             # Number
+   | STRING                             # String
    ;
 
 fragment A: [aA];

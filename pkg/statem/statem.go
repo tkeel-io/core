@@ -556,8 +556,6 @@ func (s *statem) HandleLoop() {
 		}
 
 		switch msg := message.(type) {
-		case MapperMessage:
-			s.invokeMapperMsg(msg)
 		case TentacleMsg:
 			s.invokeTentacleMsg(msg)
 		default:
@@ -713,14 +711,16 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	var err error
 	for mapperID := range actives {
 		input := make(map[string]constraint.Node)
-		for _, tentacle := range s.indexTentacles[mapperID] {
-			for _, item := range tentacle.Items() {
-				var val constraint.Node
-				if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
-					log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
-					continue
-				} else if nil != val {
-					input[item.String()] = val
+		for _, tentacle := range s.mappers[mapperID].Tentacles() {
+			if tentacle.Type() == mapper.TentacleTypeMapper {
+				for _, item := range tentacle.Items() {
+					var val constraint.Node
+					if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
+						log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
+						continue
+					} else if nil != val {
+						input[item.String()] = val
+					}
 				}
 			}
 		}
@@ -753,10 +753,10 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
 	if !strings.ContainsAny(propertyKey, ".[") {
-		if _, has := s.KValues[propertyKey]; !has {
+		if _, has := properties[propertyKey]; !has {
 			return constraint.NullNode{}, ErrPropertyNotFound
 		}
-		return s.KValues[propertyKey], nil
+		return properties[propertyKey], nil
 	}
 
 	// patch property.
@@ -805,145 +805,6 @@ func (s *statem) setProperty(op constraint.PatchOperator, propertyKey string, va
 	}
 
 	s.KValues[propertyID] = resultNode
-	return nil
-}
-
-// invokeMapperMsg dispose mapper msg.
-func (s *statem) invokeMapperMsg(msg MapperMessage) {
-	var err error
-	switch msg.Operator {
-	case MapperOperatorAppend:
-		err = s.appendMapper(msg.Mapper)
-	case MapperOperatorRemove:
-		err = s.removeMapper(msg.Mapper)
-	default:
-		err = errInvalidMapperOp
-	}
-
-	if nil != err {
-		log.Error("invoke mapper",
-			zap.Error(err),
-			logger.EntityID(s.ID),
-			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
-	} else {
-		log.Debug("invoke mapper",
-			logger.EntityID(s.ID),
-			logger.TQLString(msg.Mapper.TQLString),
-			logger.MapperID(util.FormatMapper(s.Type, s.ID, msg.Mapper.Name)))
-	}
-	log.Info("recv mapper message", logger.EntityID(s.GetID()), zap.Any("mapper", msg.Mapper))
-}
-
-// SetMapper set mapper into entity.
-func (s *statem) appendMapper(desc MapperDesc) error {
-	reqID := uuid()
-
-	// checked befors.
-	m, _ := mapper.NewMapper(util.FormatMapper(s.Type, s.ID, desc.Name), desc.TQLString)
-
-	log.Debug("append mapper",
-		logger.EntityID(s.ID),
-		logger.RequestID(reqID),
-		logger.MapperID(m.ID()),
-		logger.TQLString(m.String()))
-
-	position, length := 0, len(s.Mappers)
-	for ; position < length; position++ {
-		if desc.Name == s.Mappers[position].Name {
-			s.Mappers[position].TQLString = desc.TQLString
-			break
-		}
-	}
-
-	if position < length {
-		// 更新mapper之前我们需要将前面建立的删除
-	} else {
-		s.Mappers = append(s.Mappers, desc)
-	}
-
-	s.mappers[m.ID()] = m
-
-	// generate indexTentacles again.
-	for _, mp := range s.mappers {
-		for _, tentacle := range mp.Tentacles() {
-			s.indexTentacles[tentacle.TargetID()] =
-				append(s.indexTentacles[tentacle.TargetID()], tentacle)
-		}
-	}
-
-	// generate tentacles again.
-	s.generateTentacles()
-
-	sourceEntities := []string{}
-	for _, expr := range m.SourceEntities() {
-		sourceEntities = append(sourceEntities,
-			s.stateManager.EscapedEntities(expr)...)
-	}
-
-	for _, entityID := range sourceEntities {
-		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-		if nil != tentacle {
-			// send tentacle msg.
-			s.stateManager.SendMsg(MessageContext{
-				Headers: Header{
-					MessageCtxHeaderSourceID: s.ID,
-					MessageCtxHeaderTargetID: entityID,
-				},
-				Message: TentacleMsg{
-					StateID:  s.ID,
-					Operator: TentacleOperatorAppend,
-					Items:    tentacle.Copy().Items(),
-				},
-			})
-		}
-	}
-
-	return nil
-}
-
-func (s *statem) removeMapper(desc MapperDesc) error {
-	position, length := 0, len(s.Mappers)
-	for ; position < length; position++ {
-		if desc.Name == s.Mappers[position].Name {
-			break
-		}
-	}
-
-	if position == length {
-		return nil
-	}
-
-	m := s.mappers[util.FormatMapper(s.Type, s.ID, s.Mappers[position].Name)]
-	log.Info("remove mapper", logger.EntityID(s.ID), logger.MapperID(m.ID()), logger.TQLString(m.String()))
-
-	// 这一块暂时这样做，但是实际上是存在问题的： tentacles创建和删除的顺序行，不同entity中tentacle的一致性问题，这个问题可以使用version来解决,此外如果tentacles是动态生成也会存在问题.
-	// 如果是动态生成的，那么前后两次生成可能不一致.
-	// 且这里使用了两个锁，存在死锁风险.
-	sourceEntities := []string{m.TargetEntity()}
-	for _, expr := range m.SourceEntities() {
-		sourceEntities = append(sourceEntities,
-			s.stateManager.EscapedEntities(expr)...)
-	}
-
-	for _, entityID := range sourceEntities {
-		tentacle := mapper.MergeTentacles(s.indexTentacles[entityID]...)
-
-		if nil != tentacle {
-			// send tentacle msg.
-			s.stateManager.SendMsg(MessageContext{
-				Headers: Header{
-					MessageCtxHeaderSourceID: s.ID,
-					MessageCtxHeaderTargetID: entityID,
-				},
-				Message: &TentacleMsg{
-					StateID:  s.ID,
-					Operator: TentacleOperatorRemove,
-					Items:    tentacle.Copy().Items(),
-				},
-			})
-		}
-	}
 	return nil
 }
 

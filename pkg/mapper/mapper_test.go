@@ -66,3 +66,24 @@ func TestMapper(t *testing.T) {
 		})
 	}
 }
+
+func TestExec(t *testing.T) {
+	tqlString := `insert into 7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6 select f8f0327b-51e4-400a-a2e1-c95e371ec99d.path  + '/' + '7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6' as path`
+
+	mInstance, err := NewMapper("mapper123", tqlString)
+
+	t.Log(err)
+
+	t.Log("target: ", mInstance.TargetEntity())
+	t.Log("sources: ", mInstance.SourceEntities())
+	t.Log("tentacles: ", mInstance.Tentacles())
+
+	result, err := mInstance.Exec(map[string]constraint.Node{
+		"f8f0327b-51e4-400a-a2e1-c95e371ec99d.path": constraint.NewNode("test"),
+		"entity.property2.name":                     constraint.NewNode("123"),
+		"entity.property3":                          constraint.NewNode("g123"),
+	})
+
+	t.Log(err)
+	t.Log(result)
+}

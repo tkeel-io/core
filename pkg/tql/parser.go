@@ -27,6 +27,14 @@ import (
 	"go.uber.org/zap"
 )
 
+type OpKind string
+
+const (
+	OpKindString OpKind = "string"
+	OpKindNumber OpKind = "number"
+	OpKindIgnore OpKind = "ignore"
+)
+
 type Listener struct {
 	*parser.BaseTQLListener
 
@@ -36,9 +44,11 @@ type Listener struct {
 	// input        map[string]interface{}
 	// output       map[string]interface{}
 
-	execs []*Exec
+	opKind OpKind
+	execs  []*Exec
 	// computing results
-	stack []int
+	stack    []int
+	strStack []string
 }
 
 type Exec struct {
@@ -195,6 +205,12 @@ func (l *Listener) ExitNumber(c *parser.NumberContext) {
 	l.push(i)
 }
 
+// EnterString is called when entering the String production.
+func (l *Listener) EnterString(c *parser.StringContext) {
+	l.opKind = OpKindString
+	l.strStack = append(l.strStack, c.GetText())
+}
+
 // ExitMulDiv is called when exiting the MulDiv production.
 func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 	right, left := l.pop(), l.pop()
@@ -211,15 +227,29 @@ func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 
 // ExitAddSub is called when exiting the AddSub production.
 func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
-	right, left := l.pop(), l.pop()
-
-	switch c.GetOp().GetTokenType() {
-	case parser.TQLParserADD:
-		l.push(left + right)
-	case parser.TQLParserSUB:
-		l.push(left - right)
-	default:
-		panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+	switch l.opKind {
+	case OpKindNumber:
+		right, left := l.pop(), l.pop()
+		switch c.GetOp().GetTokenType() {
+		case parser.TQLParserADD:
+			l.push(left + right)
+		case parser.TQLParserSUB:
+			l.push(left - right)
+		default:
+			panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+		}
+	case OpKindString:
+		right, left := l.strStack[1], l.strStack[0]
+		l.strStack = []string{}
+		switch c.GetOp().GetTokenType() {
+		case parser.TQLParserADD:
+			val := (left[1:len(left)-1] + right[1:len(right)-1])
+			l.strStack = append(l.strStack, "'"+val+"'")
+		case parser.TQLParserSUB:
+			panic("not support string sub")
+		default:
+			panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+		}
 	}
 }
 
@@ -236,9 +266,17 @@ func computing(input string) string {
 	p := parser.NewTQLParser(stream)
 
 	// Finally parse the expression (by walking the tree)
+	var resString string
 	var listener Listener
 	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
-	return strconv.FormatInt(int64(listener.pop()), 10)
+	switch listener.opKind {
+	case OpKindNumber:
+		resString = strconv.FormatInt(int64(listener.pop()), 10)
+	case OpKindString:
+		val := listener.strStack[0]
+		resString = "\"" + val[1:len(val)-1] + "\""
+	}
+	return resString
 }
 
 func (l *Listener) GetParseConfigs() (TQLConfig, error) {
