@@ -87,3 +87,26 @@ func TestExec(t *testing.T) {
 	t.Log(err)
 	t.Log(result)
 }
+
+func TestExec2(t *testing.T) {
+	tqlString := `insert into bc90e5ba-4d15-4738-bf38-fdfe16740d9c select 0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath + '/bc90e5ba-4d15-4738-bf38-fdfe16740d9c'  as sysField._spacePath`
+
+	mInstance, err := NewMapper("mapper123", tqlString)
+
+	t.Log(err)
+
+	t.Log("target: ", mInstance.TargetEntity())
+	t.Log("sources: ", mInstance.SourceEntities())
+	for _, tentacle := range mInstance.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	result, err := mInstance.Exec(map[string]constraint.Node{
+		"0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath": constraint.NewNode("test"),
+		"entity.property2.name": constraint.NewNode("123"),
+		"entity.property3":      constraint.NewNode("g123"),
+	})
+
+	t.Log(err)
+	t.Log(result)
+}

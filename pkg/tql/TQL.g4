@@ -1,12 +1,9 @@
- /*
+/*
  Copyright © 2021 NAME HERE <EMAIL ADDRESS>
-
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
      http://www.apache.org/licenses/LICENSE-2.0
-
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -66,7 +63,7 @@ DOT:                '.';
 TRUE:               T R U E;
 FALSE:              F A L S E;
 ENTITYNAME:         [a-zA-Z_#*0-9]([a-zA-Z_\-#$@]+[0-9]* | [0-9]*[a-zA-Z_\-#$@]+) [a-zA-Z_\-#$@0-9]*;
-PROPERTYNAME:       '.' [a-zA-Z_#*][a-zA-Z_\-#$@0-9.]*;
+PROPERTYNAME:       [a-zA-Z_#*]([a-zA-Z_\-#$@0-9])*;
 TARGETENTITY:       [a-zA-Z_#*][a-zA-Z_\-#$@0-9]*;
 NUMBER:             '0' | [1-9][0-9]* ;
 INTEGER:            ('+' | '-')? NUMBER;
@@ -105,11 +102,11 @@ expr
 // 2.1 entity
 sourceEntity
     : '*'
-    | ENTITYNAME (PROPERTYNAME)?
+    | ENTITYNAME ('.' PROPERTYNAME)*
     ;
 
 targetProperty
-    : ENTITYNAME
+    : PROPERTYNAME
     ;
 
 
