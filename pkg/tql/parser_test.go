@@ -154,3 +154,58 @@ func TestGoja(t *testing.T) {
 	t.Log(v)
 	t.Log(reflect.ValueOf(v).Kind().String())
 }
+
+func BenchmarkGoja(b *testing.B) {
+	exprs := []struct {
+		Name       string
+		Expression string
+	}{
+		{
+			Name:       "computting-integer-add",
+			Expression: "1223+324",
+		},
+		{
+			Name:       "computting-integer-sub",
+			Expression: "1223 - 324",
+		},
+		{
+			Name:       "computting-integer-mul",
+			Expression: "1223 * 324",
+		},
+		{
+			Name:       "computting-integer-div",
+			Expression: "1223/324",
+		},
+		{
+			Name:       "computting-float-add",
+			Expression: "1223.344+324.7",
+		},
+		{
+			Name:       "computting-float-sub",
+			Expression: "1223.344 - 324.7",
+		},
+		{
+			Name:       "computting-float-mul",
+			Expression: "1223.344*324.7",
+		},
+		{
+			Name:       "computting-float-div",
+			Expression: "1223.344/324.7",
+		},
+		{
+			Name:       "computting-string",
+			Expression: "'too yong too simple' + 'He knows most who speaks least'",
+		},
+	}
+
+	vm := goja.New()
+	b.ResetTimer()
+	for _, expr := range exprs {
+		b.Log("bench for ", expr.Name)
+		b.Run(expr.Name, func(b *testing.B) {
+			for n := 0; n < b.N; n++ {
+				vm.RunString(expr.Expression)
+			}
+		})
+	}
+}
