@@ -38,17 +38,23 @@ func (s *BaseTQLListener) EnterFields(ctx *FieldsContext) {}
 // ExitFields is called when production fields is exited.
 func (s *BaseTQLListener) ExitFields(ctx *FieldsContext) {}
 
+// EnterField is called when production field is entered.
+func (s *BaseTQLListener) EnterField(ctx *FieldContext) {}
+
+// ExitField is called when production field is exited.
+func (s *BaseTQLListener) ExitField(ctx *FieldContext) {}
+
 // EnterTargetEntity is called when production targetEntity is entered.
 func (s *BaseTQLListener) EnterTargetEntity(ctx *TargetEntityContext) {}
 
 // ExitTargetEntity is called when production targetEntity is exited.
 func (s *BaseTQLListener) ExitTargetEntity(ctx *TargetEntityContext) {}
 
-// EnterExpression is called when production Expression is entered.
-func (s *BaseTQLListener) EnterExpression(ctx *ExpressionContext) {}
+// EnterExpressionZ is called when production ExpressionZ is entered.
+func (s *BaseTQLListener) EnterExpressionZ(ctx *ExpressionZContext) {}
 
-// ExitExpression is called when production Expression is exited.
-func (s *BaseTQLListener) ExitExpression(ctx *ExpressionContext) {}
+// ExitExpressionZ is called when production ExpressionZ is exited.
+func (s *BaseTQLListener) ExitExpressionZ(ctx *ExpressionZContext) {}
 
 // EnterDummyAddSub is called when production DummyAddSub is entered.
 func (s *BaseTQLListener) EnterDummyAddSub(ctx *DummyAddSubContext) {}
@@ -62,17 +68,41 @@ func (s *BaseTQLListener) EnterDummyMulDiv(ctx *DummyMulDivContext) {}
 // ExitDummyMulDiv is called when production DummyMulDiv is exited.
 func (s *BaseTQLListener) ExitDummyMulDiv(ctx *DummyMulDivContext) {}
 
+// EnterCONSTANT is called when production CONSTANT is entered.
+func (s *BaseTQLListener) EnterCONSTANT(ctx *CONSTANTContext) {}
+
+// ExitCONSTANT is called when production CONSTANT is exited.
+func (s *BaseTQLListener) ExitCONSTANT(ctx *CONSTANTContext) {}
+
 // EnterDummyCompareValue is called when production DummyCompareValue is entered.
 func (s *BaseTQLListener) EnterDummyCompareValue(ctx *DummyCompareValueContext) {}
 
 // ExitDummyCompareValue is called when production DummyCompareValue is exited.
 func (s *BaseTQLListener) ExitDummyCompareValue(ctx *DummyCompareValueContext) {}
 
+// EnterSString is called when production SString is entered.
+func (s *BaseTQLListener) EnterSString(ctx *SStringContext) {}
+
+// ExitSString is called when production SString is exited.
+func (s *BaseTQLListener) ExitSString(ctx *SStringContext) {}
+
+// EnterSource is called when production source is entered.
+func (s *BaseTQLListener) EnterSource(ctx *SourceContext) {}
+
+// ExitSource is called when production source is exited.
+func (s *BaseTQLListener) ExitSource(ctx *SourceContext) {}
+
 // EnterSourceEntity is called when production sourceEntity is entered.
 func (s *BaseTQLListener) EnterSourceEntity(ctx *SourceEntityContext) {}
 
 // ExitSourceEntity is called when production sourceEntity is exited.
 func (s *BaseTQLListener) ExitSourceEntity(ctx *SourceEntityContext) {}
+
+// EnterPropertyEntity is called when production propertyEntity is entered.
+func (s *BaseTQLListener) EnterPropertyEntity(ctx *PropertyEntityContext) {}
+
+// ExitPropertyEntity is called when production propertyEntity is exited.
+func (s *BaseTQLListener) ExitPropertyEntity(ctx *PropertyEntityContext) {}
 
 // EnterTargetProperty is called when production targetProperty is entered.
 func (s *BaseTQLListener) EnterTargetProperty(ctx *TargetPropertyContext) {}
@@ -109,3 +139,9 @@ func (s *BaseTQLListener) EnterAddSub(ctx *AddSubContext) {}
 
 // ExitAddSub is called when production AddSub is exited.
 func (s *BaseTQLListener) ExitAddSub(ctx *AddSubContext) {}
+
+// EnterString is called when production String is entered.
+func (s *BaseTQLListener) EnterString(ctx *StringContext) {}
+
+// ExitString is called when production String is exited.
+func (s *BaseTQLListener) ExitString(ctx *StringContext) {}

@@ -19,11 +19,14 @@ type TQLListener interface {
 	// EnterFields is called when entering the fields production.
 	EnterFields(c *FieldsContext)
 
+	// EnterField is called when entering the field production.
+	EnterField(c *FieldContext)
+
 	// EnterTargetEntity is called when entering the targetEntity production.
 	EnterTargetEntity(c *TargetEntityContext)
 
-	// EnterExpression is called when entering the Expression production.
-	EnterExpression(c *ExpressionContext)
+	// EnterExpressionZ is called when entering the ExpressionZ production.
+	EnterExpressionZ(c *ExpressionZContext)
 
 	// EnterDummyAddSub is called when entering the DummyAddSub production.
 	EnterDummyAddSub(c *DummyAddSubContext)
@@ -31,11 +34,23 @@ type TQLListener interface {
 	// EnterDummyMulDiv is called when entering the DummyMulDiv production.
 	EnterDummyMulDiv(c *DummyMulDivContext)
 
+	// EnterCONSTANT is called when entering the CONSTANT production.
+	EnterCONSTANT(c *CONSTANTContext)
+
 	// EnterDummyCompareValue is called when entering the DummyCompareValue production.
 	EnterDummyCompareValue(c *DummyCompareValueContext)
 
+	// EnterSString is called when entering the SString production.
+	EnterSString(c *SStringContext)
+
+	// EnterSource is called when entering the source production.
+	EnterSource(c *SourceContext)
+
 	// EnterSourceEntity is called when entering the sourceEntity production.
 	EnterSourceEntity(c *SourceEntityContext)
+
+	// EnterPropertyEntity is called when entering the propertyEntity production.
+	EnterPropertyEntity(c *PropertyEntityContext)
 
 	// EnterTargetProperty is called when entering the targetProperty production.
 	EnterTargetProperty(c *TargetPropertyContext)
@@ -55,17 +70,23 @@ type TQLListener interface {
 	// EnterAddSub is called when entering the AddSub production.
 	EnterAddSub(c *AddSubContext)
 
+	// EnterString is called when entering the String production.
+	EnterString(c *StringContext)
+
 	// ExitRoot is called when exiting the root production.
 	ExitRoot(c *RootContext)
 
 	// ExitFields is called when exiting the fields production.
 	ExitFields(c *FieldsContext)
 
+	// ExitField is called when exiting the field production.
+	ExitField(c *FieldContext)
+
 	// ExitTargetEntity is called when exiting the targetEntity production.
 	ExitTargetEntity(c *TargetEntityContext)
 
-	// ExitExpression is called when exiting the Expression production.
-	ExitExpression(c *ExpressionContext)
+	// ExitExpressionZ is called when exiting the ExpressionZ production.
+	ExitExpressionZ(c *ExpressionZContext)
 
 	// ExitDummyAddSub is called when exiting the DummyAddSub production.
 	ExitDummyAddSub(c *DummyAddSubContext)
@@ -73,11 +94,23 @@ type TQLListener interface {
 	// ExitDummyMulDiv is called when exiting the DummyMulDiv production.
 	ExitDummyMulDiv(c *DummyMulDivContext)
 
+	// ExitCONSTANT is called when exiting the CONSTANT production.
+	ExitCONSTANT(c *CONSTANTContext)
+
 	// ExitDummyCompareValue is called when exiting the DummyCompareValue production.
 	ExitDummyCompareValue(c *DummyCompareValueContext)
 
+	// ExitSString is called when exiting the SString production.
+	ExitSString(c *SStringContext)
+
+	// ExitSource is called when exiting the source production.
+	ExitSource(c *SourceContext)
+
 	// ExitSourceEntity is called when exiting the sourceEntity production.
 	ExitSourceEntity(c *SourceEntityContext)
+
+	// ExitPropertyEntity is called when exiting the propertyEntity production.
+	ExitPropertyEntity(c *PropertyEntityContext)
 
 	// ExitTargetProperty is called when exiting the targetProperty production.
 	ExitTargetProperty(c *TargetPropertyContext)
@@ -96,4 +129,7 @@ type TQLListener interface {
 
 	// ExitAddSub is called when exiting the AddSub production.
 	ExitAddSub(c *AddSubContext)
+
+	// ExitString is called when exiting the String production.
+	ExitString(c *StringContext)
 }

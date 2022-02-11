@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
@@ -116,7 +117,8 @@ func core(cmd *cobra.Command, args []string) {
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
 		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
+			print.FailureStatusEvent(os.Stdout,
+				"please check your --search-engine configuration(driver://username:password@url1,url2)")
 			return
 		}
 		switch drive {
@@ -156,13 +158,14 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	stateManager, err := runtime.NewManager(context.Background(), coroutinePool, search.GlobalService)
-	if nil != err {
+	var stateManager *runtime.Manager
+	if stateManager, err = runtime.NewManager(context.Background(),
+		coroutinePool, search.GlobalService); nil != err {
 		log.Fatal(err)
 	}
 
-	_entityManager, err = entities.NewEntityManager(context.Background(), stateManager, search.GlobalService)
-	if nil != err {
+	if _entityManager, err = entities.NewEntityManager(context.Background(),
+		stateManager, search.GlobalService); nil != err {
 		log.Fatal(err)
 	}
 
@@ -170,10 +173,13 @@ func core(cmd *cobra.Command, args []string) {
 
 	print.SuccessStatusEvent(os.Stdout, "all service registered.")
 	print.SuccessStatusEvent(os.Stdout, "everything is ready for execution.")
-	if err = _entityManager.Start(); nil != err {
+	if err = coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
 	}
-	if err = coreApp.Run(context.TODO()); err != nil {
+
+	// start enity manager.
+	time.Sleep(300 * time.Millisecond)
+	if err = _entityManager.Start(); nil != err {
 		log.Fatal(err)
 	}
 

@@ -22,9 +22,21 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	"github.com/dop251/goja"
+	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/tql/parser"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
+)
+
+const Sep = "."
+
+type OpKind string
+
+const (
+	OpKindString OpKind = "string"
+	OpKindNumber OpKind = "number"
+	OpKindIgnore OpKind = "ignore"
 )
 
 type Listener struct {
@@ -36,9 +48,24 @@ type Listener struct {
 	// input        map[string]interface{}
 	// output       map[string]interface{}
 
-	execs []*Exec
+	opKind OpKind
 	// computing results
-	stack []int
+	stack    []int
+	strStack []string
+
+	evalContexts map[string]EvalContext
+}
+
+func newListener() *Listener {
+	return &Listener{
+		evalContexts: make(map[string]EvalContext),
+	}
+}
+
+type EvalContext struct {
+	Field             string
+	ParamKeys         []string
+	TargetPropertyKey string
 }
 
 type Exec struct {
@@ -87,31 +114,22 @@ func (l *Listener) AddTentacle(k string, v string) {
 	l.pushS(k)
 }
 
+func (l *Listener) ExitSource(c *parser.SourceContext) {
+	text := c.GetText()
+	log.Info("ExitSource", text)
+	SourceEntity := c.SourceEntity().GetText()
+	PropertyEntity := c.PropertyEntity().GetText()
+	l.pushS(SourceEntity)
+	l.AddTentacle(SourceEntity, strings.TrimPrefix(PropertyEntity, Sep))
+}
+
 // ExitSourceEntity is called when production entity is exited.
 func (l *Listener) ExitSourceEntity(c *parser.SourceEntityContext) {
-	text := c.GetText()
-	if strings.Contains(text, ".") {
-		arr := strings.Split(text, ".")
-		l.AddTentacle(arr[0], arr[1])
-	} else {
-		l.pushS(text)
-	}
-
-	// record SourceEntities
-	if len(l.execs) > 0 {
-		e := l.execs[len(l.execs)-1]
-		if len(e.SourceEntities)-len(e.TargetProperty) == 1 {
-			e.SourceEntities = append(e.SourceEntities, text)
-			return
-		}
-	}
-	var ne Exec
-	ne.SourceEntities = append(ne.SourceEntities, text)
-	l.execs = append(l.execs, &ne)
 }
 
 // ExitTargetEntity is called when production entity is exited.
 func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
+	log.Info("ExitTargetEntity", c.GetText())
 	if text := c.GetText(); strings.Contains(text, ".") {
 		arr := strings.Split(text, ".")
 		l.pushT(arr[0])
@@ -122,49 +140,35 @@ func (l *Listener) ExitTargetEntity(c *parser.TargetEntityContext) {
 
 // ExitTargeProperty is called when production entity is exited.
 func (l *Listener) ExitTargetProperty(c *parser.TargetPropertyContext) {
-	tp := c.GetText()
-	// record TargetProperty
-	e := l.execs[len(l.execs)-1]
-	e.TargetProperty = tp
+	log.Info("ExitTargetProperty", c.GetText())
 }
 
-// ExitExpression is called when production Expression is exited.
-func (l *Listener) ExitExpression(c *parser.ExpressionContext) {
-	// log.Info("ExitExpression",c.GetText())
+func (l *Listener) ExitField(c *parser.FieldContext) {
+	evalCtx := EvalContext{Field: c.Expr().GetText()}
+	if c.TargetProperty() != nil {
+		evalCtx.TargetPropertyKey = c.TargetProperty().GetText()
+	}
+
+	evalCtx.ParamKeys = getParamKeys(c.Expr().GetChildren())
+	l.evalContexts[c.GetText()] = evalCtx
+}
+
+func getParamKeys(nodes []antlr.Tree) []string {
+	var sources []string
+	for _, node := range nodes {
+		if sourceContext, ok := node.(*parser.SourceContext); ok {
+			sources = append(sources, sourceContext.GetText())
+			continue
+		}
+		sources = append(sources, getParamKeys(node.GetChildren())...)
+	}
+
+	return sources
 }
 
 // ExitRoot is called when production root is exited.
 func (l *Listener) ExitRoot(c *parser.RootContext) {
-	// log.Info("ExitRoot",c.GetText())
-}
-
-// ExitFields is called when production fields is exited.
-func (l *Listener) ExitFields(c *parser.FieldsContext) {
-	// record Field
-	fields := c.GetText()
-	fieldArr := strings.Split(fields, ",")
-	for ind, f := range fieldArr {
-		if arr := strings.Split(f, "as"); len(arr) > 1 {
-			e := l.execs[ind]
-			e.Field = arr[0]
-		}
-	}
-}
-
-// ExitCompareValue is called when production CompareValue is exited.
-func (l *Listener) ExitCompareValue(c *parser.CompareValueContext) {
-}
-
-func (l *Listener) GetExpression(index int, in map[string][]byte) string {
-	e := l.execs[index]
-	field := e.Field
-	for k, v := range in {
-		// convert to string, need to add space otherwise "expecting <EOF>" error
-		nk := " " + fmt.Sprintf("%v", string(v)) + " "
-		field = strings.ReplaceAll(field, k, nk)
-	}
-	e.Expression = field
-	return e.Expression
+	log.Info("ExitRoot", c.GetText())
 }
 
 func (l *Listener) push(i int) {
@@ -195,6 +199,12 @@ func (l *Listener) ExitNumber(c *parser.NumberContext) {
 	l.push(i)
 }
 
+// EnterString is called when entering the String production.
+func (l *Listener) EnterString(c *parser.StringContext) {
+	l.opKind = OpKindString
+	l.strStack = append(l.strStack, c.GetText())
+}
+
 // ExitMulDiv is called when exiting the MulDiv production.
 func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 	right, left := l.pop(), l.pop()
@@ -211,34 +221,30 @@ func (l *Listener) ExitMulDiv(c *parser.MulDivContext) {
 
 // ExitAddSub is called when exiting the AddSub production.
 func (l *Listener) ExitAddSub(c *parser.AddSubContext) {
-	right, left := l.pop(), l.pop()
-
-	switch c.GetOp().GetTokenType() {
-	case parser.TQLParserADD:
-		l.push(left + right)
-	case parser.TQLParserSUB:
-		l.push(left - right)
-	default:
-		panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+	switch l.opKind {
+	case OpKindNumber:
+		right, left := l.pop(), l.pop()
+		switch c.GetOp().GetTokenType() {
+		case parser.TQLParserADD:
+			l.push(left + right)
+		case parser.TQLParserSUB:
+			l.push(left - right)
+		default:
+			panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+		}
+	case OpKindString:
+		right, left := l.strStack[1], l.strStack[0]
+		l.strStack = []string{}
+		switch c.GetOp().GetTokenType() {
+		case parser.TQLParserADD:
+			val := (left[1:len(left)-1] + right[1:len(right)-1])
+			l.strStack = append(l.strStack, "'"+val+"'")
+		case parser.TQLParserSUB:
+			panic("not support string sub")
+		default:
+			panic(fmt.Sprintf("unexpected operation: %s", c.GetOp().GetText()))
+		}
 	}
-}
-
-// Computing takes a number expression and returns results.
-func computing(input string) string {
-	// Setup the input
-	is := antlr.NewInputStream(input)
-
-	// Create the Lexer
-	lexer := parser.NewTQLLexer(is)
-	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
-
-	// Create the Parser
-	p := parser.NewTQLParser(stream)
-
-	// Finally parse the expression (by walking the tree)
-	var listener Listener
-	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Computing())
-	return strconv.FormatInt(int64(listener.pop()), 10)
 }
 
 func (l *Listener) GetParseConfigs() (TQLConfig, error) {
@@ -266,17 +272,38 @@ func (l *Listener) GetParseConfigs() (TQLConfig, error) {
 	return tqlConfig, nil
 }
 
-func (l *Listener) GetComputeResults(in map[string][]byte) map[string][]byte {
-	out := make(map[string][]byte)
-	for ind, e := range l.execs {
-		numExpr := l.GetExpression(ind, in)
-		out[e.TargetProperty] = []byte(computing(numExpr))
+func (l *Listener) GetComputeResults(in map[string][]byte) map[string]constraint.Node {
+	out := make(map[string]constraint.Node)
+	for _, evalCtx := range l.evalContexts {
+		params := make(map[string][]byte)
+		for _, propertyKey := range evalCtx.ParamKeys {
+			if val, ok := in[propertyKey]; ok {
+				params[propertyKey] = val
+				continue
+			}
+			break
+		}
+
+		if len(params) == len(evalCtx.ParamKeys) {
+			evalExpr := evalCtx.Field
+			for key, val := range params {
+				evalExpr = strings.ReplaceAll(
+					evalExpr, key, " "+string(val)+" ")
+			}
+			val, _ := goja.New().RunString(evalExpr)
+			out[evalCtx.TargetPropertyKey] = constraint.NewNode(val.Export())
+		}
 	}
+
 	return out
 }
 
+func (l *Listener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
+	log.Error("SyntaxError", recognizer, offendingSymbol, line, column, msg, e)
+}
+
 // Parse takes a tql string expression and returns a parsed dict.
-func Parse(input string) (Listener, error) {
+func Parse(input string) (*Listener, error) {
 	// Setup the input
 	is := antlr.NewInputStream(input)
 
@@ -288,7 +315,7 @@ func Parse(input string) (Listener, error) {
 	p := parser.NewTQLParser(stream)
 
 	// Finally parse the expression (by walking the tree)
-	var listener Listener
-	antlr.ParseTreeWalkerDefault.Walk(&listener, p.Root())
+	var listener = newListener()
+	antlr.ParseTreeWalkerDefault.Walk(listener, p.Root())
 	return listener, nil
 }
