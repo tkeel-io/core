@@ -491,31 +491,30 @@ func (s *statem) SetMessageHandler(msgHandler MessageHandler) {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) OnMessage(msg Message) bool {
+func (s *statem) OnMessage(message Message) bool {
 	var (
 		reqID     = uuid()
 		attaching = false
 	)
 
-	log.Debug("statem.OnMessage", logger.EntityID(s.ID), logger.RequestID(reqID))
-
 	if s.status == SMStatusDeleted {
 		return false
 	}
 
-	for {
-		// 如果只有一条投递线程，那么会导致Dispatcher上的所有Entity都依赖于Message Queue中的消息的均匀性.
-		if nil == s.mailBox.Put(msg) {
-			break
-		}
+	log.Debug("statem.OnMessage", logger.EntityID(s.ID), logger.RequestID(reqID))
 
-		runtime.Gosched()
+	switch msg := message.(type) {
+	case TentacleMsg:
+		s.invokeTentacleMsg(msg)
+	default:
+		// dispose message.
+		watchKeys := s.msgHandler(message)
+		// active tentacles.
+		s.activeTentacle(watchKeys)
 	}
 
-	if atomic.CompareAndSwapInt32(&s.attached, StateDetached, StateAttached) {
-		attaching = true
-		log.Info("attatched statem.", logger.EntityID(s.ID))
-	}
+	message.Promised(s)
+	s.flush(context.Background())
 
 	return attaching
 }
@@ -556,18 +555,6 @@ func (s *statem) HandleLoop() {
 			// detach coroutins.
 			break
 		}
-
-		switch msg := message.(type) {
-		case TentacleMsg:
-			s.invokeTentacleMsg(msg)
-		default:
-			// dispose message.
-			watchKeys := s.msgHandler(message)
-			// active tentacles.
-			s.activeTentacle(watchKeys)
-		}
-
-		message.Promised(s)
 
 		// reset be surs.
 		Ensure = 3

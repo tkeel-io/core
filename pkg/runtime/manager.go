@@ -213,10 +213,7 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				if stateMachine.OnMessage(msgCtx.Message) {
-					// attatch goroutine to entity.
-					m.coroutinePool.Submit(stateMachine.HandleLoop)
-				}
+				stateMachine.OnMessage(msgCtx.Message)
 			case <-m.shutdown:
 				log.Info("state machine manager exit.")
 				return
