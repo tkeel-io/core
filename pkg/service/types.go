@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/tkeel-io/core/pkg/entities"
+	apim "github.com/tkeel-io/core/pkg/manager"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 	ErrEntityPropertyIDEmpty = errors.New("emtpty property id")
 )
 
-type Entity = entities.Base
+type Entity = apim.Base
 
 const (
 	HeaderSource      = "Source"

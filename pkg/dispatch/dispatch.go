@@ -26,12 +26,13 @@ type dispatcher struct {
 	upstreamConnections   map[string]pubsub.Pubsub
 	downstreamConnections map[string]pubsub.Pubsub
 	coreRepository        repository.IRepository
+	internalConnnection   pubsub.Pubsub
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewDispatcher(ctx context.Context, id string, name string, repo repository.IRepository) Dispatcher {
+func New(ctx context.Context, id string, name string, enabled bool, repo repository.IRepository) *dispatcher { //nolint
 	ctx, cancel := context.WithCancel(ctx)
 	return &dispatcher{
 		ctx:                   ctx,
@@ -44,6 +45,10 @@ func NewDispatcher(ctx context.Context, id string, name string, repo repository.
 		upstreamConnections:   make(map[string]pubsub.Pubsub),
 		downstreamConnections: make(map[string]pubsub.Pubsub),
 	}
+}
+
+func (d *dispatcher) Dispatcher() Dispatcher {
+	return d
 }
 
 func (d *dispatcher) Run() error {
@@ -90,6 +95,11 @@ func (d *dispatcher) Run() error {
 	}
 
 	return nil
+}
+
+func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
+	err := d.internalConnnection.Send(ctx, ev)
+	return errors.Wrap(err, "dispatch event")
 }
 
 func (d *dispatcher) Stop() error {
@@ -197,6 +207,10 @@ func (d *dispatcher) setup() error {
 				d.constructQueue(&queues[index])
 			}
 		})
+
+	// setpu internal Queue.
+	d.constructQueue(internalQueue)
+	d.internalConnnection = d.upstreamConnections[internalQueue.ID]
 
 	log.Info("initialize queues", zfield.ID(d.ID),
 		zfield.Name(d.Name), zfield.Elapsed(elapsedTime.Elapsed()))

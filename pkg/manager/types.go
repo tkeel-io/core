@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package entities
+package manager
 
 import (
 	"context"
@@ -35,7 +35,7 @@ var (
 	ErrEntityAreadyExisted = errors.New("entity already existed")
 )
 
-type EntityManager interface {
+type APIManager interface {
 	// Start start Entity manager.
 	Start() error
 	// OnMessage handle message.

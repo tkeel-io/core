@@ -12,7 +12,6 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/kit/log"
@@ -27,12 +26,11 @@ type Proxy struct {
 	info         discovery.Service
 	grpcConns    map[string]pb.ProxyClient
 	serviceInfos map[string]discovery.Service
-	stateManager state.Manager
 	coreResolver discovery.Resolver
 	ctx          context.Context
 }
 
-func NewProxy(ctx context.Context, stateManager state.Manager) (*Proxy, error) {
+func NewProxy(ctx context.Context) (*Proxy, error) {
 	var (
 		err      error
 		resolver discovery.Resolver
@@ -60,7 +58,6 @@ func NewProxy(ctx context.Context, stateManager state.Manager) (*Proxy, error) {
 		info:         info,
 		grpcConns:    make(map[string]pb.ProxyClient),
 		serviceInfos: make(map[string]discovery.Service),
-		stateManager: stateManager,
 		coreResolver: resolver,
 	}
 
@@ -89,8 +86,7 @@ func (p *Proxy) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
 			log.Error("parse event", zfield.ID(ev.ID()), zfield.Event(ev))
 			return errors.Wrap(err, "parse event")
 		}
-
-		err = p.stateManager.HandleMessage(ctx, msgCtx)
+		func(interface{}) {}(msgCtx)
 	default:
 		// select proxy client.
 		var proxyClient pb.ProxyClient

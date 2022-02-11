@@ -32,6 +32,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -55,12 +56,12 @@ const (
 type subscription struct {
 	pubsubClient     pubsub.Pubsub
 	stateMachine     state.Machiner
-	stateManager     state.Manager
+	stateManager     types.Manager
 	republishHandler state.MessageHandler
 }
 
 // NewSubscription returns a subscription.
-func NewSubscription(ctx context.Context, mgr state.Manager, in *dao.Entity) (stateM state.Machiner, err error) {
+func NewSubscription(ctx context.Context, mgr types.Manager, in *dao.Entity) (stateM state.Machiner, err error) {
 	subsc := subscription{stateManager: mgr}
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
 

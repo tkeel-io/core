@@ -26,8 +26,8 @@ import (
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
-	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -43,8 +43,8 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	"github.com/tkeel-io/core/pkg/version"
@@ -82,7 +82,7 @@ var (
 	_searchEngine string
 )
 
-var _entityManager entities.EntityManager
+var _apiManager apim.APIManager
 
 func main() {
 	cmd := cobra.Command{
@@ -116,7 +116,7 @@ func main() {
 	}
 }
 
-func core(cmd *cobra.Command, args []string) {
+func core(cmd *cobra.Command, args []string) { //nolint
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
 	config.Init(_cfgFile)
 
@@ -198,12 +198,12 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	coreRepo := repository.New(coreDao)
-	var stateManager state.Manager
+	var stateManager types.Manager
 	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo)); nil != err {
 		log.Fatal(err)
 	}
 
-	if _entityManager, err = entities.NewEntityManager(context.Background(), coreRepo, stateManager); nil != err {
+	if _apiManager, err = apim.New(context.Background(), coreRepo); nil != err {
 		log.Fatal(err)
 	}
 
@@ -214,9 +214,13 @@ func core(cmd *cobra.Command, args []string) {
 
 	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
 
-	if err = _entityManager.Start(); nil != err {
+	if err = coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
-	} else if err = coreApp.Run(context.TODO()); err != nil {
+	}
+
+	if err = _apiManager.Start(); nil != err {
+		log.Fatal(err)
+	} else if err = stateManager.Start(); nil != err {
 		log.Fatal(err)
 	}
 
@@ -232,7 +236,7 @@ func core(cmd *cobra.Command, args []string) {
 // serviceRegisterToCoreV1 register your services here.
 func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(ctx, _entityManager, search.GlobalService)
+	EntitySrv, err := service.NewEntityService(ctx, _apiManager, search.GlobalService)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -240,7 +244,7 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
 
 	// register subscription service.
-	SubscriptionSrv, err := service.NewSubscriptionService(ctx, _entityManager)
+	SubscriptionSrv, err := service.NewSubscriptionService(ctx, _apiManager)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -248,7 +252,7 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
 
 	// register topic service.
-	TopicSrv, err := service.NewTopicService(ctx, _entityManager)
+	TopicSrv, err := service.NewTopicService(ctx, _apiManager)
 	if nil != err {
 		log.Fatal(err)
 	}
@@ -261,12 +265,12 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
 
 	// register proxy service.
-	ProxyService := service.NewProxyService(_entityManager)
+	ProxyService := service.NewProxyService(_apiManager)
 	corev1.RegisterProxyHTTPServer(httpSrv.Container, ProxyService)
 	corev1.RegisterProxyServer(grpcSrv.GetServe(), ProxyService)
 }
 
-func newResourceManager(coreRepo repository.IRepository) state.ResourceManager {
+func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	log.Info("create core default resources")
 	// default pubsub.
 	pubsubClient := pubsub.NewPubsub(resource.ParseFrom(config.Get().Components.Pubsub))
@@ -316,8 +320,11 @@ func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
 			zap.Any("metadata", queue.Metadata), zap.Strings("consumers", queue.Consumers))
 	}
 
-	dispatcher := dispatch.NewDispatcher(context.Background(),
-		config.Get().Dispatcher.ID, config.Get().Dispatcher.Name, repo)
+	dispatcher := dispatch.New(
+		context.Background(),
+		config.Get().Dispatcher.ID,
+		config.Get().Dispatcher.Name,
+		config.Get().Dispatcher.Enabled, repo)
 
 	if err := dispatcher.Run(); nil != err {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))

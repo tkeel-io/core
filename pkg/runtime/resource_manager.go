@@ -5,7 +5,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/core/pkg/types"
 )
 
 type resourceManager struct {
@@ -19,7 +19,7 @@ func NewResources(
 	pubsubClient pubsub.Pubsub,
 	searchClient *search.Service,
 	tseriesClient tseries.TimeSerier,
-	repoClient repository.IRepository) state.ResourceManager {
+	repoClient repository.IRepository) types.ResourceManager {
 	return &resourceManager{
 		defaultRepo:   repoClient,
 		defaultTSDB:   tseriesClient,
@@ -28,18 +28,18 @@ func NewResources(
 	}
 }
 
-func (r *resourceManager) PubsubClient() pubsub.Pubsub {
+func (r *resourceManager) Pubsub() pubsub.Pubsub {
 	return r.defaultPubsub
 }
 
-func (r *resourceManager) SearchClient() *search.Service {
+func (r *resourceManager) Search() *search.Service {
 	return r.defaultSearch
 }
 
-func (r *resourceManager) TSeriesClient() tseries.TimeSerier {
+func (r *resourceManager) TSDB() tseries.TimeSerier {
 	return r.defaultTSDB
 }
 
-func (r *resourceManager) Repository() repository.IRepository {
+func (r *resourceManager) Repo() repository.IRepository {
 	return r.defaultRepo
 }

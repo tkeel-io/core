@@ -37,7 +37,7 @@ var (
 
 type Consumer struct {
 	id      string
-	handler pubsub.MessageHandler
+	handler pubsub.EventHandler
 }
 
 func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {

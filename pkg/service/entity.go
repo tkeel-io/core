@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -36,20 +36,20 @@ import (
 
 type EntityService struct {
 	pb.UnimplementedEntityServer
-	ctx           context.Context
-	cancel        context.CancelFunc
-	entityManager entities.EntityManager
-	searchClient  pb.SearchHTTPServer
+	ctx          context.Context
+	cancel       context.CancelFunc
+	apiManager   apim.APIManager
+	searchClient pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, entityManager entities.EntityManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
+func NewEntityService(ctx context.Context, apiManager apim.APIManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
-		ctx:           ctx,
-		cancel:        cancel,
-		searchClient:  searchClient,
-		entityManager: entityManager,
+		ctx:          ctx,
+		cancel:       cancel,
+		searchClient: searchClient,
+		apiManager:   apiManager,
 	}, nil
 }
 
@@ -85,10 +85,10 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	}
 
 	// set template entity id.
-	ctx = context.WithValue(ctx, entities.TemplateEntityID{}, req.From)
+	ctx = context.WithValue(ctx, apim.TemplateEntityID{}, req.From)
 
 	// set properties.
-	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+	if entity, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create entity failed", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
@@ -126,7 +126,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	// set properties.
-	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.SetProperties(ctx, entity); nil != err {
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
@@ -161,7 +161,7 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 			}
 		}
 
-		if entity, err = s.entityManager.PatchEntity(ctx, entity, patchData); nil != err {
+		if entity, err = s.apiManager.PatchEntity(ctx, entity, patchData); nil != err {
 			log.Error("patch entity failed.", zfield.Eid(req.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
@@ -199,7 +199,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	parseHeaderFrom(ctx, entity)
 
 	// delete entity.
-	if err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
+	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.ID(req.Id))
 		return
 	}
@@ -225,7 +225,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	}
 
 	// get entity from entity manager.
-	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.GetProperties(ctx, entity); nil != err {
 		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
 		return
 	}
@@ -268,7 +268,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	parseHeaderFrom(ctx, entity)
 
 	// get entity from entity manager.
-	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.GetProperties(ctx, entity); nil != err {
 		log.Error("get entity failed.", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity failed")
 	}
@@ -285,7 +285,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	var resp *pb.SearchResponse
 	if resp, err = s.searchClient.Search(ctx, searchReq); err != nil {
-		log.Error("list entities failed.", zap.Error(err))
+		log.Error("list apim failed.", zap.Error(err))
 		return out, errors.Wrap(err, "list entity failed")
 	}
 
@@ -319,7 +319,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		}
 	}
 	if err != nil {
-		log.Error("list entities failed", zap.Error(err))
+		log.Error("list apim failed", zap.Error(err))
 		return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil
@@ -344,7 +344,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	}
 
 	// set properties.
-	entity, err = s.entityManager.AppendMapper(ctx, entity)
+	entity, err = s.apiManager.AppendMapper(ctx, entity)
 	if nil != err {
 		return
 	}
@@ -362,7 +362,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 	parseHeaderFrom(ctx, entity)
 
 	entity.Mappers = []state.Mapper{{Name: req.MapperName}}
-	if entity, err = s.entityManager.RemoveMapper(ctx, entity); nil != err {
+	if entity, err = s.apiManager.RemoveMapper(ctx, entity); nil != err {
 		log.Error("remove mapper", zfield.Eid(req.Id), zap.Error(err))
 		return
 	}
@@ -386,7 +386,7 @@ func (s *EntityService) SetConfigs(ctx context.Context, in *pb.SetConfigsRequest
 	}
 
 	// set entity configs.
-	if entity, err = s.entityManager.SetConfigs(ctx, entity); nil != err {
+	if entity, err = s.apiManager.SetConfigs(ctx, entity); nil != err {
 		log.Error("set entity configs", zfield.Eid(in.Id), zap.Error(err))
 	}
 
@@ -417,7 +417,7 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 		})
 	}
 
-	if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+	if entity, err = s.apiManager.PatchConfigs(ctx, entity, pds); nil != err {
 		log.Error("patch entity configs", zfield.Eid(in.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
@@ -445,7 +445,7 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 		})
 	}
 
-	if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+	if entity, err = s.apiManager.PatchConfigs(ctx, entity, pds); nil != err {
 		log.Error("patch entity configs", zfield.Eid(in.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
@@ -465,7 +465,7 @@ func (s *EntityService) QueryConfigs(ctx context.Context, in *pb.QueryConfigsReq
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
-	if entity, err = s.entityManager.QueryConfigs(ctx, entity, propertyIDs); nil != err {
+	if entity, err = s.apiManager.QueryConfigs(ctx, entity, propertyIDs); nil != err {
 		log.Error("query entity configs", zfield.Eid(in.Id), zap.Error(err))
 	}
 
@@ -505,7 +505,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 				Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
 		}
 
-		if entity, err = s.entityManager.PatchConfigs(ctx, entity, pds); nil != err {
+		if entity, err = s.apiManager.PatchConfigs(ctx, entity, pds); nil != err {
 			log.Error("patch entity configs", zfield.Eid(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "patch entity failed")
 		}
@@ -549,7 +549,7 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*con
 }
 
 // parseHeaderFrom parse headers.
-func parseHeaderFrom(ctx context.Context, en *entities.Base) {
+func parseHeaderFrom(ctx context.Context, en *apim.Base) {
 	if header := ctx.Value(struct{}{}); nil != header {
 		switch h := header.(type) {
 		case http.Header:

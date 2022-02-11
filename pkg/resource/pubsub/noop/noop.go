@@ -20,8 +20,12 @@ func (d *noopPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 	return nil
 }
 
-func (d *noopPubsub) Received(ctx context.Context, receiver pubsub.MessageHandler) error {
+func (d *noopPubsub) Received(ctx context.Context, receiver pubsub.EventHandler) error {
 	log.Info("pubsub.noop start receive message", zfield.ID(d.id))
+	return nil
+}
+
+func (d *noopPubsub) Commit(v interface{}) error {
 	return nil
 }
 

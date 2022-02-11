@@ -47,10 +47,14 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 	return errors.Wrap(err, "dapr send")
 }
 
-func (d *daprPubsub) Received(ctx context.Context, handler pubsub.MessageHandler) error {
+func (d *daprPubsub) Received(ctx context.Context, handler pubsub.EventHandler) error {
 	log.Debug("pubsub.dapr start receive message", zfield.ID(d.id))
 	err := registerConsumer(d.pubsubName, d.topicName, &Consumer{id: d.id, handler: handler})
 	return errors.Wrap(err, "register message handler")
+}
+
+func (d *daprPubsub) Commit(v interface{}) error {
+	return nil
 }
 
 func (d *daprPubsub) Close() error {

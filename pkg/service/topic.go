@@ -21,17 +21,17 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/entities"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	"github.com/tkeel-io/kit/log"
 )
 
 type TopicService struct {
 	pb.UnimplementedTopicServer
-	ctx           context.Context
-	cancel        context.CancelFunc
-	entityManager entities.EntityManager
+	ctx        context.Context
+	cancel     context.CancelFunc
+	apiManager apim.APIManager
 }
 
 const (
@@ -43,13 +43,13 @@ const (
 	SubscriptionResponseStatusDrop = "DROP"
 )
 
-func NewTopicService(ctx context.Context, entityManager entities.EntityManager) (*TopicService, error) {
+func NewTopicService(ctx context.Context, apiManager apim.APIManager) (*TopicService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &TopicService{
-		ctx:           ctx,
-		cancel:        cancel,
-		entityManager: entityManager,
+		ctx:        ctx,
+		cancel:     cancel,
+		apiManager: apiManager,
 	}, nil
 }
 

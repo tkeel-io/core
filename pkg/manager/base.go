@@ -1,4 +1,4 @@
-package entities
+package manager
 
 import (
 	"encoding/json"

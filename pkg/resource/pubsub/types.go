@@ -9,11 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type MessageHandler func(context.Context, cloudevents.Event) error
+type EventHandler func(context.Context, cloudevents.Event) error
 
 type Pubsub interface {
+	Commiter
 	Send(context.Context, cloudevents.Event) error
-	Received(context.Context, MessageHandler) error
+	Received(context.Context, EventHandler) error
 	Close() error
 }
 
@@ -23,7 +24,8 @@ type Sender interface {
 }
 
 type Receiver interface {
-	Received(context.Context, MessageHandler) error
+	Commiter
+	Received(context.Context, EventHandler) error
 	Close() error
 }
 

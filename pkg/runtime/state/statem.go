@@ -28,6 +28,7 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -107,7 +108,7 @@ type statem struct {
 	tseriesConstraints sort.StringSlice
 
 	// state manager.
-	stateManager Manager
+	stateManager types.Manager
 
 	status             Status
 	nextFlushNum       int32
@@ -122,7 +123,7 @@ type statem struct {
 }
 
 // NewState create an statem object.
-func NewState(ctx context.Context, stateManager Manager, in *dao.Entity, msgHandler MessageHandler) (Machiner, error) {
+func NewState(ctx context.Context, stateManager types.Manager, in *dao.Entity, msgHandler MessageHandler) (Machiner, error) {
 	if in.ID == "" {
 		in.ID = util.UUID()
 	}

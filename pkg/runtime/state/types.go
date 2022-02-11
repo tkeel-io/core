@@ -19,41 +19,11 @@ package state
 import (
 	"context"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/resource/search"
-	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 )
-
-type Republisher interface {
-	RouteMessage(ctx context.Context, ev cloudevents.Event) error
-}
-
-type Manager interface {
-	// start manager.
-	Start() error
-	// shutdown manager.
-	Shutdown() error
-	// GetResource return resource manager.
-	Resource() ResourceManager
-	// route messages cluster.
-	RouteMessage(context.Context, cloudevents.Event) error
-	// handle message on this node.
-	HandleMessage(context.Context, message.Context) error
-	SetRepublisher(republisher Republisher)
-}
-
-type ResourceManager interface {
-	PubsubClient() pubsub.Pubsub
-	SearchClient() *search.Service
-	TSeriesClient() tseries.TimeSerier
-	Repository() repository.IRepository
-}
 
 type Machiner interface {
 	// GetID return state machine id.

@@ -6,21 +6,21 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/entities"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
 type ProxyService struct {
 	pb.UnimplementedProxyServer
-	entityManager entities.EntityManager
+	apiManager apim.APIManager
 }
 
-func NewProxyService(entityManager entities.EntityManager) *ProxyService {
-	return &ProxyService{entityManager: entityManager}
+func NewProxyService(apiManager apim.APIManager) *ProxyService {
+	return &ProxyService{apiManager: apiManager}
 }
 
 func (p *ProxyService) Route(ctx context.Context, in *pb.RouteRequest) (*pb.RouteResponse, error) {
-	err := p.entityManager.OnMessage(ctx, constructEvent(in))
+	err := p.apiManager.OnMessage(ctx, constructEvent(in))
 	return &pb.RouteResponse{}, errors.Wrap(err, "route message")
 }
 

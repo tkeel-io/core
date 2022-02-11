@@ -22,8 +22,8 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
 	"github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
@@ -33,19 +33,19 @@ import (
 
 type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
-	ctx           context.Context
-	cancel        context.CancelFunc
-	entityManager entities.EntityManager
+	ctx        context.Context
+	cancel     context.CancelFunc
+	apiManager apim.APIManager
 }
 
 // NewSubscriptionService returns a new SubscriptionService.
-func NewSubscriptionService(ctx context.Context, entityManager entities.EntityManager) (*SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context, apiManager apim.APIManager) (*SubscriptionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &SubscriptionService{
-		ctx:           ctx,
-		cancel:        cancel,
-		entityManager: entityManager,
+		ctx:        ctx,
+		cancel:     cancel,
+		apiManager: apiManager,
 	}, nil
 }
 
@@ -100,7 +100,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		subscription.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
 	}
 
-	if err = s.entityManager.CheckSubscription(ctx, entity); nil != err {
+	if err = s.apiManager.CheckSubscription(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -112,14 +112,14 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}}
 
 	// set properties.
-	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
+	if entity, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
 
-	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+	if _, err = s.apiManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
-		if err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
+		if err0 := s.apiManager.DeleteEntity(ctx, entity); nil != err0 {
 			log.Error("destroy subscription", zap.Error(err0), logger.Eid(req.Id))
 		}
 		return
@@ -145,7 +145,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set properties.
-	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.SetProperties(ctx, entity); nil != err {
 		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -156,7 +156,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
-	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
+	if _, err = s.apiManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -174,7 +174,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
+	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
 		log.Error("delete subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -191,7 +191,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.GetProperties(ctx, entity); nil != err {
 		log.Error("get subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}

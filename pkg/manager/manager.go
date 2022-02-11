@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-package entities
+package manager
 
 import (
 	"context"
@@ -28,9 +27,9 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities/proxy"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/manager/proxy"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -51,45 +50,41 @@ func eventSender(api string) string {
 	return fmt.Sprintf("%s.%s", eventType, api)
 }
 
-type entityManager struct {
-	entityRepo   repository.IRepository
-	stateManager state.Manager
-	coreProxy    *proxy.Proxy
-	receivers    map[string]pubsub.Receiver
+type apiManager struct {
+	coreProxy  *proxy.Proxy
+	entityRepo repository.IRepository
+	receivers  map[string]pubsub.Receiver
 
 	lock   sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewEntityManager(
+func New(
 	ctx context.Context,
-	repo repository.IRepository,
-	stateManager state.Manager) (EntityManager, error) {
+	repo repository.IRepository) (APIManager, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	entityManager := &entityManager{
-		ctx:          ctx,
-		cancel:       cancel,
-		entityRepo:   repo,
-		receivers:    make(map[string]pubsub.Receiver),
-		stateManager: stateManager,
-		lock:         sync.RWMutex{},
+	apiManager := &apiManager{
+		ctx:        ctx,
+		cancel:     cancel,
+		entityRepo: repo,
+		receivers:  make(map[string]pubsub.Receiver),
+		lock:       sync.RWMutex{},
 	}
 
 	// set state manager Republisher.
-	stateManager.SetRepublisher(entityManager.coreProxy)
 
-	coreProxy, err := proxy.NewProxy(ctx, stateManager)
+	coreProxy, err := proxy.NewProxy(ctx)
 	if nil != err {
 		log.Error("new Proxy instance", zap.Error(err))
-		return nil, errors.Wrap(err, "new EntityManager")
+		return nil, errors.Wrap(err, "new APIManager")
 	}
 
-	entityManager.coreProxy = coreProxy
-	return entityManager, nil
+	apiManager.coreProxy = coreProxy
+	return apiManager, nil
 }
 
-func (m *entityManager) listQueue() {
+func (m *apiManager) listQueue() {
 	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
 	defer cancel()
 	revision := m.entityRepo.GetLastRevision(ctx)
@@ -114,7 +109,7 @@ func (m *entityManager) listQueue() {
 	})
 }
 
-func (m *entityManager) watchQueue() {
+func (m *apiManager) watchQueue() {
 	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
 	defer cancel()
 	revision := m.entityRepo.GetLastRevision(ctx)
@@ -159,16 +154,7 @@ func (m *entityManager) watchQueue() {
 	})
 }
 
-func (m *entityManager) Start() error {
-	// start runtime.
-	if err := m.stateManager.Start(); nil != err {
-		log.Error("start state manager")
-		return errors.Wrap(err, "start state manager")
-	}
-
-	// start state manager.
-	go m.stateManager.Start()
-
+func (m *apiManager) Start() error {
 	m.listQueue()
 	go m.watchQueue()
 	for id, receiver := range m.receivers {
@@ -185,21 +171,21 @@ func (m *entityManager) Start() error {
 	return errors.Wrap(nil, "start entity manager")
 }
 
-func (m *entityManager) OnMessage(ctx context.Context, e cloudevents.Event) error {
+func (m *apiManager) OnMessage(ctx context.Context, e cloudevents.Event) error {
 	err := m.coreProxy.RouteMessage(ctx, e)
 	return errors.Wrap(err, "core consume message")
 }
 
 // ------------------------------------APIs-----------------------------.
 
-func (m *entityManager) checkID(base *Base) {
+func (m *apiManager) checkID(base *Base) {
 	if base.ID == "" {
 		base.ID = util.UUID()
 	}
 }
 
 // CreateEntity create a entity.
-func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) {
 	var (
 		err         error
 		has         bool
@@ -289,7 +275,7 @@ func (m *entityManager) CreateEntity(ctx context.Context, en *Base) (*Base, erro
 }
 
 // DeleteEntity delete an entity from manager.
-func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) error {
+func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.DeleteEntity",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -339,7 +325,7 @@ func (m *entityManager) DeleteEntity(ctx context.Context, en *Base) error {
 }
 
 // GetProperties returns Base.
-func (m *entityManager) GetProperties(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) GetProperties(ctx context.Context, en *Base) (*Base, error) {
 	log.Info("entity.GetProperties",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -355,7 +341,7 @@ func (m *entityManager) GetProperties(ctx context.Context, en *Base) (*Base, err
 }
 
 // SetProperties set properties into entity.
-func (m *entityManager) SetProperties(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error) {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.SetProperties", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -410,7 +396,7 @@ func (m *entityManager) SetProperties(ctx context.Context, en *Base) (*Base, err
 	return entityToBase(entity), errors.Wrap(err, "set entity properties")
 }
 
-func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.PatchData) (*Base, error) {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchEntity",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -487,7 +473,7 @@ func (m *entityManager) PatchEntity(ctx context.Context, en *Base, patchData []*
 }
 
 // AppendMapper append a mapper into entity.
-func (m *entityManager) AppendMapper(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) AppendMapper(ctx context.Context, en *Base) (*Base, error) {
 	log.Info("entity.AppendMapper",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -517,7 +503,7 @@ func (m *entityManager) AppendMapper(ctx context.Context, en *Base) (*Base, erro
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *entityManager) RemoveMapper(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) RemoveMapper(ctx context.Context, en *Base) (*Base, error) {
 	log.Info("entity.RemoveMapper",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -546,7 +532,7 @@ func (m *entityManager) RemoveMapper(ctx context.Context, en *Base) (*Base, erro
 	return entityToBase(entity), errors.Wrap(err, "remove mapper")
 }
 
-func (m *entityManager) CheckSubscription(ctx context.Context, en *Base) (err error) {
+func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error) {
 	// check TQLs.
 	if err = checkTQLs(en); nil != err {
 		return errors.Wrap(err, "check subscription")
@@ -567,7 +553,7 @@ func (m *entityManager) CheckSubscription(ctx context.Context, en *Base) (err er
 }
 
 // SetProperties set properties into entity.
-func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.SetConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -616,7 +602,7 @@ func (m *entityManager) SetConfigs(ctx context.Context, en *Base) (*Base, error)
 }
 
 // PatchConfigs patch properties into entity.
-func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (*Base, error) {
+func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, patchData []*state.PatchData) (*Base, error) {
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -666,7 +652,7 @@ func (m *entityManager) PatchConfigs(ctx context.Context, en *Base, patchData []
 }
 
 // QueryConfigs query entity configs.
-func (m *entityManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (*Base, error) {
+func (m *apiManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (*Base, error) {
 	log.Info("entity.PatchConfigs",
 		zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))

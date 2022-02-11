@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service/mock"
 	"github.com/tkeel-io/core/pkg/util"
@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var entityManager entities.EntityManager
+var apiManager apim.APIManager
 var entityService *EntityService
 
 func TestMain(m *testing.M) {
@@ -25,8 +25,8 @@ func TestMain(m *testing.M) {
 	// logger initialized.
 	log.InitLogger("core-service", "DEBUG", true)
 
-	entityManager = mock.NewEntityManagerMock()
-	entityService, err = NewEntityService(context.Background(), entityManager, mock.NewSearchMock())
+	apiManager = mock.NewAPIManagerMock()
+	entityService, err = NewEntityService(context.Background(), apiManager, mock.NewSearchMock())
 	if nil != err {
 		os.Exit(1)
 	}
@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test_entity2EntityResponse(t *testing.T) {
-	base := entities.Base{
+	base := apim.Base{
 		ID:         "device123",
 		Type:       "DEVICE",
 		Owner:      "admin",

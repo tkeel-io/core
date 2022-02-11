@@ -205,19 +205,19 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 }
 
 func (s *statem) TSeries() tseries.TimeSerier {
-	return s.stateManager.Resource().TSeriesClient()
+	return s.stateManager.Resource().TSDB()
 }
 
 func (s *statem) Pubsub() pubsub.Pubsub {
-	return s.stateManager.Resource().PubsubClient()
+	return s.stateManager.Resource().Pubsub()
 }
 
 func (s *statem) Search() *search.Service {
-	return s.stateManager.Resource().SearchClient()
+	return s.stateManager.Resource().Search()
 }
 
 func (s *statem) Repo() repository.IRepository {
-	return s.stateManager.Resource().Repository()
+	return s.stateManager.Resource().Repo()
 }
 
 func convertPoints(points []tseries.TSeriesData) *tseries.TSeriesRequest {
