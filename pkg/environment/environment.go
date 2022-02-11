@@ -188,7 +188,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 	mCache.mappers[m.ID()] = m
 	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
 
-	return effects
+	return append(effects, m.TargetEntity())
 }
 
 // removeMapper remove mapper from Environment.

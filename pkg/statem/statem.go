@@ -261,6 +261,8 @@ func (s *statem) LoadEnvironments(env environment.ActorEnv) {
 		}
 		log.Debug("load environments, tentacle ", logger.EntityID(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
+
+	s.flushState(context.Background())
 	s.activeTentacle(watchKeys)
 }
 
@@ -642,13 +644,20 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 					activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
+
 					if _, exists := messages[targetID]; !exists {
 						messages[targetID] = make(map[string]constraint.Node)
 					}
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-					messages[targetID][active.PropertyKey] = thisStateProps[active.PropertyKey]
+					val, err := s.getProperty(thisStateProps, active.PropertyKey)
+					if nil != err {
+						log.Warn("get property", zap.Error(err), logger.EntityID(s.ID),
+							zap.String("entity", active.EntityId), zap.String("property-key", active.PropertyKey))
+						continue
+					}
+					messages[targetID][active.PropertyKey] = val
 				} else {
 					// undefined tentacle typs.
 					log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
@@ -698,6 +707,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 			},
 		})
 	}
+
 	// active mapper.
 	s.activeMapper(activeTentacles)
 }
@@ -715,10 +725,17 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 			if tentacle.Type() == mapper.TentacleTypeMapper {
 				for _, item := range tentacle.Items() {
 					var val constraint.Node
-					if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
-						log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
-						continue
-					} else if nil != val {
+					if s.ID == item.EntityId {
+						if val, err = s.getProperty(s.cacheProps[item.EntityId], item.PropertyKey); nil != err {
+							log.Error("get property failed", logger.RequestID(item.PropertyKey), zap.Error(err))
+							continue
+						}
+					} else {
+						if props, ok := s.cacheProps[item.EntityId]; ok {
+							val = props[item.PropertyKey]
+						}
+					}
+					if nil != val {
 						input[item.String()] = val
 					}
 				}
@@ -742,8 +759,8 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		if len(properties) > 0 {
 			for propertyKey, value := range properties {
 				if err = s.setProperty(constraint.PatchOpReplace, propertyKey, value); nil != err {
-					log.Error("get property failed",
-						logger.EntityID(s.ID), zap.String("property_key", propertyKey), zap.Error(err))
+					log.Error("set property failed", logger.EntityID(s.ID),
+						zap.String("property_key", propertyKey), zap.Error(err))
 				}
 				s.LastTime = time.Now().UnixNano() / 1e6
 			}

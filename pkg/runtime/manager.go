@@ -167,10 +167,11 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 			base := &statem.Base{ID: stateID, Type: StateMachineTypeBasic}
 			if _, stateMachine = m.getStateMachine("", stateID); nil != stateMachine {
 				log.Debug("load state machine @ runtime.", logger.EntityID(stateID))
-			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
-				stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil != err {
+				log.Error("load state machine", logger.EntityID(stateID), zap.Error(err))
 				continue
 			}
+			stateMachine.LoadEnvironments(m.actorEnv.GetActorEnv(stateID))
 		}
 	}
 	return nil
