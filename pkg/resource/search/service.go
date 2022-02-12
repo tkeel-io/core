@@ -62,10 +62,10 @@ func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 			return nil, errors.Wrap(err, "new value error")
 		}
 		out.Items = append(out.Items, val)
-		out.Total += resp.Total
-		out.Limit = resp.Limit
-		out.Offset = resp.Offset
 	}
+	out.Total = resp.Total
+	out.Limit = resp.Limit
+	out.Offset = resp.Offset
 
 	return out, nil
 }
