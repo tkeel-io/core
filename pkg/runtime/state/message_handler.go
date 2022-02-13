@@ -7,6 +7,8 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -18,31 +20,28 @@ import (
 
 // invokePropertyMessage invoke property message.
 func (s *statem) invokePropertyMessage(msgCtx message.Context) []WatchKey {
-	msg, _ := msgCtx.Message().(message.PropertyMessage)
+	stateID := msgCtx.Get(message.ExtEntityID)
+	if _, has := s.cacheProps[stateID]; !has {
+		s.cacheProps[stateID] = make(map[string]constraint.Node)
+	}
 
-	setStateID := msg.StateID
+	stateIns := State{
+		ID:    stateID,
+		Props: s.cacheProps[stateID],
+	}
+
 	watchKeys := make([]mapper.WatchKey, 0)
-	if _, has := s.cacheProps[setStateID]; !has {
-		s.cacheProps[setStateID] = make(map[string]constraint.Node)
-	}
-
-	stateProps := s.cacheProps[setStateID]
-	for key, value := range msg.Properties {
-		if _, err := patchProperty(stateProps, key, constraint.PatchOpReplace, value); nil != err {
-			log.Error("set state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
-			continue
+	collectjs.ForEach(msgCtx.Message(), jsonparser.Object, func(key, value []byte) {
+		propertyKey := string(key)
+		if _, err := stateIns.Patch(constraint.PatchOpReplace, propertyKey, value); nil != err {
+			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
+		} else {
+			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
 		}
-		watchKeys = append(watchKeys, mapper.WatchKey{EntityID: setStateID, PropertyKey: key})
-	}
-
-	// flush entity state.
-	if msgCtx.Sync() {
-		s.flushState(msgCtx.Context())
-		msgCtx.Done()
-	}
+	})
 
 	// set last active tims.
-	if setStateID == s.ID {
+	if stateID == s.ID {
 		s.Version++
 		s.LastTime = util.UnixMilli()
 	}
@@ -127,17 +126,12 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		var err error
 		var bytes []byte
 		// encode message.
-		if bytes, err = message.GetPropsCodec().Encode(message.PropertyMessage{
-			StateID:    s.ID,
-			Properties: msg,
-			Operator:   constraint.PatchOpReplace.String(),
-		}); nil != err {
-			log.Error("encode props message", zap.Error(err), zfield.Eid(s.ID))
-			return
+
+		if bytes, err = constraint.EncodeJSON(msg); nil != err {
+			log.Error("encode state properties", zap.Error(err), zfield.Eid(s.ID))
 		}
 
 		ev.SetData(bytes)
-
 		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()))
 
 		s.dispatcher.Dispatch(context.Background(), ev)

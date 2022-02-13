@@ -24,11 +24,14 @@ import (
 
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/kit/log"
 )
 
 const (
@@ -171,22 +174,36 @@ func (s *statem) WithContext(ctx StateContext) Machiner {
 
 // OnMessage recive statem input messages.
 func (s *statem) Invoke(msgCtx message.Context) error {
-	switch msgCtx.Message().(type) {
-	case message.StateMessage:
-		actives := s.callAPIs(context.Background(), msgCtx)
+	msgType := msgCtx.Get(message.ExtMessageType)
+
+	switch message.MessageType(msgType) {
+	case message.MessageTypeSync:
+		actives := s.callAPIs(msgCtx.Context(), msgCtx)
 		s.activeTentacle(actives)
-	default:
-		// handle message.
+	case message.MessageTypeState:
+		// handle state message.
 		watchKeys := s.msgHandler(msgCtx)
 		// active tentacles.
 		s.activeTentacle(watchKeys)
+	default:
+		log.Error("invalid message type", zfield.Header(msgCtx.Attributes()))
+		return xerrors.ErrInvalidMessageType
 	}
 	return nil
 }
 
-type Mapper struct {
-	ID          string `json:"id" msgpack:"id"`
-	TQL         string `json:"tql" msgpack:"tql"`
-	Name        string `json:"name" msgpack:"name"`
-	Description string `json:"description" msgpack:"description"`
+func (s *statem) State() State {
+	return State{
+		ID:    s.ID,
+		Props: s.Properties,
+	}
+}
+
+type State struct {
+	ID    string
+	Props map[string]constraint.Node
+}
+
+func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) ([]byte, error) {
+	panic("implement me")
 }

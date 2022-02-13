@@ -22,7 +22,6 @@ import (
 
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/inbox"
@@ -88,32 +87,6 @@ func (m *Manager) Shutdown() error {
 }
 
 func (m *Manager) handleMessage(msgCtx message.Context) error {
-	// squash properties.
-	switch msg := msgCtx.Message().(type) {
-	case message.StateMessage:
-		// ignore this message.
-	case message.PropertyMessage:
-		requireds := make(map[string]string)
-		for name, reserved := range state.RequiredFields {
-			if reserved {
-				if prop, has := msg.Properties[name]; has {
-					requireds[name] = constraint.Unwrap(prop)
-				}
-			}
-			delete(msg.Properties, name)
-		}
-
-		// squash fields.
-		for key, val := range state.SquashFields(requireds) {
-			msgCtx.Set(key, val)
-		}
-	default:
-		log.Error("invalid message type",
-			zfield.Header(msgCtx.Attributes()),
-			zap.Error(xerrors.ErrInvalidMessageType))
-		return xerrors.ErrInvalidMessageType
-	}
-
 	var err error
 	entityID := msgCtx.Get(message.ExtEntityID)
 	channelID := msgCtx.Get(message.ExtChannelID)

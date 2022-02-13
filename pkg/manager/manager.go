@@ -45,6 +45,8 @@ import (
 const eventType = "Core.APIs"
 const respondFmt = "http://%s:%d/v1/respond"
 
+var msgTypeSync string = message.MessageTypeSync.String()
+
 func eventSender(api string) string {
 	return fmt.Sprintf("%s.%s", eventType, api)
 }
@@ -139,29 +141,18 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityID, en.ID)
 	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
+	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIIdentify, state.APICreateEntity)
 	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	// encode message.
-	bytes, err := message.GetPropsCodec().Encode(
-		message.PropertyMessage{
-			StateID:    en.ID,
-			Properties: en.Properties,
-			Operator:   constraint.PatchOpReplace.String(),
-		})
-
-	if nil != err {
-		log.Error("encode props message", zap.Error(err),
-			zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "encode props message")
-	}
+	// TODO: encode Request to event.Data.
+	var bytes []byte
 
 	if err = ev.SetData(bytes); nil != err {
 		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
@@ -210,11 +201,11 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	ev.SetExtension(message.ExtEntityType, en.Type)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageSender, CoreAPISender)
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
+	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity)
 	ev.SetExtension(message.ExtMessageSender, eventSender("DeleteEntity"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
@@ -224,13 +215,15 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		return errors.Wrap(err, "delete entity")
 	}
 
-	// encode message.
-	if err = ev.SetData(message.StateMessage{
-		StateID: en.ID,
-		Method:  message.SMMethodDeleteEntity,
-	}); nil != err {
-		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
-		return errors.Wrap(err, "delete entity")
+	// TODO: encode Request to event.Data.
+	var bytes []byte
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return errors.Wrap(err, "encode props message")
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return errors.Wrap(err, "validate event")
 	}
 
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
@@ -285,29 +278,26 @@ func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error)
 	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityID, en.ID)
 	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
+	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIIdentify, state.APISetProperties)
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetProperties"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	// encode message.
-	bytes, err := message.GetPropsCodec().Encode(message.PropertyMessage{
-		StateID:    en.ID,
-		Properties: en.Properties,
-		Operator:   constraint.PatchOpReplace.String(),
-	})
+	// TODO: encode Request to event.Data.
+	var bytes []byte
+	var err error
 
-	if nil != err {
-		log.Error("encode props message", zap.Error(err),
-			zfield.Eid(en.ID), zfield.Base(en.JSON()))
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "encode props message")
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "validate event")
 	}
-
-	ev.SetData(bytes)
 
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("set entity properties", zap.Error(err), zfield.Eid(en.ID))
@@ -340,7 +330,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.
 
 	var err error
 	reqID := util.UUID()
-	for op, pds := range pdm {
+	for _, pds := range pdm {
 		kvs := make(map[string]constraint.Node)
 		for _, pd := range pds {
 			kvs[pd.Path] = constraint.NewNode(pd.Value.AsInterface())
@@ -356,30 +346,25 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.
 			ev.SetExtension(message.ExtMessageID, msgID)
 			ev.SetExtension(message.ExtEntityID, en.ID)
 			ev.SetExtension(message.ExtEntityType, en.Type)
-			ev.SetExtension(message.ExtSyncFlag, message.Sync)
 			ev.SetExtension(message.ExtEntityOwner, en.Owner)
 			ev.SetExtension(message.ExtMessageReceiver, en.ID)
 			ev.SetExtension(message.ExtEntitySource, en.Source)
 			ev.SetExtension(message.ExtCallback, m.callbackAddr())
-			ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
+			ev.SetExtension(message.ExtMessageType, msgTypeSync)
+			ev.SetExtension(message.ExtAPIIdentify, state.APIPatchEntity)
 			ev.SetExtension(message.ExtMessageSender, eventSender("PatchEntity"))
 			ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-			// encode message.
+			// TODO: encode Request to event.Data.
 			var bytes []byte
-			bytes, err = message.GetPropsCodec().Encode(message.PropertyMessage{
-				Operator:   op,
-				StateID:    en.ID,
-				Properties: en.Properties,
-			})
 
-			if nil != err {
-				log.Error("encode props message",
-					zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+			if err = ev.SetData(bytes); nil != err {
+				log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 				return nil, errors.Wrap(err, "encode props message")
+			} else if err = ev.Validate(); nil != err {
+				log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+				return nil, errors.Wrap(err, "validate event")
 			}
-
-			ev.SetData(bytes)
 
 			if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 				log.Error("patch entity", zap.Error(err), zfield.Eid(en.ID))
@@ -499,23 +484,27 @@ func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
 	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityID, en.ID)
 	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
+	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIIdentify, state.APISetConfigs)
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetConfigs"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	// encode message.
-	ev.SetData(message.StateMessage{
-		StateID: en.ID,
-		Value:   en.Configs,
-		Method:  message.SMMethodSetConfigs,
-	})
-
+	// TODO: encode Request to event.Data.
+	var bytes []byte
 	var err error
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "encode props message")
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "validate event")
+	}
+
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("set entity configs", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "set entity configs")
@@ -549,23 +538,27 @@ func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, patchData []*st
 	ev.SetExtension(message.ExtMessageID, msgID)
 	ev.SetExtension(message.ExtEntityID, en.ID)
 	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
+	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIIdentify, state.APIPatchConfigs)
 	ev.SetExtension(message.ExtMessageSender, eventSender("PatchConfigs"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	// encode message.
-	ev.SetData(message.StateMessage{
-		StateID: en.ID,
-		Value:   patchData,
-		Method:  message.SMMethodPatchConfigs,
-	})
-
+	// TODO: encode Request to event.Data.
+	var bytes []byte
 	var err error
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "encode props message")
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "validate event")
+	}
+
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "patch entity configs")

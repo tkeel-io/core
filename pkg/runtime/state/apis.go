@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -23,9 +22,12 @@ func (a APIID) String() string {
 }
 
 const (
-	APISetConfigs   APIID = "setconfigs"
-	APIPatchConfigs APIID = "patchconfigs"
-	APIDeleteEntity APIID = "deleteentity"
+	APICreateEntity  APIID = "core.createentity"
+	APIPatchEntity   APIID = "core.patchentity"
+	APISetProperties APIID = "core.setproperties"
+	APISetConfigs    APIID = "core.setconfigs"
+	APIPatchConfigs  APIID = "core.patchconfigs"
+	APIDeleteEntity  APIID = "core.deleteentity"
 )
 
 type APIHandler func(context.Context, message.Context) []WatchKey
@@ -50,14 +52,7 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 }
 
 func (s *statem) cbSetConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
-	var err error
-	var bytes []byte
-	stateMessage, _ := msgCtx.Message().(message.StateMessage)
-	if bytes, err = json.Marshal(stateMessage.Value); nil != err {
-		log.Error("json marshal", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-	}
-
-	s.ConfigFile = bytes
+	s.ConfigFile = msgCtx.Message()
 	return nil
 }
 
@@ -68,11 +63,7 @@ func (s *statem) cbPatchConfigs(ctx context.Context, msgCtx message.Context) []W
 		patchData []*PatchData
 	)
 
-	// assert state Message.
-	stateMessage, _ := msgCtx.Message().(message.StateMessage)
-	if err = mapstructure.Decode(stateMessage.Value, &patchData); nil != err {
-		log.Error("decode patch data", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-	}
+	// TODO: decode message to PatchData.
 
 	// marshal config.
 	for _, pd := range patchData {

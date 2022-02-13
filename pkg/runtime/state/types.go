@@ -19,7 +19,6 @@ package state
 import (
 	"context"
 
-	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
@@ -42,10 +41,11 @@ type WatchKey = mapper.WatchKey
 
 type Status string
 
-type PatchData struct {
-	Path     string                   `json:"path"`
-	Operator constraint.PatchOperator `json:"operator"`
-	Value    interface{}              `json:"value"`
-}
-
 type MessageHandler = func(message.Context) []WatchKey
+
+type Mapper struct {
+	ID          string `json:"id" msgpack:"id"`
+	TQL         string `json:"tql" msgpack:"tql"`
+	Name        string `json:"name" msgpack:"name"`
+	Description string `json:"description" msgpack:"description"`
+}
