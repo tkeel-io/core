@@ -27,6 +27,7 @@ const (
 	ExtPromise         = "extpromise"
 	ExtSyncFlag        = "extsync"
 	ExtCallback        = "extcallback"
+	ExtAPIIdentify     = "extapiid"
 
 	ExtCloudEventID          = "exteventid"
 	ExtCloudEventSpec        = "exteventspec"

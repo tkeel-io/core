@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"sync"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -16,45 +16,52 @@ import (
 	"go.uber.org/zap"
 )
 
-// call core.APIs.
-func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) error {
-	log.Debug("call core.APIs", zfield.Header(msgCtx.Attributes()))
+type APIID string
 
-	switch msg := msgCtx.Message().(type) {
-	case message.StateMessage:
-		// handle state machine message.
-		switch msg.Method {
-		case message.SMMethodSetConfigs:
-			return errors.Wrap(s.callSetConfigs(ctx, msgCtx), "call core.APIs.SetConfigs")
-		case message.SMMethodPatchConfigs:
-			return errors.Wrap(s.callPatchConfigs(ctx, msgCtx), "call core.APIs.PatchConfigs")
-		case message.SMMethodDeleteEntity:
-			s.status = SMStatusDeleted
-		default:
-			log.Error("core.APIs not support",
-				zfield.Method(msg.Method.String()))
-		}
-	default:
-		log.Error("invalid state message type")
-	}
-
-	return nil
+func (a APIID) String() string {
+	return string(a)
 }
 
-func (s *statem) callSetConfigs(ctx context.Context, msgCtx message.Context) error {
+const (
+	APISetConfigs   APIID = "setconfigs"
+	APIPatchConfigs APIID = "patchconfigs"
+	APIDeleteEntity APIID = "deleteentity"
+)
+
+type APIHandler func(context.Context, message.Context) []WatchKey
+
+var once = sync.Once{}
+var apiCallbacks map[APIID]APIHandler
+
+// call core.APIs.
+func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKey {
+	log.Debug("call core.APIs", zfield.Header(msgCtx.Attributes()))
+
+	once.Do(func() {
+		apiCallbacks = map[APIID]APIHandler{
+			APISetConfigs:   s.cbSetConfigs,
+			APIPatchConfigs: s.cbPatchConfigs,
+			APIDeleteEntity: s.cbDeleteEntity,
+		}
+	})
+
+	apiID := APIID(msgCtx.Get(message.ExtAPIIdentify))
+	return apiCallbacks[apiID](ctx, msgCtx)
+}
+
+func (s *statem) cbSetConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
 	var err error
 	var bytes []byte
 	stateMessage, _ := msgCtx.Message().(message.StateMessage)
 	if bytes, err = json.Marshal(stateMessage.Value); nil != err {
 		log.Error("json marshal", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-		return errors.Wrap(err, "json marshal")
 	}
 
 	s.ConfigFile = bytes
 	return nil
 }
 
-func (s *statem) callPatchConfigs(ctx context.Context, msgCtx message.Context) error { //nolint
+func (s *statem) cbPatchConfigs(ctx context.Context, msgCtx message.Context) []WatchKey { //nolint
 	var (
 		err       error
 		bytes     []byte
@@ -65,7 +72,6 @@ func (s *statem) callPatchConfigs(ctx context.Context, msgCtx message.Context) e
 	stateMessage, _ := msgCtx.Message().(message.StateMessage)
 	if err = mapstructure.Decode(stateMessage.Value, &patchData); nil != err {
 		log.Error("decode patch data", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-		return errors.Wrap(err, "call core.APIs.PatchConfigs")
 	}
 
 	// marshal config.
@@ -98,7 +104,6 @@ func (s *statem) callPatchConfigs(ctx context.Context, msgCtx message.Context) e
 	configs := make(map[string]interface{})
 	if err = json.Unmarshal(s.ConfigFile, &configs); nil != err {
 		log.Error("json unmarshal", zap.Error(err), zap.String("configs", string(s.ConfigFile)))
-		return errors.Wrap(err, "json unmarshal")
 	}
 
 	var cfg constraint.Config
@@ -131,5 +136,10 @@ func (s *statem) callPatchConfigs(ctx context.Context, msgCtx message.Context) e
 		}
 	}
 
+	return nil
+}
+
+func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	s.status = SMStatusDeleted
 	return nil
 }

@@ -22,17 +22,13 @@ import (
 	"context"
 	"sort"
 
-	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
-	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 const (
@@ -177,19 +173,8 @@ func (s *statem) WithContext(ctx StateContext) Machiner {
 func (s *statem) Invoke(msgCtx message.Context) error {
 	switch msgCtx.Message().(type) {
 	case message.StateMessage:
-
-		if err := s.callAPIs(context.Background(), msgCtx); nil != err {
-			log.Error("call core.APIs", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-			return errors.Wrap(err, "call core.APIs")
-		}
-
-		// flush state.
-		if err := s.flush(s.ctx); nil != err {
-			log.Error("flush state", zfield.ID(s.ID), zap.Error(err))
-			return errors.Wrap(err, "flush state")
-		}
-
-		msgCtx.Done()
+		actives := s.callAPIs(context.Background(), msgCtx)
+		s.activeTentacle(actives)
 	default:
 		// handle message.
 		watchKeys := s.msgHandler(msgCtx)
