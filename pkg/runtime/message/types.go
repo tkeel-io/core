@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	MessageTypeState MessageType = "state"
-	MessageTypeProps MessageType = "props"
+	MessageTypeState   MessageType = "state"
+	MessageTypeProps   MessageType = "props"
+	MessageTypeRespond MessageType = "respond"
 )
 
 type Message interface {

@@ -19,4 +19,6 @@ var (
 	ErrInvalidSubscriptionMode  = errors.New("Core.Message.Mode.Invalid")
 	ErrInvalidPropertyConfig    = errors.New("Core.Entity.Property.Config.Invalid")
 	ErrInvalidEntityParams      = errors.New("Core.Entity.Params.Invalid")
+	ErrInvalidHTTPRequest       = errors.New("Core.Transport.Http.Request.Invalid")
+	ErrInvalidHTTPInited        = errors.New("Core.Transport.Http.Inited")
 )

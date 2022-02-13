@@ -14,6 +14,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -27,6 +28,7 @@ type dispatcher struct {
 	downstreamConnections map[string]pubsub.Pubsub
 	coreRepository        repository.IRepository
 	internalConnnection   pubsub.Pubsub
+	transmitter           transport.Transmitter
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -34,12 +36,15 @@ type dispatcher struct {
 
 func New(ctx context.Context, id string, name string, enabled bool, repo repository.IRepository) *dispatcher { //nolint
 	ctx, cancel := context.WithCancel(ctx)
+	transType := transport.TransTypeHTTP
+
 	return &dispatcher{
 		ctx:                   ctx,
 		cancel:                cancel,
 		ID:                    id,
 		Name:                  name,
 		coreRepository:        repo,
+		transmitter:           transport.New(transType),
 		upstreamQueues:        make(map[string]*dao.Queue),
 		downstreamQueues:      make(map[string]*dao.Queue),
 		upstreamConnections:   make(map[string]pubsub.Pubsub),
@@ -98,8 +103,21 @@ func (d *dispatcher) Run() error {
 }
 
 func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
-	err := d.internalConnnection.Send(ctx, ev)
-	return errors.Wrap(err, "dispatch event")
+	var err error
+	var msgType string
+	ev.ExtensionAs(message.ExtMessageType, msgType)
+
+	switch message.MessageType(msgType) {
+	case message.MessageTypeRespond:
+		d.transmitter.Do(ctx, &transport.Request{})
+	default:
+		if err = d.internalConnnection.Send(ctx, ev); nil != err {
+			log.Error("dispatch event", zap.Error(err), zfield.Event(ev),
+				zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
+		}
+	}
+
+	return nil
 }
 
 func (d *dispatcher) Stop() error {

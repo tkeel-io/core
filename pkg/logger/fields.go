@@ -201,3 +201,11 @@ func Method(method string) zap.Field {
 func Header(header map[string]string) zap.Field {
 	return zap.Any("header", header)
 }
+
+func Addr(addr string) zap.Field {
+	return zap.String("address", addr)
+}
+
+func Payload(payload []byte) zap.Field {
+	return zap.String("payload", string(payload))
+}
