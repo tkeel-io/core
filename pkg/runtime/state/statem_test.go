@@ -27,8 +27,6 @@ import (
 )
 
 func TestNewStatem(t *testing.T) {
-	stateManager := NewManagerMock()
-
 	base := dao.Entity{
 		ID:         "device123",
 		Type:       "DEVICE",
@@ -40,7 +38,7 @@ func TestNewStatem(t *testing.T) {
 		ConfigFile: nil,
 	}
 
-	sm, err := NewState(context.Background(), stateManager, &base, nil)
+	sm, err := NewState(context.Background(), &base, nil, nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", sm.GetID())
 }

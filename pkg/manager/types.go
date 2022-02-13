@@ -20,8 +20,8 @@ import (
 	"context"
 	"errors"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -38,8 +38,8 @@ var (
 type APIManager interface {
 	// Start start Entity manager.
 	Start() error
-	// OnMessage handle message.
-	OnMessage(context.Context, cloudevents.Event) error
+	// OnRespond handle message.
+	OnRespond(context.Context, *holder.Response)
 	// CreateEntity create entity.
 	CreateEntity(context.Context, *Base) (*Base, error)
 	// DeleteEntity delete entity.

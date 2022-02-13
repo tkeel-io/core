@@ -32,7 +32,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
-	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -56,16 +55,15 @@ const (
 type subscription struct {
 	pubsubClient     pubsub.Pubsub
 	stateMachine     state.Machiner
-	stateManager     types.Manager
 	republishHandler state.MessageHandler
 }
 
 // NewSubscription returns a subscription.
-func NewSubscription(ctx context.Context, mgr types.Manager, in *dao.Entity) (stateM state.Machiner, err error) {
-	subsc := subscription{stateManager: mgr}
+func NewSubscription(ctx context.Context, in *dao.Entity) (stateM state.Machiner, err error) {
+	subsc := subscription{}
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
 
-	if stateM, err = state.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
+	if stateM, err = state.NewState(ctx, in, nil, nil, subsc.HandleMessage); nil != err {
 		return nil, errFunc(err)
 	}
 
@@ -125,11 +123,7 @@ func (s *subscription) GetEntity() *dao.Entity {
 	return s.stateMachine.GetEntity()
 }
 
-func (s *subscription) WithContext(sCtx state.StateContext) state.Machiner {
-	return s.stateMachine.WithContext(sCtx)
-}
-
-// OnMessage recv message from pubsub.
+// Invoke message from pubsub.
 func (s *subscription) Invoke(msgCtx message.Context) error {
 	return errors.Wrap(s.stateMachine.Invoke(msgCtx), "subscription invoke message")
 }

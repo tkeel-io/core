@@ -34,8 +34,6 @@ type Machiner interface {
 	GetEntity() *dao.Entity
 	// OnMessage recv message from pubsub.
 	Invoke(ctx message.Context) error
-	// WithContext set actor context.
-	WithContext(StateContext) Machiner
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
 }

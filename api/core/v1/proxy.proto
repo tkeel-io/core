@@ -13,31 +13,30 @@ option java_package = "api.core.v1";
 
 
 service Proxy {
-	rpc Route (RouteRequest) returns (RouteResponse) {
+	rpc Respond (RespondRequest) returns (RespondResponse) {
 		option (google.api.http) = {
-			post : "/route"
+			post : "/respond"
 			body: "data"
 		};
-        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "route apis Request";
-            operation_id: "Route";
-            tags: "Proxy";
-            responses: {
-              key: "200"
-              value: {
-                description: "OK";
-              }
-            }
-          };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+        summary: "apis callback respond.";
+        operation_id: "Respond";
+        tags: "Proxy";
+        responses: {
+          key: "200"
+          value: {
+            description: "OK";
+          }
+        }
+    };
 	};
 }
 
 
-message RouteRequest {
-    map<string,string> header = 1;
-    bytes data = 2;
+message RespondRequest {
+    map<string,string> metadata = 1;
+    bytes              data     = 2;
 }
 
-message RouteResponse {
-    
+message RespondResponse {
 }

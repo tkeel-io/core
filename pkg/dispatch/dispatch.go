@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"context"
+	"net/http"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
@@ -22,12 +23,13 @@ import (
 type dispatcher struct {
 	ID                    string
 	Name                  string
+	Enabled               bool
 	upstreamQueues        map[string]*dao.Queue
 	downstreamQueues      map[string]*dao.Queue
 	upstreamConnections   map[string]pubsub.Pubsub
 	downstreamConnections map[string]pubsub.Pubsub
 	coreRepository        repository.IRepository
-	internalConnnection   pubsub.Pubsub
+	loopbackConnection    pubsub.Pubsub
 	transmitter           transport.Transmitter
 
 	ctx    context.Context
@@ -39,10 +41,11 @@ func New(ctx context.Context, id string, name string, enabled bool, repo reposit
 	transType := transport.TransTypeHTTP
 
 	return &dispatcher{
+		ID:                    id,
 		ctx:                   ctx,
 		cancel:                cancel,
-		ID:                    id,
 		Name:                  name,
+		Enabled:               enabled,
 		coreRepository:        repo,
 		transmitter:           transport.New(transType),
 		upstreamQueues:        make(map[string]*dao.Queue),
@@ -52,8 +55,31 @@ func New(ctx context.Context, id string, name string, enabled bool, repo reposit
 	}
 }
 
-func (d *dispatcher) Dispatcher() Dispatcher {
-	return d
+func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
+	var err error
+	var msgType string
+	var callbackEnd string
+	data, _ := ev.DataBytes()
+	ev.ExtensionAs(message.ExtMessageType, &msgType)
+	ev.ExtensionAs(message.ExtCallback, &callbackEnd)
+
+	switch message.MessageType(msgType) {
+	case message.MessageTypeRespond:
+		d.transmitter.Do(ctx, &transport.Request{
+			PackageID: ev.ID(),
+			Method:    http.MethodPost,
+			Address:   callbackEnd,
+			Header:    message.GetAttributes(ev),
+			Payload:   data,
+		})
+	default:
+		if err = d.loopbackConnection.Send(ctx, ev); nil != err {
+			log.Error("dispatch event", zap.Error(err), zfield.Event(ev),
+				zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
+		}
+	}
+
+	return nil
 }
 
 func (d *dispatcher) Run() error {
@@ -95,24 +121,6 @@ func (d *dispatcher) Run() error {
 				return nil
 			}); nil != err {
 			log.Error("start receive pubsub", zfield.ID(id),
-				zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
-		}
-	}
-
-	return nil
-}
-
-func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
-	var err error
-	var msgType string
-	ev.ExtensionAs(message.ExtMessageType, msgType)
-
-	switch message.MessageType(msgType) {
-	case message.MessageTypeRespond:
-		d.transmitter.Do(ctx, &transport.Request{})
-	default:
-		if err = d.internalConnnection.Send(ctx, ev); nil != err {
-			log.Error("dispatch event", zap.Error(err), zfield.Event(ev),
 				zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
 		}
 	}
@@ -215,6 +223,10 @@ func (d *dispatcher) closeQueue(queue *dao.Queue) {
 }
 
 func (d *dispatcher) setup() error {
+	// setpu loopback Queue.
+	d.constructQueue(loopbackQueue)
+	d.loopbackConnection = d.upstreamConnections[loopbackQueue.ID]
+
 	// list current queues.
 	elapsedTime := util.NewElapsed()
 	revision := d.coreRepository.GetLastRevision(context.Background())
@@ -225,10 +237,6 @@ func (d *dispatcher) setup() error {
 				d.constructQueue(&queues[index])
 			}
 		})
-
-	// setpu internal Queue.
-	d.constructQueue(internalQueue)
-	d.internalConnnection = d.upstreamConnections[internalQueue.ID]
 
 	log.Info("initialize queues", zfield.ID(d.ID),
 		zfield.Name(d.Name), zfield.Elapsed(elapsedTime.Elapsed()))

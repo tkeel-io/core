@@ -29,11 +29,13 @@ type daprStore struct {
 func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, error) {
 	item, err := d.daprClient.GetState(ctx, d.storeName, key)
 	if nil != err {
-		if len(item.Value) == 0 {
-			return nil, xerrors.ErrEntityNotFound
-		}
 		return nil, errors.Wrap(err, "dapr store get")
 	}
+
+	if len(item.Value) == 0 {
+		return nil, xerrors.ErrEntityNotFound
+	}
+
 	return &store.StateItem{
 		Key:      item.Key,
 		Etag:     item.Etag,

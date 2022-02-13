@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,6 +35,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
+	_ "github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
@@ -47,6 +49,7 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/discovery"
+	_ "github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/core/pkg/version"
 	"go.uber.org/zap"
 
@@ -83,6 +86,7 @@ var (
 )
 
 var _apiManager apim.APIManager
+var _dispatcher dispatch.Dispatcher
 
 func main() {
 	cmd := cobra.Command{
@@ -156,6 +160,11 @@ func core(cmd *cobra.Command, args []string) { //nolint
 	grpcSrv := grpc.NewServer(_grpcAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
+	// new proxy.
+	httpProxySrv := http.NewServer(fmt.Sprintf(":%d", config.Get().Proxy.HTTPPort))
+	grpcProxySrv := grpc.NewServer(fmt.Sprintf(":%d", config.Get().Proxy.GRPCPort))
+	serverList = append(serverList, httpProxySrv, grpcProxySrv)
+
 	coreApp := app.New(config.Get().Server.AppID,
 		&log.Conf{
 			App:    config.Get().Server.AppID,
@@ -198,21 +207,22 @@ func core(cmd *cobra.Command, args []string) { //nolint
 	}
 
 	coreRepo := repository.New(coreDao)
-	var stateManager types.Manager
-	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo)); nil != err {
-		log.Fatal(err)
-	}
-
-	if _apiManager, err = apim.New(context.Background(), coreRepo); nil != err {
-		log.Fatal(err)
-	}
-
 	// create message dispatcher.
 	if err = loadDispatcher(context.Background(), coreRepo); nil != err {
 		log.Fatal(err)
 	}
 
+	var stateManager types.Manager
+	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo), _dispatcher); nil != err {
+		log.Fatal(err)
+	}
+
+	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
+		log.Fatal(err)
+	}
+
 	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
+	serviceRegisterToProxyV1(ctx, httpProxySrv, grpcProxySrv)
 
 	if err = coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
@@ -263,7 +273,9 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	SearchSrv := service.NewSearchService(search.GlobalService)
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+}
 
+func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register proxy service.
 	ProxyService := service.NewProxyService(_apiManager)
 	corev1.RegisterProxyHTTPServer(httpSrv.Container, ProxyService)
@@ -330,6 +342,8 @@ func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
+
+	_dispatcher = dispatcher
 
 	return nil
 }

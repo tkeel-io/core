@@ -140,7 +140,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()))
 
-		s.stateManager.RouteMessage(context.Background(), ev)
+		s.dispatcher.Dispatch(context.Background(), ev)
 	}
 
 	// active mapper.

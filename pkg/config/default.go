@@ -15,6 +15,11 @@ const (
 )
 
 var (
+	_defaultProxy = Proxy{
+		Name:     "core.proxy",
+		HTTPPort: 7000,
+		GRPCPort: 7001,
+	}
 	_defaultAppServer = Server{
 		Name:    DefaultName,
 		AppID:   DefaultAppID,

@@ -27,10 +27,4 @@ type Manager interface {
 	Start() error
 	// shutdown manager.
 	Shutdown() error
-	// GetResource return resource manager.
-	Resource() ResourceManager
-	// route messages cluster.
-	RouteMessage(context.Context, cloudevents.Event) error
-	// handle message on this node.
-	SetRepublisher(republisher Republisher)
 }

@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
@@ -27,14 +26,13 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/manager/proxy"
+	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
@@ -45,15 +43,16 @@ import (
 )
 
 const eventType = "Core.APIs"
+const respondFmt = "http://%s:%d/v1/respond"
 
 func eventSender(api string) string {
 	return fmt.Sprintf("%s.%s", eventType, api)
 }
 
 type apiManager struct {
-	coreProxy  *proxy.Proxy
+	holder     holder.Holder
+	dispatcher dispatch.Dispatcher
 	entityRepo repository.IRepository
-	receivers  map[string]pubsub.Receiver
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -62,118 +61,28 @@ type apiManager struct {
 
 func New(
 	ctx context.Context,
-	repo repository.IRepository) (APIManager, error) {
+	repo repository.IRepository,
+	dispatcher dispatch.Dispatcher) (APIManager, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	apiManager := &apiManager{
 		ctx:        ctx,
 		cancel:     cancel,
+		holder:     holder.New(),
 		entityRepo: repo,
-		receivers:  make(map[string]pubsub.Receiver),
+		dispatcher: dispatcher,
 		lock:       sync.RWMutex{},
 	}
 
-	// set state manager Republisher.
-
-	coreProxy, err := proxy.NewProxy(ctx)
-	if nil != err {
-		log.Error("new Proxy instance", zap.Error(err))
-		return nil, errors.Wrap(err, "new APIManager")
-	}
-
-	apiManager.coreProxy = coreProxy
 	return apiManager, nil
 }
 
-func (m *apiManager) listQueue() {
-	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
-	defer cancel()
-	revision := m.entityRepo.GetLastRevision(ctx)
-	coreNodeName := config.Get().Server.Name
-	m.entityRepo.RangeQueue(context.Background(), revision, func(queues []dao.Queue) {
-		// create receiver.
-		for _, queue := range queues {
-			if coreNodeName == queue.NodeName {
-				log.Info("append queue", zfield.ID(queue.ID))
-				// create receiver instance.
-				receiver := pubsub.NewPubsub(resource.Metadata{
-					Name:       queue.Type.String(),
-					Properties: queue.Metadata,
-				})
-
-				if _, has := m.receivers[queue.ID]; has {
-					m.receivers[queue.ID].Close()
-				}
-				m.receivers[queue.ID] = receiver
-			}
-		}
-	})
-}
-
-func (m *apiManager) watchQueue() {
-	ctx, cancel := context.WithTimeout(m.ctx, 3*time.Second)
-	defer cancel()
-	revision := m.entityRepo.GetLastRevision(ctx)
-
-	coreNodeName := config.Get().Server.Name
-	ctx, cancel1 := context.WithCancel(m.ctx)
-	defer cancel1()
-	m.entityRepo.WatchQueue(ctx, revision, func(et dao.EnventType, queue dao.Queue) {
-		switch et {
-		case dao.PUT:
-			// create receiver.
-			if coreNodeName == queue.NodeName {
-				log.Info("upsert queue", zfield.ID(queue.ID))
-				// create receiver instance.
-				receiver := pubsub.NewPubsub(resource.Metadata{
-					Name:       queue.Type.String(),
-					Properties: queue.Metadata,
-				})
-
-				if _, has := m.receivers[queue.ID]; has {
-					m.receivers[queue.ID].Close()
-				}
-				m.receivers[queue.ID] = receiver
-				// start consumer queue.
-				receiver.Received(context.Background(), func(ctx context.Context, ev cloudevents.Event) error {
-					if err := m.coreProxy.RouteMessage(ctx, ev); nil != err {
-						// TODO: 对出处理错误的消息，需要做出处理.
-						log.Error("route event", zap.Error(err), zap.String("queue", queue.ID), zfield.Event(ev))
-					}
-					log.Debug("received event", zap.String("queue", queue.ID), zfield.Event(ev))
-					return nil
-				})
-			}
-		case dao.DELETE:
-			log.Info("remove queue", zfield.ID(queue.ID))
-			if _, has := m.receivers[queue.ID]; has {
-				log.Error("catch Queue event", zfield.ID(queue.ID),
-					zfield.Type(queue.Type.String()), zfield.Name(queue.Name))
-			}
-		default:
-		}
-	})
-}
-
 func (m *apiManager) Start() error {
-	m.listQueue()
-	go m.watchQueue()
-	for id, receiver := range m.receivers {
-		receiver.Received(context.Background(), func(ctx context.Context, ev cloudevents.Event) error {
-			if err := m.coreProxy.RouteMessage(ctx, ev); nil != err {
-				// TODO: 对出处理错误的消息，需要做出处理.
-				log.Error("route event", zap.Error(err), zap.String("queue", id), zfield.Event(ev))
-			}
-			log.Debug("received event", zap.String("queue", id), zfield.Event(ev))
-			return nil
-		})
-	}
-
-	return errors.Wrap(nil, "start entity manager")
+	log.Info("start API Manager")
+	return nil
 }
 
-func (m *apiManager) OnMessage(ctx context.Context, e cloudevents.Event) error {
-	err := m.coreProxy.RouteMessage(ctx, e)
-	return errors.Wrap(err, "core consume message")
+func (m *apiManager) OnRespond(ctx context.Context, resp *holder.Response) {
+	m.holder.OnRespond(resp)
 }
 
 // ------------------------------------APIs-----------------------------.
@@ -182,6 +91,10 @@ func (m *apiManager) checkID(base *Base) {
 	if base.ID == "" {
 		base.ID = util.UUID()
 	}
+}
+
+func (m *apiManager) callbackAddr() string {
+	return fmt.Sprintf(respondFmt, util.ResolveAddr(), config.Get().Proxy.HTTPPort)
 }
 
 // CreateEntity create a entity.
@@ -231,9 +144,10 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode message.
 	bytes, err := message.GetPropsCodec().Encode(
@@ -257,7 +171,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, errors.Wrap(err, "validate event")
 	}
 
-	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("create entity", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "create entity")
 	}
@@ -265,13 +179,17 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	var entity *dao.Entity
-	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
-		log.Error("create entity", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "create entity")
+	resp := m.holder.Wait(ctx, eventID)
+	if resp.Status != holder.StatusOK {
+		log.Error("create entity",
+			zap.Error(xerrors.New(resp.ErrCode)),
+			zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	return entityToBase(entity), errors.Wrap(err, "create entity")
+	// decode resp.Data.
+
+	return nil, nil
 }
 
 // DeleteEntity delete an entity from manager.
@@ -294,9 +212,11 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtSyncFlag, message.Sync)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
+	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageSender, CoreAPISender)
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("DeleteEntity"))
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	var err error
 	if err = ev.Validate(); nil != err {
@@ -313,7 +233,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		return errors.Wrap(err, "delete entity")
 	}
 
-	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.Eid(en.ID))
 		return errors.Wrap(err, "delete entity")
 	}
@@ -321,7 +241,16 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	log.Debug("processing message completed", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return errors.Wrap(err, "delete entity")
+	resp := m.holder.Wait(ctx, eventID)
+	if resp.Status != holder.StatusOK {
+		log.Error("create entity",
+			zap.Error(xerrors.New(resp.ErrCode)),
+			zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return xerrors.New(resp.ErrCode)
+	}
+
+	// decode resp.Data.
+	return nil
 }
 
 // GetProperties returns Base.
@@ -360,9 +289,10 @@ func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error)
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetProperties"))
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode message.
 	bytes, err := message.GetPropsCodec().Encode(message.PropertyMessage{
@@ -379,7 +309,7 @@ func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error)
 
 	ev.SetData(bytes)
 
-	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("set entity properties", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "set entity properties")
 	}
@@ -430,6 +360,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.
 			ev.SetExtension(message.ExtEntityOwner, en.Owner)
 			ev.SetExtension(message.ExtMessageReceiver, en.ID)
 			ev.SetExtension(message.ExtEntitySource, en.Source)
+			ev.SetExtension(message.ExtCallback, m.callbackAddr())
 			ev.SetExtension(message.ExtMessageType, message.MessageTypeProps.String())
 			ev.SetExtension(message.ExtMessageSender, eventSender("PatchEntity"))
 			ev.SetDataContentType(cloudevents.ApplicationJSON)
@@ -450,7 +381,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, patchData []*pb.
 
 			ev.SetData(bytes)
 
-			if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+			if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 				log.Error("patch entity", zap.Error(err), zfield.Eid(en.ID))
 				return nil, errors.Wrap(err, "patch entity")
 			}
@@ -572,9 +503,10 @@ func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("SetConfigs"))
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode message.
 	ev.SetData(message.StateMessage{
@@ -584,7 +516,7 @@ func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
 	})
 
 	var err error
-	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("set entity configs", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "set entity configs")
 	}
@@ -621,6 +553,7 @@ func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, patchData []*st
 	ev.SetExtension(message.ExtEntityOwner, en.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
+	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeState.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("PatchConfigs"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
@@ -633,7 +566,7 @@ func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, patchData []*st
 	})
 
 	var err error
-	if err = m.coreProxy.RouteMessage(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID))
 		return nil, errors.Wrap(err, "patch entity configs")
 	}

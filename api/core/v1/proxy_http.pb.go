@@ -21,7 +21,7 @@ import transportHTTP "github.com/tkeel-io/kit/transport/http"
 // import package.context.http.reflect.go_restful.json.errors.emptypb.
 
 type ProxyHTTPServer interface {
-	Route(context.Context, *RouteRequest) (*RouteResponse, error)
+	Respond(context.Context, *RespondRequest) (*RespondResponse, error)
 }
 
 type ProxyHTTPHandler struct {
@@ -32,8 +32,8 @@ func newProxyHTTPHandler(s ProxyHTTPServer) *ProxyHTTPHandler {
 	return &ProxyHTTPHandler{srv: s}
 }
 
-func (h *ProxyHTTPHandler) Route(req *go_restful.Request, resp *go_restful.Response) {
-	in := RouteRequest{}
+func (h *ProxyHTTPHandler) Respond(req *go_restful.Request, resp *go_restful.Response) {
+	in := RespondRequest{}
 	if err := transportHTTP.GetBody(req, &in.Data); err != nil {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -45,7 +45,7 @@ func (h *ProxyHTTPHandler) Route(req *go_restful.Request, resp *go_restful.Respo
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
-	out, err := h.srv.Route(ctx, &in)
+	out, err := h.srv.Respond(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -84,6 +84,6 @@ func RegisterProxyHTTPServer(container *go_restful.Container, srv ProxyHTTPServe
 	}
 
 	handler := newProxyHTTPHandler(srv)
-	ws.Route(ws.POST("/route").
-		To(handler.Route))
+	ws.Route(ws.POST("/respond").
+		To(handler.Respond))
 }

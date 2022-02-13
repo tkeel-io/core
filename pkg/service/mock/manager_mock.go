@@ -3,12 +3,10 @@ package mock
 import (
 	"context"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/runtime/state"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type APIManagerMock struct {
@@ -22,9 +20,7 @@ func NewAPIManagerMock() apim.APIManager {
 func (m *APIManagerMock) Start() error { return nil }
 
 // OnMessage handle message.
-func (m *APIManagerMock) OnMessage(ctx context.Context, event cloudevents.Event) error {
-	log.Debug("handle message", zap.Any("headers", event.Context), zap.Any("message", event.Data))
-	return nil
+func (m *APIManagerMock) OnRespond(ctx context.Context, resp *holder.Response) {
 }
 
 // CreateEntity create entity.

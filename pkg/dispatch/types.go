@@ -12,10 +12,10 @@ type Dispatcher interface {
 	Dispatch(ctx context.Context, ev cloudevents.Event) error
 }
 
-var internalQueue = &dao.Queue{
+var loopbackQueue = &dao.Queue{
 	ID:           util.UUID(),
-	Name:         "internal-core-route-and-republish",
-	Type:         "internal",
+	Name:         "loopback-core-route-and-republish",
+	Type:         "loopback",
 	Consumers:    []string{},
 	ConsumerType: dao.ConsumerTypeDispatch,
 	Description:  "used for core.runtime actor republish event and core.APIs route request.",

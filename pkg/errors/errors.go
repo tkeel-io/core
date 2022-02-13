@@ -22,3 +22,7 @@ var (
 	ErrInvalidHTTPRequest       = errors.New("Core.Transport.Http.Request.Invalid")
 	ErrInvalidHTTPInited        = errors.New("Core.Transport.Http.Inited")
 )
+
+func New(code string) error {
+	return errors.New(code)
+}

@@ -20,10 +20,10 @@ import (
 	"context"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/inbox"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -40,11 +40,9 @@ import (
 type Manager struct {
 	coroutinePool   *ants.Pool
 	containers      map[string]*Container
-	msgCh           chan message.Context
-	disposeCh       chan message.Context
 	actorEnv        environment.IEnvironment
 	resourceManager types.ResourceManager
-	republisher     types.Republisher
+	dispatcher      dispatch.Dispatcher
 	inboxes         map[string]inbox.Inboxer
 
 	shutdown chan struct{}
@@ -53,7 +51,7 @@ type Manager struct {
 	cancel   context.CancelFunc
 }
 
-func NewManager(ctx context.Context, resourceManager types.ResourceManager) (types.Manager, error) {
+func NewManager(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher) (types.Manager, error) {
 	coroutinePool, err := ants.NewPool(5000)
 	if err != nil {
 		return nil, errors.Wrap(err, "new coroutine pool")
@@ -66,8 +64,7 @@ func NewManager(ctx context.Context, resourceManager types.ResourceManager) (typ
 		inboxes:         make(map[string]inbox.Inboxer),
 		actorEnv:        environment.NewEnvironment(),
 		containers:      make(map[string]*Container),
-		msgCh:           make(chan message.Context, 10),
-		disposeCh:       make(chan message.Context, 10),
+		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
 		coroutinePool:   coroutinePool,
 		lock:            sync.RWMutex{},
@@ -88,16 +85,6 @@ func (m *Manager) Shutdown() error {
 	m.cancel()
 	m.shutdown <- struct{}{}
 	return nil
-}
-
-func (m *Manager) SetRepublisher(republisher types.Republisher) {
-	m.republisher = republisher
-}
-
-func (m *Manager) RouteMessage(ctx context.Context, ev cloudevents.Event) error {
-	// assume single node.
-	log.Debug("route event", zfield.ID(ev.ID()), zfield.Type(ev.Type()), zfield.Event(ev))
-	return errors.Wrap(m.republisher.RouteMessage(ctx, ev), "route message")
 }
 
 func (m *Manager) handleMessage(msgCtx message.Context) error {
@@ -211,11 +198,11 @@ func (m *Manager) reloadActor(stateIDs []string) error {
 			base := &dao.Entity{ID: stateID, Type: SMTypeBasic}
 			if _, stateMachine = m.getMachiner("", stateID); nil != stateMachine {
 				log.Warn("load state machine", zfield.ID(stateID))
-			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err {
+			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err { // nolint
 				continue
 			}
-			actorEnv := m.actorEnv.GetActorEnv(stateID)
-			stateMachine.WithContext(state.NewContext(stateMachine, actorEnv.Mappers, actorEnv.Tentacles))
+			m.actorEnv.GetActorEnv(stateID)
+			// TODO: 更新state machine 的StateContext.
 		}
 	}
 	return nil
@@ -246,12 +233,12 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 
 	switch base.Type {
 	case SMTypeSubscription:
-		if sm, err = subscription.NewSubscription(ctx, m, base); nil != err {
+		if sm, err = subscription.NewSubscription(ctx, base); nil != err {
 			return nil, errors.Wrap(err, "load subscription")
 		}
 	default:
 		// default base entity type.
-		if sm, err = state.NewState(ctx, m, base, nil); nil != err {
+		if sm, err = state.NewState(ctx, base, m.dispatcher, m.resourceManager, nil); nil != err {
 			return nil, errors.Wrap(err, "load state machine")
 		}
 	}
@@ -264,8 +251,7 @@ func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate
 		m.containers[channelID] = NewContainer()
 	}
 
-	thisActorEnv := m.actorEnv.GetActorEnv(sm.GetID())
-	sm.WithContext(state.NewContext(sm, thisActorEnv.Mappers, thisActorEnv.Tentacles))
+	m.actorEnv.GetActorEnv(sm.GetID())
 
 	m.containers[channelID].Add(sm)
 	return sm, nil

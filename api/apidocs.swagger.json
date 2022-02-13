@@ -962,15 +962,15 @@
         ]
       }
     },
-    "/route": {
+    "/respond": {
       "post": {
-        "summary": "route apis Request",
-        "operationId": "Route",
+        "summary": "apis callback respond.",
+        "operationId": "Respond",
         "responses": {
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/v1RouteResponse"
+              "$ref": "#/definitions/v1RespondResponse"
             }
           },
           "default": {
@@ -1563,7 +1563,7 @@
         }
       }
     },
-    "v1RouteResponse": {
+    "v1RespondResponse": {
       "type": "object"
     },
     "v1SearchCondition": {

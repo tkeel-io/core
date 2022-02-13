@@ -110,12 +110,12 @@ func (d *Dao) DelEntity(ctx context.Context, id string) error {
 }
 
 func (d *Dao) HasEntity(ctx context.Context, id string) (bool, error) {
-	res, err := d.stateClient.Get(ctx, d.entityCodec.Key(id))
-	if nil == err {
-		if len(res.Value) > 0 {
-			return true, nil
+	_, err := d.stateClient.Get(ctx, d.entityCodec.Key(id))
+	if nil != err {
+		if errors.Is(err, xerrors.ErrEntityNotFound) {
+			return false, nil
 		}
+		return false, errors.Wrap(err, "repo exists entity")
 	}
-
-	return false, errors.Wrap(err, "repo exists entity")
+	return true, nil
 }

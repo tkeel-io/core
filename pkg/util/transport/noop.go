@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"os"
 
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
@@ -20,6 +21,7 @@ func (t *noopTransmitter) Close() error {
 }
 
 func init() {
+	zfield.SuccessStatusEvent(os.Stdout, "Register Transmitter<noop> successful")
 	Register(TransTypeNOOP, func() (Transmitter, error) {
 		return &noopTransmitter{}, nil
 	})

@@ -32,11 +32,18 @@ import (
 var _config = defaultConfig()
 
 type Configuration struct {
+	Proxy      Proxy          `yaml:"proxy" mapstructure:"proxy"`
 	Server     Server         `yaml:"server" mapstructure:"server"`
 	Logger     LogConfig      `yaml:"logger" mapstructure:"logger"`
 	Discovery  Discovery      `yaml:"discovery" mapstructure:"discovery"`
 	Components Components     `yaml:"components" mapstructure:"components"`
 	Dispatcher DispatchConfig `yaml:"dispatcher" mapstructure:"dispatcher"`
+}
+
+type Proxy struct {
+	Name     string `yaml:"name" mapstructure:"name"`
+	HTTPPort int    `yaml:"http_port" mapstructure:"http_port"`
+	GRPCPort int    `yaml:"grpc_port" mapstructure:"grpc_port"`
 }
 
 type Components struct {
@@ -110,6 +117,9 @@ func Init(cfgFile string) {
 	viper.AutomaticEnv()
 
 	// default.
+	viper.SetDefault("proxy.name", _defaultProxy.Name)
+	viper.SetDefault("proxy.http_port", _defaultProxy.HTTPPort)
+	viper.SetDefault("proxy.grpc_port", _defaultProxy.GRPCPort)
 	viper.SetDefault("server.name", _defaultAppServer.Name)
 	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
 	viper.SetDefault("server.app_port", _defaultAppServer.AppPort)

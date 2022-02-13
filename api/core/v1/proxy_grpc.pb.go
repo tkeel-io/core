@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProxyClient interface {
-	Route(ctx context.Context, in *RouteRequest, opts ...grpc.CallOption) (*RouteResponse, error)
+	Respond(ctx context.Context, in *RespondRequest, opts ...grpc.CallOption) (*RespondResponse, error)
 }
 
 type proxyClient struct {
@@ -29,9 +29,9 @@ func NewProxyClient(cc grpc.ClientConnInterface) ProxyClient {
 	return &proxyClient{cc}
 }
 
-func (c *proxyClient) Route(ctx context.Context, in *RouteRequest, opts ...grpc.CallOption) (*RouteResponse, error) {
-	out := new(RouteResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Proxy/Route", in, out, opts...)
+func (c *proxyClient) Respond(ctx context.Context, in *RespondRequest, opts ...grpc.CallOption) (*RespondResponse, error) {
+	out := new(RespondResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Proxy/Respond", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (c *proxyClient) Route(ctx context.Context, in *RouteRequest, opts ...grpc.
 // All implementations must embed UnimplementedProxyServer
 // for forward compatibility
 type ProxyServer interface {
-	Route(context.Context, *RouteRequest) (*RouteResponse, error)
+	Respond(context.Context, *RespondRequest) (*RespondResponse, error)
 	mustEmbedUnimplementedProxyServer()
 }
 
@@ -50,8 +50,8 @@ type ProxyServer interface {
 type UnimplementedProxyServer struct {
 }
 
-func (UnimplementedProxyServer) Route(context.Context, *RouteRequest) (*RouteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Route not implemented")
+func (UnimplementedProxyServer) Respond(context.Context, *RespondRequest) (*RespondResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Respond not implemented")
 }
 func (UnimplementedProxyServer) mustEmbedUnimplementedProxyServer() {}
 
@@ -66,20 +66,20 @@ func RegisterProxyServer(s grpc.ServiceRegistrar, srv ProxyServer) {
 	s.RegisterService(&Proxy_ServiceDesc, srv)
 }
 
-func _Proxy_Route_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RouteRequest)
+func _Proxy_Respond_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RespondRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProxyServer).Route(ctx, in)
+		return srv.(ProxyServer).Respond(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.core.v1.Proxy/Route",
+		FullMethod: "/api.core.v1.Proxy/Respond",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProxyServer).Route(ctx, req.(*RouteRequest))
+		return srv.(ProxyServer).Respond(ctx, req.(*RespondRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -92,8 +92,8 @@ var Proxy_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ProxyServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Route",
-			Handler:    _Proxy_Route_Handler,
+			MethodName: "Respond",
+			Handler:    _Proxy_Respond_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

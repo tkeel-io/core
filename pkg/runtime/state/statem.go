@@ -24,6 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/dispatch"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -38,10 +39,6 @@ const (
 	// statem runtime-status enumerates.
 	StateRuntimeDetached int32 = 0
 	StateRuntimeAttached int32 = 1
-
-	// state machine default configurations.
-	defaultEnsureConsumeTimes int32 = 3
-	defaultStateFlushPeried   int32 = 10
 
 	// statem status enumerates.
 	SMStatusActive   Status = "active"
@@ -108,11 +105,10 @@ type statem struct {
 	tseriesConstraints sort.StringSlice
 
 	// state manager.
-	stateManager types.Manager
+	dispatcher      dispatch.Dispatcher
+	resourceManager types.ResourceManager
 
-	status             Status
-	nextFlushNum       int32
-	ensureComsumeTimes int32
+	status Status
 	// state machine message handler.
 	msgHandler MessageHandler
 
@@ -123,7 +119,7 @@ type statem struct {
 }
 
 // NewState create an statem object.
-func NewState(ctx context.Context, stateManager types.Manager, in *dao.Entity, msgHandler MessageHandler) (Machiner, error) {
+func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, resourceManager types.ResourceManager, msgHandler MessageHandler) (Machiner, error) {
 	if in.ID == "" {
 		in.ID = util.UUID()
 	}
@@ -133,16 +129,15 @@ func NewState(ctx context.Context, stateManager types.Manager, in *dao.Entity, m
 	state := &statem{
 		Entity: in.Copy(),
 
-		ctx:                ctx,
-		cancel:             cancel,
-		status:             SMStatusActive,
-		msgHandler:         msgHandler,
-		stateManager:       stateManager,
-		nextFlushNum:       defaultStateFlushPeried,
-		ensureComsumeTimes: defaultEnsureConsumeTimes,
-		mappers:            make(map[string]mapper.Mapper),
-		cacheProps:         make(map[string]map[string]constraint.Node),
-		constraints:        make(map[string]*constraint.Constraint),
+		ctx:             ctx,
+		cancel:          cancel,
+		status:          SMStatusActive,
+		msgHandler:      msgHandler,
+		dispatcher:      dispatcher,
+		resourceManager: resourceManager,
+		mappers:         make(map[string]mapper.Mapper),
+		cacheProps:      make(map[string]map[string]constraint.Node),
+		constraints:     make(map[string]*constraint.Constraint),
 	}
 
 	// initialize Properties.
@@ -153,10 +148,7 @@ func NewState(ctx context.Context, stateManager types.Manager, in *dao.Entity, m
 	// set properties into cacheProps.
 	state.cacheProps[in.ID] = state.Properties
 
-	if nil == msgHandler {
-		// use default message handler.
-		state.msgHandler = state.invokePropertyMessage
-	}
+	state.msgHandler = state.invokePropertyMessage
 
 	return state, nil
 }
