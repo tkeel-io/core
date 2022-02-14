@@ -65,6 +65,8 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
 
 	switch message.MessageType(msgType) {
 	case message.MessageTypeRespond:
+		log.Debug("dispatch callback", zfield.ID(ev.ID()),
+			zfield.Header(message.GetAttributes(ev)))
 		d.transmitter.Do(ctx, &transport.Request{
 			PackageID: ev.ID(),
 			Method:    http.MethodPost,
@@ -105,7 +107,6 @@ func (d *dispatcher) Run() error {
 				ev.ExtensionAs(message.ExtEntityID, &entityID)
 				selectQueue := placement.Global().Select(entityID)
 				selectConn := d.downstreamConnections[selectQueue.ID]
-
 				// append som attributes.
 				ev.SetExtension(message.ExtChannelID, id)
 
@@ -191,9 +192,10 @@ func (d *dispatcher) closeQueue(queue *dao.Queue) {
 	)
 	switch queue.ConsumerType {
 	case dao.ConsumerTypeCore:
-		fmtString = "close downstream queue"
-		closeQueues = d.downstreamQueues
-		closeConnections = d.downstreamConnections
+		// fmtString = "close downstream queue"
+		// closeQueues = d.downstreamQueues
+		// closeConnections = d.downstreamConnections
+		return
 	case dao.ConsumerTypeDispatch:
 		fmtString = "close upstream queue"
 		closeQueues = d.upstreamQueues

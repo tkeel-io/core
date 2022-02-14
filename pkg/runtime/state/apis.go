@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -22,12 +23,12 @@ func (a APIID) String() string {
 }
 
 const (
-	APICreateEntity  APIID = "core.createentity"
-	APIPatchEntity   APIID = "core.patchentity"
-	APISetProperties APIID = "core.setproperties"
-	APISetConfigs    APIID = "core.setconfigs"
-	APIPatchConfigs  APIID = "core.patchconfigs"
-	APIDeleteEntity  APIID = "core.deleteentity"
+	APICreateEntity  APIID = "corecreateentity"
+	APIPatchEntity   APIID = "corepatchentity"
+	APISetProperties APIID = "coresetproperties"
+	APISetConfigs    APIID = "coresetconfigs"
+	APIPatchConfigs  APIID = "corepatchconfigs"
+	APIDeleteEntity  APIID = "coredeleteentity"
 )
 
 type APIHandler func(context.Context, message.Context) []WatchKey
@@ -41,6 +42,7 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 
 	once.Do(func() {
 		apiCallbacks = map[APIID]APIHandler{
+			APICreateEntity: s.cbCreateEntity,
 			APISetConfigs:   s.cbSetConfigs,
 			APIPatchConfigs: s.cbPatchConfigs,
 			APIDeleteEntity: s.cbDeleteEntity,
@@ -49,6 +51,30 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 
 	apiID := APIID(msgCtx.Get(message.ExtAPIIdentify))
 	return apiCallbacks[apiID](ctx, msgCtx)
+}
+
+func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	msgID := util.UUID()
+	eventID := util.UUID()
+	ev := cloudevents.NewEvent()
+
+	ev.SetID(eventID)
+	ev.SetType(s.Type)
+	ev.SetSource(s.Source)
+	ev.SetExtension(message.ExtMessageID, msgID)
+	ev.SetExtension(message.ExtEntityID, s.ID)
+	ev.SetExtension(message.ExtEntityType, s.Type)
+	ev.SetExtension(message.ExtEntityOwner, s.Owner)
+	ev.SetExtension(message.ExtMessageReceiver, s.ID)
+	ev.SetExtension(message.ExtEntitySource, s.Source)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeRespond.String())
+	ev.SetDataContentType(cloudevents.ApplicationJSON)
+
+	log.Debug("call CreateEntity============================", zfield.ID(s.ID))
+	s.dispatcher.Dispatch(ctx, ev)
+
+	return nil
 }
 
 func (s *statem) cbSetConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {

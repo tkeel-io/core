@@ -147,12 +147,12 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, msgTypeSync)
-	ev.SetExtension(message.ExtAPIIdentify, state.APICreateEntity)
+	ev.SetExtension(message.ExtAPIIdentify, state.APICreateEntity.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// TODO: encode Request to event.Data.
-	var bytes []byte
+	var bytes = []byte(`{}`)
 
 	if err = ev.SetData(bytes); nil != err {
 		log.Error("encode props message", zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
