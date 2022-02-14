@@ -18,5 +18,6 @@ var loopbackQueue = &dao.Queue{
 	Type:         "loopback",
 	Consumers:    []string{},
 	ConsumerType: dao.ConsumerTypeDispatch,
+	Metadata:     map[string]interface{}{},
 	Description:  "used for core.runtime actor republish event and core.APIs route request.",
 }

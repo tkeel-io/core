@@ -167,7 +167,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	log.Debug("processing message completed", zfield.Eid(en.ID),
+	log.Debug("processing message", zfield.Eid(en.ID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	resp := m.holder.Wait(ctx, eventID)

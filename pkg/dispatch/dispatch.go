@@ -6,7 +6,6 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -98,35 +97,40 @@ func (d *dispatcher) Run() error {
 
 	// consume queues.
 	for id, pubsubInstance := range d.upstreamConnections {
-		log.Info("pubsub start receive", zfield.ID(id),
-			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
-
-		if err = pubsubInstance.Received(context.Background(),
-			func(ctx context.Context, ev cloudevents.Event) error {
-				var entityID string
-				ev.ExtensionAs(message.ExtEntityID, &entityID)
-				selectQueue := placement.Global().Select(entityID)
-				selectConn := d.downstreamConnections[selectQueue.ID]
-				// append som attributes.
-				ev.SetExtension(message.ExtChannelID, id)
-
-				// send event.
-				if err = selectConn.Send(ctx, ev); nil != err {
-					log.Error("dispatch message", zfield.Eid(entityID),
-						zap.String("select_queue", selectQueue.ID))
-				}
-
-				log.Debug("dispatch pubsub message", zfield.Eid(entityID),
-					zap.String("select_queue", selectQueue.ID))
-
-				return nil
-			}); nil != err {
-			log.Error("start receive pubsub", zfield.ID(id),
-				zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
-		}
+		d.startConsumeQueue(id, pubsubInstance)
 	}
 
 	return nil
+}
+
+func (d *dispatcher) startConsumeQueue(id string, pubsubIns pubsub.Pubsub) {
+	log.Info("pubsub start receive", zfield.ID(id),
+		zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
+
+	var err error
+	if err = pubsubIns.Received(context.Background(),
+		func(ctx context.Context, ev cloudevents.Event) error {
+			var entityID string
+			ev.ExtensionAs(message.ExtEntityID, &entityID)
+			selectQueue := placement.Global().Select(entityID)
+			selectConn := d.downstreamConnections[selectQueue.ID]
+			// append som attributes.
+			ev.SetExtension(message.ExtChannelID, id)
+
+			// send event.
+			if err = selectConn.Send(ctx, ev); nil != err {
+				log.Error("dispatch message", zfield.Eid(entityID),
+					zap.String("select_queue", selectQueue.ID))
+			}
+
+			log.Debug("dispatch pubsub message",
+				zfield.Eid(entityID), zap.Any("select_queue", selectQueue))
+
+			return nil
+		}); nil != err {
+		log.Error("start receive pubsub", zfield.ID(id),
+			zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name))
+	}
 }
 
 func (d *dispatcher) Stop() error {
@@ -151,37 +155,59 @@ func (d *dispatcher) Stop() error {
 	return nil
 }
 
-func (d *dispatcher) constructQueue(queue *dao.Queue) {
-	pubsubInst := pubsub.NewPubsub(resource.Metadata{
+func (d *dispatcher) constructQueues(queues []dao.Queue) {
+	for index := range queues {
+		switch queues[index].ConsumerType {
+		case dao.ConsumerTypeCore:
+			d.constructDownstreamQueue(&queues[index])
+		case dao.ConsumerTypeDispatch:
+			if d.Enabled {
+				d.constructUpstreamQueue(&queues[index])
+			}
+		default:
+			log.Error("invalid consumer type",
+				zfield.ID(queues[index].ID), zfield.Type(queues[index].ConsumerType.String()))
+		}
+	}
+}
+
+func (d *dispatcher) constructUpstreamQueue(queue *dao.Queue) pubsub.Pubsub {
+	pubsubInst := pubsub.NewPubsub(queue.ID, resource.Metadata{
 		Name:       queue.Type.String(),
 		Properties: queue.Metadata,
 	})
 
+	d.upstreamQueues[queue.ID] = queue
 	d.upstreamConnections[queue.ID] = pubsubInst
 
-	var fmtString string
-	switch queue.ConsumerType {
-	case dao.ConsumerTypeCore:
-		fmtString = "initialize downstream queue"
-		placement.Global().AppendQueue(*queue)
-		d.downstreamQueues[queue.ID] = queue
-		d.downstreamConnections[queue.ID] = pubsubInst
-	case dao.ConsumerTypeDispatch:
-		fmtString = "initialize upstream queue"
-		placement.Global().RemoveQueue(*queue)
-		d.upstreamQueues[queue.ID] = queue
-		d.upstreamConnections[queue.ID] = pubsubInst
-	default:
-		log.Error("Queue consumer type unknown", zfield.DispatcherID(d.ID),
-			zfield.DispatcherName(d.Name), zap.Error(xerrors.ErrInvalidQueueConsumerType))
-	}
-
-	log.Info(fmtString, zfield.ID(queue.ID),
+	log.Info("initialize upstream queue", zfield.ID(queue.ID),
 		zfield.Name(queue.Name), zfield.Desc(queue.Description),
 		zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name),
 		zap.String("consumer_type", queue.ConsumerType.String()),
 		zfield.Type(queue.Type.String()), zfield.Version(queue.Version),
 		zap.Any("metadata", queue.Metadata), zap.Strings("consumers", queue.Consumers))
+
+	return pubsubInst
+}
+
+func (d *dispatcher) constructDownstreamQueue(queue *dao.Queue) pubsub.Pubsub {
+	pubsubInst := pubsub.NewPubsub(queue.ID, resource.Metadata{
+		Name:       queue.Type.String(),
+		Properties: queue.Metadata,
+	})
+
+	d.downstreamQueues[queue.ID] = queue
+	placement.Global().AppendQueue(*queue)
+	d.downstreamConnections[queue.ID] = pubsubInst
+
+	log.Info("initialize downstream queue", zfield.ID(queue.ID),
+		zfield.Name(queue.Name), zfield.Desc(queue.Description),
+		zfield.DispatcherID(d.ID), zfield.DispatcherName(d.Name),
+		zap.String("consumer_type", queue.ConsumerType.String()),
+		zfield.Type(queue.Type.String()), zfield.Version(queue.Version),
+		zap.Any("metadata", queue.Metadata), zap.Strings("consumers", queue.Consumers))
+
+	return pubsubInst
 }
 
 func (d *dispatcher) closeQueue(queue *dao.Queue) {
@@ -192,9 +218,7 @@ func (d *dispatcher) closeQueue(queue *dao.Queue) {
 	)
 	switch queue.ConsumerType {
 	case dao.ConsumerTypeCore:
-		// fmtString = "close downstream queue"
-		// closeQueues = d.downstreamQueues
-		// closeConnections = d.downstreamConnections
+		log.Warn("access ConsumerTypeDispatch queue updated", zfield.ID(queue.ID))
 		return
 	case dao.ConsumerTypeDispatch:
 		fmtString = "close upstream queue"
@@ -226,7 +250,7 @@ func (d *dispatcher) closeQueue(queue *dao.Queue) {
 
 func (d *dispatcher) setup() error {
 	// setpu loopback Queue.
-	d.constructQueue(loopbackQueue)
+	d.constructUpstreamQueue(loopbackQueue)
 	d.loopbackConnection = d.upstreamConnections[loopbackQueue.ID]
 
 	// list current queues.
@@ -234,10 +258,7 @@ func (d *dispatcher) setup() error {
 	revision := d.coreRepository.GetLastRevision(context.Background())
 	d.coreRepository.RangeQueue(context.Background(), revision,
 		func(queues []dao.Queue) {
-			for index := range queues {
-				// construct queue.
-				d.constructQueue(&queues[index])
-			}
+			d.constructQueues(queues)
 		})
 
 	log.Info("initialize queues", zfield.ID(d.ID),
@@ -250,8 +271,14 @@ func (d *dispatcher) setup() error {
 			zap.String("queue_id", queue.ID), zap.String("queue_name", queue.Name))
 		switch et {
 		case dao.PUT:
-			d.closeQueue(&queue)
-			d.constructQueue(&queue)
+			switch queue.ConsumerType {
+			case dao.ConsumerTypeDispatch:
+				d.closeQueue(&queue)
+				pubsubIns := d.constructUpstreamQueue(&queue)
+				d.startConsumeQueue(pubsubIns.ID(), pubsubIns)
+			default:
+				log.Warn("access ConsumerTypeDispatch queue updated", zfield.ID(queue.ID))
+			}
 		case dao.DELETE:
 			d.closeQueue(&queue)
 		default:

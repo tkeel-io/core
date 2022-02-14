@@ -29,19 +29,23 @@ func (m *Manager) listQueue() {
 	repo.RangeQueue(context.Background(), revision, func(queues []dao.Queue) {
 		// create receiver.
 		for _, queue := range queues {
-			if coreNodeName == queue.NodeName {
-				log.Info("append queue", zfield.ID(queue.ID))
-				// create receiver instance.
-				receiver := pubsub.NewPubsub(resource.Metadata{
-					Name:       queue.Type.String(),
-					Properties: queue.Metadata,
-				})
+			switch queue.ConsumerType {
+			case dao.ConsumerTypeCore:
+				if coreNodeName == queue.NodeName {
+					log.Info("append queue", zfield.ID(queue.ID))
+					// create receiver instance.
+					receiver := pubsub.NewPubsub(queue.ID, resource.Metadata{
+						Name:       queue.Type.String(),
+						Properties: queue.Metadata,
+					})
 
-				inboxIns := inbox.New(m.ctx, receiver)
-				if _, has := m.inboxes[queue.ID]; has {
-					m.inboxes[queue.ID].Close()
+					inboxIns := inbox.New(m.ctx, receiver)
+					if _, has := m.inboxes[queue.ID]; has {
+						m.inboxes[queue.ID].Close()
+					}
+					m.inboxes[queue.ID] = inboxIns
 				}
-				m.inboxes[queue.ID] = inboxIns
+			default:
 			}
 		}
 	})
@@ -67,23 +71,27 @@ func (m *Manager) watchQueue() {
 		switch et {
 		case dao.PUT:
 			// create receiver.
-			if coreNodeName == queue.NodeName {
-				log.Info("append queue", zfield.ID(queue.ID))
-				// create receiver instance.
-				receiver := pubsub.NewPubsub(resource.Metadata{
-					Name:       queue.Type.String(),
-					Properties: queue.Metadata,
-				})
+			switch queue.ConsumerType {
+			case dao.ConsumerTypeCore:
+				if coreNodeName == queue.NodeName {
+					log.Info("append queue", zfield.ID(queue.ID))
+					// create receiver instance.
+					receiver := pubsub.NewPubsub(queue.ID, resource.Metadata{
+						Name:       queue.Type.String(),
+						Properties: queue.Metadata,
+					})
 
-				inboxIns := inbox.New(m.ctx, receiver)
-				if _, has := m.inboxes[queue.ID]; has {
-					m.inboxes[queue.ID].Close()
+					inboxIns := inbox.New(m.ctx, receiver)
+					if _, has := m.inboxes[queue.ID]; has {
+						m.inboxes[queue.ID].Close()
+					}
+					m.inboxes[queue.ID] = inboxIns
+
+					// start consumer inbox.
+					log.Info("start consumer inbox", zfield.ID(queue.ID))
+					inboxIns.Consume(m.ctx, m.handleMessage)
 				}
-				m.inboxes[queue.ID] = inboxIns
-
-				// start consumer inbox.
-				log.Info("start consumer inbox", zfield.ID(queue.ID))
-				inboxIns.Consume(m.ctx, m.handleMessage)
+			default:
 			}
 		case dao.DELETE:
 			if inboxInst, has := m.inboxes[queue.ID]; has {

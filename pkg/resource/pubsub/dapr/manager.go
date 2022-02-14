@@ -57,11 +57,11 @@ func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicE
 
 	lock.RLock()
 	for _, consumer := range consumers[groupName] {
-		consumer.handler(ctx, ev)
 		log.Debug("handle event",
 			zfield.Topic(req.Meta.Topic),
 			zfield.Pubsub(req.Meta.Pubsubname),
 			zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
+		consumer.handler(ctx, ev)
 	}
 	lock.RUnlock()
 

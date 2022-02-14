@@ -33,7 +33,6 @@ import (
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
@@ -284,12 +283,10 @@ func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv
 
 func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	log.Info("create core default resources")
-	// default pubsub.
-	pubsubClient := pubsub.NewPubsub(resource.ParseFrom(config.Get().Components.Pubsub))
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries))
 
-	return runtime.NewResources(pubsubClient, search.GlobalService, tsdbClient, coreRepo)
+	return runtime.NewResources(search.GlobalService, tsdbClient, coreRepo)
 }
 
 func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
@@ -303,10 +300,11 @@ func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
 
 		if queue.Version > 0 {
 			// compare version.
-			remoteQueue, err := repo.GetQueue(context.Background(), &dao.Queue{ID: queue.ID})
-			if nil != err {
-				log.Error("query Queue", zap.Error(err), logger.ID(queue.ID))
-				return errors.Wrap(err, "query queue")
+			var err error
+			var remoteQueue *dao.Queue
+			if remoteQueue, err = repo.GetQueue(context.Background(), &dao.Queue{ID: queue.ID}); nil != err {
+				log.Warn("query Queue", zap.Error(err), logger.ID(queue.ID))
+				continue
 			}
 
 			if remoteQueue.Version >= queue.Version {

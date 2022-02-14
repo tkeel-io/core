@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -24,6 +23,10 @@ type daprPubsub struct {
 	topicName  string
 	pubsubName string
 	daprClient daprSDK.Client
+}
+
+func (d *daprPubsub) ID() string {
+	return d.id
 }
 
 func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
@@ -65,13 +68,12 @@ func (d *daprPubsub) Close() error {
 
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.dapr> successful")
-	pubsub.Register("dapr", func(properties map[string]interface{}) (pubsub.Pubsub, error) {
+	pubsub.Register("dapr", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
 		var daprMeta daprMetadata
 		if err := mapstructure.Decode(properties, &daprMeta); nil != err {
 			return nil, errors.Wrap(err, "decode pubsub.dapr configuration")
 		}
 
-		id := util.UUID()
 		log.Info("create pubsub.dapr instance", zfield.ID(id))
 
 		// TODO: 这里并非每一个 daprPubsub 实例都需要持有一个 client, 可以整个 core 节点持有一个连接池.

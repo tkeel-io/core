@@ -7,12 +7,15 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
 
 type noopPubsub struct {
 	id string
+}
+
+func (d *noopPubsub) ID() string {
+	return d.id
 }
 
 func (d *noopPubsub) Send(ctx context.Context, event cloudevents.Event) error {
@@ -36,8 +39,7 @@ func (d *noopPubsub) Close() error {
 
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.noop> successful")
-	pubsub.Register("noop", func(map[string]interface{}) (pubsub.Pubsub, error) {
-		id := util.UUID()
+	pubsub.Register("noop", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
 		log.Info("create pubsub.noop instance", zfield.ID(id))
 		return &noopPubsub{id: id}, nil
 	})

@@ -89,6 +89,7 @@ func NewSubscription(ctx context.Context, in *dao.Entity) (stateM state.Machiner
 
 	// create pubsub client.
 	subsc.pubsubClient = pubsub.NewPubsub(
+		util.UUID(),
 		resource.Metadata{
 			Name: "dapr",
 			Properties: map[string]interface{}{

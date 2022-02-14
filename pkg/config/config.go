@@ -49,7 +49,6 @@ type Proxy struct {
 type Components struct {
 	Etcd         EtcdConfig   `yaml:"etcd" mapstructure:"etcd"`
 	Store        Metadata     `yaml:"store" mapstructure:"store"`
-	Pubsub       Metadata     `yaml:"pubsub" mapstructure:"pubsub"`
 	TimeSeries   Metadata     `yaml:"time_series" mapstructure:"time_series"`
 	SearchEngine SearchEngine `yaml:"search_engine" mapstructure:"search_engine"`
 }

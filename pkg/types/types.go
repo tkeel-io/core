@@ -5,13 +5,11 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
 
 type ResourceManager interface {
-	Pubsub() pubsub.Pubsub
 	Search() *search.Service
 	TSDB() tseries.TimeSerier
 	Repo() repository.IRepository

@@ -27,7 +27,6 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/util"
@@ -206,10 +205,6 @@ func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) 
 
 func (s *statem) TSeries() tseries.TimeSerier {
 	return s.resourceManager.TSDB()
-}
-
-func (s *statem) Pubsub() pubsub.Pubsub {
-	return s.resourceManager.Pubsub()
 }
 
 func (s *statem) Search() *search.Service {
