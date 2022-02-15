@@ -29,9 +29,7 @@ func (m *Manager) listMetadata() {
 			log.Debug("load actor", zfield.ID(info.ID), zfield.Name(info.Name), zfield.TQL(info.TQL),
 				zfield.Eid(info.EntityID), zfield.Type(info.EntityType), zfield.Desc(info.Description))
 			// load actor when environment initialized.
-			if err := m.loadActor(context.Background(), info.EntityType, info.EntityID); nil != err {
-				log.Error("load actor", zfield.Eid(info.EntityID), zfield.Type(info.EntityType))
-			}
+			m.loadMachine(info.EntityID, info.EntityType)
 		}
 	})
 
@@ -45,6 +43,6 @@ func (m *Manager) watchMetadata() {
 		repo.GetLastRevision(context.Background()),
 		func(et dao.EnventType, mp dao.Mapper) {
 			effects, _ := m.actorEnv.OnMapperChanged(et, mp)
-			m.reloadActor(effects)
+			m.reloadMachineEnv(effects)
 		})
 }

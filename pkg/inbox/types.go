@@ -6,7 +6,7 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 )
 
-type MessageHandler func(msgCtx message.Context) error
+type MessageHandler func(ctx context.Context, msgCtx message.Context) error
 
 type Inboxer interface {
 	ID() string

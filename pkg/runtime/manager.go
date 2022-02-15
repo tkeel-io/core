@@ -26,11 +26,8 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/inbox"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/state"
-	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -69,8 +66,6 @@ func NewManager(ctx context.Context, resourceManager types.ResourceManager, disp
 		lock:            sync.RWMutex{},
 	}
 
-	// set default container.
-	stateManager.containers["default"] = NewContainer()
 	return stateManager, nil
 }
 
@@ -86,35 +81,41 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
-func (m *Manager) handleMessage(msgCtx message.Context) error {
-	var err error
+func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) error {
 	entityID := msgCtx.Get(message.ExtEntityID)
-	channelID := msgCtx.Get(message.ExtChannelID)
+	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
-	channelID, stateMachine := m.getMachiner(channelID, entityID)
-	if nil == stateMachine {
-		en := &dao.Entity{
-			ID:         entityID,
-			Type:       msgCtx.Get(message.ExtEntityType),
-			Owner:      msgCtx.Get(message.ExtEntityOwner),
-			Source:     msgCtx.Get(message.ExtEntitySource),
-			TemplateID: msgCtx.Get(message.ExtTemplateID),
+
+	container := m.containers[channelID]
+	machine, err := container.Load(ctx, entityID)
+	if nil != err {
+		if !errors.Is(err, xerrors.ErrEntityNotFound) {
+			log.Error("undefine error, load state machine",
+				zap.Error(err), zfield.ID(entityID), zfield.Channel(channelID))
+			return xerrors.ErrInternal
 		}
 
-		// TODO：判断消息属主是否已经被调度了.
-		// load entity, create if not exists.
-		if stateMachine, err = m.loadOrCreate(m.ctx, channelID, true, en); nil != err {
-			log.Error("disposing message", zap.Error(err),
-				zfield.ID(entityID), zap.String("channel", channelID), zfield.Message(msgCtx))
-			return errors.Wrap(err, "handle message")
+		// state machine not exists, then create.
+		// TODO: create state machine.
+		enDao := message.ParseEntityFrom(msgCtx)
+		if machine, err = container.Add(enDao); nil != err {
+			log.Error("create state machine", zap.Error(err),
+				zfield.ID(entityID), zfield.Channel(channelID))
+			return xerrors.ErrInternal
 		}
 	}
 
-	if err = stateMachine.Invoke(msgCtx); nil != err {
+	log.Debug("core.Runtime invoke message",
+		zfield.ID(entityID),
+		zfield.Channel(channelID),
+		zfield.Header(msgCtx.Attributes()),
+		zfield.Message(string(msgCtx.Message())))
+
+	if err = machine.Invoke(msgCtx); nil != err {
 		log.Error("invoke message", zap.Error(err), zfield.Header(msgCtx.Attributes()))
-		return errors.Wrap(err, "invoke message")
 	}
-	return nil
+
+	return errors.Wrap(err, "invoke message")
 }
 
 // Resource return resource manager.
@@ -122,112 +123,15 @@ func (m *Manager) Resource() types.ResourceManager {
 	return m.resourceManager
 }
 
-func (m *Manager) getMachiner(cid, eid string) (string, state.Machiner) {
-	if cid == "" {
-		cid = "default"
-	}
-
-	if container, ok := m.containers[cid]; ok {
-		if sm := container.Get(eid); nil != sm {
-			if sm.GetStatus() == state.SMStatusDeleted {
-				container.Remove(eid)
-				return cid, nil
-			}
-			return cid, sm
-		}
-	}
-
-	for channelID, container := range m.containers {
-		if sm := container.Get(eid); sm != nil {
-			if sm.GetStatus() == state.SMStatusDeleted {
-				container.Remove(eid)
-				return cid, nil
-			}
-
-			if channelID == "default" && cid != channelID {
-				container.Remove(sm.GetID())
-				if _, ok := m.containers[cid]; !ok {
-					m.containers[cid] = NewContainer()
-				}
-				m.containers[cid].Add(sm)
-			}
-			return cid, sm
-		}
-	}
-
-	return cid, nil
+func (m *Manager) loadMachine(stateID, stateType string) {
+	// load subscription.
 }
 
-func (m *Manager) isThisNode() bool {
-	return true
-}
-
-func (m *Manager) reloadActor(stateIDs []string) error {
-	// 判断 actor 是否在当前节点.
-	if m.isThisNode() {
-		var err error
-		for _, stateID := range stateIDs {
-			var stateMachine state.Machiner
-			base := &dao.Entity{ID: stateID, Type: SMTypeBasic}
-			if _, stateMachine = m.getMachiner("", stateID); nil != stateMachine {
-				log.Warn("load state machine", zfield.ID(stateID))
-			} else if stateMachine, err = m.loadOrCreate(m.ctx, "", false, base); nil == err { // nolint
-				continue
-			}
-			m.actorEnv.GetActorEnv(stateID)
-			// TODO: 更新state machine 的StateContext.
-		}
+func (m *Manager) reloadMachineEnv(stateIDs []string) {
+	for _, stateID := range stateIDs {
+		m.actorEnv.GetActorEnv(stateID)
+		// TODO: 更新state machine 的StateContext.
 	}
-	return nil
-}
-
-func (m *Manager) loadActor(ctx context.Context, typ string, id string) error {
-	_, err := m.loadOrCreate(ctx, "", false, &dao.Entity{ID: id, Type: typ})
-	return errors.Wrap(err, "load entity")
-}
-
-func (m *Manager) loadOrCreate(ctx context.Context, channelID string, flagCreate bool, base *dao.Entity) (sm state.Machiner, err error) {
-	log.Debug("load or create actor", zfield.ID(base.ID),
-		zap.String("type", base.Type), zap.String("owner", base.Owner), zap.String("source", base.Source))
-
-	var en *dao.Entity
-	repo := m.Resource().Repo()
-	if en, err = repo.GetEntity(ctx, base); nil == err {
-		base = en
-	} else {
-		log.Warn("load or create actor", zap.Error(err),
-			zfield.Eid(base.ID), zfield.Type(base.Type), zfield.Template(base.TemplateID))
-
-		// notfound.
-		if !flagCreate || !errors.Is(err, xerrors.ErrEntityNotFound) {
-			return nil, errors.Wrap(err, "load or create actor")
-		}
-	}
-
-	switch base.Type {
-	case SMTypeSubscription:
-		if sm, err = subscription.NewSubscription(ctx, base); nil != err {
-			return nil, errors.Wrap(err, "load subscription")
-		}
-	default:
-		// default base entity type.
-		if sm, err = state.NewState(ctx, base, m.dispatcher, m.resourceManager, nil); nil != err {
-			return nil, errors.Wrap(err, "load state machine")
-		}
-	}
-
-	if channelID == "" {
-		channelID = "defult"
-	}
-
-	if _, has := m.containers[channelID]; !has {
-		m.containers[channelID] = NewContainer()
-	}
-
-	m.actorEnv.GetActorEnv(sm.GetID())
-
-	m.containers[channelID].Add(sm)
-	return sm, nil
 }
 
 // Tools.

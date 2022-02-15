@@ -18,6 +18,8 @@ import (
 
 const defaultInboxCapcity int = 1000
 
+type IDKey struct{}
+
 type inbox struct {
 	id           string
 	size         int
@@ -51,7 +53,10 @@ func (ix *inbox) Consume(ctx context.Context, handler MessageHandler) error {
 			log.Error("parse event", zap.Error(err))
 			return errors.Wrap(err, "consume inbox")
 		}
-		handler(msgCtx)
+
+		ctx = context.WithValue(ctx, IDKey{}, ix.id)
+
+		handler(ctx, msgCtx)
 		return nil
 	})
 	return errors.Wrap(err, "consume inbox")

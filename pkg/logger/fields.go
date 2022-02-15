@@ -70,6 +70,10 @@ func ID(id string) zap.Field {
 	return zap.String("id", id)
 }
 
+func Channel(channel string) zap.Field {
+	return zap.String("channel", channel)
+}
+
 func Path(path string) zap.Field {
 	return zap.String("path", path)
 }
