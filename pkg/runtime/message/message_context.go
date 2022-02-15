@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// event extension fields definitions.
+	// event Extension fields definitions.
 	ExtEntityID        = "extenid"
 	ExtEntityType      = "extentype"
 	ExtEntityOwner     = "extowner"
@@ -23,6 +23,9 @@ const (
 	ExtChannelID       = "extchid"
 	ExtCallback        = "extcallback"
 	ExtAPIIdentify     = "extapiid"
+	ExtAPIRequestID    = "extreqid"
+	ExtAPIRespStatus   = "extrespstatus"
+	ExtAPIRespErrCode  = "extresperrcode"
 
 	ExtCloudEventID          = "exteventid"
 	ExtCloudEventSpec        = "exteventspec"

@@ -6,15 +6,18 @@ package v1
 
 import (
 	context "context"
-	json "encoding/json"
+	json "encoding/json" 
+	"io/ioutil"
+	http "net/http"
+	reflect "reflect"
+	"strings"
+
 	go_restful "github.com/emicklei/go-restful"
 	errors "github.com/tkeel-io/kit/errors"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
-	http "net/http"
-	reflect "reflect"
-)
 
-import transportHTTP "github.com/tkeel-io/kit/transport/http"
+	transportHTTP "github.com/tkeel-io/kit/transport/http"
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
@@ -33,19 +36,20 @@ func newProxyHTTPHandler(s ProxyHTTPServer) *ProxyHTTPHandler {
 }
 
 func (h *ProxyHTTPHandler) Respond(req *go_restful.Request, resp *go_restful.Response) {
-	in := RespondRequest{}
-	if err := transportHTTP.GetBody(req, &in.Data); err != nil {
+	defer req.Request.Body.Close()
+	bytes,err := ioutil.ReadAll(req.Request.Body)
+	if nil != err {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
-		return
+
+	meta := make(map[string]string)
+	for key, vals := range req.Request.Header {
+		meta[strings.ToLower(key)] = vals[0]
 	}
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
-
-	out, err := h.srv.Respond(ctx, &in)
+	out, err := h.srv.Respond(ctx, 		&RespondRequest{Metadata: meta, Data: bytes})
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())

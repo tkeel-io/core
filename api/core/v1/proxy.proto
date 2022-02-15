@@ -14,10 +14,6 @@ option java_package = "api.core.v1";
 
 service Proxy {
 	rpc Respond (RespondRequest) returns (RespondResponse) {
-		option (google.api.http) = {
-			post : "/respond"
-			body: "data"
-		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
         summary: "apis callback respond.";
         operation_id: "Respond";

@@ -962,40 +962,6 @@
         ]
       }
     },
-    "/respond": {
-      "post": {
-        "summary": "apis callback respond.",
-        "operationId": "Respond",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1RespondResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "byte"
-            }
-          }
-        ],
-        "tags": [
-          "Proxy"
-        ]
-      }
-    },
     "/search": {
       "delete": {
         "summary": "Delete objects by id",

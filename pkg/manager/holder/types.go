@@ -1,17 +1,9 @@
 package holder
 
-import "context"
+import (
+	"context"
 
-type Status string
-
-func (s Status) String() string {
-	return string(s)
-}
-
-const (
-	StatusOK       Status = "OK"
-	StatusError    Status = "Error"
-	StatusCanceled Status = "Canceled"
+	"github.com/tkeel-io/core/pkg/types"
 )
 
 type Holder interface {
@@ -21,7 +13,7 @@ type Holder interface {
 
 type Response struct {
 	ID       string
-	Status   Status
+	Status   types.Status
 	ErrCode  string
 	Metadata map[string]string
 	Data     []byte

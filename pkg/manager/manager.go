@@ -37,6 +37,7 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -147,6 +148,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
 	ev.SetExtension(message.ExtMessageType, msgTypeSync)
+	ev.SetExtension(message.ExtAPIRequestID, eventID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APICreateEntity.String())
 	ev.SetExtension(message.ExtMessageSender, eventSender("CreateEntity"))
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
@@ -167,11 +169,11 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	log.Debug("processing message", zfield.Eid(en.ID),
+	log.Debug("processing message", zfield.Eid(en.ID), zfield.ReqID(eventID),
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	resp := m.holder.Wait(ctx, eventID)
-	if resp.Status != holder.StatusOK {
+	if resp.Status != types.StatusOK {
 		log.Error("create entity",
 			zap.Error(xerrors.New(resp.ErrCode)),
 			zfield.Eid(en.ID), zfield.Base(en.JSON()))
@@ -180,7 +182,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 
 	// decode resp.Data.
 
-	return nil, nil
+	return &Base{}, nil
 }
 
 // DeleteEntity delete an entity from manager.
@@ -235,7 +237,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		zfield.MsgID(msgID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	resp := m.holder.Wait(ctx, eventID)
-	if resp.Status != holder.StatusOK {
+	if resp.Status != types.StatusOK {
 		log.Error("create entity",
 			zap.Error(xerrors.New(resp.ErrCode)),
 			zfield.Eid(en.ID), zfield.Base(en.JSON()))

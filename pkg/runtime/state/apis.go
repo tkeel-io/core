@@ -11,6 +11,7 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/runtime/message"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -67,11 +68,16 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	ev.SetExtension(message.ExtEntityOwner, s.Owner)
 	ev.SetExtension(message.ExtMessageReceiver, s.ID)
 	ev.SetExtension(message.ExtEntitySource, s.Source)
+	ev.SetExtension(message.ExtAPIRespStatus, types.StatusOK.String())
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+	ev.SetExtension(message.ExtAPIRequestID, msgCtx.Get(message.ExtAPIRequestID))
 	ev.SetExtension(message.ExtMessageType, message.MessageTypeRespond.String())
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	log.Debug("call CreateEntity============================", zfield.ID(s.ID))
+	ev.SetData([]byte("{}"))
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
 	s.dispatcher.Dispatch(ctx, ev)
 
 	return nil

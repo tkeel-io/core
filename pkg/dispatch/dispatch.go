@@ -56,11 +56,17 @@ func New(ctx context.Context, id string, name string, enabled bool, repo reposit
 
 func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
 	var err error
+	var data []byte
 	var msgType string
 	var callbackEnd string
-	data, _ := ev.DataBytes()
 	ev.ExtensionAs(message.ExtMessageType, &msgType)
 	ev.ExtensionAs(message.ExtCallback, &callbackEnd)
+
+	if data, err = ev.DataBytes(); nil != err {
+		log.Error("get data", zap.Error(err),
+			zfield.ID(ev.ID()), zfield.Header(message.GetAttributes(ev)))
+		return errors.Wrap(err, "dispatch event")
+	}
 
 	switch message.MessageType(msgType) {
 	case message.MessageTypeRespond:

@@ -93,6 +93,9 @@ func (tm *httpTransmitter) process(in *Request) {
 			zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
 	}
 
+	log.Debug("process request completed", zfield.ID(in.PackageID),
+		zfield.Status(rsp.Status), zap.Int("status_code", rsp.StatusCode))
+
 	defer rsp.Body.Close()
 	io.Copy(ioutil.Discard, rsp.Body)
 }
