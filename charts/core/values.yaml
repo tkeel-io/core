@@ -8,15 +8,13 @@ image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.2.0"
+  tag: "v0.4.0"
 
 nameOverride: "core"
 fullnameOverride: "core"
 
 daprConfig: core
 appPort: 6789
-middleware:
-  name: tkeel-middleware
 
 resources:
   {}
@@ -43,13 +41,4 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-elasticsearch:
-  replicas: 1
-  minimumMasterNodes: 1
-
-etcd:
-  auth:
-    rbac:
-      enabled: false
-  fullnameOverride: etcd
+# middleware configuration
