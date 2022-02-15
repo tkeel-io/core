@@ -93,6 +93,8 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 	msgCtx.Headers.SetOwner(interface2string(values["type"]))
 	msgCtx.Headers.SetOwner(interface2string(values["source"]))
 
+	log.Debug("received event", zap.String("id", req.Id), zap.Any("event", req))
+
 	s.entityManager.OnMessage(ctx, msgCtx)
 	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
 }

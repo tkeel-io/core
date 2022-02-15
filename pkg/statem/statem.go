@@ -683,6 +683,10 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	}
 
 	for stateID, msg := range messages {
+		if stateID == s.ID {
+			log.Warn("send message to self", logger.EntityID(s.ID))
+			continue
+		}
 		s.stateManager.SendMsg(MessageContext{
 			Headers: Header{
 				MessageCtxHeaderSourceID: s.ID,
@@ -706,6 +710,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 
 	var err error
+	var activeKeys []mapper.WatchKey
 	for mapperID := range actives {
 		input := make(map[string]constraint.Node)
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
@@ -748,11 +753,28 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 				if err = s.setProperty(constraint.PatchOpReplace, propertyKey, value); nil != err {
 					log.Error("set property failed", logger.EntityID(s.ID),
 						zap.String("property_key", propertyKey), zap.Error(err))
+					continue
 				}
 				s.LastTime = time.Now().UnixNano() / 1e6
+				activeKeys = append(activeKeys, mapper.WatchKey{EntityId: s.ID, PropertyKey: propertyKey})
 			}
 		}
 	}
+
+	s.activeTentacle(unique(activeKeys))
+}
+
+func unique(actives []mapper.WatchKey) []mapper.WatchKey {
+	umap := make(map[string]mapper.WatchKey)
+	for _, w := range actives {
+		umap[w.String()] = w
+	}
+
+	actives = []mapper.WatchKey{}
+	for _, w := range umap {
+		actives = append(actives, w)
+	}
+	return actives
 }
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {

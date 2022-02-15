@@ -5,6 +5,6 @@ metadata:
 spec:
   topic: core-pub
   route: /v1/topic
-  pubsubname: core-pubsub
+  pubsubname: core-pubsub111
 scopes:
   - core
