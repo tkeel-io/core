@@ -341,13 +341,11 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		log.Error("append mapper failed.", logger.EntityID(req.Id), zap.Error(err))
 		return nil, errors.Wrap(ErrEntityMapperNil, "append mapper to entity failed")
 	}
-
 	// set properties.
 	entity, err = s.entityManager.AppendMapper(ctx, entity)
 	if nil != err {
 		return
 	}
-
 	out = s.entity2EntityResponse(entity)
 	return
 }

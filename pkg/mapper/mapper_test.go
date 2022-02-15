@@ -24,9 +24,9 @@ import (
 
 func TestMapper(t *testing.T) {
 	input := map[string]constraint.Node{
-		"entity1.property1":      constraint.NewNode("123"),
-		"entity2.property2.name": constraint.NewNode("123"),
-		"entity2.property3":      constraint.NewNode("123"),
+		"entity1.property1":      constraint.NewNode(123),
+		"entity2.property2.name": constraint.NewNode("tomas"),
+		"entity2.property3":      constraint.NewNode(123),
 	}
 
 	tqlTexts := []struct {
@@ -35,10 +35,9 @@ func TestMapper(t *testing.T) {
 		input    map[string]constraint.Node
 		computed bool
 	}{
-		{"tql1", "insert into device1 select *", map[string]constraint.Node{}, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
-		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
-		{"tql4", "insert into sub123 select test123.temp", nil, false},
+		{"tql1", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
+		{"tql2", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
+		{"tql3", "insert into sub123 select test123.temp", nil, false},
 	}
 
 	for _, tqlInst := range tqlTexts {
@@ -65,4 +64,73 @@ func TestMapper(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExec(t *testing.T) {
+	tqlString := `insert into 7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6 select f8f0327b-51e4-400a-a2e1-c95e371ec99d.path  + '/' + '7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6' as path`
+
+	mInstance, err := NewMapper("mapper123", tqlString)
+
+	t.Log(err)
+
+	t.Log("target: ", mInstance.TargetEntity())
+	t.Log("sources: ", mInstance.SourceEntities())
+	for _, tentacle := range mInstance.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	result, err := mInstance.Exec(map[string]constraint.Node{
+		"f8f0327b-51e4-400a-a2e1-c95e371ec99d.path": constraint.NewNode("test"),
+		"entity.property2.name":                     constraint.NewNode("123"),
+		"entity.property3":                          constraint.NewNode("g123"),
+	})
+
+	t.Log(err)
+	t.Log(result)
+}
+
+func TestExec2(t *testing.T) {
+	tqlString := `insert into bc90e5ba-4d15-4738-bf38-fdfe16740d9c select 0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath + '/bc90e5ba-4d15-4738-bf38-fdfe16740d9c'  as sysField._spacePath`
+
+	mInstance, err := NewMapper("mapper123", tqlString)
+
+	t.Log(err)
+
+	t.Log("target: ", mInstance.TargetEntity())
+	t.Log("sources: ", mInstance.SourceEntities())
+	for _, tentacle := range mInstance.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	result, err := mInstance.Exec(map[string]constraint.Node{
+		"0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath": constraint.NewNode("test"),
+		"entity.property2.name": constraint.NewNode("123"),
+		"entity.property3":      constraint.NewNode("g123"),
+	})
+
+	t.Log(err)
+	t.Log(result)
+}
+
+func TestExec3(t *testing.T) {
+	tqlString := `insert into 43ce9690-7c5d-4e62-be07-fb16a13f67d0 select 0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath + '/43ce9690-7c5d-4e62-be07-fb16a13f67d0'  as sysField._spacePath`
+
+	mInstance, err := NewMapper("mapper123", tqlString)
+
+	t.Log(err)
+
+	t.Log("target: ", mInstance.TargetEntity())
+	t.Log("sources: ", mInstance.SourceEntities())
+	for _, tentacle := range mInstance.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	result, err := mInstance.Exec(map[string]constraint.Node{
+		"0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath": constraint.NewNode("test"),
+		"entity.property2.name": constraint.NewNode("123"),
+		"entity.property3":      constraint.NewNode("g123"),
+	})
+
+	t.Log(err)
+	t.Log(result)
 }

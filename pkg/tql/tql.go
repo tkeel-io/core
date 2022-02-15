@@ -24,7 +24,7 @@ import (
 type tql struct {
 	text     string
 	config   TQLConfig
-	listener Listener
+	listener *Listener
 }
 
 func NewTQL(tqlString string) (TQL, error) {
@@ -57,14 +57,15 @@ func (t *tql) Tentacles() []TentacleConfig {
 func (t *tql) Exec(in map[string]constraint.Node) (map[string]constraint.Node, error) {
 	input := make(map[string][]byte)
 	for key, val := range in {
-		input[key] = []byte(val.String())
+		switch val.Type() {
+		case constraint.String:
+			input[key] = []byte("'" + val.String() + "'")
+		default:
+			input[key] = []byte(val.String())
+		}
 	}
+
 	ret := t.listener.GetComputeResults(input)
 
-	out := make(map[string]constraint.Node)
-	for key, val := range ret {
-		out[key] = constraint.NewNode(val)
-	}
-
-	return out, nil
+	return ret, nil
 }

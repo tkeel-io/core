@@ -50,7 +50,7 @@ var (
 		CoroutinePoolSize: 500,
 	}
 	_defaultLogConfig = LogConfig{
-		Level: "info",
+		Level: "debug",
 	}
 	_defaultUseSearchEngine = "elasticsearch"
 	_defaultESConfig        = ESConfig{

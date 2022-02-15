@@ -84,7 +84,7 @@ func NewEntityManager(ctx context.Context, mgr *runtime.Manager, searchClient pb
 }
 
 func (m *entityManager) Start() error {
-	go m.stateManager.Start()
+	m.stateManager.Start()
 	return errors.Wrap(nil, "start entity manager")
 }
 
@@ -275,12 +275,11 @@ func (m *entityManager) AppendMapper(ctx context.Context, en *statem.Base) (base
 		log.Info("append mapper", logger.EntityID(en.ID), zap.Any("mapper", mm))
 	}
 
-	// 有两种方式来对mapper进行变更，有了etcd的watch，这里的调用考虑异步.
-	if err = m.stateManager.AppendMapper(ctx, en); nil != err {
-		log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
-		return nil, errors.Wrap(err, "append mapper")
-	}
-
+	// // 有两种方式来对mapper进行变更，有了etcd的watch，这里的调用考虑异步.
+	// if err = m.stateManager.AppendMapper(ctx, en); nil != err {
+	// 	log.Error("append mapper", zap.Error(err), logger.EntityID(en.ID))
+	// 	return nil, errors.Wrap(err, "append mapper")
+	// }
 	base, err = m.getEntityFromState(ctx, en)
 	return base, errors.Wrap(err, "append mapper")
 }

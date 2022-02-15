@@ -223,7 +223,7 @@ service Entity {
     };
     rpc PatchConfigs(PatchConfigsRequest) returns (EntityResponse) {
       option (google.api.http) = {
-			post : "/entities/{id}/configs/patch"
+			put : "/entities/{id}/configs/patch"
       body: "configs"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {

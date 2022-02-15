@@ -17,6 +17,8 @@ limitations under the License.
 package mapper
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/tql"
@@ -43,6 +45,11 @@ func NewMapper(id, tqlText string) (Mapper, error) {
 // ID returns mapper id.
 func (m *mapper) ID() string {
 	return m.id
+}
+
+func (m *mapper) Name() string {
+	arr := strings.Split(m.id, ".")
+	return arr[len(arr)-1]
 }
 
 // String returns MQL text.

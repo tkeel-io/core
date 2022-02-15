@@ -1,12 +1,9 @@
- /*
+/*
  Copyright © 2021 NAME HERE <EMAIL ADDRESS>
-
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
      http://www.apache.org/licenses/LICENSE-2.0
-
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,14 +62,25 @@ SUB:                '-';
 DOT:                '.';
 TRUE:               T R U E;
 FALSE:              F A L S E;
-ENTITYNAME:         [a-zA-Z_#*0-9]([a-zA-Z_\-#$@]+[0-9]* | [0-9]*[a-zA-Z_\-#$@]+) [a-zA-Z_\-#$@0-9]*;
-PROPERTYNAME:       '.' [a-zA-Z_#*][a-zA-Z_\-#$@0-9.]*;
+INDENTIFIER:        [0-9a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
+ENTITYNAME:         [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
+PROPERTYNAME:       [a-zA-Z_#*]([a-zA-Z_\-#$@0-9])*;
 TARGETENTITY:       [a-zA-Z_#*][a-zA-Z_\-#$@0-9]*;
 NUMBER:             '0' | [1-9][0-9]* ;
 INTEGER:            ('+' | '-')? NUMBER;
 FLOAT:              ('+' | '-')? (NUMBER+ DOT NUMBER+ |  NUMBER+ DOT | DOT NUMBER+);
 STRING:             '\'' (~'\'' | '\'\'')* '\'';
 WHITESPACE:         [ \r\n\t]+ -> skip;
+
+//INDENTIFIER:        [a-zA-Z_#][a-zA-Z_\-#$@0-9]*;
+//NUMBER:             '0' | [1-9][0-9]* ;
+//INTEGER:            ('+' | '-')? NUMBER;
+//FLOAT:              ('+' | '-')? (NUMBER+ DOT NUMBER+ |  NUMBER+ DOT | DOT NUMBER+);
+//TOPICITEM:          [a-zA-Z_/\-#$@0-9]+;
+//PATHITEM:           TOPICITEM (ARRAYITEM)? (DOT TOPICITEM (ARRAYITEM)?)*;
+//ARRAYITEM:          '[' NUMBER ']' | '[' '#' ']';
+//STRING:             '\'' (~'\'' | '\'\'')* '\'';
+//WHITESPACE:         [ \r\n\t]+ -> skip;
 
 
 
@@ -84,31 +92,49 @@ root
 
 // 2.1 Select
 fields
-    : expr (',' expr)*
+    : field (',' field)*                                      
     ;
 
+field
+    : expr (AS targetProperty)?
+    ;
+
+
 targetEntity
-    : ENTITYNAME
+    : INDENTIFIER
     ;
 
 expr
-    : sourceEntity                                  # Expression
-    | sourceEntity+ AS targetProperty+              # Expression
+    : constant                                      # CONSTANT 
     | expr op=('*'|'/'|'%') expr                    # DummyMulDiv
     | expr op=('+'|'-') expr                        # DummyAddSub
     | expr op=(EQ | GT | LT | GTE | LTE | NE) expr  # DummyCompareValue
-    ;
+    | source                                        # ExpressionZ
+    ;                                             
 
+constant
+    : STRING                                         # SString
+    ;
 
 
 // 2.1 entity
-sourceEntity
-    : '*'
-    | ENTITYNAME (PROPERTYNAME)?
+source
+    : sourceEntity propertyEntity
     ;
 
+sourceEntity
+    :INDENTIFIER
+    ;
+
+propertyEntity
+    : '.*'
+    | ('.' INDENTIFIER)+
+    ;
+
+
+
 targetProperty
-    : ENTITYNAME
+    : INDENTIFIER ('.' INDENTIFIER)*     
     ;
 
 
@@ -120,6 +146,7 @@ numExp
    | numExp op=('+'|'-') numExp # AddSub
    | numExp op=(EQ | GT | LT | GTE | LTE | NE) numExp  # CompareValue
    | NUMBER                             # Number
+   | STRING                             # String
    ;
 
 fragment A: [aA];

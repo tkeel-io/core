@@ -140,7 +140,9 @@ func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleI
 			for _, id := range tentacleIDs {
 				if tentacle, ok := mCache.tentacles[id]; ok {
 					delete(mCache.tentacles, id)
-					targets = append(targets, tentacle.TargetID())
+					if tentacle.Type() == mapper.TentacleTypeEntity {
+						targets = append(targets, tentacle.TargetID())
+					}
 				}
 			}
 			delete(mCache.mappers, mapperID)
@@ -186,7 +188,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 	mCache.mappers[m.ID()] = m
 	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
 
-	return effects
+	return append(effects, m.TargetEntity())
 }
 
 // removeMapper remove mapper from Environment.
