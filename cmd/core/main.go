@@ -113,9 +113,9 @@ func core(cmd *cobra.Command, args []string) {
 	// user flags input recover config file content.
 	envETCD := os.Getenv("TKEEL_REGISTRY")
 	if envETCD != "" {
-		etcdUrl, err := url.Parse(envETCD)
+		etcdURL, err := url.Parse(envETCD)
 		if err == nil {
-			_etcdBrokers = strings.Split(etcdUrl.Host, ",")
+			_etcdBrokers = strings.Split(etcdURL.Host, ",")
 		}
 	}
 	if _etcdBrokers != nil {
