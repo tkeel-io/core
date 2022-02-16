@@ -28,6 +28,10 @@ resources:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+middleware:
+  database: mysql://root:a3fks=ixmeb82a@tkeel-middleware-mysql:3306/tkeelauth
+  search: elasticsearch://admin:admin@tkeel-middleware-elasticsearch:9200
+  service_registry: etcd://tkeel-middleware-etcd:2379
 
 autoscaling:
   enabled: false
