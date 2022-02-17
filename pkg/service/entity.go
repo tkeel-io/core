@@ -279,7 +279,10 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (out *pb.ListEntityResponse, err error) {
 	searchReq := &pb.SearchRequest{}
 	searchReq.Query = req.Query
-	searchReq.Page = req.Page
+	searchReq.PageNum = req.PageNum
+	searchReq.PageSize = req.PageSize
+	searchReq.OrderBy = req.OrderBy
+	searchReq.IsDescending = req.IsDescending
 	searchReq.Condition = req.Condition
 
 	var resp *pb.SearchResponse

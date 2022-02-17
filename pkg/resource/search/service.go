@@ -41,9 +41,13 @@ func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 		Source:    request.Source,
 		Owner:     request.Owner,
 		Query:     request.Query,
-		Page:      request.Page,
 		Condition: request.Condition,
 	}
+	req.Page = &pb.Pager{}
+	req.Page.Limit = int64(request.PageSize)
+	req.Page.Offset = int64(request.PageSize * (request.PageNum - 1))
+	req.Page.Reverse = request.IsDescending
+	req.Page.Sort = request.OrderBy
 
 	// TODO: Multiple Driver Services One Response support.
 	// assumption len(s.selectOpt) == 1.

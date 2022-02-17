@@ -23,8 +23,8 @@ require (
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tkeel-io/collectjs v0.0.0-20211130035606-e8d64c4a2a39
-	github.com/tkeel-io/kit v0.0.0-20211122161648-31b3986683f2
-	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730
+	github.com/tkeel-io/kit v0.0.0-20220216070111-216ac6e8fa29
+	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20220215024719-5296e91b6ff3
 	go.etcd.io/etcd/api/v3 v3.5.1
 	go.etcd.io/etcd/client/v3 v3.5.1
 	go.uber.org/atomic v1.9.0
@@ -32,8 +32,8 @@ require (
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
-	google.golang.org/grpc v1.43.0
+	google.golang.org/genproto v0.0.0-20220216160803-4663080d8bc8
+	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.27.1
 )
 
