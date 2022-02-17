@@ -293,7 +293,8 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	out = &pb.ListEntityResponse{}
 	out.Total = resp.Total
-	out.Limit = resp.Limit
+	out.PageNum = resp.PageNum
+	out.PageSize = resp.PageSize
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:

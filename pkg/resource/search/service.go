@@ -68,8 +68,8 @@ func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 		out.Items = append(out.Items, val)
 	}
 	out.Total = resp.Total
-	out.Limit = resp.Limit
-	out.Offset = resp.Offset
+	out.PageNum = request.PageNum
+	out.PageSize = request.PageSize
 
 	return out, nil
 }

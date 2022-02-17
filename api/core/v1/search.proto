@@ -91,9 +91,8 @@ message SearchRequest {
 
 message SearchResponse {
     int64 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "count of the results"}];
-    int64 page = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "page number"}];
-    int64 limit = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "limit"}];
-    int64 offset = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "offset"}];
+    int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
+    int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
     repeated google.protobuf.Value items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "items of the results"}];
 }
 
