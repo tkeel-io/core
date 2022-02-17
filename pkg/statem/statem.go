@@ -81,10 +81,10 @@ type Base struct {
 	Version      int64                        `json:"version" msgpack:"version" mapstructure:"version"`
 	LastTime     int64                        `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
 	Mappers      []MapperDesc                 `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
-	KValues      map[string]constraint.Node   `json:"-" msgpack:"properties" mapstructure:"-"` //nolint
+	KValues      map[string]constraint.Node   `json:"-" msgpack:"properties" mapstructure:"-"`
 	Configs      map[string]constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
 	ConfigsBytes []byte                       `json:"-" msgpack:"configs_bytes" mapstructure:"-"`
-	Properties   map[string]interface{}       `json:"properties" msgpack:"-" mapstructure:"-"` //nolint
+	Properties   map[string]interface{}       `json:"properties" msgpack:"-" mapstructure:"-"`
 }
 
 func (b *Base) Copy() Base {
@@ -93,7 +93,7 @@ func (b *Base) Copy() Base {
 	return *bb
 }
 
-func (b *Base) CopyPropertiesForJson() {
+func (b *Base) CopyPropertiesForJSON() {
 	b.Properties = make(map[string]interface{})
 	for k, v := range b.KValues {
 		b.Properties[k] = v.Value()
