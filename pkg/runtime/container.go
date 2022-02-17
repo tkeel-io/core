@@ -37,12 +37,13 @@ type Container struct {
 	cancel context.CancelFunc
 }
 
-func NewContainer(ctx context.Context, id string) *Container {
+func NewContainer(ctx context.Context, id string, mgr *Manager) *Container {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Container{
-		ctx:    ctx,
-		cancel: cancel,
-		states: make(map[string]state.Machiner),
+		ctx:     ctx,
+		cancel:  cancel,
+		manager: mgr,
+		states:  make(map[string]state.Machiner),
 	}
 }
 
@@ -79,6 +80,8 @@ func (c *Container) Load(ctx context.Context, stateID string) (state.Machiner, e
 
 	return machine, errors.Wrap(err, "load machine")
 }
+
+func (c *Container) Close() {}
 
 func makeMachine(ctx context.Context, mgr *Manager, en *dao.Entity) (machine state.Machiner, err error) {
 	// make state machine.

@@ -20,7 +20,6 @@ import (
 	"context"
 	"sync"
 
-	ants "github.com/panjf2000/ants/v2"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -34,7 +33,6 @@ import (
 )
 
 type Manager struct {
-	coroutinePool   *ants.Pool
 	containers      map[string]*Container
 	actorEnv        environment.IEnvironment
 	resourceManager types.ResourceManager
@@ -48,11 +46,6 @@ type Manager struct {
 }
 
 func NewManager(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher) (types.Manager, error) {
-	coroutinePool, err := ants.NewPool(5000)
-	if err != nil {
-		return nil, errors.Wrap(err, "new coroutine pool")
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	stateManager := &Manager{
 		ctx:             ctx,
@@ -62,7 +55,6 @@ func NewManager(ctx context.Context, resourceManager types.ResourceManager, disp
 		containers:      make(map[string]*Container),
 		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
-		coroutinePool:   coroutinePool,
 		lock:            sync.RWMutex{},
 	}
 

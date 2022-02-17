@@ -8,7 +8,6 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -34,7 +33,7 @@ type inbox struct {
 func New(ctx context.Context, receiver pubsub.Receiver) Inboxer {
 	ctx, cancel := context.WithCancel(ctx)
 	return &inbox{
-		id:      util.UUID(),
+		id:      receiver.ID(),
 		ctx:     ctx,
 		cancel:  cancel,
 		recever: receiver,

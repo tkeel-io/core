@@ -54,6 +54,7 @@ func (m *Manager) listQueue() {
 	for id, inboxIns := range m.inboxes {
 		log.Info("start consumer inbox", zfield.ID(id))
 		inboxIns.Consume(m.ctx, m.handleMessage)
+		m.containers[id] = NewContainer(m.ctx, id, m)
 	}
 }
 
@@ -90,12 +91,14 @@ func (m *Manager) watchQueue() {
 					// start consumer inbox.
 					log.Info("start consumer inbox", zfield.ID(queue.ID))
 					inboxIns.Consume(m.ctx, m.handleMessage)
+					m.containers[inboxIns.ID()] = NewContainer(m.ctx, inboxIns.ID(), m)
 				}
 			default:
 			}
 		case dao.DELETE:
 			if inboxInst, has := m.inboxes[queue.ID]; has {
 				inboxInst.Close()
+				m.containers[inboxInst.ID()].Close()
 				log.Info("remove inbox", zfield.ID(inboxInst.ID()))
 				log.Info("remove queue", zfield.ID(queue.ID),
 					zfield.Type(queue.Type.String()), zfield.Name(queue.Name))
