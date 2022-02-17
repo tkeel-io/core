@@ -3,7 +3,6 @@ package mock
 import (
 	"context"
 
-	pb "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/runtime/state"
@@ -44,7 +43,7 @@ func (m *APIManagerMock) SetProperties(ctx context.Context, en *apim.Base) (base
 }
 
 // PatchEntity patch entity properties.
-func (m *APIManagerMock) PatchEntity(ctx context.Context, en *apim.Base, patchData []*pb.PatchData) (base *apim.Base, err error) {
+func (m *APIManagerMock) PatchEntity(ctx context.Context, en *apim.Base, patchData []state.PatchData) (base *apim.Base, err error) {
 	return en, nil
 }
 
@@ -69,7 +68,7 @@ func (m *APIManagerMock) SetConfigs(ctx context.Context, en *apim.Base) (base *a
 }
 
 // PatchConfigs patch entity configs.
-func (m *APIManagerMock) PatchConfigs(ctx context.Context, en *apim.Base, patchData []*state.PatchData) (base *apim.Base, err error) {
+func (m *APIManagerMock) PatchConfigs(ctx context.Context, en *apim.Base, patchData []state.PatchData) (base *apim.Base, err error) {
 	return en, nil
 }
 

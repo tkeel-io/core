@@ -71,10 +71,16 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	ev.SetExtension(message.ExtAPIRespStatus, types.StatusOK.String())
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
 	ev.SetExtension(message.ExtAPIRequestID, msgCtx.Get(message.ExtAPIRequestID))
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeRespond.String())
+	ev.SetExtension(message.ExtMessageType, message.MessageTypeAPIRespond.String())
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
-	ev.SetData([]byte("{}"))
+	ev.SetData(msgCtx.Message())
+
+	if err := ev.Validate(); nil != err {
+		log.Error("validate response", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 

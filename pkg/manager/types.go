@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 
-	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
@@ -49,7 +48,7 @@ type APIManager interface {
 	// SetProperties set entity properties.
 	SetProperties(context.Context, *Base) (*Base, error)
 	// PatchEntity patch entity properties.
-	PatchEntity(context.Context, *Base, []*pb.PatchData) (*Base, error)
+	PatchEntity(context.Context, *Base, []state.PatchData) (*Base, error)
 	// AppendMapper append entity mapper.
 	AppendMapper(context.Context, *Base) (*Base, error)
 	// RemoveMapper remove entity mapper.
@@ -59,7 +58,7 @@ type APIManager interface {
 	// SetConfigs set entity configs.
 	SetConfigs(context.Context, *Base) (*Base, error)
 	// PatchConfigs patch entity configs.
-	PatchConfigs(context.Context, *Base, []*state.PatchData) (*Base, error)
+	PatchConfigs(context.Context, *Base, []state.PatchData) (*Base, error)
 	// QueryConfigs returns entity configs.
 	QueryConfigs(context.Context, *Base, []string) (*Base, error)
 }

@@ -9,6 +9,10 @@ import (
 	msgpack "github.com/shamaton/msgpack/v2"
 )
 
+func GetEntityCodec() entityCodec { //nolint
+	return entityCodec{}
+}
+
 type entityCodec struct {
 }
 

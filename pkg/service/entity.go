@@ -146,9 +146,11 @@ func (s *EntityService) PatchEntity(ctx context.Context, req *pb.PatchEntityRequ
 
 	switch kv := req.Properties.AsInterface().(type) {
 	case []interface{}:
-		patchData := make([]*pb.PatchData, 0)
-		data, _ := json.Marshal(kv)
-		if err = json.Unmarshal(data, &patchData); nil != err {
+		patchData := make([]state.PatchData, 0)
+		if data, err := json.Marshal(kv); nil != err { //nolint
+			log.Error("patch entity failed.", zfield.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
+			return nil, ErrEntityInvalidParams
+		} else if err = json.Unmarshal(data, &patchData); nil != err {
 			log.Error("patch entity failed.", zfield.Eid(req.Id), zap.Error(ErrEntityInvalidParams))
 			return nil, ErrEntityInvalidParams
 		}
@@ -181,8 +183,8 @@ func (s *EntityService) PatchEntityZ(ctx context.Context, req *pb.PatchEntityReq
 	return s.PatchEntity(ctx, req)
 }
 
-func checkPatchData(patchData *pb.PatchData) error {
-	if constraint.IsReversedOp(patchData.Operator) {
+func checkPatchData(patchData state.PatchData) error {
+	if constraint.IsReversedOp(patchData.Operator.String()) {
 		return constraint.ErrJSONPatchReservedOp
 	} else if !constraint.IsValidPath(patchData.Path) {
 		return constraint.ErrPatchPathInvalid
@@ -408,9 +410,9 @@ func (s *EntityService) AppendConfigs(ctx context.Context, in *pb.AppendConfigsR
 		return out, err
 	}
 
-	pds := make([]*state.PatchData, 0)
+	pds := make([]state.PatchData, 0)
 	for key, cfg := range entity.Configs {
-		pds = append(pds, &state.PatchData{
+		pds = append(pds, state.PatchData{
 			Value:    cfg,
 			Path:     key,
 			Operator: constraint.PatchOpReplace,
@@ -437,9 +439,9 @@ func (s *EntityService) RemoveConfigs(ctx context.Context, in *pb.RemoveConfigsR
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyIds, ",")
-	pds := make([]*state.PatchData, 0)
+	pds := make([]state.PatchData, 0)
 	for index := range propertyIDs {
-		pds = append(pds, &state.PatchData{
+		pds = append(pds, state.PatchData{
 			Path:     propertyIDs[index],
 			Operator: constraint.PatchOpRemove,
 		})
@@ -491,7 +493,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 			return nil, ErrEntityInvalidParams
 		}
 
-		var pds []*state.PatchData
+		var pds []state.PatchData
 		for _, pd := range patchData {
 			var cfg constraint.Config
 			switch value := pd.Value.AsInterface().(type) {
@@ -501,7 +503,7 @@ func (s *EntityService) PatchConfigs(ctx context.Context, in *pb.PatchConfigsReq
 				}
 			}
 
-			pds = append(pds, &state.PatchData{Path: pd.Path,
+			pds = append(pds, state.PatchData{Path: pd.Path,
 				Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
 		}
 

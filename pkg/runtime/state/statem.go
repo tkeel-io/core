@@ -177,7 +177,7 @@ func (s *statem) Invoke(msgCtx message.Context) error {
 	msgType := msgCtx.Get(message.ExtMessageType)
 
 	switch message.MessageType(msgType) {
-	case message.MessageTypeSync:
+	case message.MessageTypeAPIRequest:
 		actives := s.callAPIs(msgCtx.Context(), msgCtx)
 		s.activeTentacle(actives)
 	case message.MessageTypeState:

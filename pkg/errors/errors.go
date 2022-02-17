@@ -21,6 +21,7 @@ var (
 	ErrInvalidEntityParams      = errors.New("Core.Entity.Params.Invalid")
 	ErrInvalidHTTPRequest       = errors.New("Core.Transport.Http.Request.Invalid")
 	ErrInvalidHTTPInited        = errors.New("Core.Transport.Http.Inited")
+	ErrTemplateNotFound         = errors.New("Core.Template.NotFound")
 )
 
 func New(code string) error {

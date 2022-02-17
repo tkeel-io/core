@@ -69,7 +69,7 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
 	}
 
 	switch message.MessageType(msgType) {
-	case message.MessageTypeRespond:
+	case message.MessageTypeAPIRespond:
 		log.Debug("dispatch callback", zfield.ID(ev.ID()),
 			zfield.Header(message.GetAttributes(ev)))
 		d.transmitter.Do(ctx, &transport.Request{
