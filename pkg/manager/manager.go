@@ -177,8 +177,127 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	}, nil
 }
 
+// GetProperties returns Base.
+func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
+	var (
+		err error
+		ev  cloudevents.Event
+	)
+
+	reqID := util.UUID()
+	elapsedTime := util.NewElapsed()
+	log.Info("entity.GetProperties", zfield.Eid(en.ID), zfield.Type(en.Type),
+		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
+
+	// create event & set payload.
+	if ev, err = m.makeEvent(&dao.Entity{
+		ID:     en.ID,
+		Type:   en.Type,
+		Owner:  en.Owner,
+		Source: en.Source,
+	}); nil != err {
+		log.Info("get entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
+		return nil, errors.Wrap(err, "get entity")
+	}
+
+	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
+		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "get entity")
+	}
+
+	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
+
+	// hold request, wait response.
+	resp := m.holder.Wait(ctx, reqID)
+	if resp.Status != types.StatusOK {
+		log.Error("get entity", zfield.Eid(en.ID),
+			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
+		return nil, xerrors.New(resp.ErrCode)
+	}
+
+	// decode response.
+	var apiResp dao.Entity
+	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
+		log.Error("get entity, decode response",
+			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "get entity, decode response")
+	}
+
+	log.Info("processing completed", zfield.Eid(en.ID),
+		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
+
+	return &Base{
+		ID:         apiResp.ID,
+		Type:       apiResp.Type,
+		Owner:      apiResp.Owner,
+		Source:     apiResp.Source,
+		Properties: apiResp.Properties,
+	}, nil
+}
+
+func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) {
+	panic("implement me")
+}
+
+// DeleteEntity delete an entity from manager.
+func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
+	var (
+		err error
+		ev  cloudevents.Event
+	)
+
+	reqID := util.UUID()
+	elapsedTime := util.NewElapsed()
+	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
+		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
+
+	// create event & set payload.
+	if ev, err = m.makeEvent(&dao.Entity{
+		ID:         en.ID,
+		Type:       en.Type,
+		Owner:      en.Owner,
+		Source:     en.Source,
+		Properties: en.Properties,
+	}); nil != err {
+		log.Error("delete entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
+		return errors.Wrap(err, "delete entity")
+	}
+
+	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
+	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
+		log.Error("delete entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return errors.Wrap(err, "delete entity, dispatch event")
+	}
+
+	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
+
+	// hold request, wait response.
+	resp := m.holder.Wait(ctx, reqID)
+	if resp.Status != types.StatusOK {
+		log.Error("delete entity", zfield.Eid(en.ID),
+			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
+		return xerrors.New(resp.ErrCode)
+	}
+
+	// decode response.
+	var apiResp dao.Entity
+	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
+		log.Error("delete entity, decode response",
+			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return errors.Wrap(err, "delete entity, decode response")
+	}
+
+	log.Info("processing completed", zfield.Eid(en.ID),
+		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
+
+	return nil
+}
+
 // SetProperties set properties into entity.
-func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, error) {
 	var (
 		err error
 		ev  cloudevents.Event
@@ -242,7 +361,7 @@ func (m *apiManager) SetProperties(ctx context.Context, en *Base) (*Base, error)
 	}, nil
 }
 
-func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
 	var (
 		err error
 		ev  cloudevents.Event
@@ -304,203 +423,12 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []state.Patc
 	}, nil
 }
 
-// DeleteEntity delete an entity from manager.
-func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
-	var (
-		err error
-		ev  cloudevents.Event
-	)
-
-	reqID := util.UUID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
-	}); nil != err {
-		log.Error("delete entity", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return errors.Wrap(err, "delete entity")
-	}
-
-	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("delete entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return errors.Wrap(err, "delete entity, dispatch event")
-	}
-
-	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("delete entity", zfield.Eid(en.ID),
-			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
-		return xerrors.New(resp.ErrCode)
-	}
-
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("delete entity, decode response",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return errors.Wrap(err, "delete entity, decode response")
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return nil
-}
-
-// GetProperties returns Base.
-func (m *apiManager) GetProperties(ctx context.Context, en *Base) (*Base, error) {
-	var (
-		err error
-		ev  cloudevents.Event
-	)
-
-	reqID := util.UUID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.GetProperties", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:     en.ID,
-		Type:   en.Type,
-		Owner:  en.Owner,
-		Source: en.Source,
-	}); nil != err {
-		log.Info("get entity", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return nil, errors.Wrap(err, "get entity")
-	}
-
-	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity")
-	}
-
-	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("get entity", zfield.Eid(en.ID),
-			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("get entity, decode response",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity, decode response")
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
-}
-
-// AppendMapper append a mapper into entity.
-func (m *apiManager) AppendMapper(ctx context.Context, en *Base) (*Base, error) {
-	log.Info("entity.AppendMapper",
-		zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// upert mapper.
-	var err error
-	mp := en.Mappers[0]
-	if err = m.entityRepo.PutMapper(ctx, &dao.Mapper{
-		ID:          mp.ID,
-		TQL:         mp.TQL,
-		Name:        mp.Name,
-		EntityID:    en.ID,
-		EntityType:  en.Type,
-		Description: mp.Description,
-	}); nil != err {
-		log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "append mapper")
-	}
-
-	var entity *dao.Entity
-	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
-		log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "append mapper")
-	}
-
-	return entityToBase(entity), errors.Wrap(err, "append mapper")
-}
-
-// DeleteMapper delete mapper from entity.
-func (m *apiManager) RemoveMapper(ctx context.Context, en *Base) (*Base, error) {
-	log.Info("entity.RemoveMapper",
-		zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// delete mapper.
-	var err error
-	mp := en.Mappers[0]
-	if err = m.entityRepo.DelMapper(ctx, &dao.Mapper{
-		ID:          mp.ID,
-		TQL:         mp.TQL,
-		Name:        mp.Name,
-		EntityID:    en.ID,
-		EntityType:  en.Type,
-		Description: mp.Description,
-	}); nil != err {
-		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "remove mapper")
-	}
-
-	var entity *dao.Entity
-	if entity, err = m.entityRepo.GetEntity(ctx, &dao.Entity{ID: en.ID}); nil != err {
-		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
-		return nil, errors.Wrap(err, "remove mapper")
-	}
-
-	return entityToBase(entity), errors.Wrap(err, "remove mapper")
-}
-
-func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error) {
-	// check TQLs.
-	if err = checkTQLs(en); nil != err {
-		return errors.Wrap(err, "check subscription")
-	}
-
-	// check request.
-	mode := getString(en.Properties[subscription.SubscriptionFieldMode])
-	topic := getString(en.Properties[subscription.SubscriptionFieldTopic])
-	filter := getString(en.Properties[subscription.SubscriptionFieldFilter])
-	pubsubName := getString(en.Properties[subscription.SubscriptionFieldPubsubName])
-	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
-	if mode == subscription.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
-		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
-		return runtime.ErrSubscriptionInvalid
-	}
-
-	return nil
+func (m *apiManager) GetEntityProps(context.Context, *Base, []string) (*Base, error) {
+	panic("implement me")
 }
 
 // SetProperties set properties into entity.
-func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, error) {
 	var (
 		err   error
 		bytes []byte
@@ -566,7 +494,7 @@ func (m *apiManager) SetConfigs(ctx context.Context, en *Base) (*Base, error) {
 }
 
 // PatchConfigs patch properties into entity.
-func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
 	var (
 		err error
 		ev  cloudevents.Event
@@ -627,7 +555,7 @@ func (m *apiManager) PatchConfigs(ctx context.Context, en *Base, pds []state.Pat
 }
 
 // QueryConfigs query entity configs.
-func (m *apiManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []string) (*Base, error) {
+func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs []string) (*Base, error) {
 	var (
 		err    error
 		entity *dao.Entity
@@ -664,6 +592,74 @@ func (m *apiManager) QueryConfigs(ctx context.Context, en *Base, propertyIDs []s
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	return base, nil
+}
+
+// AppendMapper append a mapper into entity.
+func (m *apiManager) AppendMapper(ctx context.Context, en *Base) error {
+	log.Info("entity.AppendMapper",
+		zfield.Eid(en.ID), zfield.Type(en.Type),
+		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
+
+	// upert mapper.
+	var err error
+	mp := en.Mappers[0]
+	if err = m.entityRepo.PutMapper(ctx, &dao.Mapper{
+		ID:          mp.ID,
+		TQL:         mp.TQL,
+		Name:        mp.Name,
+		EntityID:    en.ID,
+		EntityType:  en.Type,
+		Description: mp.Description,
+	}); nil != err {
+		log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
+		return errors.Wrap(err, "append mapper")
+	}
+
+	return nil
+}
+
+// DeleteMapper delete mapper from entity.
+func (m *apiManager) RemoveMapper(ctx context.Context, en *Base) error {
+	log.Info("entity.RemoveMapper",
+		zfield.Eid(en.ID), zfield.Type(en.Type),
+		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
+
+	// delete mapper.
+	var err error
+	mp := en.Mappers[0]
+	if err = m.entityRepo.DelMapper(ctx, &dao.Mapper{
+		ID:          mp.ID,
+		TQL:         mp.TQL,
+		Name:        mp.Name,
+		EntityID:    en.ID,
+		EntityType:  en.Type,
+		Description: mp.Description,
+	}); nil != err {
+		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
+		return errors.Wrap(err, "remove mapper")
+	}
+
+	return nil
+}
+
+func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error) {
+	// check TQLs.
+	if err = checkTQLs(en); nil != err {
+		return errors.Wrap(err, "check subscription")
+	}
+
+	// check request.
+	mode := getString(en.Properties[subscription.SubscriptionFieldMode])
+	topic := getString(en.Properties[subscription.SubscriptionFieldTopic])
+	filter := getString(en.Properties[subscription.SubscriptionFieldFilter])
+	pubsubName := getString(en.Properties[subscription.SubscriptionFieldPubsubName])
+	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
+	if mode == subscription.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
+		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
+		return runtime.ErrSubscriptionInvalid
+	}
+
+	return nil
 }
 
 func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {

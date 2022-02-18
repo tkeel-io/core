@@ -25,11 +25,12 @@ func (a APIID) String() string {
 
 const (
 	APICreateEntity  APIID = "corecreateentity"
-	APIPatchEntity   APIID = "corepatchentity"
+	APIGetEntity     APIID = "coregetentity"
 	APISetProperties APIID = "coresetproperties"
+	APIPatchEntity   APIID = "corepatchentity"
+	APIDeleteEntity  APIID = "coredeleteentity"
 	APISetConfigs    APIID = "coresetconfigs"
 	APIPatchConfigs  APIID = "corepatchconfigs"
-	APIDeleteEntity  APIID = "coredeleteentity"
 )
 
 type APIHandler func(context.Context, message.Context) []WatchKey

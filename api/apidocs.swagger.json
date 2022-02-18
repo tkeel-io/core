@@ -238,7 +238,7 @@
         ]
       },
       "put": {
-        "summary": "Update a entity",
+        "summary": "Update Entity",
         "operationId": "UpdateEntity",
         "responses": {
           "200": {
@@ -264,95 +264,30 @@
           },
           {
             "name": "body",
-            "description": "entity properties",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties"
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "entity type"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "source id"
+                },
+                "owner": {
+                  "type": "string",
+                  "description": "owner id"
+                },
+                "properties": {
+                  "type": "object",
+                  "description": "entity properties"
+                }
+              },
+              "description": "Update Entity Request."
             }
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Entity"
-        ]
-      },
-      "patch": {
-        "summary": "Patch a entity properties",
-        "operationId": "PatchEntity",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1EntityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "description": "entity properties",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "description": "entity properties"
-            }
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -363,7 +298,7 @@
     "/entities/{id}/configs": {
       "get": {
         "summary": "query entity configs",
-        "operationId": "QueryConfigs",
+        "operationId": "GetEntityConfigs",
         "responses": {
           "200": {
             "description": "OK",
@@ -408,7 +343,7 @@
             "type": "string"
           },
           {
-            "name": "property_ids",
+            "name": "property_keys",
             "description": "entity property ids",
             "in": "query",
             "required": false,
@@ -421,7 +356,7 @@
       },
       "delete": {
         "summary": "remove entity configs",
-        "operationId": "RemoveConfigs",
+        "operationId": "RemoveEntityConfigs",
         "responses": {
           "200": {
             "description": "OK",
@@ -466,7 +401,7 @@
             "type": "string"
           },
           {
-            "name": "property_ids",
+            "name": "property_keys",
             "description": "entity property ids",
             "in": "query",
             "required": false,
@@ -477,9 +412,9 @@
           "Entity"
         ]
       },
-      "post": {
-        "summary": "set entity configs.",
-        "operationId": "SetConfigs",
+      "put": {
+        "summary": "update entity configs.",
+        "operationId": "UpdateEntityConfigs",
         "responses": {
           "200": {
             "description": "OK",
@@ -538,9 +473,9 @@
           "Entity"
         ]
       },
-      "put": {
-        "summary": "append entity configs",
-        "operationId": "AppendConfigs",
+      "patch": {
+        "summary": "patch entity configs",
+        "operationId": "PatchEntityConfigs",
         "responses": {
           "200": {
             "description": "OK",
@@ -603,7 +538,7 @@
     "/entities/{id}/configs/patch": {
       "put": {
         "summary": "patch entity configs",
-        "operationId": "PatchConfigs",
+        "operationId": "PatchEntityConfigsZ",
         "responses": {
           "200": {
             "description": "OK",
@@ -665,13 +600,13 @@
     },
     "/entities/{id}/mappers": {
       "delete": {
-        "summary": "remove entity mappers",
+        "summary": "remove mappers from entity",
         "operationId": "RemoveMapper",
         "responses": {
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/v1EntityResponse"
+              "$ref": "#/definitions/v1RemoveMapperResponse"
             }
           },
           "default": {
@@ -723,13 +658,13 @@
         ]
       },
       "post": {
-        "summary": "Append entity mapper",
+        "summary": "Append mapper for entity",
         "operationId": "AppendMapper",
         "responses": {
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/v1EntityResponse"
+              "$ref": "#/definitions/v1AppendMapperResponse"
             }
           },
           "default": {
@@ -753,7 +688,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1MapperDesc",
+              "$ref": "#/definitions/v1Mapper",
               "description": "mapper description"
             }
           },
@@ -774,68 +709,6 @@
           {
             "name": "owner",
             "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Entity"
-        ]
-      }
-    },
-    "/entities/{id}/patch": {
-      "put": {
-        "operationId": "Entity_PatchEntityZ",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/v1EntityResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "description": "entity properties",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "description": "entity properties"
-            }
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "description": "entity type",
             "in": "query",
             "required": false,
             "type": "string"
@@ -894,8 +767,251 @@
             "type": "string"
           },
           {
-            "name": "pids",
+            "name": "property_keys",
             "description": "entity property ids, eg: pids=1,2,3",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "delete": {
+        "summary": "Remove Entity Properties",
+        "operationId": "RemoveEntityProps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "property_keys",
+            "description": "entity property ids",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "put": {
+        "summary": "Update entity properties",
+        "operationId": "UpdateEntityProps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "entity properties",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "description": "entity properties"
+            }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "patch": {
+        "summary": "Patch entity properties",
+        "operationId": "PatchEntityProps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "entity properties",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "description": "entity properties"
+            }
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/entities/{id}/properties/patch": {
+      "put": {
+        "summary": "Patch entity properties",
+        "operationId": "PatchEntityPropsZ",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "entity properties",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "description": "entity properties"
+            }
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1313,6 +1429,10 @@
         }
       }
     },
+    "v1AppendMapperResponse": {
+      "type": "object",
+      "description": "Append Mapper Response."
+    },
     "v1DeleteByIDResponse": {
       "type": "object"
     },
@@ -1327,7 +1447,8 @@
           "type": "string",
           "description": "status"
         }
-      }
+      },
+      "description": "Delete Entity Response."
     },
     "v1DeleteSubscriptionResponse": {
       "type": "object",
@@ -1364,7 +1485,7 @@
         "mappers": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/v1MapperDesc"
+            "$ref": "#/definitions/v1Mapper"
           },
           "description": "entity mappers"
         },
@@ -1376,7 +1497,8 @@
           "type": "object",
           "description": "entity properties"
         }
-      }
+      },
+      "description": "Entity Response."
     },
     "v1HealthResponse": {
       "type": "object"
@@ -1449,7 +1571,8 @@
           },
           "description": "entity list"
         }
-      }
+      },
+      "description": "List Entity Response."
     },
     "v1ListSubscriptionResponse": {
       "type": "object",
@@ -1468,16 +1591,24 @@
         }
       }
     },
-    "v1MapperDesc": {
+    "v1Mapper": {
       "type": "object",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "mapper id"
+        },
         "name": {
           "type": "string",
           "description": "mapper name"
         },
-        "tql": {
+        "tql_text": {
           "type": "string",
-          "description": "tql content"
+          "description": "mapper tql text"
+        },
+        "description": {
+          "type": "string",
+          "description": "mapper description"
         }
       }
     },
@@ -1528,6 +1659,10 @@
           "type": "boolean"
         }
       }
+    },
+    "v1RemoveMapperResponse": {
+      "type": "object",
+      "description": "Remove Mapper Response."
     },
     "v1RespondResponse": {
       "type": "object"

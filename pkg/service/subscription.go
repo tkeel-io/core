@@ -117,7 +117,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return
 	}
 
-	if _, err = s.apiManager.AppendMapper(ctx, entity); nil != err {
+	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
 		if err0 := s.apiManager.DeleteEntity(ctx, entity); nil != err0 {
 			log.Error("destroy subscription", zap.Error(err0), logger.Eid(req.Id))
@@ -145,7 +145,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set properties.
-	if entity, err = s.apiManager.SetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
 		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -156,7 +156,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
 	}}
 
-	if _, err = s.apiManager.AppendMapper(ctx, entity); nil != err {
+	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
 		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}
@@ -191,7 +191,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if entity, err = s.apiManager.GetProperties(ctx, entity); nil != err {
+	if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
 		log.Error("get subscription", zap.Error(err), logger.Eid(req.Id))
 		return
 	}

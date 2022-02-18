@@ -86,7 +86,7 @@ func Test_PatchEntity(t *testing.T) {
 	m := []interface{}{}
 	properties, err := structpb.NewValue(m)
 	assert.Nil(t, err, "properties NewValue")
-	_, err = entityService.PatchEntity(context.Background(), &pb.PatchEntityRequest{
+	_, err = entityService.PatchEntityProps(context.Background(), &pb.PatchEntityPropsRequest{
 		Id:         "device123",
 		Owner:      "admin",
 		Type:       "DEVICE",
@@ -108,11 +108,11 @@ func Test_DeleteEntity(t *testing.T) {
 
 func Test_GetEntityProps(t *testing.T) {
 	_, err := entityService.GetEntityProps(context.Background(), &pb.GetEntityPropsRequest{
-		Id:     "device123",
-		Owner:  "admin",
-		Type:   "DEVICE",
-		Source: "dm",
-		Pids:   "temp,metrics.cpu",
+		Id:           "device123",
+		Owner:        "admin",
+		Type:         "DEVICE",
+		Source:       "dm",
+		PropertyKeys: "temp,metrics.cpu",
 	})
 	assert.Nil(t, err)
 }
@@ -141,9 +141,11 @@ func Test_AppendMapper(t *testing.T) {
 		Owner:  "admin",
 		Type:   "DEVICE",
 		Source: "dm",
-		Mapper: &pb.MapperDesc{
-			Name: "mapper123",
-			Tql:  "insert into device123 select device234.temp as temp",
+		Mapper: &pb.Mapper{
+			Id:          "mapper123",
+			Name:        "mapper123",
+			TqlText:     "insert into device123 select device234.temp as temp",
+			Description: "test mapper.",
 		},
 	})
 	assert.Nil(t, err)
@@ -243,7 +245,7 @@ func Test_SetConfigs(t *testing.T) {
 			c, err := structpb.NewValue(cfg)
 			assert.Nil(t, err)
 
-			res, err := entityService.SetConfigs(context.Background(), &pb.SetConfigsRequest{
+			res, err := entityService.UpdateEntityConfigs(context.Background(), &pb.UpdateEntityConfigsRequest{
 				Id:      "device123",
 				Owner:   "admin",
 				Type:    "DEVICE",
@@ -258,28 +260,28 @@ func Test_SetConfigs(t *testing.T) {
 	}
 }
 
-func Test_AppendConfigs(t *testing.T) {
-	c, err := structpb.NewValue([]interface{}{
-		map[string]interface{}{
-			"id":   "temp",
-			"type": "int",
-			"define": map[string]interface{}{
-				"max":  100,
-				"unit": "°",
-				"ext": map[string]interface{}{
-					"unit_zh": "度",
-				},
-			},
-		},
-	})
+func Test_RemoveEntityConfigs(t *testing.T) {
+	res, err := entityService.RemoveEntityConfigs(context.Background(),
+		&pb.RemoveEntityConfigsRequest{
+			Id:           "device123",
+			Owner:        "admin",
+			Type:         "DEVICE",
+			Source:       "dm",
+			PropertyKeys: "temp,metrics.cpu_used",
+		})
 	assert.Nil(t, err)
+	assert.Equal(t, "device123", res.Id)
+	assert.Equal(t, "admin", res.Owner)
+	assert.Equal(t, "DEVICE", res.Type)
+}
 
-	res, err := entityService.AppendConfigs(context.Background(), &pb.AppendConfigsRequest{
-		Id:      "device123",
-		Owner:   "admin",
-		Type:    "DEVICE",
-		Source:  "dm",
-		Configs: c,
+func Test_GetEntityConfigs(t *testing.T) {
+	res, err := entityService.GetEntityConfigs(context.Background(), &pb.GetEntityConfigsRequest{
+		Id:           "device123",
+		Owner:        "admin",
+		Type:         "DEVICE",
+		Source:       "dm",
+		PropertyKeys: "temp,metrics.cpu_used",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", res.Id)
@@ -287,35 +289,7 @@ func Test_AppendConfigs(t *testing.T) {
 	assert.Equal(t, "DEVICE", res.Type)
 }
 
-func Test_RemoveConfigs(t *testing.T) {
-	res, err := entityService.RemoveConfigs(context.Background(), &pb.RemoveConfigsRequest{
-		Id:          "device123",
-		Owner:       "admin",
-		Type:        "DEVICE",
-		Source:      "dm",
-		PropertyIds: "temp,metrics.cpu_used",
-	})
-	assert.Nil(t, err)
-	assert.Equal(t, "device123", res.Id)
-	assert.Equal(t, "admin", res.Owner)
-	assert.Equal(t, "DEVICE", res.Type)
-}
-
-func Test_QueryConfigs(t *testing.T) {
-	res, err := entityService.QueryConfigs(context.Background(), &pb.QueryConfigsRequest{
-		Id:          "device123",
-		Owner:       "admin",
-		Type:        "DEVICE",
-		Source:      "dm",
-		PropertyIds: "temp,metrics.cpu_used",
-	})
-	assert.Nil(t, err)
-	assert.Equal(t, "device123", res.Id)
-	assert.Equal(t, "admin", res.Owner)
-	assert.Equal(t, "DEVICE", res.Type)
-}
-
-func Test_PatchConfigs(t *testing.T) {
+func Test_PatchEntityConfigs(t *testing.T) {
 	configs, err := structpb.NewValue([]interface{}{
 		map[string]interface{}{
 			"path":     "metrics.cpu_used",
@@ -376,13 +350,14 @@ func Test_PatchConfigs(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	res, err := entityService.PatchConfigs(context.Background(), &pb.PatchConfigsRequest{
-		Id:      "device123",
-		Owner:   "admin",
-		Type:    "DEVICE",
-		Source:  "dm",
-		Configs: configs,
-	})
+	res, err := entityService.PatchEntityConfigs(context.Background(),
+		&pb.PatchEntityConfigsRequest{
+			Id:      "device123",
+			Owner:   "admin",
+			Type:    "DEVICE",
+			Source:  "dm",
+			Configs: configs,
+		})
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", res.Id)
 	assert.Equal(t, "admin", res.Owner)

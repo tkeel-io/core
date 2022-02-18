@@ -40,25 +40,29 @@ type APIManager interface {
 	// OnRespond handle message.
 	OnRespond(context.Context, *holder.Response)
 	// CreateEntity create entity.
+	UpdateEntity(context.Context, *Base) (*Base, error)
+	// UpdateEntity update entity.
 	CreateEntity(context.Context, *Base) (*Base, error)
 	// DeleteEntity delete entity.
 	DeleteEntity(context.Context, *Base) error
 	// GetProperties returns entity properties.
-	GetProperties(context.Context, *Base) (*Base, error)
+	GetEntity(context.Context, *Base) (*Base, error)
 	// SetProperties set entity properties.
-	SetProperties(context.Context, *Base) (*Base, error)
+	UpdateEntityProps(context.Context, *Base) (*Base, error)
 	// PatchEntity patch entity properties.
-	PatchEntity(context.Context, *Base, []state.PatchData) (*Base, error)
+	PatchEntityProps(context.Context, *Base, []state.PatchData) (*Base, error)
+	// GetEntityProps returns entity configs.
+	GetEntityProps(context.Context, *Base, []string) (*Base, error)
+	// SetConfigs set entity configs.
+	UpdateEntityConfigs(context.Context, *Base) (*Base, error)
+	// PatchConfigs patch entity configs.
+	PatchEntityConfigs(context.Context, *Base, []state.PatchData) (*Base, error)
+	// GetEntityConfigs returns entity configs.
+	GetEntityConfigs(context.Context, *Base, []string) (*Base, error)
 	// AppendMapper append entity mapper.
-	AppendMapper(context.Context, *Base) (*Base, error)
+	AppendMapper(context.Context, *Base) error
 	// RemoveMapper remove entity mapper.
-	RemoveMapper(context.Context, *Base) (*Base, error)
+	RemoveMapper(context.Context, *Base) error
 	// CheckSubscription check subscription.
 	CheckSubscription(context.Context, *Base) error
-	// SetConfigs set entity configs.
-	SetConfigs(context.Context, *Base) (*Base, error)
-	// PatchConfigs patch entity configs.
-	PatchConfigs(context.Context, *Base, []state.PatchData) (*Base, error)
-	// QueryConfigs returns entity configs.
-	QueryConfigs(context.Context, *Base, []string) (*Base, error)
 }
