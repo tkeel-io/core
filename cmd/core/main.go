@@ -18,8 +18,10 @@ package main
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -109,11 +111,22 @@ func core(cmd *cobra.Command, args []string) {
 	config.Init(_cfgFile)
 
 	// user flags input recover config file content.
+	envETCD := os.Getenv("TKEEL_REGISTRY")
+	if envETCD != "" {
+		etcdURL, err := url.Parse(envETCD)
+		if err == nil {
+			_etcdBrokers = strings.Split(etcdURL.Host, ",")
+		}
+	}
 	if _etcdBrokers != nil {
 		config.SetEtcdBrokers(_etcdBrokers)
 	}
 
 	// rewrite search engine config by flags input info.
+	envES := os.Getenv("TKEEL_SEARCH")
+	if envES != "" {
+		_searchEngine = envES
+	}
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
 		if err != nil {
