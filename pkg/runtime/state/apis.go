@@ -24,13 +24,16 @@ func (a APIID) String() string {
 }
 
 const (
-	APICreateEntity  APIID = "corecreateentity"
-	APIGetEntity     APIID = "coregetentity"
-	APISetProperties APIID = "coresetproperties"
-	APIPatchEntity   APIID = "corepatchentity"
-	APIDeleteEntity  APIID = "coredeleteentity"
-	APISetConfigs    APIID = "coresetconfigs"
-	APIPatchConfigs  APIID = "corepatchconfigs"
+	APICreateEntity        APIID = "core.apis.Entity.Create"
+	APIUpdateEntity        APIID = "core.apis.Entity.Update"
+	APIGetEntity           APIID = "core.apis.Entity.Get"
+	APIDeleteEntity        APIID = "core.apis.Entity.Delete"
+	APIUpdataEntityProps   APIID = "core.apis.Entity.Props.Update"
+	APIPatchEntityProps    APIID = "core.apis.Entity.Props.Patch"
+	APIGetEntityProps      APIID = "core.apis.Entity.Props.Get"
+	APIUpdataEntityConfigs APIID = "core.apis.Entity.Configs.Update"
+	APIPatchEntityConfigs  APIID = "core.apis.Entity.Configs.Patch"
+	APIGetEntityConfigs    APIID = "core.apis.Entity.Configs.Get"
 )
 
 type APIHandler func(context.Context, message.Context) []WatchKey
@@ -44,10 +47,16 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 
 	once.Do(func() {
 		apiCallbacks = map[APIID]APIHandler{
-			APICreateEntity: s.cbCreateEntity,
-			APISetConfigs:   s.cbSetConfigs,
-			APIPatchConfigs: s.cbPatchConfigs,
-			APIDeleteEntity: s.cbDeleteEntity,
+			APICreateEntity:        s.cbCreateEntity,
+			APIUpdateEntity:        s.cbUpdateEntity,
+			APIGetEntity:           s.cbGetEntity,
+			APIDeleteEntity:        s.cbDeleteEntity,
+			APIUpdataEntityProps:   s.cbUpdateEntityProps,
+			APIPatchEntityProps:    s.cbPatchEntityProps,
+			APIGetEntityProps:      s.cbGetEntityProps,
+			APIUpdataEntityConfigs: s.cbUpdateEntityConfigs,
+			APIPatchEntityConfigs:  s.cbPatchEntityConfigs,
+			APIGetEntityConfigs:    s.cbGetEntityConfigs,
 		}
 	})
 
@@ -90,12 +99,37 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	return nil
 }
 
-func (s *statem) cbSetConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	s.status = SMStatusDeleted
+	return nil
+}
+
+func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
 	s.ConfigFile = msgCtx.Message()
 	return nil
 }
 
-func (s *statem) cbPatchConfigs(ctx context.Context, msgCtx message.Context) []WatchKey { //nolint
+func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey { //nolint
 	var (
 		err       error
 		bytes     []byte
@@ -169,7 +203,6 @@ func (s *statem) cbPatchConfigs(ctx context.Context, msgCtx message.Context) []W
 	return nil
 }
 
-func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
-	s.status = SMStatusDeleted
-	return nil
+func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
 }
