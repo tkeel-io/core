@@ -43,11 +43,8 @@ import (
 	"go.uber.org/zap"
 )
 
-const eventType = "API.REQUEST"
 const eventSender = "Core.APIManager"
 const respondFmt = "http://%s:%d/v1/respond"
-
-var msgTypeSync string = message.MessageTypeAPIRequest.String()
 
 type apiManager struct {
 	holder     holder.Holder
@@ -719,6 +716,8 @@ func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error
 	return nil
 }
 
+var eventType = message.MessageTypeAPIRequest.String()
+
 func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {
 	var err error
 	var bytes []byte
@@ -733,7 +732,6 @@ func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, msgTypeSync)
 	ev.SetExtension(message.ExtMessageSender, eventSender)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
@@ -766,7 +764,6 @@ func (m *apiManager) makePatchEvent(en *dao.Entity, pds []state.PatchData) (clou
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageType, msgTypeSync)
 	ev.SetExtension(message.ExtMessageSender, eventSender)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 

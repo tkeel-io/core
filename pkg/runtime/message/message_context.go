@@ -89,6 +89,8 @@ func From(ctx context.Context, ev cloudevents.Event) (Context, error) {
 		attributes: GetAttributes(ev),
 	}
 
+	msgCtx.Set(ExtMessageType, ev.Context.GetType())
+
 	return msgCtx, errors.Wrap(err, "parse event")
 }
 

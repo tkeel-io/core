@@ -64,26 +64,25 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 	return apiCallbacks[apiID](ctx, msgCtx)
 }
 
-func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
-	msgID := util.UUID()
-	eventID := util.UUID()
+func (s *statem) makeEvent() cloudevents.Event {
 	ev := cloudevents.NewEvent()
-
-	ev.SetID(eventID)
-	ev.SetType(s.Type)
-	ev.SetSource(s.Source)
-	ev.SetExtension(message.ExtMessageID, msgID)
+	ev.SetID(util.UUID())
+	ev.SetSource("core.runtime")
+	ev.SetType(message.MessageTypeAPIRespond.String())
 	ev.SetExtension(message.ExtEntityID, s.ID)
 	ev.SetExtension(message.ExtEntityType, s.Type)
 	ev.SetExtension(message.ExtEntityOwner, s.Owner)
-	ev.SetExtension(message.ExtMessageReceiver, s.ID)
 	ev.SetExtension(message.ExtEntitySource, s.Source)
 	ev.SetExtension(message.ExtAPIRespStatus, types.StatusOK.String())
+	return ev
+}
+
+func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	ev := s.makeEvent()
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
 	ev.SetExtension(message.ExtAPIRequestID, msgCtx.Get(message.ExtAPIRequestID))
-	ev.SetExtension(message.ExtMessageType, message.MessageTypeAPIRespond.String())
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
+	// TODO: create entity.
 	ev.SetData(msgCtx.Message())
 
 	if err := ev.Validate(); nil != err {
@@ -94,7 +93,10 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	s.dispatcher.Dispatch(ctx, ev)
+	if err := s.dispatcher.Dispatch(ctx, ev); nil != err {
+		log.Error("diispatch event", zap.Error(err),
+			zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+	}
 
 	return nil
 }
