@@ -279,7 +279,10 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (out *pb.ListEntityResponse, err error) {
 	searchReq := &pb.SearchRequest{}
 	searchReq.Query = req.Query
-	searchReq.Page = req.Page
+	searchReq.PageNum = req.PageNum
+	searchReq.PageSize = req.PageSize
+	searchReq.OrderBy = req.OrderBy
+	searchReq.IsDescending = req.IsDescending
 	searchReq.Condition = req.Condition
 
 	var resp *pb.SearchResponse
@@ -290,7 +293,8 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	out = &pb.ListEntityResponse{}
 	out.Total = resp.Total
-	out.Limit = resp.Limit
+	out.PageNum = resp.PageNum
+	out.PageSize = resp.PageSize
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
