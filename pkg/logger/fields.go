@@ -213,3 +213,15 @@ func Addr(addr string) zap.Field {
 func Payload(payload []byte) zap.Field {
 	return zap.String("payload", string(payload))
 }
+
+func Partition(partition int32) zap.Field {
+	return zap.Int32("partition", partition)
+}
+
+func Offset(offset int64) zap.Field {
+	return zap.Int64("offset", offset)
+}
+
+func Group(group string) zap.Field {
+	return zap.String("offset", group)
+}

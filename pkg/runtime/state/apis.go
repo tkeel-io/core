@@ -10,6 +10,7 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
@@ -78,25 +79,70 @@ func (s *statem) makeEvent() cloudevents.Event {
 }
 
 func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	var (
+		err   error
+		bytes []byte
+		reqEn dao.Entity
+	)
+
+	// create event.
 	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
-	ev.SetExtension(message.ExtAPIRequestID, msgCtx.Get(message.ExtAPIRequestID))
 
-	// TODO: create entity.
-	ev.SetData(msgCtx.Message())
+	defer func() {
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
 
-	if err := ev.Validate(); nil != err {
+	// decode request.
+	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		return nil
+	}
+
+	// initialize.
+	s.LastTime = util.UnixMilli()
+	s.Properties = reqEn.Properties
+	s.TemplateID = reqEn.TemplateID
+
+	// sync template.
+	if reqEn.TemplateID != "" {
+		var tempEn = &dao.Entity{ID: reqEn.TemplateID}
+		if tempEn, err = s.Repo().GetEntity(ctx, tempEn); nil != err {
+			log.Error("pull template entity", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+			return nil
+		}
+
+		s.ConfigFile = tempEn.ConfigFile
+	}
+
+	// set response.
+	if bytes, err = dao.GetEntityCodec().Encode(&s.Entity); nil != err {
+		log.Error("set response", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		return nil
+	}
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("set response event payload", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	} else if err := ev.Validate(); nil != err {
 		log.Error("validate response", zfield.Eid(s.ID), zap.Error(err))
 		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
 		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
-
-	if err := s.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("diispatch event", zap.Error(err),
-			zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
-	}
 
 	return nil
 }

@@ -77,7 +77,6 @@ func (c *Container) Load(ctx context.Context, stateID string) (state.Machiner, e
 	// make machine.
 	var machine state.Machiner
 	machine, err = makeMachine(c.ctx, c.manager, en)
-
 	return machine, errors.Wrap(err, "load machine")
 }
 

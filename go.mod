@@ -3,13 +3,15 @@ module github.com/tkeel-io/core
 go 1.16
 
 require (
+	github.com/Shopify/sarama v1.23.1
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211026222012-6af4c774c47b
 	github.com/cloudevents/sdk-go v1.2.0
-	github.com/cloudevents/sdk-go/v2 v2.8.0
 	github.com/dapr/dapr v1.5.1 // indirect
 	github.com/dapr/go-sdk v1.3.0
+	github.com/dapr/kit v0.0.2-0.20210614175626-b9074b64d233
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/fsnotify/fsnotify v1.5.1
+	github.com/goinggo/mapstructure v0.0.0-20140717182941-194205d9b4a9
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0
 	github.com/influxdata/influxdb-client-go v1.4.0
