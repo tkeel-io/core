@@ -62,6 +62,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	entity.Owner = req.Owner
 	entity.Type = req.Type
 	entity.Source = req.Source
+	entity.TemplateID = req.From
 	parseHeaderFrom(ctx, entity)
 	entity.Properties = make(map[string]constraint.Node)
 	switch kv := req.Properties.AsInterface().(type) {
@@ -203,6 +204,12 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 				log.Error("patch entity failed.", zfield.Eid(req.Id), zap.Error(err))
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
+		}
+
+		for index := range patchData {
+			//encode value.
+			bytes, _ := json.Marshal(patchData[index].Value)
+			patchData[index].Value = bytes
 		}
 
 		if entity, err = s.apiManager.PatchEntityProps(ctx, entity, patchData); nil != err {

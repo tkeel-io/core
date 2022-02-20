@@ -7,9 +7,12 @@ import (
 	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
@@ -78,10 +81,35 @@ func (s *statem) makeEvent() cloudevents.Event {
 	return ev
 }
 
-func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) setEventPayload(ev *cloudevents.Event, reqID string) error {
 	var (
 		err   error
 		bytes []byte
+	)
+
+	if bytes, err = dao.GetEntityCodec().Encode(&s.Entity); nil != err {
+		log.Error("set response", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		return nil
+	}
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("set response event payload", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate response", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	}
+
+	return errors.Wrap(err, "set event payload")
+}
+
+func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+	var (
+		err   error
 		reqEn dao.Entity
 	)
 
@@ -92,6 +120,10 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
 
 	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
 		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
 			log.Error("diispatch event", zap.Error(innerErr),
 				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
@@ -101,8 +133,6 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	// decode request.
 	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
-		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
 		return nil
 	}
 
@@ -116,30 +146,19 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 		var tempEn = &dao.Entity{ID: reqEn.TemplateID}
 		if tempEn, err = s.Repo().GetEntity(ctx, tempEn); nil != err {
 			log.Error("pull template entity", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
-			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
 			return nil
 		}
 
 		s.ConfigFile = tempEn.ConfigFile
 	}
 
-	// set response.
-	if bytes, err = dao.GetEntityCodec().Encode(&s.Entity); nil != err {
-		log.Error("set response", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
-		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
-		return nil
-	}
+	// parse configs.
+	s.reparseConfig()
 
-	if err = ev.SetData(bytes); nil != err {
-		log.Error("set response event payload", zfield.Eid(s.ID), zap.Error(err))
-		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
-		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
-	} else if err := ev.Validate(); nil != err {
-		log.Error("validate response", zfield.Eid(s.ID), zap.Error(err))
-		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
-		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
@@ -152,7 +171,33 @@ func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) []W
 }
 
 func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
-	panic("implement me")
+	var err error
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	return nil
 }
 
 func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
@@ -161,43 +206,218 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []W
 }
 
 func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
-	panic("implement me")
+	var (
+		err   error
+		reqEn dao.Entity
+	)
+
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// decode request.
+	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	// update state properties.
+	stateIns := State{ID: s.ID, Props: s.Properties}
+
+	watchKeys := make([]mapper.WatchKey, 0)
+	for key, val := range reqEn.Properties {
+		if _, err := stateIns.Patch(constraint.PatchOpReplace, key, []byte(val.String())); nil != err {
+			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
+		} else {
+			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: key})
+		}
+	}
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	return watchKeys
 }
 
 func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
-	panic("implement me")
+	var err error
+
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// decode request.
+	pds := make([]PatchData, 0)
+	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	// update state properties.
+	stateIns := State{ID: s.ID, Props: s.Properties}
+	watchKeys := make([]mapper.WatchKey, 0)
+	for index := range pds {
+		valBytes, _ := pds[index].Value.([]byte)
+		if _, err := stateIns.Patch(constraint.PatchOpReplace, pds[index].Path, valBytes); nil != err {
+			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
+		} else {
+			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: pds[index].Path})
+		}
+	}
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	return watchKeys
 }
 
 func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
-	panic("implement me")
+	var err error
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	return nil
 }
 
 func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
-	s.ConfigFile = msgCtx.Message()
+	var (
+		err   error
+		bytes []byte
+		reqEn dao.Entity
+	)
+
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// decode request.
+	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	// update configs.
+	collectjs.ForEach(reqEn.ConfigFile, jsonparser.Object, func(key, value []byte) {
+		propertyKey := string(key)
+		if bytes, err = collectjs.Set(s.ConfigFile, propertyKey, value); nil == err {
+			s.ConfigFile = bytes
+		}
+		log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
+	})
+
+	// reparse state configs.
+	s.reparseConfig()
+
 	return nil
 }
 
 func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey { //nolint
 	var (
-		err       error
-		bytes     []byte
-		patchData []*PatchData
+		err   error
+		bytes []byte
 	)
 
-	// TODO: decode message to PatchData.
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
 
-	// marshal config.
-	for _, pd := range patchData {
-		if pd.Value, err = json.Marshal(pd.Value); nil != err {
-			log.Error("json marshal", zap.Error(err), zfield.Header(msgCtx.Attributes()))
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
 		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// decode request.
+	pds := make([]PatchData, 0)
+	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
 	}
 
-	for _, pd := range patchData {
+	for _, pd := range pds {
 		switch pd.Operator {
 		case constraint.PatchOpAdd:
 			if bytes, err = collectjs.Append(s.ConfigFile, pd.Path, pd.Value.([]byte)); nil != err {
-				log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
+				log.Error("call core.APIs.PatchConfigs patch add",
+					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				continue
 			}
 			s.ConfigFile = bytes
@@ -212,6 +432,17 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		}
 	}
 
+	s.reparseConfig()
+
+	return nil
+}
+
+func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+	panic("implement me")
+}
+
+func (s *statem) reparseConfig() {
+	var err error
 	// parse state config again.
 	configs := make(map[string]interface{})
 	if err = json.Unmarshal(s.ConfigFile, &configs); nil != err {
@@ -247,10 +478,4 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 			}
 		}
 	}
-
-	return nil
-}
-
-func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
-	panic("implement me")
 }

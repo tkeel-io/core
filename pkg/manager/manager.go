@@ -127,6 +127,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		Type:       en.Type,
 		Owner:      en.Owner,
 		Source:     en.Source,
+		TemplateID: templateID,
 		Properties: en.Properties,
 	}); nil != err {
 		log.Info("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -171,6 +172,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		Owner:      apiResp.Owner,
 		Source:     apiResp.Source,
 		Properties: apiResp.Properties,
+		ConfigFile: apiResp.ConfigFile,
 	}, nil
 }
 
@@ -199,6 +201,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, errors.Wrap(err, "update entity")
 	}
 
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdateEntity.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("update entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -259,6 +262,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 		return nil, errors.Wrap(err, "get entity")
 	}
 
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APIGetEntity.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -320,6 +324,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		return errors.Wrap(err, "delete entity")
 	}
 
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("delete entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
