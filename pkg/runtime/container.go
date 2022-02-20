@@ -60,7 +60,7 @@ func (c *Container) Add(en *dao.Entity) (machine state.Machiner, err error) {
 	}
 
 	// load state context.
-	stateEnv := c.manager.actorEnv.GetActorEnv(en.ID)
+	stateEnv := c.manager.actorEnv.GetStateEnv(en.ID)
 	machine.Context().LoadEnvironments(stateEnv)
 
 	// add machine into container.
@@ -96,7 +96,7 @@ func (c *Container) Load(ctx context.Context, stateID string) (machine state.Mac
 	}
 
 	// load state context.
-	stateEnv := c.manager.actorEnv.GetActorEnv(en.ID)
+	stateEnv := c.manager.actorEnv.GetStateEnv(en.ID)
 	machine.Context().LoadEnvironments(stateEnv)
 
 	// add machine into container.

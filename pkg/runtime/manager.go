@@ -148,7 +148,7 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 		}
 
 		// update state machine context.
-		stateEnv := m.actorEnv.GetActorEnv(stateID)
+		stateEnv := m.actorEnv.GetStateEnv(stateID)
 		machine.Context().LoadEnvironments(stateEnv)
 
 		// TODO: 初始化新创建的mapper.

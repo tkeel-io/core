@@ -17,55 +17,84 @@ limitations under the License.
 package environment
 
 import (
+	"sort"
+	"sync"
+
 	"github.com/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
 
+type CleanFunc func() []string
+
 // cache for state machine.
 type MapperCache struct {
-	mappers       map[string]mapper.Mapper    // map[mapperID]Mapper.
-	tentacles     map[string]mapper.Tentacler // tentacle set.
-	cleanHandlers map[string]CleanHandler     // map[mapperID]Handler.
+	mid       string
+	mapper    mapper.Mapper
+	tentacles []mapper.Tentacler
 }
 
-func newMapperCache() *MapperCache {
-	return &MapperCache{
-		mappers:       make(map[string]mapper.Mapper),
-		tentacles:     make(map[string]mapper.Tentacler),
-		cleanHandlers: make(map[string]CleanHandler),
+type StateCache struct {
+	stateID string
+	mappers map[string]MapperCache
+}
+
+func newMapperCache(id string, m mapper.Mapper) MapperCache {
+	return MapperCache{
+		mid:    id,
+		mapper: m,
+	}
+}
+
+func newStateCache(id string) *StateCache {
+	return &StateCache{
+		stateID: id,
+		mappers: make(map[string]MapperCache),
 	}
 }
 
 type Environment struct {
-	mapperCaches map[string]*MapperCache // map[stateID]MapperCache
+	lock         sync.RWMutex
+	stateCaches  map[string]*StateCache
+	mapperStates map[string]sort.StringSlice
 }
 
 // NewEnvironment returns *Environment.
 func NewEnvironment() IEnvironment {
 	return &Environment{
-		mapperCaches: make(map[string]*MapperCache),
+		lock:         sync.RWMutex{},
+		stateCaches:  make(map[string]*StateCache),
+		mapperStates: make(map[string]sort.StringSlice),
 	}
 }
 
 // GetActorEnv returns Actor Environments.
-func (env *Environment) GetActorEnv(stateID string) ActorEnv {
+func (env *Environment) GetStateEnv(stateID string) ActorEnv {
+	env.lock.RLock()
+	defer env.lock.RUnlock()
+
 	var actorEnv = newActorEnv()
-	if mCache, has := env.mapperCaches[stateID]; has {
-		for _, m := range mCache.mappers {
-			actorEnv.Mappers[m.ID()] = m.Copy()
-		}
-		for _, tentacle := range mCache.tentacles {
-			actorEnv.Tentacles = append(actorEnv.Tentacles, tentacle.Copy())
+	if sCache, has := env.stateCaches[stateID]; has {
+		for _, mc := range sCache.mappers {
+			for _, tentacle := range mc.tentacles {
+				actorEnv.Tentacles = append(actorEnv.Tentacles, tentacle.Copy())
+			}
+			if nil != mc.mapper {
+				actorEnv.Mappers[mc.mapper.ID()] = mc.mapper.Copy()
+			}
 		}
 	}
 	return actorEnv
 }
 
 func (env *Environment) StoreMappers(mappers []dao.Mapper) []dao.Mapper {
+	env.lock.Lock()
+	defer env.lock.Unlock()
+
 	var err error
 	for _, m := range mappers {
 		log.Debug("store mapper", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
@@ -89,6 +118,9 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 		MapperID: m.ID,
 		StateID:  m.EntityID,
 	}
+
+	env.lock.Lock()
+	defer env.lock.Unlock()
 
 	switch et {
 	case dao.PUT:
@@ -117,93 +149,110 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 	return effect, nil
 }
 
-// generateCleanHandler generate clean-handler for mapper.
-func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleIDs []string) CleanHandler {
-	return func() []string {
-		var targets []string
-		if mCache, ok := env.mapperCaches[stateID]; ok {
-			for _, id := range tentacleIDs {
-				if tentacle, ok := mCache.tentacles[id]; ok {
-					delete(mCache.tentacles, id)
-					if tentacle.Type() == mapper.TentacleTypeEntity {
-						targets = append(targets, tentacle.TargetID())
-					}
-				}
-			}
-			delete(mCache.mappers, mapperID)
-			return targets
-		}
-		return targets
-	}
-}
-
 // addMapper add mapper into Environment.
 func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 	// create cache if not exist.
 	targetID := m.TargetEntity()
-	if _, has := env.mapperCaches[targetID]; !has {
-		env.mapperCaches[targetID] = newMapperCache()
+	if _, has := env.stateCaches[targetID]; !has {
+		env.stateCaches[targetID] = newStateCache(targetID)
 	}
 
-	tentacleIDs := make([]string, 0)
-	mCache := env.mapperCaches[targetID]
-	if _, exists := mCache.mappers[m.ID()]; exists {
-		effects = mCache.cleanHandlers[m.ID()]()
+	sCache := env.stateCaches[targetID]
+	if _, exists := sCache.mappers[m.ID()]; exists {
+		effects = env.cleanMapper(m.ID())
 	}
 
 	// generate tentacles.
+	mCache := newMapperCache(m.ID(), m)
 	for _, tentacle := range m.Tentacles() {
 		switch tentacle.Type() {
 		case mapper.TentacleTypeEntity:
 			remoteID := tentacle.TargetID()
-			effects = append(effects, tentacle.TargetID())
 			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
-			env.addTentacle(remoteID, tentacle)
+			env.addTentacle(remoteID, m.ID(), tentacle)
 			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		case mapper.TentacleTypeMapper:
 			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMachine.
-			mCache.tentacles[tentacle.ID()] = tentacle
+			mCache.tentacles = append(mCache.tentacles, tentacle)
 			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
 		}
-		tentacleIDs = append(tentacleIDs, tentacle.ID())
 	}
 
-	mCache.mappers[m.ID()] = m
-	mCache.cleanHandlers[m.ID()] = env.generateCleanHandler(targetID, m.ID(), tentacleIDs)
+	// reset mapper cache.
+	sCache.mappers[m.ID()] = mCache
+	env.index(targetID, m.ID())
 
-	return effects
+	return util.Unique(append(effects, env.mapperStates[m.ID()]...))
 }
 
 // removeMapper remove mapper from Environment.
-func (env *Environment) removeMapper(stateID, mapperID string) []string {
-	if _, exists := env.mapperCaches[stateID]; !exists {
+func (env *Environment) removeMapper(stateID, mapperID string) (effects []string) {
+	if _, exists := env.stateCaches[stateID]; !exists {
 		log.Warn("state machine environment not found",
 			zap.String("stateID", stateID), zap.String("mapperID", mapperID))
 		return nil
 	}
 
 	// clean mapper.
-	mCache, ok := env.mapperCaches[stateID]
-	if !ok {
-		return []string{}
+	if _, ok := env.stateCaches[stateID]; !ok {
+		return effects
 	}
 
-	effects := mCache.cleanHandlers[mapperID]()
-	if len(mCache.mappers) == 0 {
-		delete(env.mapperCaches, stateID)
-	}
+	effects = append(effects, env.cleanMapper(mapperID)...)
+	delete(env.stateCaches[stateID].mappers, mapperID)
 
 	return effects
 }
 
 // addTentacle add tentacle into Environment.
-func (env *Environment) addTentacle(stateID string, tentacle mapper.Tentacler) {
-	if _, has := env.mapperCaches[stateID]; !has {
-		env.mapperCaches[stateID] = newMapperCache()
+func (env *Environment) addTentacle(stateID, mapperID string, tentacle mapper.Tentacler) {
+	var (
+		has    bool
+		sCache *StateCache
+		mCache MapperCache
+	)
+
+	if _, has = env.stateCaches[stateID]; !has {
+		env.stateCaches[stateID] = newStateCache(stateID)
 	}
 
-	mCache := env.mapperCaches[stateID]
-	mCache.tentacles[tentacle.ID()] = tentacle
+	sCache = env.stateCaches[stateID]
+	if mCache, has = sCache.mappers[mapperID]; !has {
+		mCache = newMapperCache(mapperID, nil)
+	}
+
+	env.index(stateID, mapperID)
+	mCache.tentacles = append(mCache.tentacles, tentacle.Copy())
+	sCache.mappers[mapperID] = mCache
+}
+
+func (env *Environment) index(stateID, mapperID string) {
+	if _, ok := env.mapperStates[mapperID]; !ok {
+		env.mapperStates[mapperID] = sort.StringSlice{}
+	}
+
+	slice := env.mapperStates[mapperID]
+	if util.RangeOutIndex != util.Search(slice, stateID) {
+		return
+	}
+
+	slice = append(slice, stateID)
+	slice.Sort()
+
+	// reset index.
+	env.mapperStates[mapperID] = slice
+}
+
+func (env *Environment) cleanMapper(id string) []string {
+	for _, stateID := range env.mapperStates[id] {
+		if sCache, has := env.stateCaches[stateID]; has {
+			delete(sCache.mappers, id)
+		}
+	}
+
+	stateIDs := env.mapperStates[id]
+	delete(env.mapperStates, id)
+	return stateIDs
 }

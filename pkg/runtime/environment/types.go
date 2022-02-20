@@ -45,7 +45,7 @@ func newActorEnv() ActorEnv {
 }
 
 type IEnvironment interface {
-	GetActorEnv(string) ActorEnv
+	GetStateEnv(string) ActorEnv
 	StoreMappers([]dao.Mapper) []dao.Mapper
 	OnMapperChanged(dao.EnventType, dao.Mapper) (Effect, error)
 }

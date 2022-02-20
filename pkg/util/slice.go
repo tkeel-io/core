@@ -2,11 +2,14 @@ package util
 
 import "sort"
 
+const RangeOutIndex = -1
+
 func SliceAppend(slice sort.StringSlice, vals []string) sort.StringSlice {
 	slice = append(slice, vals...)
 	return Unique(slice)
 }
 
+// Unique input order slice.
 func Unique(slice sort.StringSlice) sort.StringSlice {
 	if slice.Len() <= 1 {
 		return slice
@@ -25,4 +28,13 @@ func Unique(slice sort.StringSlice) sort.StringSlice {
 		newSlice = append(newSlice, preVal)
 	}
 	return newSlice
+}
+
+func Search(slice sort.StringSlice, str string) int {
+	if index := slice.Search(str); index < slice.Len() {
+		if slice[index] == str {
+			return index
+		}
+	}
+	return RangeOutIndex
 }
