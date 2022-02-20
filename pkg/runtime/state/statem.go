@@ -21,8 +21,10 @@ package state
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -33,6 +35,7 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -225,6 +228,65 @@ type State struct {
 	Props map[string]constraint.Node
 }
 
-func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) ([]byte, error) {
-	panic("implement me")
+func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) (constraint.Node, error) {
+	var (
+		err    error
+		result constraint.Node
+	)
+	if !strings.ContainsAny(path, ".[") {
+		if result, err = s.patchProp(op, path, value); nil != err {
+			log.Error("patch state property", zap.Error(err), zfield.Eid(s.ID))
+		}
+		return result, errors.Wrap(err, "patch state property")
+	}
+
+	// if path contains '.' or '[' .
+	index := strings.IndexAny(path, ".[")
+	propertyID, patchPath := path[:index], path[index:]
+
+	valNode := constraint.NewNode(value)
+	if result, err = constraint.Patch(s.Props[propertyID], valNode, patchPath, op); nil != err {
+		log.Error("patch state", zfield.Path(path), zap.Error(err), zfield.Eid(s.ID))
+		return nil, errors.Wrap(err, "patch state")
+	}
+
+	switch op {
+	case constraint.PatchOpCopy:
+		return result, nil
+	}
+
+	s.Props[propertyID] = result
+	return result, nil
+}
+
+func (s *State) patchProp(op constraint.PatchOperator, path string, value []byte) (constraint.Node, error) {
+	var (
+		err    error
+		result constraint.Node
+	)
+	switch op {
+	case constraint.PatchOpReplace:
+		s.Props[path] = constraint.NewNode(value)
+	case constraint.PatchOpAdd:
+		// patch property add.
+		prop := s.Props[path]
+		if nil == prop {
+			prop = constraint.JSONNode(`[]`)
+		}
+
+		// patch add val.
+		valNode := constraint.NewNode(value)
+		if result, err = constraint.Patch(prop, valNode, "", op); nil != err {
+			log.Error("patch add", zfield.Path(path), zap.Error(err))
+			return result, errors.Wrap(err, "patch add")
+		}
+		s.Props[path] = result
+	case constraint.PatchOpRemove:
+		delete(s.Props, path)
+	case constraint.PatchOpCopy:
+		result = s.Props[path]
+	default:
+		return result, constraint.ErrJSONPatchReservedOp
+	}
+	return result, nil
 }

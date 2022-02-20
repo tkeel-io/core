@@ -17,11 +17,12 @@ limitations under the License.
 package constraint
 
 import (
-	"errors"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 )
 
 type PatchOperator int
@@ -40,7 +41,7 @@ const (
 
 func NewPatchOperator(op string) PatchOperator {
 	switch op {
-	case "add":
+	case "add": //nolint
 		return PatchOpAdd
 	case "move":
 		return PatchOpMove
@@ -114,15 +115,126 @@ func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) 
 
 		// dispose 'remove' & 'add'
 		if nil != srcNode {
-			switch op {
-			case PatchOpReplace:
-				collect.Set(path, ToBytesWithWrapString(srcNode))
-			case PatchOpAdd:
-				collect.Append(path, ToBytesWithWrapString(srcNode))
-			}
-			return JSONNode(collect.GetRaw()), collect.GetError()
+			setVal := ToBytesWithWrapString(srcNode)
+			resBytes, err := setValue(bytes, setVal, path, op.String())
+			return NewNode(resBytes), errors.Wrap(err, "patch json")
 		}
 		return destNode, ErrEmptyParam
 	}
 	return destNode, ErrInvalidNodeType
+}
+
+func check(raw []byte, path string) ([]byte, []string, []string, error) {
+	// TODO: 后面可以改写 jsonparser.search 来优化.
+	var (
+		err       error
+		valueT    jsonparser.ValueType
+		prevalueT jsonparser.ValueType
+	)
+
+	segs := splitPath(path)
+	if len(raw) == 0 {
+		switch segs[0][0] {
+		case '[':
+			raw = []byte(`[]`)
+		default:
+			raw = []byte(`{}`)
+		}
+	}
+
+	prevalueT, err = jsonparser.ParseType(raw)
+	if nil != err {
+		return raw, nil, nil, errors.Wrap(err, "check path")
+	}
+
+	for index := range segs {
+		if _, valueT, _, err = jsonparser.Get(raw, segs[:index+1]...); nil != err {
+			if segs[index][0] == byte('[') {
+				if prevalueT != jsonparser.Array {
+					return raw, nil, nil, xerrors.ErrInvalidJSONPath
+				}
+			} else if prevalueT != jsonparser.Object {
+				return raw, nil, nil, xerrors.ErrInvalidJSONPath
+			}
+
+			if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+				return raw, segs[:index], segs[index:], nil
+			}
+			return raw, nil, nil, errors.Wrap(err, "check path")
+		}
+		prevalueT = valueT
+	}
+
+	return raw, segs, []string{}, nil
+}
+
+func setValue(raw, setVal []byte, path, op string) ([]byte, error) { //nolint
+	raw2, foundSegs, notFoundSegs, err := check(raw, path)
+	if nil != err {
+		return raw, errors.Wrap(err, "make value")
+	}
+
+	if len(notFoundSegs) == 0 {
+		switch op {
+		case "add":
+			if raw2, err = collectjs.Append(raw2, path, setVal); nil != err {
+				return raw2, errors.Wrap(err, "set value")
+			}
+		case "replace":
+			if raw2, err = collectjs.Set(raw2, path, setVal); nil != err {
+				return raw2, errors.Wrap(err, "set value")
+			}
+		}
+		return raw2, nil
+	}
+
+	segs := notFoundSegs[1:]
+	if len(segs) > 0 {
+		switch op {
+		case "add":
+			if setVal, err = collectjs.Append([]byte(`[]`), "", setVal); nil != err {
+				return raw2, errors.Wrap(err, "set value")
+			}
+		}
+
+		for index := range segs {
+			seg := segs[len(segs)-1-index]
+			switch seg[0] {
+			case '[':
+				if seg != "[0]" {
+					return raw, xerrors.ErrInvalidJSONPath
+				}
+				if setVal, err = collectjs.Append([]byte(`[]`), "", setVal); nil != err {
+					return raw2, errors.Wrap(err, "set value")
+				}
+			default:
+				if setVal, err = collectjs.Set([]byte(`{}`), seg, setVal); nil != err {
+					return raw2, errors.Wrap(err, "set value")
+				}
+			}
+		}
+	}
+
+	path = strings.Join(append(foundSegs, notFoundSegs[0]), ".")
+	path = strings.ReplaceAll(path, ".[", "[")
+	if raw, err = collectjs.Set(raw2, path, setVal); nil != err {
+		return raw2, errors.Wrap(err, "set value")
+	}
+
+	return raw, nil
+}
+
+func splitPath(path string) []string {
+	keys := []string{}
+	if len(path) > 0 {
+		if path[0] == '"' && path[len(path)-1] == '"' {
+			return []string{path[1 : len(path)-1]}
+		}
+		path = strings.ReplaceAll(path, "[", ".[")
+		keys = strings.Split(path, ".")
+	}
+	if len(keys) > 0 && keys[0] == "" {
+		return keys[1:]
+	}
+	return keys
 }

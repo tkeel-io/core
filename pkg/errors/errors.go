@@ -9,6 +9,7 @@ var (
 	ErrInternal                 = errors.New("Core.Internal")
 	ErrEntityNotFound           = errors.New("Core.Entity.NotFound")
 	ErrEntityAleadyExists       = errors.New("Core.Entity.Already.Exists")
+	ErrInvalidEntityParams      = errors.New("Core.Entity.Params.Invalid")
 	ErrMapperNotFound           = errors.New("Core.Mapper.NotFound")
 	ErrQueueNotFound            = errors.New("Core.Queue.NotFound")
 	ErrNodeNotExist             = errors.New("Core.Cluster.Node.NotExist")
@@ -18,10 +19,11 @@ var (
 	ErrInvalidMessageField      = errors.New("Core.Message.Field.Invalid")
 	ErrInvalidSubscriptionMode  = errors.New("Core.Message.Mode.Invalid")
 	ErrInvalidPropertyConfig    = errors.New("Core.Entity.Property.Config.Invalid")
-	ErrInvalidEntityParams      = errors.New("Core.Entity.Params.Invalid")
 	ErrInvalidHTTPRequest       = errors.New("Core.Transport.Http.Request.Invalid")
 	ErrInvalidHTTPInited        = errors.New("Core.Transport.Http.Inited")
 	ErrTemplateNotFound         = errors.New("Core.Template.NotFound")
+	ErrEntityPropertyIDEmpty    = errors.New("Core.Entity.PropertyID.Empty")
+	ErrInvalidRequest           = errors.New("Core.Request.Invalid")
 )
 
 func New(code string) error {

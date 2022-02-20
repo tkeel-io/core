@@ -291,7 +291,7 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	watchKeys := make([]mapper.WatchKey, 0)
 	for index := range pds {
 		valBytes, _ := pds[index].Value.([]byte)
-		if _, err = stateIns.Patch(constraint.PatchOpReplace, pds[index].Path, valBytes); nil != err {
+		if _, err = stateIns.Patch(pds[index].Operator, pds[index].Path, valBytes); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: pds[index].Path})

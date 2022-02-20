@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
@@ -41,4 +42,17 @@ func TestNewStatem(t *testing.T) {
 	sm, err := NewState(context.Background(), &base, nil, nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", sm.GetID())
+}
+
+func TestGJson(t *testing.T) {
+	bytes, _ := jsonparser.Set([]byte(``), []byte(`"sss"`), "aa.a")
+	t.Log(string(bytes))
+}
+
+func TestState_Patch(t *testing.T) {
+	stateIns := State{ID: "test", Props: make(map[string]constraint.Node)}
+
+	stateIns.Patch(constraint.PatchOpAdd, "aa.b.c.c[0]", []byte(`123`))
+
+	t.Log(stateIns.Props)
 }

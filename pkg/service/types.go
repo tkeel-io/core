@@ -18,17 +18,8 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 
 	apim "github.com/tkeel-io/core/pkg/manager"
-)
-
-var (
-	ErrEntityMapperNil       = errors.New("mapper is nil")
-	ErrEntityConfigInvalid   = errors.New("entity config format invalid")
-	ErrEntityInvalidParams   = errors.New("invalid params")
-	ErrEntityEmptyRequest    = errors.New("empty request")
-	ErrEntityPropertyIDEmpty = errors.New("emtpty property id")
 )
 
 type Entity = apim.Base
@@ -61,4 +52,10 @@ func (m MarshalField) String() string {
 
 func NewMarField(v interface{}) MarshalField {
 	return MarshalField{val: v}
+}
+
+type PatchData struct {
+	Path     string
+	Operator string
+	Value    interface{}
 }
