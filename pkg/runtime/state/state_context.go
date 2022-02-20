@@ -1,6 +1,8 @@
 package state
 
 import (
+	"sync/atomic"
+
 	"github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
@@ -10,8 +12,18 @@ import (
 
 type StateContext struct { //nolint
 	stateMachine Machiner
-	mappers      map[string]mapper.Mapper
-	tentacles    map[string][]mapper.Tentacler
+
+	version   int64
+	mappers   map[string]mapper.Mapper
+	tentacles map[string][]mapper.Tentacler
+}
+
+func newContext(sm Machiner) StateContext {
+	return StateContext{
+		stateMachine: sm,
+		mappers:      make(map[string]mapper.Mapper),
+		tentacles:    make(map[string][]mapper.Tentacler),
+	}
 }
 
 func NewContext(sm Machiner, mappers map[string]mapper.Mapper, tentacles []mapper.Tentacler) StateContext {
@@ -31,7 +43,7 @@ func NewContext(sm Machiner, mappers map[string]mapper.Mapper, tentacles []mappe
 	return stateCtx
 }
 
-func (ctx StateContext) LoadEnvironments(env environment.ActorEnv) {
+func (ctx *StateContext) LoadEnvironments(env environment.ActorEnv) {
 	ctx.tentacles = make(map[string][]mapper.Tentacler)
 
 	// load actor mappers.
@@ -48,4 +60,7 @@ func (ctx StateContext) LoadEnvironments(env environment.ActorEnv) {
 		}
 		log.Debug("load environments, tentacle ", logger.Eid(ctx.stateMachine.GetID()), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
 	}
+
+	// update version.
+	atomic.SwapInt64(&ctx.version, ctx.version+1)
 }

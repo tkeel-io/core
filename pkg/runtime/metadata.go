@@ -6,8 +6,10 @@ import (
 
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 func (m *Manager) initializeMetadata() {
@@ -42,7 +44,13 @@ func (m *Manager) watchMetadata() {
 	repo.WatchMapper(context.Background(),
 		repo.GetLastRevision(context.Background()),
 		func(et dao.EnventType, mp dao.Mapper) {
-			effects, _ := m.actorEnv.OnMapperChanged(et, mp)
-			m.reloadMachineEnv(effects)
+			var err error
+			var effect environment.Effect
+			if effect, err = m.actorEnv.OnMapperChanged(et, mp); nil != err {
+				log.Error("call OnMapperChanged", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				return
+			}
+
+			m.reloadMachineEnv(effect.EffectStateIDs)
 		})
 }

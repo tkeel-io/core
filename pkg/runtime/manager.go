@@ -25,6 +25,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/inbox"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
@@ -62,6 +63,7 @@ func NewManager(ctx context.Context, resourceManager types.ResourceManager, disp
 }
 
 func (m *Manager) Start() error {
+	log.Info("start runtime manager")
 	m.initializeMetadata()
 	m.initializeSources()
 	return nil
@@ -73,12 +75,20 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
+func (m *Manager) getContainer(id string) *Container {
+	if _, ok := m.containers[id]; !ok {
+		m.containers[id] = NewContainer(m.ctx, id, m)
+	}
+
+	return m.containers[id]
+}
+
 func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) error {
 	entityID := msgCtx.Get(message.ExtEntityID)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
 
-	container := m.containers[channelID]
+	container := m.getContainer(channelID)
 	machine, err := container.Load(ctx, entityID)
 	if nil != err {
 		if !errors.Is(err, xerrors.ErrEntityNotFound) {
@@ -116,13 +126,32 @@ func (m *Manager) Resource() types.ResourceManager {
 }
 
 func (m *Manager) loadMachine(stateID, stateType string) {
-	// load subscription.
+	switch stateType {
+	case SMTypeSubscription:
+		// TODO: load subscription.
+	default:
+	}
 }
 
 func (m *Manager) reloadMachineEnv(stateIDs []string) {
 	for _, stateID := range stateIDs {
-		m.actorEnv.GetActorEnv(stateID)
-		// TODO: 更新state machine 的StateContext.
+		// load state machine.
+		queue := placement.Global().Select(stateID)
+		container := m.getContainer(queue.ID)
+
+		// load state machine.
+		machine, err := container.Load(context.Background(), stateID)
+		if nil != err {
+			log.Error("load state machine", zap.Error(err),
+				zfield.Channel(queue.ID), zfield.Eid(stateID))
+			continue
+		}
+
+		// update state machine context.
+		stateEnv := m.actorEnv.GetActorEnv(stateID)
+		machine.Context().LoadEnvironments(stateEnv)
+
+		// TODO: 初始化新创建的mapper.
 	}
 }
 

@@ -239,7 +239,7 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	for key, val := range reqEn.Properties {
-		if _, err := stateIns.Patch(constraint.PatchOpReplace, key, []byte(val.String())); nil != err {
+		if _, err = stateIns.Patch(constraint.PatchOpReplace, key, []byte(val.String())); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: key})
@@ -258,7 +258,10 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 }
 
 func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
-	var err error
+	var (
+		err error
+		pds []PatchData
+	)
 
 	// create event.
 	ev := s.makeEvent()
@@ -278,7 +281,6 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	}()
 
 	// decode request.
-	pds := make([]PatchData, 0)
 	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil
@@ -289,7 +291,7 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	watchKeys := make([]mapper.WatchKey, 0)
 	for index := range pds {
 		valBytes, _ := pds[index].Value.([]byte)
-		if _, err := stateIns.Patch(constraint.PatchOpReplace, pds[index].Path, valBytes); nil != err {
+		if _, err = stateIns.Patch(constraint.PatchOpReplace, pds[index].Path, valBytes); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: pds[index].Path})
@@ -382,10 +384,11 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	return nil
 }
 
-func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey { //nolint
+func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
 	var (
 		err   error
 		bytes []byte
+		pds   []PatchData
 	)
 
 	// create event.
@@ -406,7 +409,6 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	}()
 
 	// decode request.
-	pds := make([]PatchData, 0)
 	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil

@@ -123,6 +123,10 @@ func (s *subscription) GetEntity() *dao.Entity {
 	return s.stateMachine.GetEntity()
 }
 
+func (s *subscription) Context() *state.StateContext {
+	return s.stateMachine.Context()
+}
+
 // Invoke message from pubsub.
 func (s *subscription) Invoke(msgCtx message.Context) error {
 	return errors.Wrap(s.stateMachine.Invoke(msgCtx), "subscription invoke message")

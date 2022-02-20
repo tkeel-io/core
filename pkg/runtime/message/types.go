@@ -11,7 +11,8 @@ func (mt MessageType) String() string {
 }
 
 const (
-	MessageTypeState      MessageType = "state"
-	MessageTypeAPIRequest MessageType = "apirequest"
-	MessageTypeAPIRespond MessageType = "apirespond"
+	MessageTypeState        MessageType = "state"
+	MessageTypeAPIRequest   MessageType = "apirequest"
+	MessageTypeAPIRespond   MessageType = "apirespond"
+	MessageTypeAPIRepublish MessageType = "republish"
 )

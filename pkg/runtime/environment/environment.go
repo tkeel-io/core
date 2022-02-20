@@ -45,7 +45,7 @@ type Environment struct {
 }
 
 // NewEnvironment returns *Environment.
-func NewEnvironment() *Environment {
+func NewEnvironment() IEnvironment {
 	return &Environment{
 		mapperCaches: make(map[string]*MapperCache),
 	}
@@ -83,9 +83,12 @@ func (env *Environment) StoreMappers(mappers []dao.Mapper) []dao.Mapper {
 }
 
 // OnMapperChanged respond for mapper.
-func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) ([]string, error) {
+func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect, error) {
 	var err error
-	var effects []string
+	var effect = Effect{
+		MapperID: m.ID,
+		StateID:  m.EntityID,
+	}
 
 	switch et {
 	case dao.PUT:
@@ -95,23 +98,23 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) ([]stri
 		var mapperInstence mapper.Mapper
 		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL); nil != err {
 			log.Error("parse mapper", zap.Error(err), zfield.ID(m.ID), zfield.Eid(m.EntityID))
-			return effects, errors.Wrap(err, "parse mapper again")
+			return effect, errors.Wrap(err, "parse mapper again")
 		}
 		// add mapper into caches.
-		effects = env.addMapper(mapperInstence)
+		effect.EffectStateIDs = env.addMapper(mapperInstence)
 	case dao.DELETE:
 		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
 			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
 		// remove mapper from caches.
-		effects = env.removeMapper(m.EntityID, m.ID)
+		effect.EffectStateIDs = env.removeMapper(m.EntityID, m.ID)
 	default:
 		log.Error("invalid operator", zap.Any("operator", et.String()), zfield.ID(m.ID), zfield.Name(m.Name),
 			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
 	}
 
 	log.Debug("update environment", zfield.ID(m.ID),
-		zfield.Name(m.Name), zfield.Eid(m.EntityID), zap.Strings("effects", effects))
-	return effects, nil
+		zfield.Name(m.Name), zfield.Eid(m.EntityID), zap.Any("effect", effect))
+	return effect, nil
 }
 
 // generateCleanHandler generate clean-handler for mapper.
@@ -122,7 +125,9 @@ func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleI
 			for _, id := range tentacleIDs {
 				if tentacle, ok := mCache.tentacles[id]; ok {
 					delete(mCache.tentacles, id)
-					targets = append(targets, tentacle.TargetID())
+					if tentacle.Type() == mapper.TentacleTypeEntity {
+						targets = append(targets, tentacle.TargetID())
+					}
 				}
 			}
 			delete(mCache.mappers, mapperID)
@@ -134,7 +139,7 @@ func (env *Environment) generateCleanHandler(stateID, mapperID string, tentacleI
 
 // addMapper add mapper into Environment.
 func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
-	// check mapper exists.
+	// create cache if not exist.
 	targetID := m.TargetEntity()
 	if _, has := env.mapperCaches[targetID]; !has {
 		env.mapperCaches[targetID] = newMapperCache()

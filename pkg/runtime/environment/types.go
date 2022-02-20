@@ -34,6 +34,12 @@ type ActorEnv struct {
 	Tentacles []mapper.Tentacler
 }
 
+type Effect struct {
+	StateID        string
+	MapperID       string
+	EffectStateIDs []string
+}
+
 func newActorEnv() ActorEnv {
 	return ActorEnv{Mappers: make(map[string]mapper.Mapper)}
 }
@@ -41,5 +47,5 @@ func newActorEnv() ActorEnv {
 type IEnvironment interface {
 	GetActorEnv(string) ActorEnv
 	StoreMappers([]dao.Mapper) []dao.Mapper
-	OnMapperChanged(dao.EnventType, dao.Mapper) ([]string, error)
+	OnMapperChanged(dao.EnventType, dao.Mapper) (Effect, error)
 }

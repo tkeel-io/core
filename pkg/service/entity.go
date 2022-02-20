@@ -207,7 +207,7 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 		}
 
 		for index := range patchData {
-			//encode value.
+			// encode value.
 			bytes, _ := json.Marshal(patchData[index].Value)
 			patchData[index].Value = bytes
 		}

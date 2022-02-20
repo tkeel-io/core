@@ -21,6 +21,7 @@ package state
 import (
 	"context"
 	"sort"
+	"sync/atomic"
 
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
@@ -111,8 +112,10 @@ type statem struct {
 	// state machine message handler.
 	msgHandler MessageHandler
 
-	// state Context.
-	sCtx   StateContext
+	// state Context, state context version.
+	sCtx    StateContext
+	version int64
+
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -149,6 +152,9 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 
 	state.msgHandler = state.invokePropertyMessage
 
+	// initialize state context.
+	state.sCtx = newContext(state)
+
 	return state, nil
 }
 
@@ -166,16 +172,31 @@ func (s *statem) GetEntity() *dao.Entity {
 	return &s.Entity
 }
 
+func (s *statem) Context() *StateContext {
+	return &s.sCtx
+}
+
 // WithContext set state Context.
 func (s *statem) WithContext(ctx StateContext) Machiner {
 	s.sCtx = ctx
 	return s
 }
 
+func (s *statem) updateFromContext() {
+	if atomic.LoadInt64(&s.sCtx.version) > s.version {
+		log.Debug("state context changed", zfield.Eid(s.ID), zfield.Type(s.Type))
+		s.mappers = s.sCtx.mappers
+		s.tentacles = s.sCtx.tentacles
+	}
+}
+
 // OnMessage recive statem input messages.
 func (s *statem) Invoke(msgCtx message.Context) error {
-	msgType := msgCtx.Get(message.ExtMessageType)
+	// update state from StateContext.
+	s.updateFromContext()
 
+	// delive message.
+	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
 	case message.MessageTypeAPIRequest:
 		actives := s.callAPIs(msgCtx.Context(), msgCtx)

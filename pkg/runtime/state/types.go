@@ -31,6 +31,8 @@ type Machiner interface {
 	GetStatus() Status
 	// GetEntity returns this.Entity.
 	GetEntity() *dao.Entity
+	// Context return state context.
+	Context() *StateContext
 	// OnMessage recv message from pubsub.
 	Invoke(ctx message.Context) error
 	// Flush flush entity data.
