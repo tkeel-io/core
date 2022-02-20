@@ -2,10 +2,8 @@ package kafka
 
 // import (
 // 	"context"
-// 	"fmt"
 // 	"testing"
 
-// 	"github.com/Shopify/sarama"
 // 	cloudevents "github.com/cloudevents/sdk-go"
 // )
 
