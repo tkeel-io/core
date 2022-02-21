@@ -39,7 +39,10 @@ func TestEntity_Copy(t *testing.T) {
 	}
 
 	cp := en.Copy()
-	assert.Equal(t, en, cp)
+	assert.Equal(t, en.ID, cp.ID)
+	assert.Equal(t, en.Type, cp.Type)
+	assert.Equal(t, en.Owner, cp.Owner)
+	assert.Equal(t, en.Source, cp.Source)
 }
 
 func TestEntity_Basic(t *testing.T) {

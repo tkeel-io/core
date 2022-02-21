@@ -285,7 +285,7 @@ service Entity {
 
 	rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
 		option (google.api.http) = {
-			delete : "/entities/{id}/mappers"
+			delete : "/entities/{id}/mappers/{mapper_id}"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "remove mappers from entity";
@@ -467,7 +467,7 @@ message RemoveMapperRequest {
     string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
     string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
     string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    string mapper_name = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper name"}];
+    string mapper_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper name"}];
 }
 
 // Remove Mapper Response.

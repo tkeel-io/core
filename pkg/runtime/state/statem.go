@@ -194,7 +194,7 @@ func (s *statem) updateFromContext() {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) Invoke(msgCtx message.Context) error {
+func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 	// update state from StateContext.
 	s.updateFromContext()
 
@@ -213,6 +213,8 @@ func (s *statem) Invoke(msgCtx message.Context) error {
 		log.Error("invalid message type", zfield.Header(msgCtx.Attributes()))
 		return xerrors.ErrInvalidMessageType
 	}
+
+	s.flush(ctx)
 	return nil
 }
 

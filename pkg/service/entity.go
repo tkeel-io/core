@@ -354,8 +354,13 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				}
 			}
 
+			var bytes []byte
+			if bytes, err = json.Marshal(cfg); nil != err {
+				log.Error("json marshal", zap.Error(err), zfield.Eid(in.Id))
+				return nil, errors.Wrap(err, "patch entity failed")
+			}
 			pds = append(pds, state.PatchData{Path: pd.Path,
-				Operator: constraint.NewPatchOperator(pd.Operator), Value: cfg})
+				Operator: constraint.NewPatchOperator(pd.Operator), Value: bytes})
 		}
 
 		if entity, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
@@ -388,12 +393,16 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	parseHeaderFrom(ctx, entity)
 
 	// set properties.
-	propertyIDs := strings.Split(in.PropertyKeys, ",")
+	var propertyIDs []string
+	if in.PropertyKeys != "" {
+		propertyIDs = strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
+	}
+
 	if entity, err = s.apiManager.GetEntityConfigs(ctx, entity, propertyIDs); nil != err {
 		log.Error("query entity configs", zfield.Eid(in.Id), zap.Error(err))
 	}
 
-	out = s.entity2EntityResponse(entity)
+	out = s.entity2EntityResponseZ(entity)
 	return out, errors.Wrap(err, "query entity configs")
 }
 
@@ -510,7 +519,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
-	entity.Mappers = []state.Mapper{{Name: req.MapperName}}
+	entity.Mappers = []state.Mapper{{ID: req.MapperId}}
 	if err = s.apiManager.RemoveMapper(ctx, entity); nil != err {
 		log.Error("remove mapper", zfield.Eid(req.Id), zap.Error(err))
 		return
@@ -566,6 +575,52 @@ func parseHeaderFrom(ctx context.Context, en *apim.Base) {
 	}
 }
 
+func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityResponse) {
+	if entity == nil {
+		return
+	}
+
+	var err error
+	out = &pb.EntityResponse{}
+
+	kv := make(map[string]interface{})
+	for k, v := range entity.Properties {
+		kv[k] = v.Value()
+	}
+
+	var configBytes []byte
+	configs := make(map[string]interface{})
+	if configBytes, err = json.Marshal(entity.Configs); nil != err {
+		log.Error("marshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
+	} else if err = json.Unmarshal(configBytes, &configs); nil != err {
+		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
+	}
+
+	if out.Properties, err = structpb.NewValue(kv); nil != err {
+		log.Error("convert entity failed", zap.Error(err))
+	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
+		log.Error("convert entity failed.", zap.Error(err))
+	}
+
+	out.Mappers = make([]*pb.Mapper, 0)
+	for _, mDesc := range entity.Mappers {
+		out.Mappers = append(out.Mappers,
+			&pb.Mapper{
+				Id:          mDesc.ID,
+				Name:        mDesc.Name,
+				TqlText:     mDesc.TQL,
+				Description: mDesc.Description,
+			})
+	}
+
+	out.Id = entity.ID
+	out.Type = entity.Type
+	out.Owner = entity.Owner
+	out.Source = entity.Source
+
+	return out
+}
+
 func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityResponse) {
 	if entity == nil {
 		return
@@ -580,7 +635,9 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	configs := make(map[string]interface{})
-	json.Unmarshal(entity.ConfigFile, &configs)
+	if err = json.Unmarshal(entity.ConfigFile, &configs); nil != err {
+		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
+	}
 
 	if out.Properties, err = structpb.NewValue(kv); nil != err {
 		log.Error("convert entity failed", zap.Error(err))

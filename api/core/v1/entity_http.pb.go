@@ -730,7 +730,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.GetEntityConfigs))
 	ws.Route(ws.POST("/entities/{id}/mappers").
 		To(handler.AppendMapper))
-	ws.Route(ws.DELETE("/entities/{id}/mappers").
+	ws.Route(ws.DELETE("/entities/{id}/mappers/{mapper_id}").
 		To(handler.RemoveMapper))
 	ws.Route(ws.POST("/entities/search").
 		To(handler.ListEntity))

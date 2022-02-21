@@ -31,6 +31,7 @@ func (e *Entity) Copy() Entity {
 		Version:    e.Version,
 		LastTime:   e.LastTime,
 		TemplateID: e.TemplateID,
+		ConfigFile: []byte(`{}`),
 		Properties: make(map[string]constraint.Node),
 	}
 
@@ -39,7 +40,11 @@ func (e *Entity) Copy() Entity {
 		en.Properties[pid] = pval.Copy()
 	}
 
-	copy(en.ConfigFile, e.ConfigFile)
+	if len(en.ConfigFile) > 0 {
+		en.ConfigFile = make([]byte, len(e.ConfigFile))
+		copy(en.ConfigFile, e.ConfigFile)
+	}
+
 	return en
 }
 
@@ -98,7 +103,6 @@ func (d *Dao) GetEntity(ctx context.Context, id string) (en *Entity, err error) 
 		if len(item.Value) == 0 {
 			return nil, xerrors.ErrEntityNotFound
 		}
-
 		en = new(Entity)
 		err = d.entityCodec.Decode(item.Value, en)
 	}

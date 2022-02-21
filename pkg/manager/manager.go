@@ -166,14 +166,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-		ConfigFile: apiResp.ConfigFile,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) {
@@ -229,13 +222,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 // GetProperties returns Base.
@@ -290,13 +277,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 // DeleteEntity delete an entity from manager.
@@ -411,13 +392,7 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
@@ -473,13 +448,7 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 func (m *apiManager) GetEntityProps(context.Context, *Base, []string) (*Base, error) {
@@ -516,6 +485,7 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 		return nil, errors.Wrap(err, "set entity configs")
 	}
 
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityConfigs.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("set entity configs, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -543,13 +513,7 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 // PatchConfigs patch properties into entity.
@@ -577,6 +541,7 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 	}
 
 	// set event header fields.
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtAPIIdentify, state.APIPatchEntityConfigs.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -604,13 +569,7 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &Base{
-		ID:         apiResp.ID,
-		Type:       apiResp.Type,
-		Owner:      apiResp.Owner,
-		Source:     apiResp.Source,
-		Properties: apiResp.Properties,
-	}, nil
+	return entityToBase(&apiResp), nil
 }
 
 // QueryConfigs query entity configs.
@@ -686,14 +645,15 @@ func (m *apiManager) RemoveMapper(ctx context.Context, en *Base) error {
 	// delete mapper.
 	var err error
 	mp := en.Mappers[0]
-	if err = m.entityRepo.DelMapper(ctx, &dao.Mapper{
-		ID:          mp.ID,
-		TQL:         mp.TQL,
-		Name:        mp.Name,
-		EntityID:    en.ID,
-		EntityType:  en.Type,
-		Description: mp.Description,
-	}); nil != err {
+	if err = m.entityRepo.DelMapper(ctx,
+		&dao.Mapper{
+			ID:          mp.ID,
+			TQL:         mp.TQL,
+			Name:        mp.Name,
+			EntityID:    en.ID,
+			EntityType:  en.Type,
+			Description: mp.Description,
+		}); nil != err {
 		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
 		return errors.Wrap(err, "remove mapper")
 	}

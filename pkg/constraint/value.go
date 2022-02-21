@@ -144,8 +144,8 @@ func Parse(bytes []byte) (map[string]*Config, error) {
 }
 
 func ParseFrom(bytes []byte) (*Config, error) {
-	var v = new(interface{})
-	if err := json.Unmarshal(bytes, v); nil != err {
+	v := make(map[string]interface{})
+	if err := json.Unmarshal(bytes, &v); nil != err {
 		log.Error("unmarshal Config", zap.Error(err))
 		return nil, errors.Wrap(err, "unmarshal Config")
 	}
@@ -157,9 +157,9 @@ func ParseFrom(bytes []byte) (*Config, error) {
 func ParseConfigFrom(data interface{}) (cfg Config, err error) {
 	cfgRequest := Config{}
 	if err = mapstructure.Decode(data, &cfgRequest); nil != err {
-		return cfg, errors.Wrap(err, "parse property config failed")
+		return cfg, errors.Wrap(err, "decode property config failed")
 	} else if cfgRequest, err = parseField(cfgRequest); nil != err {
-		return cfg, errors.Wrap(err, "parse property config failed")
+		return cfg, errors.Wrap(err, "parse config  failed")
 	}
 	return cfgRequest, nil
 }

@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/inbox"
@@ -113,7 +114,7 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 		zfield.Header(msgCtx.Attributes()),
 		zfield.Message(string(msgCtx.Message())))
 
-	if err = machine.Invoke(msgCtx); nil != err {
+	if err = machine.Invoke(ctx, msgCtx); nil != err {
 		log.Error("invoke message", zap.Error(err), zfield.Header(msgCtx.Attributes()))
 	}
 
@@ -138,6 +139,9 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 		// load state machine.
 		queue := placement.Global().Select(stateID)
 		container := m.getContainer(queue.ID)
+		if config.Get().Server.Name != queue.Name {
+			return
+		}
 
 		// load state machine.
 		machine, err := container.Load(context.Background(), stateID)

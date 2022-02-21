@@ -202,6 +202,33 @@ func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) []Watc
 
 func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
 	s.status = SMStatusDeleted
+
+	var err error
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
 	return nil
 }
 
@@ -381,6 +408,14 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	// reparse state configs.
 	s.reparseConfig()
 
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
 	return nil
 }
 
@@ -426,15 +461,26 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		case constraint.PatchOpRemove:
 			s.ConfigFile = collectjs.Del(s.ConfigFile, pd.Path)
 		case constraint.PatchOpReplace:
-			if bytes, err = collectjs.Set(s.ConfigFile, pd.Path, pd.Value.([]byte)); nil != err {
-				log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
-				continue
+			if valBytes, ok := pd.Value.([]byte); ok {
+				if bytes, err = collectjs.Set(s.ConfigFile, pd.Path, valBytes); nil != err {
+					log.Error("call core.APIs.PatchConfigs patch replace", zap.Error(err))
+					return nil
+				}
+				s.ConfigFile = bytes
 			}
-			s.ConfigFile = bytes
+			log.Error("assert patch data value", zfield.Eid(s.ID), zfield.ReqID(reqID))
 		}
 	}
 
 	s.reparseConfig()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
 	return nil
 }

@@ -166,7 +166,12 @@ type StringNode string
 func (r StringNode) Type() Type         { return String }
 func (r StringNode) String() string     { return string(r) }
 func (r StringNode) Value() interface{} { return string(r[1 : len(r)-1]) }
-func (r StringNode) Copy() Node         { return r }
+func (r StringNode) Copy() Node {
+	res := make([]byte, len(r))
+	copy(res, r)
+	return StringNode(res)
+}
+
 func (r StringNode) To(typ Type) Node {
 	switch typ {
 	case String:
@@ -238,7 +243,7 @@ func (r ArrayNode) Value() interface{} {
 	return data
 }
 func (r ArrayNode) Copy() Node {
-	var res []byte
+	res := make([]byte, len(r))
 	copy(res, r)
 	return ArrayNode(res)
 }
@@ -268,7 +273,7 @@ func (r JSONNode) Value() interface{} {
 }
 
 func (r JSONNode) Copy() Node {
-	var res []byte
+	res := make([]byte, len(r))
 	copy(res, r)
 	return JSONNode(res)
 }

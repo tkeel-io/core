@@ -148,6 +148,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 
 	var err error
+	var activeKeys []mapper.WatchKey
 	for mapperID := range actives {
 		input := make(map[string]constraint.Node)
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
@@ -182,8 +183,23 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 				continue
 			}
 			s.LastTime = time.Now().UnixNano() / 1e6
+			activeKeys = append(activeKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: propertyKey})
 		}
 	}
+	s.activeTentacle(unique(activeKeys))
+}
+
+func unique(actives []mapper.WatchKey) []mapper.WatchKey {
+	umap := make(map[string]mapper.WatchKey)
+	for _, w := range actives {
+		umap[w.String()] = w
+	}
+
+	actives = []mapper.WatchKey{}
+	for _, w := range umap {
+		actives = append(actives, w)
+	}
+	return actives
 }
 
 func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {

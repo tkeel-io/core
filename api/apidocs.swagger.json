@@ -599,64 +599,6 @@
       }
     },
     "/entities/{id}/mappers": {
-      "delete": {
-        "summary": "remove mappers from entity",
-        "operationId": "RemoveMapper",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1RemoveMapperResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "mapper_name",
-            "description": "mapper name",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Entity"
-        ]
-      },
       "post": {
         "summary": "Append mapper for entity",
         "operationId": "AppendMapper",
@@ -709,6 +651,66 @@
           {
             "name": "owner",
             "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      }
+    },
+    "/entities/{id}/mappers/{mapper_id}": {
+      "delete": {
+        "summary": "remove mappers from entity",
+        "operationId": "RemoveMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveMapperResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "mapper_id",
+            "description": "mapper name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
             "in": "query",
             "required": false,
             "type": "string"

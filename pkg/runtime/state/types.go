@@ -34,7 +34,7 @@ type Machiner interface {
 	// Context return state context.
 	Context() *StateContext
 	// OnMessage recv message from pubsub.
-	Invoke(ctx message.Context) error
+	Invoke(ctx context.Context, msgCtx message.Context) error
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
 }
