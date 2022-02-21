@@ -10,6 +10,7 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/core/pkg/constraint"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -39,10 +40,10 @@ const (
 	APIGetEntityConfigs    APIID = "core.apis.Entity.Configs.Get"
 )
 
-type APIHandler func(context.Context, message.Context) []WatchKey
+type APIHandler func(context.Context, message.Context) ([]WatchKey, error)
 
 // call core.APIs.
-func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	log.Debug("call core.APIs", zfield.Header(msgCtx.Attributes()))
 
 	apiID := APIID(msgCtx.Get(message.ExtAPIIdentify))
@@ -71,7 +72,7 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKe
 		// nerver.
 	}
 
-	return nil
+	return []WatchKey{}, nil
 }
 
 func (s *statem) makeEvent() cloudevents.Event {
@@ -113,7 +114,7 @@ func (s *statem) setEventPayload(ev *cloudevents.Event, reqID string) error {
 	return errors.Wrap(err, "set event payload")
 }
 
-func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err   error
 		reqEn dao.Entity
@@ -136,10 +137,17 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 		}
 	}()
 
+	// check version.
+	if s.Version > 0 {
+		err = xerrors.ErrEntityAleadyExists
+		log.Error("state machine already exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine already exists")
+	}
+
 	// decode request.
 	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "decode core api request")
 	}
 
 	// initialize.
@@ -152,7 +160,7 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 		var tempEn = &dao.Entity{ID: reqEn.TemplateID}
 		if tempEn, err = s.Repo().GetEntity(ctx, tempEn); nil != err {
 			log.Error("pull template entity", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-			return nil
+			return nil, errors.Wrap(err, "pull template entity")
 		}
 
 		s.ConfigFile = tempEn.ConfigFile
@@ -164,19 +172,23 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) []W
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set response event payload")
 	}
+
+	s.Version++
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	s.flush(ctx)
+
+	return nil, nil
 }
 
-func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	panic("implement me")
 }
 
-func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var err error
 	// create event.
 	ev := s.makeEvent()
@@ -195,18 +207,24 @@ func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) []Watc
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	return []WatchKey{}, errors.Wrap(err, "")
 }
 
-func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	s.status = SMStatusDeleted
 
 	var err error
@@ -227,18 +245,25 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) []W
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	return []WatchKey{}, errors.Wrap(err, "")
 }
 
-func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err   error
 		reqEn dao.Entity
@@ -261,10 +286,17 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
 	// decode request.
 	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "decode core api request")
 	}
 
 	// update state properties.
@@ -282,15 +314,17 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return watchKeys
+	s.flush(ctx)
+
+	return watchKeys, nil
 }
 
-func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err error
 		pds []PatchData
@@ -313,10 +347,17 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
 	// decode request.
 	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "decode core api request")
 	}
 
 	// update state properties.
@@ -334,15 +375,16 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return watchKeys
+	s.flush(ctx)
+	return watchKeys, nil
 }
 
-func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var err error
 	// create event.
 	ev := s.makeEvent()
@@ -361,18 +403,24 @@ func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) [
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	return []WatchKey{}, nil
 }
 
-func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err   error
 		bytes []byte
@@ -396,10 +444,17 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
 	// decode request.
 	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "decode core api request")
 	}
 
 	// update configs.
@@ -417,15 +472,16 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	s.flush(ctx)
+	return []WatchKey{}, nil
 }
 
-func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err   error
 		bytes []byte
@@ -449,10 +505,17 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		}
 	}()
 
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
 	// decode request.
 	if pds, err = GetPatchCodec().Decode(msgCtx.Message()); nil != err {
 		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "set event payload")
 	}
 
 	for _, pd := range pds {
@@ -470,7 +533,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 			if valBytes, ok := pd.Value.([]byte); ok {
 				if bytes, err = collectjs.Set(s.ConfigFile, pd.Path, valBytes); nil != err {
 					log.Error("call core.APIs.PatchConfigs patch replace", zap.Error(err))
-					return nil
+					return nil, errors.Wrap(err, "patch replace")
 				}
 				s.ConfigFile = bytes
 			}
@@ -483,15 +546,16 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	// set response.
 	if err = s.setEventPayload(&ev, reqID); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil
+		return nil, errors.Wrap(err, "patch replace")
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 
-	return nil
+	s.flush(ctx)
+	return []WatchKey{}, nil
 }
 
-func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) []WatchKey {
+func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	panic("implement me")
 }
 

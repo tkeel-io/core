@@ -199,22 +199,24 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 	s.updateFromContext()
 
 	// delive message.
+	var err error
+	var actives []WatchKey
 	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
 	case message.MessageTypeAPIRequest:
-		actives := s.callAPIs(msgCtx.Context(), msgCtx)
+		if actives, err = s.callAPIs(msgCtx.Context(), msgCtx); nil != err {
+			return errors.Wrap(err, "apis call")
+		}
 		s.activeTentacle(actives)
 	case message.MessageTypeState:
 		// handle state message.
-		watchKeys := s.msgHandler(msgCtx)
-		// active tentacles.
-		s.activeTentacle(watchKeys)
+		s.activeTentacle(s.msgHandler(msgCtx))
+		s.flush(ctx)
 	default:
 		log.Error("invalid message type", zfield.Header(msgCtx.Attributes()))
 		return xerrors.ErrInvalidMessageType
 	}
 
-	s.flush(ctx)
 	return nil
 }
 

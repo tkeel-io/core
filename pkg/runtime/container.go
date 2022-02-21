@@ -52,20 +52,13 @@ func (c *Container) Remove(stateID string) {
 	delete(c.states, stateID)
 }
 
-func (c *Container) Add(en *dao.Entity) (machine state.Machiner, err error) {
-	// make machine.
-	if machine, err = makeMachine(c.ctx, c.manager, en); nil != err {
-		log.Error("make state machine", zap.Error(err), zfield.ID(en.ID), zfield.Channel(c.id))
-		return machine, errors.Wrap(err, "make state machine")
-	}
-
+func (c *Container) Add(machine state.Machiner) {
+	eid := machine.GetID()
 	// load state context.
-	stateEnv := c.manager.actorEnv.GetStateEnv(en.ID)
+	stateEnv := c.manager.actorEnv.GetStateEnv(eid)
 	machine.Context().LoadEnvironments(stateEnv)
-
 	// add machine into container.
-	c.states[en.ID] = machine
-	return machine, errors.Wrap(err, "add machine")
+	c.states[eid] = machine
 }
 
 func (c *Container) Load(ctx context.Context, stateID string) (machine state.Machiner, err error) {
@@ -89,9 +82,15 @@ func (c *Container) Load(ctx context.Context, stateID string) (machine state.Mac
 		return nil, errors.Wrap(err, "load entity from store")
 	}
 
+	// update version.
+	if en.Version <= 0 {
+		en.Version = 1
+	}
+
 	// make machine.
-	if machine, err = makeMachine(c.ctx, c.manager, en); nil != err {
-		log.Error("make state machine", zap.Error(err), zfield.ID(en.ID), zfield.Channel(c.id))
+	if machine, err = c.MakeMachine(en); nil != err {
+		log.Error("make state machine",
+			zap.Error(err), zfield.ID(en.ID), zfield.Channel(c.id))
 		return machine, errors.Wrap(err, "make state machine")
 	}
 
@@ -106,15 +105,15 @@ func (c *Container) Load(ctx context.Context, stateID string) (machine state.Mac
 
 func (c *Container) Close() {}
 
-func makeMachine(ctx context.Context, mgr *Manager, en *dao.Entity) (machine state.Machiner, err error) {
+func (c *Container) MakeMachine(en *dao.Entity) (machine state.Machiner, err error) {
 	// make state machine.
 	switch en.Type {
 	case SMTypeSubscription:
-		if machine, err = subscription.NewSubscription(ctx, en); nil != err {
+		if machine, err = subscription.NewSubscription(c.ctx, en); nil != err {
 			log.Error("load subscription", zap.Error(err), zfield.Eid(en.ID), zfield.Type(en.Type))
 		}
 	default:
-		machine, err = state.NewState(ctx, en, mgr.dispatcher, mgr.resourceManager, nil)
+		machine, err = state.NewState(c.ctx, en, c.manager.dispatcher, c.manager.resourceManager, nil)
 		if nil != err {
 			log.Error("load machine", zap.Error(err), zfield.Eid(en.ID), zfield.Type(en.Type))
 		}

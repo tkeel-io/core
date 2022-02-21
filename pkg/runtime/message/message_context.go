@@ -5,6 +5,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/kit/log"
@@ -101,6 +102,8 @@ func ParseEntityFrom(msgCtx Context) *dao.Entity {
 		Owner:      msgCtx.Get(ExtEntityOwner),
 		Source:     msgCtx.Get(ExtEntitySource),
 		TemplateID: msgCtx.Get(ExtTemplateID),
+		Properties: make(map[string]constraint.Node),
+		ConfigFile: []byte("{}"),
 	}
 
 	return en

@@ -76,7 +76,7 @@ func (m *Manager) Shutdown() error {
 	return nil
 }
 
-func (m *Manager) getContainer(id string) *Container {
+func (m *Manager) selectContainer(id string) *Container {
 	if _, ok := m.containers[id]; !ok {
 		m.containers[id] = NewContainer(m.ctx, id, m)
 	}
@@ -85,40 +85,48 @@ func (m *Manager) getContainer(id string) *Container {
 }
 
 func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) error {
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
 	entityID := msgCtx.Get(message.ExtEntityID)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
 
-	container := m.getContainer(channelID)
+	var flagCreate bool
+	container := m.selectContainer(channelID)
 	machine, err := container.Load(ctx, entityID)
 	if nil != err {
 		if !errors.Is(err, xerrors.ErrEntityNotFound) {
-			log.Error("undefine error, load state machine",
+			log.Error("undefine error, load state machine", zfield.ReqID(reqID),
 				zap.Error(err), zfield.ID(entityID), zfield.Channel(channelID))
 			return xerrors.ErrInternal
 		}
 
+		flagCreate = true
 		// state machine not exists, then create.
-		// TODO: create state machine.
 		enDao := message.ParseEntityFrom(msgCtx)
-		if machine, err = container.Add(enDao); nil != err {
-			log.Error("create state machine", zap.Error(err),
-				zfield.ID(entityID), zfield.Channel(channelID))
+		if machine, err = container.MakeMachine(enDao); nil != err {
+			log.Error("create state machine", zfield.Channel(channelID),
+				zfield.ReqID(reqID), zfield.ID(entityID), zap.Error(err))
 			return xerrors.ErrInternal
 		}
 	}
 
-	log.Debug("core.Runtime invoke message",
+	log.Debug("handle message",
 		zfield.ID(entityID),
+		zfield.ReqID(reqID),
 		zfield.Channel(channelID),
 		zfield.Header(msgCtx.Attributes()),
 		zfield.Message(string(msgCtx.Message())))
 
 	if err = machine.Invoke(ctx, msgCtx); nil != err {
-		log.Error("invoke message", zap.Error(err), zfield.Header(msgCtx.Attributes()))
+		log.Error("handle message", zap.Error(err),
+			zfield.ID(entityID), zfield.ReqID(reqID),
+			zfield.Message(string(msgCtx.Message())),
+			zfield.Channel(channelID), zfield.Header(msgCtx.Attributes()))
+	} else if flagCreate {
+		container.Add(machine)
 	}
 
-	return errors.Wrap(err, "invoke message")
+	return errors.Wrap(err, "handle message")
 }
 
 // Resource return resource manager.
@@ -138,7 +146,7 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 	for _, stateID := range stateIDs {
 		// load state machine.
 		queue := placement.Global().Select(stateID)
-		container := m.getContainer(queue.ID)
+		container := m.selectContainer(queue.ID)
 		if config.Get().Server.Name != queue.Name {
 			return
 		}

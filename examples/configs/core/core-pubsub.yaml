@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: core-pubsub
+  name: core-pubsub0
 spec:
   type: pubsub.redis
   version: v1
