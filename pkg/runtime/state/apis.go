@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
-	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
@@ -42,30 +41,37 @@ const (
 
 type APIHandler func(context.Context, message.Context) []WatchKey
 
-var once = sync.Once{}
-var apiCallbacks map[APIID]APIHandler
-
 // call core.APIs.
 func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) []WatchKey {
 	log.Debug("call core.APIs", zfield.Header(msgCtx.Attributes()))
 
-	once.Do(func() {
-		apiCallbacks = map[APIID]APIHandler{
-			APICreateEntity:        s.cbCreateEntity,
-			APIUpdateEntity:        s.cbUpdateEntity,
-			APIGetEntity:           s.cbGetEntity,
-			APIDeleteEntity:        s.cbDeleteEntity,
-			APIUpdataEntityProps:   s.cbUpdateEntityProps,
-			APIPatchEntityProps:    s.cbPatchEntityProps,
-			APIGetEntityProps:      s.cbGetEntityProps,
-			APIUpdataEntityConfigs: s.cbUpdateEntityConfigs,
-			APIPatchEntityConfigs:  s.cbPatchEntityConfigs,
-			APIGetEntityConfigs:    s.cbGetEntityConfigs,
-		}
-	})
-
 	apiID := APIID(msgCtx.Get(message.ExtAPIIdentify))
-	return apiCallbacks[apiID](ctx, msgCtx)
+	switch apiID {
+	case APICreateEntity:
+		return s.cbCreateEntity(ctx, msgCtx)
+	case APIUpdateEntity:
+		return s.cbUpdateEntity(ctx, msgCtx)
+	case APIGetEntity:
+		return s.cbGetEntity(ctx, msgCtx)
+	case APIDeleteEntity:
+		return s.cbDeleteEntity(ctx, msgCtx)
+	case APIUpdataEntityProps:
+		return s.cbUpdateEntityProps(ctx, msgCtx)
+	case APIPatchEntityProps:
+		return s.cbPatchEntityProps(ctx, msgCtx)
+	case APIGetEntityProps:
+		return s.cbGetEntityProps(ctx, msgCtx)
+	case APIUpdataEntityConfigs:
+		return s.cbUpdateEntityConfigs(ctx, msgCtx)
+	case APIPatchEntityConfigs:
+		return s.cbPatchEntityConfigs(ctx, msgCtx)
+	case APIGetEntityConfigs:
+		return s.cbGetEntityConfigs(ctx, msgCtx)
+	default:
+		// nerver.
+	}
+
+	return nil
 }
 
 func (s *statem) makeEvent() cloudevents.Event {

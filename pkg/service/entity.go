@@ -56,10 +56,8 @@ func NewEntityService(ctx context.Context, apiManager apim.APIManager, searchCli
 
 func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (out *pb.EntityResponse, err error) {
 	var entity = new(Entity)
-	if req.Id != "" {
-		entity.ID = req.Id
-	}
 
+	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Type = req.Type
 	entity.Source = req.Source
