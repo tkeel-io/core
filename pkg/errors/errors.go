@@ -24,6 +24,15 @@ var (
 	ErrTemplateNotFound         = errors.New("Core.Template.NotFound")
 	ErrEntityPropertyIDEmpty    = errors.New("Core.Entity.PropertyID.Empty")
 	ErrInvalidRequest           = errors.New("Core.Request.Invalid")
+	ErrEntityConfigInvalid      = errors.New("invalid entity configurations")
+	ErrJSONPatchReservedOp      = errors.New("invalid json patch operator")
+	ErrInvalidNodeType          = errors.New("undefine node type")
+	ErrEmptyParam               = errors.New("empty params")
+	ErrPatchNotFound            = errors.New("patch not found")
+	ErrPatchPathInvalid         = errors.New("invalid patch path")
+	ErrPatchPathLack            = errors.New("patch path lack")
+	ErrPatchPathRoot            = errors.New("patch path lack root")
+	ErrPatchTypeInvalid         = errors.New("patch config type invalid")
 )
 
 func New(code string) error {

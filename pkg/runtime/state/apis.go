@@ -17,6 +17,7 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -304,7 +305,7 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	for key, val := range reqEn.Properties {
-		if _, err = stateIns.Patch(constraint.OpReplace, key, []byte(val.String())); nil != err {
+		if _, err = stateIns.Patch(xjson.OpReplace, key, []byte(val.String())); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: key})
@@ -365,7 +366,7 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	watchKeys := make([]mapper.WatchKey, 0)
 	for index := range pds {
 		valBytes, _ := pds[index].Value.([]byte)
-		op := constraint.NewPatchOp(pds[index].Operator)
+		op := xjson.NewPatchOp(pds[index].Operator)
 		if _, err = stateIns.Patch(op, pds[index].Path, valBytes); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
 		} else {
@@ -528,17 +529,17 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	}
 
 	for _, pd := range pds {
-		switch constraint.NewPatchOp(pd.Operator) {
-		case constraint.OpAdd:
+		switch xjson.NewPatchOp(pd.Operator) {
+		case xjson.OpAdd:
 			if bytes, err = collectjs.Append(s.ConfigBytes, pd.Path, pd.Value.([]byte)); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch add",
 					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				continue
 			}
 			s.ConfigBytes = bytes
-		case constraint.OpRemove:
+		case xjson.OpRemove:
 			s.ConfigBytes = collectjs.Del(s.ConfigBytes, pd.Path)
-		case constraint.OpReplace:
+		case xjson.OpReplace:
 			if valBytes, ok := pd.Value.([]byte); ok {
 				if bytes, err = collectjs.Set(s.ConfigBytes, pd.Path, valBytes); nil != err {
 					log.Error("call core.APIs.PatchConfigs patch replace", zap.Error(err))

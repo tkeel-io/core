@@ -17,8 +17,6 @@ limitations under the License.
 package constraint
 
 import (
-	"errors"
-
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -26,18 +24,6 @@ const (
 	EnabledFlagSelf = 1 << iota
 	EnabledFlagSearch
 	EnabledFlagTimeSeries
-)
-
-var (
-	ErrEntityConfigInvalid = errors.New("invalid entity configurations")
-	ErrJSONPatchReservedOp = errors.New("invalid json patch operator")
-	ErrInvalidNodeType     = errors.New("undefine node type")
-	ErrEmptyParam          = errors.New("empty params")
-	ErrPatchNotFound       = errors.New("patch not found")
-	ErrPatchPathInvalid    = errors.New("invalid patch path")
-	ErrPatchPathLack       = errors.New("patch path lack")
-	ErrPatchPathRoot       = errors.New("patch path lack root")
-	ErrPatchTypeInvalid    = errors.New("patch config type invalid")
 )
 
 var callbacks = map[string]func(op Operator, val tdtl.Node) (tdtl.Node, error){

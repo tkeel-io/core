@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
-	"github.com/tkeel-io/core/pkg/constraint"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 
 	msgpack "github.com/shamaton/msgpack/v2"
@@ -45,7 +45,7 @@ func (ec entityCodec) Decode(data []byte, en *Entity) error {
 	en.Properties = make(map[string]tdtl.Node)
 	collectjs.ForEach(en.PropertyBytes, jsonparser.Object,
 		func(key, value []byte, dataType jsonparser.ValueType) {
-			en.Properties[string(key)] = constraint.NewNode(dataType, value)
+			en.Properties[string(key)] = xjson.NewNode(dataType, value)
 		})
 
 	// reset .

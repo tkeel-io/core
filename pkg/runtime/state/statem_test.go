@@ -22,9 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
-	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -53,7 +53,7 @@ func TestGJson(t *testing.T) {
 func TestState_Patch(t *testing.T) {
 	stateIns := State{ID: "test", Props: make(map[string]tdtl.Node)}
 
-	stateIns.Patch(constraint.OpAdd, "aa.b.c.c[0]", []byte(`123`))
+	stateIns.Patch(xjson.OpAdd, "aa.b.c.c[0]", []byte(`123`))
 
 	t.Log(stateIns.Props)
 }

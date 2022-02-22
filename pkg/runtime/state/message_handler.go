@@ -9,11 +9,11 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
-	"github.com/tkeel-io/core/pkg/constraint"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -50,7 +50,7 @@ func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 	collectjs.ForEach(msgCtx.Message(), jsonparser.Object,
 		func(key, value []byte, dataType jsonparser.ValueType) {
 			propertyKey := string(key)
-			if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
+			if _, err := stateIns.Patch(xjson.OpReplace, propertyKey, value); nil != err {
 				log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
 			} else {
 				watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
@@ -78,7 +78,7 @@ func (s *statem) invokeRepublishMessage(msgCtx message.Context) []WatchKey {
 	collectjs.ForEach(msgCtx.Message(), jsonparser.Object,
 		func(key, value []byte, dataType jsonparser.ValueType) {
 			propertyKey := string(key)
-			if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
+			if _, err := stateIns.Patch(xjson.OpReplace, propertyKey, value); nil != err {
 				log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
 			} else {
 				watchKeys = append(watchKeys, mapper.WatchKey{EntityID: msgSender, PropertyKey: propertyKey})
@@ -122,7 +122,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
 
-					if prop, err := stateIns.Patch(constraint.OpCopy, active.PropertyKey, nil); nil == err {
+					if prop, err := stateIns.Patch(xjson.OpCopy, active.PropertyKey, nil); nil == err {
 						messages[targetID][active.PropertyKey] = prop
 					} else {
 						log.Warn("patch copy property", zfield.Eid(s.ID), zfield.PK(active.PropertyKey))
@@ -228,7 +228,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 			for _, item := range tentacle.Items() {
 				var val tdtl.Node
 				stateIns := s.getState(item.EntityID)
-				if val, err = stateIns.Patch(constraint.OpCopy, item.PropertyKey, nil); nil != err {
+				if val, err = stateIns.Patch(xjson.OpCopy, item.PropertyKey, nil); nil != err {
 					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
 					continue
 				} else if nil != val {
@@ -254,7 +254,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		stateIns := s.getState(s.ID)
 		for propertyKey, value := range properties {
 			setVal := []byte(wrapStr(value.String()))
-			if _, err = stateIns.Patch(constraint.OpReplace, propertyKey, setVal); nil != err {
+			if _, err = stateIns.Patch(xjson.OpReplace, propertyKey, setVal); nil != err {
 				log.Error("set property", zfield.ID(s.ID), zap.Error(err),
 					zap.String("property_key", propertyKey), zap.String("value", string(setVal)))
 				continue

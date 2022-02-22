@@ -2,11 +2,8 @@ package manager
 
 import (
 	"encoding/json"
-	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/constraint"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/tdtl"
@@ -41,20 +38,6 @@ func (b *Base) Basic() Base {
 
 	cp.Mappers = append(cp.Mappers, b.Mappers...)
 	return cp
-}
-
-func (b *Base) GetProperty(path string) (tdtl.Node, error) {
-	if !strings.ContainsAny(path, ".[") {
-		if _, has := b.Properties[path]; !has {
-			return tdtl.DefaultNode{}, xerrors.ErrPropertyNotFound
-		}
-		return b.Properties[path], nil
-	}
-
-	// patch copy property.
-	arr := strings.SplitN(path, ".", 2)
-	res, err := constraint.Patch(b.Properties[arr[0]], nil, arr[1], constraint.OpCopy)
-	return res, errors.Wrap(err, "patch copy")
 }
 
 func (b *Base) JSON() map[string]interface{} {

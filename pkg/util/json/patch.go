@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package constraint
+package json
 
 import (
 	"strings"
@@ -111,7 +111,7 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 	case OpAdd:
 	case OpReplace:
 	default:
-		return destNode, ErrJSONPatchReservedOp
+		return destNode, xerrors.ErrJSONPatchReservedOp
 	}
 
 	// dispose 'remove' & 'add'
@@ -120,7 +120,7 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 		resBytes, err := setValue(rawData, setVal, path, op)
 		return tdtl.JSONNode(resBytes), errors.Wrap(err, "patch json")
 	}
-	return destNode, ErrEmptyParam
+	return destNode, xerrors.ErrEmptyParam
 }
 
 func check(raw []byte, path string) ([]byte, []string, []string, error) {

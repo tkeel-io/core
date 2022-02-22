@@ -35,6 +35,7 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -232,11 +233,11 @@ type State struct {
 }
 
 func (s *State) Get(path string) (tdtl.Node, error) {
-	val, err := s.Patch(constraint.OpCopy, path, nil)
+	val, err := s.Patch(xjson.OpCopy, path, nil)
 	return val, errors.Wrap(err, "patch copy property")
 }
 
-func (s *State) Patch(op constraint.PatchOp, path string, value []byte) (tdtl.Node, error) {
+func (s *State) Patch(op xjson.PatchOp, path string, value []byte) (tdtl.Node, error) {
 	var (
 		err    error
 		result tdtl.Node
@@ -253,13 +254,13 @@ func (s *State) Patch(op constraint.PatchOp, path string, value []byte) (tdtl.No
 	propertyID, patchPath := path[:index], strings.TrimPrefix(path[index:], ".")
 
 	valNode := tdtl.JSONNode(value)
-	if result, err = constraint.Patch(s.get(propertyID), valNode, patchPath, op); nil != err {
+	if result, err = xjson.Patch(s.get(propertyID), valNode, patchPath, op); nil != err {
 		log.Error("patch state", zfield.Path(path), zap.Error(err), zfield.Eid(s.ID))
 		return nil, errors.Wrap(err, "patch state")
 	}
 
 	switch op {
-	case constraint.OpCopy:
+	case xjson.OpCopy:
 		return result, nil
 	}
 
@@ -274,16 +275,16 @@ func (s *State) get(pid string) tdtl.Node {
 	return tdtl.JSONNode("")
 }
 
-func (s *State) patchProp(op constraint.PatchOp, path string, value string) (tdtl.Node, error) {
+func (s *State) patchProp(op xjson.PatchOp, path string, value string) (tdtl.Node, error) {
 	var (
 		err    error
 		bytes  []byte
 		result tdtl.Node
 	)
 	switch op {
-	case constraint.OpReplace:
+	case xjson.OpReplace:
 		s.Props[path] = tdtl.JSONNode(value)
-	case constraint.OpAdd:
+	case xjson.OpAdd:
 		// patch property add.
 		prop := s.Props[path]
 		if nil == prop {
@@ -298,15 +299,15 @@ func (s *State) patchProp(op constraint.PatchOp, path string, value string) (tdt
 		}
 		result = tdtl.JSONNode(bytes)
 		s.Props[path] = result
-	case constraint.OpRemove:
+	case xjson.OpRemove:
 		delete(s.Props, path)
-	case constraint.OpCopy:
+	case xjson.OpCopy:
 		var ok bool
 		if result, ok = s.Props[path]; !ok {
 			return result, xerrors.ErrPropertyNotFound
 		}
 	default:
-		return result, constraint.ErrJSONPatchReservedOp
+		return result, xerrors.ErrJSONPatchReservedOp
 	}
 	return result, nil
 }

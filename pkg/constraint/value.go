@@ -21,6 +21,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -74,13 +75,13 @@ func (cfg *Config) GetConfig(segs []string, index int) (int, *Config, error) {
 func (cfg *Config) getConfig(segs []string, index int) (int, *Config, error) {
 	if len(segs) > index {
 		if cfg.Type != PropertyTypeStruct {
-			return index, cfg, ErrPatchTypeInvalid
+			return index, cfg, xerrors.ErrPatchTypeInvalid
 		}
 
 		define := cfg.getStructDefine()
 		c, ok := define.Fields[segs[index]]
 		if !ok {
-			return index, cfg, ErrPatchPathLack
+			return index, cfg, xerrors.ErrPatchPathLack
 		}
 
 		cc := &c
@@ -91,7 +92,7 @@ func (cfg *Config) getConfig(segs []string, index int) (int, *Config, error) {
 
 func (cfg *Config) AppendField(c Config) error {
 	if cfg.Type != PropertyTypeStruct {
-		return ErrInvalidNodeType
+		return xerrors.ErrInvalidNodeType
 	}
 	define := cfg.getStructDefine()
 	define.Fields[c.ID] = c
@@ -100,7 +101,7 @@ func (cfg *Config) AppendField(c Config) error {
 
 func (cfg *Config) RemoveField(id string) error {
 	if cfg.Type != PropertyTypeStruct {
-		return ErrInvalidNodeType
+		return xerrors.ErrInvalidNodeType
 	}
 	define := cfg.getStructDefine()
 	delete(define.Fields, id)
@@ -176,7 +177,7 @@ func parseField(in Config) (out Config, err error) {
 		if err = mapstructure.Decode(in.Define, &arrDefine); nil != err {
 			return out, errors.Wrap(err, "parse property config failed")
 		} else if arrDefine.Length <= 0 {
-			return out, ErrEntityConfigInvalid
+			return out, xerrors.ErrEntityConfigInvalid
 		}
 		arrDefine.ElemType, err = parseField(arrDefine.ElemType)
 		in.Define["elem_type"] = arrDefine.ElemType
@@ -196,7 +197,7 @@ func parseField(in Config) (out Config, err error) {
 
 		in.Define["fields"] = jsonDefine2.Fields
 	default:
-		return out, ErrEntityConfigInvalid
+		return out, xerrors.ErrEntityConfigInvalid
 	}
 
 	return in, errors.Wrap(err, "parse property config failed")

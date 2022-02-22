@@ -31,6 +31,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/state"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -247,10 +248,10 @@ func (s *EntityService) PatchEntityPropsZ(ctx context.Context, req *pb.PatchEnti
 }
 
 func checkPatchData(patchData state.PatchData) error {
-	if constraint.IsReversedOp(patchData.Operator) {
-		return constraint.ErrJSONPatchReservedOp
-	} else if !constraint.IsValidPath(patchData.Path) {
-		return constraint.ErrPatchPathInvalid
+	if xjson.IsReversedOp(patchData.Operator) {
+		return xerrors.ErrJSONPatchReservedOp
+	} else if !xjson.IsValidPath(patchData.Path) {
+		return xerrors.ErrPatchPathInvalid
 	}
 	return nil
 }
@@ -403,7 +404,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 	for index := range propertyIDs {
 		pds = append(pds, state.PatchData{
 			Path:     propertyIDs[index],
-			Operator: constraint.OpRemove.String(),
+			Operator: xjson.OpRemove.String(),
 		})
 	}
 
@@ -566,7 +567,7 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 	out = &pb.EntityResponse{}
 
 	properties := make(map[string]interface{})
-	bytes, _ := constraint.EncodeJSON(entity.Properties)
+	bytes, _ := xjson.EncodeJSON(entity.Properties)
 	json.Unmarshal(bytes, &properties)
 
 	var configBytes []byte
@@ -611,7 +612,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	out = &pb.EntityResponse{}
 
 	properties := make(map[string]interface{})
-	bytes, _ := constraint.EncodeJSON(entity.Properties)
+	bytes, _ := xjson.EncodeJSON(entity.Properties)
 	json.Unmarshal(bytes, &properties)
 
 	configs := make(map[string]interface{})
@@ -654,7 +655,7 @@ func parseProps(props map[string]interface{}) (map[string]tdtl.Node, error) {
 	var result = make(map[string]tdtl.Node)
 	collectjs.ForEach(bytes, jsonparser.Object,
 		func(key, value []byte, dataType jsonparser.ValueType) {
-			result[string(key)] = constraint.NewNode(dataType, value)
+			result[string(key)] = xjson.NewNode(dataType, value)
 		})
 
 	return result, errors.Wrap(err, "parse properties")

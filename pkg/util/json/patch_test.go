@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package constraint
+package json
 
 import (
 	"testing"
@@ -54,7 +54,7 @@ func TestPatch(t *testing.T) {
 
 func TestPatch2(t *testing.T) {
 	raw := `{"_spacePath":"tesxt"}`
-	res, err := Patch(tdtl.JSONNode(raw), tdtl.StringNode(`"test"`), "_spacePath", OpAdd)
+	res, err := Patch(tdtl.JSONNode(raw), tdtl.StringNode(`"test"`), "_spacePath", OpReplace)
 	assert.Nil(t, err)
 	t.Log(res.String())
 }
