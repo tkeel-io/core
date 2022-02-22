@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -26,8 +27,19 @@ func (s *statem) getState(stateID string) State {
 	return State{ID: stateID, Props: s.cacheProps[stateID]}
 }
 
+func (s *statem) invokeMessage(msgCtx message.Context) []WatchKey {
+	msgType := msgCtx.Get(message.ExtMessageType)
+	switch message.MessageType(msgType) {
+	case message.MessageTypeAPIRequest:
+		return s.invokeStateMessage(msgCtx)
+	case message.MessageTypeAPIRepublish:
+		return s.invokeRepublishMessage(msgCtx)
+	}
+	return nil
+}
+
 // invokePropertyMessage invoke property message.
-func (s *statem) invokePropertyMessage(msgCtx message.Context) []WatchKey {
+func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
 	if _, has := s.cacheProps[stateID]; !has {
 		s.cacheProps[stateID] = make(map[string]tdtl.Node)
@@ -41,6 +53,33 @@ func (s *statem) invokePropertyMessage(msgCtx message.Context) []WatchKey {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
+		}
+	})
+
+	// set last active tims.
+	if stateID == s.ID {
+		s.Version++
+		s.LastTime = util.UnixMilli()
+	}
+
+	return watchKeys
+}
+
+func (s *statem) invokeRepublishMessage(msgCtx message.Context) []WatchKey {
+	stateID := msgCtx.Get(message.ExtEntityID)
+	msgSender := msgCtx.Get(message.ExtMessageSender)
+	if _, has := s.cacheProps[msgSender]; !has {
+		s.cacheProps[msgSender] = make(map[string]tdtl.Node)
+	}
+
+	stateIns := s.getState(msgSender)
+	watchKeys := make([]mapper.WatchKey, 0)
+	collectjs.ForEach(msgCtx.Message(), jsonparser.Object, func(key, value []byte) {
+		propertyKey := string(key)
+		if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
+			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
+		} else {
+			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: msgSender, PropertyKey: propertyKey})
 		}
 	})
 
@@ -129,6 +168,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		ev.SetID(util.UUID())
 		ev.SetType("republish")
 		ev.SetSource("core.runtime")
+		ev.SetExtension(message.ExtEntityID, stateID)
 		ev.SetExtension(message.ExtMessageSender, s.ID)
 		ev.SetExtension(message.ExtMessageReceiver, stateID)
 		ev.SetDataContentType(cloudevents.ApplicationJSON)
@@ -137,11 +177,21 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		var bytes []byte
 		// encode message.
 
-		if bytes, err = constraint.EncodeJSON(msg); nil != err {
-			log.Error("encode state properties", zap.Error(err), zfield.Eid(s.ID))
+		msgArr := []string{}
+		for key, val := range msg {
+			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.String()))
 		}
 
-		ev.SetData(bytes)
+		bytes = []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ",")))
+
+		if err = ev.SetData(bytes); nil != err {
+			log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID))
+			continue
+		} else if err = ev.Validate(); nil != err {
+			log.Error("validate event", zap.Error(err), zfield.Eid(s.ID))
+			continue
+		}
+
 		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()), zfield.Event(ev))
 
 		s.dispatcher.Dispatch(context.Background(), ev)
@@ -151,6 +201,17 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	s.activeMapper(activeTentacles)
 }
 
+func unwrap(s tdtl.Node) tdtl.Node {
+	if len(s.String()) > 0 {
+		return tdtl.StringNode(s.String()[1 : len(s.String())-1])
+	}
+	return s
+}
+
+func wrapStr(s string) string {
+	return "\"" + s + "\""
+}
+
 // activeMapper active mappers.
 func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	if len(actives) == 0 {
@@ -158,18 +219,18 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 
 	var err error
-	var stateIns = s.getState(s.ID)
 	var activeKeys []mapper.WatchKey
 	for mapperID := range actives {
 		input := make(map[string]tdtl.Node)
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
 			for _, item := range tentacle.Items() {
 				var val tdtl.Node
+				stateIns := s.getState(item.EntityID)
 				if val, err = stateIns.Patch(constraint.OpCopy, item.PropertyKey, nil); nil != err {
 					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
 					continue
 				} else if nil != val {
-					input[item.String()] = val
+					input[item.String()] = unwrap(val)
 				}
 			}
 		}
@@ -188,9 +249,12 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 
 		log.Debug("exec mapper", zfield.Mid(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
+		stateIns := s.getState(s.ID)
 		for propertyKey, value := range properties {
-			if _, err = stateIns.Patch(constraint.OpReplace, propertyKey, []byte(value.String())); nil != err {
-				log.Error("set property", zfield.ID(s.ID), zap.String("property_key", propertyKey), zap.Error(err))
+			setVal := []byte(wrapStr(value.String()))
+			if _, err = stateIns.Patch(constraint.OpReplace, propertyKey, setVal); nil != err {
+				log.Error("set property", zfield.ID(s.ID), zap.Error(err),
+					zap.String("property_key", propertyKey), zap.String("value", string(setVal)))
 				continue
 			}
 			s.LastTime = time.Now().UnixNano() / 1e6

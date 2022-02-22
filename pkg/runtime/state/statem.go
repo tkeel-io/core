@@ -155,7 +155,7 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 	// set properties into cacheProps.
 	state.cacheProps[in.ID] = state.Properties
 
-	state.msgHandler = state.invokePropertyMessage
+	state.msgHandler = state.invokeMessage
 
 	// initialize state context.
 	state.sCtx = newContext(state)
@@ -209,15 +209,11 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 		if actives, err = s.callAPIs(msgCtx.Context(), msgCtx); nil != err {
 			return errors.Wrap(err, "apis call")
 		}
-
 		s.activeTentacle(actives)
-	case message.MessageTypeState:
+	default:
 		// handle state message.
 		s.activeTentacle(s.msgHandler(msgCtx))
 		s.flush(ctx)
-	default:
-		log.Error("invalid message type", zfield.Header(msgCtx.Attributes()))
-		return xerrors.ErrInvalidMessageType
 	}
 
 	return nil

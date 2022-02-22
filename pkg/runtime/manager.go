@@ -112,7 +112,7 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 	}
 
 	log.Debug("handle message",
-		zfield.ID(entityID),
+		zfield.Eid(entityID),
 		zfield.ReqID(reqID),
 		zfield.Channel(channelID),
 		zfield.Header(msgCtx.Attributes()),

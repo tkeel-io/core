@@ -92,10 +92,7 @@ func TestMapper1233(t *testing.T) {
 }
 
 func TestMapper123(t *testing.T) {
-	tqlText := `insert into 
-			4c1e33a1-6899-4643-a6b3-46cf37950b7f 
-		select 
-			54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath + 54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.prop1 as sysField._spacePath`
+	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select 49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath`
 
 	mapperIns, err := NewMapper("mapper123", tqlText)
 	assert.Nil(t, err)
@@ -107,8 +104,7 @@ func TestMapper123(t *testing.T) {
 	}
 
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
-		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
-		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.prop1":               tdtl.IntNode(23456),
+		"49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.JSONNode(`tom`),
 	})
 
 	assert.Nil(t, err)
