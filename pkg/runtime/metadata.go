@@ -51,6 +51,10 @@ func (m *Manager) watchMetadata() {
 				return
 			}
 
+			log.Debug("mapper changed",
+				zfield.Eid(effect.StateID),
+				zfield.Mid(effect.MapperID),
+				zap.Strings("effected", effect.EffectStateIDs))
 			m.reloadMachineEnv(effect.EffectStateIDs)
 		})
 }

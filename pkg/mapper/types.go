@@ -20,7 +20,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/tdtl"
 )
 
 const (
@@ -45,7 +45,7 @@ type Mapper interface {
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
-	Exec(map[string]constraint.Node) (map[string]constraint.Node, error)
+	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
 }
 
 type TentacleType = string

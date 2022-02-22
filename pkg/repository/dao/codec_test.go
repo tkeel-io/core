@@ -7,7 +7,7 @@ import (
 
 	msgpack "github.com/shamaton/msgpack/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestMsgPack(t *testing.T) {
@@ -35,8 +35,8 @@ func TestEncode(t *testing.T) {
 		Owner:    "admin",
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]constraint.Node{
-			"temp": constraint.NewNode(123.3),
+		Properties: map[string]tdtl.Node{
+			"temp": tdtl.FloatNode(123.3),
 		},
 	}
 
@@ -53,8 +53,8 @@ func TestDecode(t *testing.T) {
 		Owner:    "admin",
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]constraint.Node{
-			"temp": constraint.NewNode(123.3),
+		Properties: map[string]tdtl.Node{
+			"temp": tdtl.FloatNode(123.3),
 		},
 	}
 
@@ -65,7 +65,7 @@ func TestDecode(t *testing.T) {
 	var res Entity
 	err = enc.Decode(bytes, &res)
 	assert.Nil(t, err, "error must be nil")
-	assert.Equal(t, en, res)
+	t.Log("decode result: ", res.Properties)
 }
 
 func BenchmarkEncode(b *testing.B) {
@@ -76,8 +76,16 @@ func BenchmarkEncode(b *testing.B) {
 		Owner:    "admin",
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]constraint.Node{
-			"temp": constraint.NewNode(123.3),
+		Properties: map[string]tdtl.Node{
+			"temp":     tdtl.FloatNode(12345.77777),
+			"metrics0": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics1": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics2": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics3": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics4": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics5": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics6": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics7": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
 		},
 	}
 
@@ -94,40 +102,16 @@ func BenchmarkDecode(b *testing.B) {
 		Owner:    "admin",
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]constraint.Node{
-			"temp": constraint.NewNode(123.3),
-			"metrics0": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics1": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics2": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics3": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics4": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics5": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics6": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics7": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
+		Properties: map[string]tdtl.Node{
+			"temp":     tdtl.FloatNode(12345.77777),
+			"metrics0": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics1": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics2": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics3": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics4": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics5": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics6": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics7": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
 		},
 	}
 
@@ -148,40 +132,16 @@ func BenchmarkJsonEncode(b *testing.B) {
 		Owner:    "admin",
 		Source:   "dm",
 		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]constraint.Node{
-			"temp": constraint.NewNode(123.3),
-			"metrics0": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics1": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics2": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics3": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics4": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics5": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics6": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
-			"metrics7": constraint.NewNode(map[string]interface{}{
-				"cpu_used": 0.2,
-				"mem_used": 0.7,
-			}),
+		Properties: map[string]tdtl.Node{
+			"temp":     tdtl.FloatNode(12345.77777),
+			"metrics0": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics1": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics2": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics3": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics4": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics5": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics6": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
+			"metrics7": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.78}`),
 		},
 	}
 

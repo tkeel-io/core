@@ -18,6 +18,8 @@ package constraint
 
 import (
 	"errors"
+
+	"github.com/tkeel-io/tdtl"
 )
 
 const (
@@ -38,11 +40,11 @@ var (
 	ErrPatchTypeInvalid    = errors.New("patch config type invalid")
 )
 
-var callbacks = map[string]func(op Operator, val Node) (Node, error){
-	"max": func(op Operator, val Node) (Node, error) {
+var callbacks = map[string]func(op Operator, val tdtl.Node) (tdtl.Node, error){
+	"max": func(op Operator, val tdtl.Node) (tdtl.Node, error) {
 		return val, nil
 	},
-	"size": func(op Operator, val Node) (Node, error) {
+	"size": func(op Operator, val tdtl.Node) (tdtl.Node, error) {
 		return val, nil
 	},
 }
@@ -151,6 +153,6 @@ func keyContains(key string) bool {
 	return flag
 }
 
-func ExecData(val Node, ct *Constraint) (Node, error) {
+func ExecData(val tdtl.Node, ct *Constraint) (tdtl.Node, error) {
 	return val, nil
 }

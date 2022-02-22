@@ -19,50 +19,59 @@ package constraint
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/tdtl"
 )
 
-// func TestPatch(t *testing.T) {
-// 	var err error
-// 	var dest Node = JSONNode(`{"temp":20}`)
-// 	dest, err = Patch(dest, NewNode(22), "temp", PatchOpReplace)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, `{"temp":22}`, dest.String())
+func TestPatch(t *testing.T) {
+	var err error
+	var dest tdtl.Node = tdtl.JSONNode(`{"temp":20}`)
+	dest, err = Patch(dest, tdtl.IntNode(22), "temp", OpReplace)
+	assert.Nil(t, err)
+	assert.Equal(t, `{"temp":22}`, dest.String())
 
-// 	dest, err = Patch(dest, NewNode("555"), "temp", PatchOpReplace)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, `{"temp":"555"}`, dest.String())
+	dest, err = Patch(dest, tdtl.StringNode(`"555"`), "temp", OpReplace)
+	assert.Nil(t, err)
+	assert.Equal(t, `{"temp":"555"}`, dest.String())
 
-// 	dest, err = Patch(dest, NewNode("555"), "append", PatchOpAdd)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, `{"temp":"555","append":["555"]}`, dest.String())
+	dest, err = Patch(dest, tdtl.StringNode(`"555"`), "append", OpAdd)
+	assert.Nil(t, err)
+	assert.Equal(t, `{"temp":"555","append":["555"]}`, dest.String())
 
-// 	dest, err = Patch(dest, NewNode("555"), "append[0]", PatchOpRemove)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, `{"temp":"555","append":[]}`, dest.String())
+	dest, err = Patch(dest, tdtl.StringNode(`"555"`), "append[0]", OpRemove)
+	assert.Nil(t, err)
+	assert.Equal(t, `{"temp":"555","append":[]}`, dest.String())
 
-// 	dest, err = Patch(dest, NewNode(map[string]interface{}{"property1": 12345}), "append", PatchOpAdd)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, "{\"temp\":\"555\",\"append\":[{\"property1\":12345}]}", dest.String())
+	dest, err = Patch(dest, tdtl.JSONNode(`{"property1": 12345}`), "append", OpAdd)
+	assert.Nil(t, err)
+	assert.Equal(t, "{\"temp\":\"555\",\"append\":[{\"property1\": 12345}]}", dest.String())
 
-// 	dest, err = Patch(dest, NewNode("test"), "append", PatchOpAdd)
-// 	assert.Nil(t, err)
-// 	assert.Equal(t, `{"temp":"555","append":[{"property1":12345},"test"]}`, dest.String())
-// }
+	dest, err = Patch(dest, tdtl.StringNode(`"test"`), "append", OpAdd)
+	assert.Nil(t, err)
+	assert.Equal(t, `{"temp":"555","append":[{"property1": 12345},"test"]}`, dest.String())
+}
+
+func TestPatch2(t *testing.T) {
+	raw := `{"_spacePath":"tesxt"}`
+	res, err := Patch(tdtl.JSONNode(raw), tdtl.StringNode(`"test"`), "_spacePath", OpAdd)
+	assert.Nil(t, err)
+	t.Log(res.String())
+}
 
 func BenchmarkPatch1(b *testing.B) {
-	raw := JSONNode(`{"temp":"555"}`)
+	raw := tdtl.JSONNode(`{"temp":"555"}`)
 	//	expect := `{"temp":"555","append":[{"property1":9999},"test"]}`
 	for n := 0; n < b.N; n++ {
-		Patch(raw, NewNode(9999), "temp", PatchOpReplace)
+		Patch(raw, tdtl.IntNode(9999), "temp", OpReplace)
 	}
 }
 
 func BenchmarkPatch2(b *testing.B) {
-	raw := JSONNode(`{"temp":"555","append":[{"property1":12345},"test"]}`)
+	raw := tdtl.JSONNode(`{"temp":"555","append":[{"property1":12345},"test"]}`)
 	//	expect := `{"temp":"555","append":[{"property1":9999},"test"]}`
 	for n := 0; n < b.N; n++ {
-		Patch(raw, NewNode(9999), "append[0].property1", PatchOpRemove)
+		Patch(raw, tdtl.IntNode(9999), "append[0].property1", OpRemove)
 	}
 }
 

@@ -30,9 +30,10 @@ func Unique(slice sort.StringSlice) sort.StringSlice {
 	return newSlice
 }
 
-func Search(slice sort.StringSlice, str string) int {
-	if index := slice.Search(str); index < slice.Len() {
-		if slice[index] == str {
+func Search(slice sort.StringSlice, elem string) int {
+	index := slice.Search(elem)
+	if index < slice.Len() {
+		if slice[index] == elem {
 			return index
 		}
 	}

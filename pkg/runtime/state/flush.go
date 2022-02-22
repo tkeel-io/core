@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -31,8 +30,8 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func (s *statem) Flush(ctx context.Context) error {
@@ -84,57 +83,60 @@ func (s *statem) flushState(ctx context.Context) error {
 }
 
 func (s *statem) flushSearch(ctx context.Context) error {
-	var err error
-	var flushData = make(map[string]interface{})
-	for _, JSONPath := range s.searchConstraints {
-		var val constraint.Node
-		var ct *constraint.Constraint
-		if val, err = s.getProperty(s.Properties, JSONPath); nil != err {
-			log.Warn("flush search", zap.Error(err), zfield.ID(s.ID))
-		} else if ct, err = s.getConstraint(JSONPath); nil != err {
-			// TODO: 终止本次写入.
-		} else if val, err = constraint.ExecData(val, ct); nil != err {
-			// TODO: 终止本次写入.
-		} else if nil != val {
-			flushData[JSONPath] = val.Value()
-			continue
-		}
-		log.Warn("patch.copy entity property failed",
-			zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
-	}
+	// var err error
+	// var flushData = make(map[string]interface{})
+	// for _, JSONPath := range s.searchConstraints {
+	// 	var val tdtl.Node
+	// 	var stateIns = s.getState(s.ID)
+	// 	var ct *constraint.Constraint
+	// 	if val, err = stateIns.Get(JSONPath); nil != err {
+	// 		log.Warn("flush search", zap.Error(err), zfield.ID(s.ID))
+	// 	} else if ct, err = s.getConstraint(JSONPath); nil != err {
+	// 		// TODO: 终止本次写入.
+	// 	} else if val, err = constraint.ExecData(val, ct); nil != err {
+	// 		// TODO: 终止本次写入.
+	// 	} else if nil != val {
+	// 		flushData[JSONPath] = val.Value()
+	// 		continue
+	// 	}
+	// 	log.Warn("patch.copy entity property failed",
+	// 		zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
+	// }
 
-	// flush all.
-	for key, val := range s.Properties {
-		flushData[key] = val.Value()
-	}
+	// // flush all.
+	// for key, val := range s.Properties {
+	// 	flushData[key] = val.Value()
+	// }
 
-	// basic fields.
-	flushData["id"] = s.ID
-	flushData["type"] = s.Type
-	flushData["owner"] = s.Owner
-	flushData["source"] = s.Source
-	flushData["version"] = s.Version
-	flushData["last_time"] = s.LastTime
+	// // basic fields.
+	// flushData["id"] = s.ID
+	// flushData["type"] = s.Type
+	// flushData["owner"] = s.Owner
+	// flushData["source"] = s.Source
+	// flushData["version"] = s.Version
+	// flushData["last_time"] = s.LastTime
 
-	var data *structpb.Value
-	if data, err = structpb.NewValue(flushData); nil != err {
-		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
-		return errors.Wrap(err, "Search flush")
-	} else if _, err = s.Search().Index(ctx, &pb.IndexObject{Obj: data}); nil != err {
-		log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
-	}
+	// var data *structpb.Value
+	// if data, err = structpb.NewValue(flushData); nil != err {
+	// 	log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+	// 	return errors.Wrap(err, "Search flush")
+	// } else if _, err = s.Search().Index(ctx, &pb.IndexObject{Obj: data}); nil != err {
+	// 	log.Error("flush state Search.", zap.Any("data", flushData), zap.Error(err))
+	// }
 
-	log.Debug("flush state Search.", zap.Any("data", flushData))
-	return errors.Wrap(err, "Search flush")
+	// log.Debug("flush state Search.", zap.Any("data", flushData))
+	// return errors.Wrap(err, "Search flush")
+	return nil
 }
 
 func (s *statem) flushTimeSeries(ctx context.Context) error {
 	var err error
 	var flushData []tseries.TSeriesData
 	for _, JSONPath := range s.tseriesConstraints {
-		var val constraint.Node
+		var val tdtl.Node
+		var stateIns = s.getState(s.ID)
 		var ct *constraint.Constraint
-		if val, err = s.getProperty(s.Properties, JSONPath); nil != err || val == nil {
+		if val, err = stateIns.Get(JSONPath); nil != err || val == nil {
 		} else if ct, err = s.getConstraint(JSONPath); nil != err {
 		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
 		} else {

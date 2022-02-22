@@ -30,7 +30,6 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/manager/holder"
-	"github.com/tkeel-io/core/pkg/mapper/tql"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -40,6 +39,7 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -182,12 +182,12 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 
 	// create event & set payload.
 	if ev, err = m.makeEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
-		ConfigFile: en.ConfigFile,
+		ID:          en.ID,
+		Type:        en.Type,
+		Owner:       en.Owner,
+		Source:      en.Source,
+		Properties:  en.Properties,
+		ConfigBytes: en.ConfigFile,
 	}); nil != err {
 		log.Info("update entity", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
@@ -474,11 +474,11 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 	}
 
 	if ev, err = m.makeEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		ConfigFile: bytes,
+		ID:          en.ID,
+		Type:        en.Type,
+		Owner:       en.Owner,
+		Source:      en.Source,
+		ConfigBytes: bytes,
 	}); nil != err {
 		log.Error("set entity configs", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -591,7 +591,7 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs
 	}
 
 	// get properties by ids.
-	cc := collectjs.ByteNew(entity.ConfigFile)
+	cc := collectjs.ByteNew(entity.ConfigBytes)
 	configs := make(map[string]*constraint.Config)
 	for _, propertyID := range propertyIDs {
 		var cfg *constraint.Config
@@ -760,8 +760,8 @@ func checkTQLs(en *Base) error {
 		}()
 	}()
 	for _, mm := range en.Mappers {
-		var tqlInst tql.TQL
-		if tqlInst, err = tql.NewTQL(mm.TQL); nil != err {
+		var tqlInst tdtl.TDTL
+		if tqlInst, err = tdtl.NewTDTL(mm.TQL, nil); nil != err {
 			log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
 			return errors.Wrap(err, "check TQL")
 		} else if tqlInst.Target() != en.ID {
@@ -772,7 +772,7 @@ func checkTQLs(en *Base) error {
 	return errors.Wrap(err, "check TQL")
 }
 
-func getString(node constraint.Node) string {
+func getString(node tdtl.Node) string {
 	if nil != node {
 		return node.String()
 	}

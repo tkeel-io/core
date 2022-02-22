@@ -18,18 +18,17 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/mapper/tql"
+	"github.com/tkeel-io/tdtl"
 )
 
 type mapper struct {
 	id      string
 	tqlText string
-	tqlInst tql.TQL
+	tqlInst tdtl.TDTL
 }
 
 func NewMapper(id, tqlText string) (Mapper, error) {
-	tqlInst, err := tql.NewTQL(tqlText)
+	tqlInst, err := tdtl.NewTDTL(tqlText, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "construct mapper")
 	}
@@ -92,7 +91,7 @@ func (m *mapper) Copy() Mapper {
 }
 
 // Exec input returns output.
-func (m *mapper) Exec(values map[string]constraint.Node) (res map[string]constraint.Node, err error) {
-	res, err = m.tqlInst.Exec(values)
-	return res, errors.Wrap(err, "execute tql failed")
+func (m *mapper) Exec(values map[string]tdtl.Node) (map[string]tdtl.Node, error) {
+	res, err := m.tqlInst.Exec(values)
+	return res, errors.Wrap(err, "execute tql")
 }

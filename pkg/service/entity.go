@@ -23,6 +23,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -30,6 +32,7 @@ import (
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -63,11 +66,13 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	entity.Source = req.Source
 	entity.TemplateID = req.From
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]tdtl.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
-		for k, v := range kv {
-			entity.Properties[k] = constraint.NewNode(v)
+		if entity.Properties, err = parseProps(kv); nil != err {
+			log.Error("create entity, but invalid params",
+				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
 		log.Warn("create entity, but empty params", zfield.Eid(req.Id))
@@ -147,11 +152,13 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 	entity.Source = req.Source
 
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]tdtl.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
-		for k, v := range kv {
-			entity.Properties[k] = constraint.NewNode(v)
+		if entity.Properties, err = parseProps(kv); nil != err {
+			log.Error("create entity, but invalid params",
+				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
@@ -184,7 +191,7 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]tdtl.Node)
 
 	switch kv := req.Properties.AsInterface().(type) {
 	case []interface{}:
@@ -207,7 +214,7 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 		for index := range patchData {
 			pd := state.PatchData{
 				Path:     patchData[index].Path,
-				Operator: constraint.NewPatchOperator(patchData[index].Operator),
+				Operator: patchData[index].Operator,
 				Value:    patchData[index].Value,
 			}
 
@@ -240,7 +247,7 @@ func (s *EntityService) PatchEntityPropsZ(ctx context.Context, req *pb.PatchEnti
 }
 
 func checkPatchData(patchData state.PatchData) error {
-	if constraint.IsReversedOp(patchData.Operator.String()) {
+	if constraint.IsReversedOp(patchData.Operator) {
 		return constraint.ErrJSONPatchReservedOp
 	} else if !constraint.IsValidPath(patchData.Path) {
 		return constraint.ErrPatchPathInvalid
@@ -256,8 +263,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
-	pids := strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
-	if len(pids) == 0 {
+	if pids := strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
 		log.Error("patch entity properties, empty property ids.", zfield.Eid(in.Id))
 		return out, xerrors.ErrInvalidRequest
 	}
@@ -265,36 +271,11 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	// get entity from entity manager.
 	if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
 		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
-		return
+		return out, errors.Wrap(err, "get entity properties")
 	}
 
-	props := make(map[string]constraint.Node)
-	// patch copy.
-	for _, pid := range pids {
-		props[pid] = constraint.NewNode(nil)
-		if !strings.ContainsAny(pid, ".[") {
-			if val, exists := entity.Properties[pid]; exists {
-				props[pid] = val
-			}
-			continue
-		}
-
-		arr := strings.SplitN(strings.TrimSpace(pid), ".", 2)
-		if props[pid], err = constraint.Patch(entity.Properties[arr[0]],
-			nil, arr[1], constraint.PatchOpCopy); nil != err {
-			if !errors.Is(err, constraint.ErrPatchNotFound) {
-				log.Error("patch entity", zfield.Eid(in.Id), zap.Error(err))
-				return out, errors.Wrap(err, "patch entity properties")
-			}
-			err = nil
-			props[pid] = constraint.NewNode(nil)
-			log.Warn("patch entity", zfield.Eid(in.Id), zap.Error(err))
-		}
-	}
-
-	entity.Properties = props
 	out = s.entity2EntityResponse(entity)
-	return out, errors.Wrap(err, "patch entity properties")
+	return out, errors.Wrap(err, "get entity properties")
 }
 
 func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEntityPropsRequest) (*pb.EntityResponse, error) {
@@ -331,7 +312,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]constraint.Node)
+	entity.Properties = make(map[string]tdtl.Node)
 
 	switch kv := in.Configs.AsInterface().(type) {
 	case []interface{}:
@@ -357,8 +338,11 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				log.Error("json marshal", zap.Error(err), zfield.Eid(in.Id))
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
-			pds = append(pds, state.PatchData{Path: pd.Path,
-				Operator: constraint.NewPatchOperator(pd.Operator), Value: bytes})
+			pds = append(pds, state.PatchData{
+				Path:     pd.Path,
+				Operator: pd.Operator,
+				Value:    bytes,
+			})
 		}
 
 		if entity, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
@@ -419,7 +403,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 	for index := range propertyIDs {
 		pds = append(pds, state.PatchData{
 			Path:     propertyIDs[index],
-			Operator: constraint.PatchOpRemove,
+			Operator: constraint.OpRemove.String(),
 		})
 	}
 
@@ -581,10 +565,9 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 	var err error
 	out = &pb.EntityResponse{}
 
-	kv := make(map[string]interface{})
-	for k, v := range entity.Properties {
-		kv[k] = v.Value()
-	}
+	properties := make(map[string]interface{})
+	bytes, _ := constraint.EncodeJSON(entity.Properties)
+	json.Unmarshal(bytes, &properties)
 
 	var configBytes []byte
 	configs := make(map[string]interface{})
@@ -594,7 +577,7 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
 	}
 
-	if out.Properties, err = structpb.NewValue(kv); nil != err {
+	if out.Properties, err = structpb.NewValue(properties); nil != err {
 		log.Error("convert entity failed", zap.Error(err))
 	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
 		log.Error("convert entity failed.", zap.Error(err))
@@ -627,17 +610,16 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	var err error
 	out = &pb.EntityResponse{}
 
-	kv := make(map[string]interface{})
-	for k, v := range entity.Properties {
-		kv[k] = v.Value()
-	}
+	properties := make(map[string]interface{})
+	bytes, _ := constraint.EncodeJSON(entity.Properties)
+	json.Unmarshal(bytes, &properties)
 
 	configs := make(map[string]interface{})
 	if err = json.Unmarshal(entity.ConfigFile, &configs); nil != err {
 		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
 	}
 
-	if out.Properties, err = structpb.NewValue(kv); nil != err {
+	if out.Properties, err = structpb.NewValue(properties); nil != err {
 		log.Error("convert entity failed", zap.Error(err))
 	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
 		log.Error("convert entity failed.", zap.Error(err))
@@ -660,4 +642,19 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	out.Source = entity.Source
 
 	return out
+}
+
+func parseProps(props map[string]interface{}) (map[string]tdtl.Node, error) {
+	bytes, err := json.Marshal(props)
+	if nil != err {
+		log.Error("marshal properties", zap.Error(err))
+		return nil, errors.Wrap(err, "marshal properties")
+	}
+
+	var result = make(map[string]tdtl.Node)
+	collectjs.ForEach(bytes, jsonparser.Object, func(key, value []byte) {
+		result[string(key)] = tdtl.JSONNode(value)
+	})
+
+	return result, nil
 }

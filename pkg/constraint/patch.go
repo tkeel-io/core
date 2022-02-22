@@ -23,54 +23,55 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/tdtl"
 )
 
-type PatchOperator int
+type PatchOp int
 
 // reference: https://datatracker.ietf.org/doc/html/rfc6902 .
 // implement [ add, remove, replace ], reversed [ copy, move, test ].
 const (
-	PatchOpUndef PatchOperator = iota
-	PatchOpAdd
-	PatchOpTest
-	PatchOpCopy
-	PatchOpMove
-	PatchOpRemove
-	PatchOpReplace
+	OpUndef PatchOp = iota
+	OpAdd
+	OpTest
+	OpCopy
+	OpMove
+	OpRemove
+	OpReplace
 )
 
-func NewPatchOperator(op string) PatchOperator {
+func NewPatchOp(op string) PatchOp {
 	switch op {
-	case "add": //nolint
-		return PatchOpAdd
+	case "add":
+		return OpAdd
 	case "move":
-		return PatchOpMove
+		return OpMove
 	case "copy":
-		return PatchOpCopy
+		return OpCopy
 	case "test":
-		return PatchOpTest
+		return OpTest
 	case "remove":
-		return PatchOpRemove
+		return OpRemove
 	case "replace":
-		return PatchOpReplace
+		return OpReplace
 	default:
-		return PatchOpReplace
+		return OpReplace
 	}
 }
 
-func (po PatchOperator) String() string {
+func (po PatchOp) String() string {
 	switch po {
-	case PatchOpAdd:
+	case OpAdd:
 		return "add"
-	case PatchOpMove:
+	case OpMove:
 		return "move"
-	case PatchOpCopy:
+	case OpCopy:
 		return "copy"
-	case PatchOpTest:
+	case OpTest:
 		return "test"
-	case PatchOpRemove:
+	case OpRemove:
 		return "remove"
-	case PatchOpReplace:
+	case OpReplace:
 		return "replace"
 	default:
 		return "undefine"
@@ -93,35 +94,33 @@ func IsValidPath(path string) bool {
 	return true
 }
 
-func Patch(destNode, srcNode Node, path string, op PatchOperator) (Node, error) {
-	bytes := ToBytesWithWrapString(destNode)
-	if nil != bytes {
-		collect := collectjs.ByteNew(bytes)
-		switch op {
-		case PatchOpRemove:
-			collect.Del(path)
-			return JSONNode(collect.GetRaw()), collect.GetError()
-		case PatchOpCopy:
-			if collect = collect.Get(path); nil == collect ||
-				errors.Is(collect.GetError(), jsonparser.KeyPathNotFoundError) {
-				return nil, ErrPatchNotFound
-			}
-			return JSONNode(collect.GetRaw()), collect.GetError()
-		case PatchOpAdd:
-		case PatchOpReplace:
-		default:
-			return destNode, ErrJSONPatchReservedOp
-		}
+func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, error) {
+	var (
+		err     error
+		bytes   []byte
+		rawData = []byte(destNode.String())
+	)
 
-		// dispose 'remove' & 'add'
-		if nil != srcNode {
-			setVal := ToBytesWithWrapString(srcNode)
-			resBytes, err := setValue(bytes, setVal, path, op.String())
-			return NewNode(resBytes), errors.Wrap(err, "patch json")
-		}
-		return destNode, ErrEmptyParam
+	switch op {
+	case OpRemove:
+		bytes = collectjs.Del(rawData, path)
+		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch remove")
+	case OpCopy:
+		bytes, _, err = collectjs.Get(rawData, path)
+		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch copy")
+	case OpAdd:
+	case OpReplace:
+	default:
+		return destNode, ErrJSONPatchReservedOp
 	}
-	return destNode, ErrInvalidNodeType
+
+	// dispose 'remove' & 'add'
+	if nil != srcNode {
+		setVal := []byte(srcNode.String())
+		resBytes, err := setValue(rawData, setVal, path, op)
+		return tdtl.JSONNode(resBytes), errors.Wrap(err, "patch json")
+	}
+	return destNode, ErrEmptyParam
 }
 
 func check(raw []byte, path string) ([]byte, []string, []string, error) {
@@ -168,7 +167,7 @@ func check(raw []byte, path string) ([]byte, []string, []string, error) {
 	return raw, segs, []string{}, nil
 }
 
-func setValue(raw, setVal []byte, path, op string) ([]byte, error) { //nolint
+func setValue(raw, setVal []byte, path string, op PatchOp) ([]byte, error) { //nolint
 	raw2, foundSegs, notFoundSegs, err := check(raw, path)
 	if nil != err {
 		return raw, errors.Wrap(err, "make value")
@@ -176,11 +175,11 @@ func setValue(raw, setVal []byte, path, op string) ([]byte, error) { //nolint
 
 	if len(notFoundSegs) == 0 {
 		switch op {
-		case "add":
+		case OpAdd:
 			if raw2, err = collectjs.Append(raw2, path, setVal); nil != err {
 				return raw2, errors.Wrap(err, "set value")
 			}
-		case "replace":
+		case OpReplace:
 			if raw2, err = collectjs.Set(raw2, path, setVal); nil != err {
 				return raw2, errors.Wrap(err, "set value")
 			}
@@ -188,15 +187,15 @@ func setValue(raw, setVal []byte, path, op string) ([]byte, error) { //nolint
 		return raw2, nil
 	}
 
+	switch op {
+	case OpAdd:
+		if setVal, err = collectjs.Append([]byte(`[]`), "", setVal); nil != err {
+			return raw2, errors.Wrap(err, "set value")
+		}
+	}
+
 	segs := notFoundSegs[1:]
 	if len(segs) > 0 {
-		switch op {
-		case "add":
-			if setVal, err = collectjs.Append([]byte(`[]`), "", setVal); nil != err {
-				return raw2, errors.Wrap(err, "set value")
-			}
-		}
-
 		for index := range segs {
 			seg := segs[len(segs)-1-index]
 			switch seg[0] {

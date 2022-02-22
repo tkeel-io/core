@@ -3,15 +3,14 @@ package state
 import (
 	"github.com/pkg/errors"
 	"github.com/shamaton/msgpack/v2"
-	"github.com/tkeel-io/core/pkg/constraint"
 )
 
 // ----------------- Request & Response.
 
 type PatchData struct {
-	Path     string                   `json:"path"`
-	Operator constraint.PatchOperator `json:"operator"`
-	Value    interface{}              `json:"value"`
+	Path     string      `json:"path"`
+	Operator string      `json:"operator"`
+	Value    interface{} `json:"value"`
 }
 
 // -------------------------------- Codec.

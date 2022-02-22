@@ -5,44 +5,46 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/resource/store"
+	"github.com/tkeel-io/tdtl"
 )
 
 type Entity struct {
-	ID         string                     `json:"id" msgpack:"id" mapstructure:"id"`
-	Type       string                     `json:"type" msgpack:"type" mapstructure:"type"`
-	Owner      string                     `json:"owner" msgpack:"owner" mapstructure:"owner"`
-	Source     string                     `json:"source" msgpack:"source" mapstructure:"source"`
-	Version    int64                      `json:"version" msgpack:"version" mapstructure:"version"`
-	LastTime   int64                      `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	TemplateID string                     `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
-	Properties map[string]constraint.Node `json:"properties" msgpack:"properties" mapstructure:"-"`
-	ConfigFile []byte                     `json:"-" msgpack:"config_file" mapstructure:"config_file"`
+	ID            string               `json:"id" msgpack:"id" mapstructure:"id"`
+	Type          string               `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner         string               `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source        string               `json:"source" msgpack:"source" mapstructure:"source"`
+	Version       int64                `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime      int64                `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	TemplateID    string               `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	Properties    map[string]tdtl.Node `json:"-" msgpack:"-" mapstructure:"-"`
+	ConfigBytes   []byte               `json:"-" msgpack:"config_bytes" mapstructure:"config_bytes"`
+	PropertyBytes []byte               `json:"property_bytes" msgpack:"property_bytes" mapstructure:"property_bytes"`
 }
 
 func (e *Entity) Copy() Entity {
 	en := Entity{
-		ID:         e.ID,
-		Type:       e.Type,
-		Owner:      e.Owner,
-		Source:     e.Source,
-		Version:    e.Version,
-		LastTime:   e.LastTime,
-		TemplateID: e.TemplateID,
-		ConfigFile: []byte(`{}`),
-		Properties: make(map[string]constraint.Node),
+		ID:            e.ID,
+		Type:          e.Type,
+		Owner:         e.Owner,
+		Source:        e.Source,
+		Version:       e.Version,
+		LastTime:      e.LastTime,
+		TemplateID:    e.TemplateID,
+		ConfigBytes:   []byte(`{}`),
+		Properties:    make(map[string]tdtl.Node),
+		PropertyBytes: []byte(`{}`),
 	}
 
 	// copy entity properties.
 	for pid, pval := range e.Properties {
-		en.Properties[pid] = pval.Copy()
+		en.Properties[pid] = pval
 	}
 
-	if len(en.ConfigFile) > 0 {
-		en.ConfigFile = make([]byte, len(e.ConfigFile))
-		copy(en.ConfigFile, e.ConfigFile)
+	if len(en.ConfigBytes) > 0 {
+		en.ConfigBytes = make([]byte, len(e.ConfigBytes))
+		copy(en.ConfigBytes, e.ConfigBytes)
 	}
 
 	return en
@@ -57,7 +59,7 @@ func (e *Entity) Basic() Entity {
 		Version:    e.Version,
 		LastTime:   e.LastTime,
 		TemplateID: e.TemplateID,
-		Properties: make(map[string]constraint.Node),
+		Properties: make(map[string]tdtl.Node),
 	}
 
 	return en
@@ -80,7 +82,7 @@ func (e *Entity) JSON() string {
 	}
 
 	info["properties"] = props
-	info["config_file"] = string(e.ConfigFile)
+	info["config_file"] = string(e.ConfigBytes)
 
 	bytes, _ := json.Marshal(info)
 	return string(bytes)

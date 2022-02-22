@@ -146,6 +146,7 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 
 	log.Debug("update environment", zfield.ID(m.ID),
 		zfield.Name(m.Name), zfield.Eid(m.EntityID), zap.Any("effect", effect))
+
 	return effect, nil
 }
 

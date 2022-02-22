@@ -29,6 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/environment"
 	"github.com/tkeel-io/core/pkg/runtime/message"
+	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -147,15 +148,18 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 		// load state machine.
 		queue := placement.Global().Select(stateID)
 		container := m.selectContainer(queue.ID)
-		if config.Get().Server.Name != queue.Name {
-			return
+
+		log.Debug("reload state machine", zfield.Eid(stateID), zfield.Queue(queue))
+		if config.Get().Server.Name != queue.NodeName {
+			continue
 		}
 
 		// load state machine.
-		machine, err := container.Load(context.Background(), stateID)
-		if nil != err {
-			log.Error("load state machine", zap.Error(err),
-				zfield.Channel(queue.ID), zfield.Eid(stateID))
+		var has bool
+		var machine state.Machiner
+		if machine, has = container.Get(stateID); !has {
+			log.Debug("load state machine, runtime not found",
+				zfield.Queue(queue), zfield.Eid(stateID))
 			continue
 		}
 

@@ -25,18 +25,19 @@ import (
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestNewStatem(t *testing.T) {
 	base := dao.Entity{
-		ID:         "device123",
-		Type:       "DEVICE",
-		Owner:      "admin",
-		Source:     "dm",
-		Version:    0,
-		LastTime:   util.UnixMilli(),
-		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
-		ConfigFile: nil,
+		ID:          "device123",
+		Type:        "DEVICE",
+		Owner:       "admin",
+		Source:      "dm",
+		Version:     0,
+		LastTime:    util.UnixMilli(),
+		Properties:  map[string]tdtl.Node{"temp": tdtl.IntNode(25)},
+		ConfigBytes: nil,
 	}
 
 	sm, err := NewState(context.Background(), &base, nil, nil, nil)
@@ -50,9 +51,9 @@ func TestGJson(t *testing.T) {
 }
 
 func TestState_Patch(t *testing.T) {
-	stateIns := State{ID: "test", Props: make(map[string]constraint.Node)}
+	stateIns := State{ID: "test", Props: make(map[string]tdtl.Node)}
 
-	stateIns.Patch(constraint.PatchOpAdd, "aa.b.c.c[0]", []byte(`123`))
+	stateIns.Patch(constraint.OpAdd, "aa.b.c.c[0]", []byte(`123`))
 
 	t.Log(stateIns.Props)
 }

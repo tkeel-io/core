@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service/mock"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -42,7 +42,7 @@ func Test_entity2EntityResponse(t *testing.T) {
 		Version:    0,
 		LastTime:   util.UnixMilli(),
 		Mappers:    []state.Mapper{{Name: "mapper123", TQL: "insert into device123 select device234.temp as temp"}},
-		Properties: map[string]constraint.Node{"temp": constraint.NewNode(25)},
+		Properties: map[string]tdtl.Node{"temp": tdtl.IntNode(25)},
 		ConfigFile: nil,
 	}
 

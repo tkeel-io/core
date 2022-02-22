@@ -225,3 +225,7 @@ func Offset(offset int64) zap.Field {
 func Group(group string) zap.Field {
 	return zap.String("offset", group)
 }
+
+func Queue(v interface{}) zap.Field {
+	return zap.Any("queue", v)
+}

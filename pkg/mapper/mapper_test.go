@@ -19,31 +19,36 @@ package mapper
 import (
 	"testing"
 
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestMapper(t *testing.T) {
-	input := map[string]constraint.Node{
-		"entity1.property1":      constraint.NewNode("123"),
-		"entity2.property2.name": constraint.NewNode("123"),
-		"entity2.property3":      constraint.NewNode("123"),
+	input := map[string]tdtl.Node{
+		"entity1.property1":      tdtl.IntNode(123),
+		"entity2.property2.name": tdtl.StringNode("tom"),
+		"entity2.property3":      tdtl.IntNode(123),
 	}
 
 	tqlTexts := []struct {
 		id       string
 		tqlText  string
-		input    map[string]constraint.Node
+		input    map[string]tdtl.Node
 		computed bool
 	}{
-		{"tql1", "insert into device1 select *", map[string]constraint.Node{}, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
+		{"tql1", "insert into device1 select device2.*", input, false},
+		{"tql2", "insert into test123 select test234.temp as temp", map[string]tdtl.Node{"test234.temp": tdtl.IntNode(123)}, true},
 		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
 		{"tql4", "insert into sub123 select test123.temp", nil, false},
 	}
 
 	for _, tqlInst := range tqlTexts {
 		t.Run(tqlInst.id, func(t *testing.T) {
-			m, _ := NewMapper(tqlInst.id, tqlInst.tqlText)
+			m, err := NewMapper(tqlInst.id, tqlInst.tqlText)
+			if nil != err {
+				t.Log("error: ", err)
+				return
+			}
 
 			t.Log("parse ID: ", m.ID())
 
@@ -65,4 +70,47 @@ func TestMapper(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMapper1233(t *testing.T) {
+	tqlText := "insert into 4c1e33a1-6899-4643-a6b3-46cf37950b7f select 54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
+	mapperIns, err := NewMapper("mapper123", tqlText)
+	assert.Nil(t, err)
+	t.Log("id: ", mapperIns.ID())
+	t.Log("target: ", mapperIns.TargetEntity())
+	t.Log("sources: ", mapperIns.SourceEntities())
+	for _, tentacle := range mapperIns.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	res, err := mapperIns.Exec(map[string]tdtl.Node{
+		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
+	})
+
+	assert.Nil(t, err)
+	t.Log("result: ", res)
+}
+
+func TestMapper123(t *testing.T) {
+	tqlText := `insert into 
+			4c1e33a1-6899-4643-a6b3-46cf37950b7f 
+		select 
+			54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath + 54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.prop1 as sysField._spacePath`
+
+	mapperIns, err := NewMapper("mapper123", tqlText)
+	assert.Nil(t, err)
+	t.Log("id: ", mapperIns.ID())
+	t.Log("target: ", mapperIns.TargetEntity())
+	t.Log("sources: ", mapperIns.SourceEntities())
+	for _, tentacle := range mapperIns.Tentacles() {
+		t.Log("tentacle: ", tentacle)
+	}
+
+	res, err := mapperIns.Exec(map[string]tdtl.Node{
+		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
+		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.prop1":               tdtl.IntNode(23456),
+	})
+
+	assert.Nil(t, err)
+	t.Log("result: ", res)
 }

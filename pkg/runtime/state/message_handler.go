@@ -6,7 +6,6 @@ import (
 	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/core/pkg/constraint"
@@ -15,25 +14,30 @@ import (
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
+
+func (s *statem) getState(stateID string) State {
+	if _, ok := s.cacheProps[stateID]; !ok {
+		s.cacheProps[stateID] = make(map[string]tdtl.Node)
+	}
+
+	return State{ID: stateID, Props: s.cacheProps[stateID]}
+}
 
 // invokePropertyMessage invoke property message.
 func (s *statem) invokePropertyMessage(msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
 	if _, has := s.cacheProps[stateID]; !has {
-		s.cacheProps[stateID] = make(map[string]constraint.Node)
+		s.cacheProps[stateID] = make(map[string]tdtl.Node)
 	}
 
-	stateIns := State{
-		ID:    stateID,
-		Props: s.cacheProps[stateID],
-	}
-
+	stateIns := s.getState(stateID)
 	watchKeys := make([]mapper.WatchKey, 0)
 	collectjs.ForEach(msgCtx.Message(), jsonparser.Object, func(key, value []byte) {
 		propertyKey := string(key)
-		if _, err := stateIns.Patch(constraint.PatchOpReplace, propertyKey, value); nil != err {
+		if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
@@ -56,13 +60,13 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	}
 
 	var (
-		messages        = make(map[string]map[string]constraint.Node)
+		messages        = make(map[string]map[string]tdtl.Node)
 		activeTentacles = make(map[string][]mapper.Tentacler)
 	)
 
-	thisStateProps := s.cacheProps[s.ID]
 	for _, active := range actives {
 		// full match.
+		stateIns := s.getState(active.EntityID)
 		if tentacles, exists := s.tentacles[active.String()]; exists {
 			for _, tentacle := range tentacles {
 				targetID := tentacle.TargetID()
@@ -71,19 +75,24 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
 					if _, exists := messages[targetID]; !exists {
-						messages[targetID] = make(map[string]constraint.Node)
+						messages[targetID] = make(map[string]tdtl.Node)
 					}
 
 					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-					messages[targetID][active.PropertyKey] = thisStateProps[active.PropertyKey]
+
+					if prop, err := stateIns.Patch(constraint.OpCopy, active.PropertyKey, nil); nil == err {
+						messages[targetID][active.PropertyKey] = prop
+					} else {
+						log.Warn("patch copy property", zfield.Eid(s.ID), zfield.PK(active.PropertyKey))
+					}
 				} else {
 					// undefined tentacle typs.
 					log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
 				}
 			}
 		} else {
-			// TODO...
+			// TODO: topic 规则匹配树.
 			// 如果消息是缓存，那么，我们应该对改state的tentacles刷新。
 			log.Debug("match end of string \".*\" PropertyKey.", zap.String("entity", active.EntityID), zap.String("property-key", active.PropertyKey))
 			// match entityID.*   .
@@ -97,13 +106,14 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 						} else if mapper.TentacleTypeEntity == tentacle.Type() {
 							// make if not exists.
 							if _, exists := messages[targetID]; !exists {
-								messages[targetID] = make(map[string]constraint.Node)
+								messages[targetID] = make(map[string]tdtl.Node)
 							}
 
 							segments := strings.Split(active.PropertyKey, ".")
 							// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
 							// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-							messages[targetID][segments[0]] = thisStateProps[segments[0]]
+							// TODO:
+							messages[targetID][segments[0]] = s.getState(active.EntityID).Props[segments[0]]
 						} else {
 							// undefined tentacle typs.
 							log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
@@ -132,7 +142,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		}
 
 		ev.SetData(bytes)
-		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()))
+		log.Debug("republish message", zap.String("event_id", ev.Context.GetID()), zfield.Event(ev))
 
 		s.dispatcher.Dispatch(context.Background(), ev)
 	}
@@ -148,13 +158,14 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 	}
 
 	var err error
+	var stateIns = s.getState(s.ID)
 	var activeKeys []mapper.WatchKey
 	for mapperID := range actives {
-		input := make(map[string]constraint.Node)
+		input := make(map[string]tdtl.Node)
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
 			for _, item := range tentacle.Items() {
-				var val constraint.Node
-				if val, err = s.getProperty(s.cacheProps[item.EntityID], item.PropertyKey); nil != err {
+				var val tdtl.Node
+				if val, err = stateIns.Patch(constraint.OpCopy, item.PropertyKey, nil); nil != err {
 					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
 					continue
 				} else if nil != val {
@@ -168,7 +179,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 			continue
 		}
 
-		var properties map[string]constraint.Node
+		var properties map[string]tdtl.Node
 
 		// excute mapper.
 		if properties, err = s.mappers[mapperID].Exec(input); nil != err {
@@ -178,7 +189,7 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		log.Debug("exec mapper", zfield.Mid(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
 		for propertyKey, value := range properties {
-			if err = s.setProperty(propertyKey, constraint.PatchOpReplace, value); nil != err {
+			if _, err = stateIns.Patch(constraint.OpReplace, propertyKey, []byte(value.String())); nil != err {
 				log.Error("set property", zfield.ID(s.ID), zap.String("property_key", propertyKey), zap.Error(err))
 				continue
 			}
@@ -200,61 +211,4 @@ func unique(actives []mapper.WatchKey) []mapper.WatchKey {
 		actives = append(actives, w)
 	}
 	return actives
-}
-
-func (s *statem) getProperty(properties map[string]constraint.Node, propertyKey string) (constraint.Node, error) {
-	val, err := patchProperty(properties, propertyKey, constraint.PatchOpCopy, nil)
-	return val, errors.Wrap(err, "patch copy property")
-}
-
-func (s *statem) setProperty(path string, op constraint.PatchOperator, value constraint.Node) error {
-	_, err := patchProperty(s.Properties, path, constraint.PatchOpReplace, value)
-	return errors.Wrap(err, "set property")
-}
-
-func patchProperty(props map[string]constraint.Node, path string, op constraint.PatchOperator, val constraint.Node) (constraint.Node, error) {
-	var err error
-	var resultNode constraint.Node
-	if !strings.ContainsAny(path, ".[") {
-		switch op {
-		case constraint.PatchOpReplace:
-			props[path] = val
-		case constraint.PatchOpAdd:
-			// patch property add.
-			prop := props[path]
-			if nil == prop {
-				prop = constraint.JSONNode(`[]`)
-			}
-
-			// patch add val.
-			if resultNode, err = constraint.Patch(val, prop, "", op); nil != err {
-				log.Error("patch add", zfield.Path(path), zap.Error(err))
-				return nil, errors.Wrap(err, "patch add")
-			}
-			props[path] = resultNode
-		case constraint.PatchOpRemove:
-			delete(props, path)
-		case constraint.PatchOpCopy:
-			resultNode = props[path]
-		default:
-			return nil, constraint.ErrJSONPatchReservedOp
-		}
-		return resultNode, nil
-	}
-
-	// if path contains '.' or '[' .
-	index := strings.IndexAny(path, ".[")
-	propertyID, patchPath := path[:index], path[index:]
-	if _, has := props[propertyID]; !has {
-		log.Error("patch state", zfield.Path(path), zap.Error(constraint.ErrPatchNotFound))
-		return nil, constraint.ErrPatchNotFound
-	}
-
-	if resultNode, err = constraint.Patch(props[propertyID], val, patchPath, op); nil != err {
-		log.Error("patch state", zfield.Path(path), zap.Error(err))
-		return nil, errors.Wrap(err, "patch state")
-	}
-
-	props[propertyID] = resultNode
-	return resultNode, nil
 }

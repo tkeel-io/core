@@ -163,7 +163,7 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) ([]
 			return nil, errors.Wrap(err, "pull template entity")
 		}
 
-		s.ConfigFile = tempEn.ConfigFile
+		s.ConfigBytes = tempEn.ConfigBytes
 	}
 
 	// parse configs.
@@ -304,7 +304,7 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	for key, val := range reqEn.Properties {
-		if _, err = stateIns.Patch(constraint.PatchOpReplace, key, []byte(val.String())); nil != err {
+		if _, err = stateIns.Patch(constraint.OpReplace, key, []byte(val.String())); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: key})
@@ -365,7 +365,8 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	watchKeys := make([]mapper.WatchKey, 0)
 	for index := range pds {
 		valBytes, _ := pds[index].Value.([]byte)
-		if _, err = stateIns.Patch(pds[index].Operator, pds[index].Path, valBytes); nil != err {
+		op := constraint.NewPatchOp(pds[index].Operator)
+		if _, err = stateIns.Patch(op, pds[index].Path, valBytes); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: pds[index].Path})
@@ -458,10 +459,10 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	}
 
 	// update configs.
-	collectjs.ForEach(reqEn.ConfigFile, jsonparser.Object, func(key, value []byte) {
+	collectjs.ForEach(reqEn.ConfigBytes, jsonparser.Object, func(key, value []byte) {
 		propertyKey := string(key)
-		if bytes, err = collectjs.Set(s.ConfigFile, propertyKey, value); nil == err {
-			s.ConfigFile = bytes
+		if bytes, err = collectjs.Set(s.ConfigBytes, propertyKey, value); nil == err {
+			s.ConfigBytes = bytes
 		}
 		log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
 	})
@@ -519,23 +520,23 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	}
 
 	for _, pd := range pds {
-		switch pd.Operator {
-		case constraint.PatchOpAdd:
-			if bytes, err = collectjs.Append(s.ConfigFile, pd.Path, pd.Value.([]byte)); nil != err {
+		switch constraint.NewPatchOp(pd.Operator) {
+		case constraint.OpAdd:
+			if bytes, err = collectjs.Append(s.ConfigBytes, pd.Path, pd.Value.([]byte)); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch add",
 					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				continue
 			}
-			s.ConfigFile = bytes
-		case constraint.PatchOpRemove:
-			s.ConfigFile = collectjs.Del(s.ConfigFile, pd.Path)
-		case constraint.PatchOpReplace:
+			s.ConfigBytes = bytes
+		case constraint.OpRemove:
+			s.ConfigBytes = collectjs.Del(s.ConfigBytes, pd.Path)
+		case constraint.OpReplace:
 			if valBytes, ok := pd.Value.([]byte); ok {
-				if bytes, err = collectjs.Set(s.ConfigFile, pd.Path, valBytes); nil != err {
+				if bytes, err = collectjs.Set(s.ConfigBytes, pd.Path, valBytes); nil != err {
 					log.Error("call core.APIs.PatchConfigs patch replace", zap.Error(err))
 					return nil, errors.Wrap(err, "patch replace")
 				}
-				s.ConfigFile = bytes
+				s.ConfigBytes = bytes
 			}
 			log.Error("assert patch data value", zfield.Eid(s.ID), zfield.ReqID(reqID))
 		}
@@ -563,8 +564,8 @@ func (s *statem) reparseConfig() {
 	var err error
 	// parse state config again.
 	configs := make(map[string]interface{})
-	if err = json.Unmarshal(s.ConfigFile, &configs); nil != err {
-		log.Error("json unmarshal", zap.Error(err), zap.String("configs", string(s.ConfigFile)))
+	if err = json.Unmarshal(s.ConfigBytes, &configs); nil != err {
+		log.Error("json unmarshal", zap.Error(err), zap.String("configs", string(s.ConfigBytes)))
 	}
 
 	var cfg constraint.Config

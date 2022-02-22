@@ -9,6 +9,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/tdtl"
 )
 
 // EntityBase state basic informatinon.
@@ -21,7 +22,7 @@ type Base struct {
 	LastTime   int64                         `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
 	Mappers    []state.Mapper                `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
 	TemplateID string                        `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
-	Properties map[string]constraint.Node    `json:"properties" msgpack:"properties" mapstructure:"-"`
+	Properties map[string]tdtl.Node          `json:"properties" msgpack:"properties" mapstructure:"-"`
 	Configs    map[string]*constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
 	ConfigFile []byte                        `json:"-" msgpack:"config_file" mapstructure:"-"`
 }
@@ -34,7 +35,7 @@ func (b *Base) Basic() Base {
 		Source:     b.Source,
 		Version:    b.Version,
 		LastTime:   b.LastTime,
-		Properties: make(map[string]constraint.Node),
+		Properties: make(map[string]tdtl.Node),
 		Configs:    make(map[string]*constraint.Config),
 	}
 
@@ -42,17 +43,17 @@ func (b *Base) Basic() Base {
 	return cp
 }
 
-func (b *Base) GetProperty(path string) (constraint.Node, error) {
+func (b *Base) GetProperty(path string) (tdtl.Node, error) {
 	if !strings.ContainsAny(path, ".[") {
 		if _, has := b.Properties[path]; !has {
-			return constraint.NullNode{}, xerrors.ErrPropertyNotFound
+			return tdtl.DefaultNode{}, xerrors.ErrPropertyNotFound
 		}
 		return b.Properties[path], nil
 	}
 
 	// patch copy property.
 	arr := strings.SplitN(path, ".", 2)
-	res, err := constraint.Patch(b.Properties[arr[0]], nil, arr[1], constraint.PatchOpCopy)
+	res, err := constraint.Patch(b.Properties[arr[0]], nil, arr[1], constraint.OpCopy)
 	return res, errors.Wrap(err, "patch copy")
 }
 
@@ -91,7 +92,7 @@ func entityToBase(en *dao.Entity) *Base {
 		LastTime:   en.LastTime,
 		TemplateID: en.TemplateID,
 		Properties: en.Properties,
-		ConfigFile: en.ConfigFile,
+		ConfigFile: en.ConfigBytes,
 	}
 
 	return base

@@ -2,7 +2,7 @@ package subscription
 
 import (
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/tdtl"
 )
 
 // Base subscription basic information.
@@ -36,7 +36,7 @@ func (s *Base) Validate() error {
 	return nil
 }
 
-func decode2Subscription(kvalues map[string]constraint.Node, subsc *Base) {
+func decode2Subscription(kvalues map[string]tdtl.Node, subsc *Base) {
 	// parse Mode.
 	if node, has := kvalues[SubscriptionFieldMode]; has {
 		subsc.Mode = node.String()

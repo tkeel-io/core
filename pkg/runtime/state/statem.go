@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -35,6 +36,7 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -96,7 +98,7 @@ type statem struct {
 	// state basic fields.
 	dao.Entity
 	// other state machine property cache.
-	cacheProps map[string]map[string]constraint.Node // cache other property.
+	cacheProps map[string]map[string]tdtl.Node // cache other property.
 
 	// mapper & tentacles.
 	mappers   map[string]mapper.Mapper      // key=mapperId
@@ -141,13 +143,13 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
 		mappers:         make(map[string]mapper.Mapper),
-		cacheProps:      make(map[string]map[string]constraint.Node),
+		cacheProps:      make(map[string]map[string]tdtl.Node),
 		constraints:     make(map[string]*constraint.Constraint),
 	}
 
 	// initialize Properties.
 	if nil == state.Entity.Properties {
-		state.Properties = make(map[string]constraint.Node)
+		state.Properties = make(map[string]tdtl.Node)
 	}
 
 	// set properties into cacheProps.
@@ -207,6 +209,7 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 		if actives, err = s.callAPIs(msgCtx.Context(), msgCtx); nil != err {
 			return errors.Wrap(err, "apis call")
 		}
+
 		s.activeTentacle(actives)
 	case message.MessageTypeState:
 		// handle state message.
@@ -229,16 +232,21 @@ func (s *statem) State() State {
 
 type State struct {
 	ID    string
-	Props map[string]constraint.Node
+	Props map[string]tdtl.Node
 }
 
-func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) (constraint.Node, error) {
+func (s *State) Get(path string) (tdtl.Node, error) {
+	val, err := s.Patch(constraint.OpCopy, path, nil)
+	return val, errors.Wrap(err, "patch copy property")
+}
+
+func (s *State) Patch(op constraint.PatchOp, path string, value []byte) (tdtl.Node, error) {
 	var (
 		err    error
-		result constraint.Node
+		result tdtl.Node
 	)
 	if !strings.ContainsAny(path, ".[") {
-		if result, err = s.patchProp(op, path, value); nil != err {
+		if result, err = s.patchProp(op, path, string(value)); nil != err {
 			log.Error("patch state property", zap.Error(err), zfield.Eid(s.ID))
 		}
 		return result, errors.Wrap(err, "patch state property")
@@ -246,16 +254,16 @@ func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) (c
 
 	// if path contains '.' or '[' .
 	index := strings.IndexAny(path, ".[")
-	propertyID, patchPath := path[:index], path[index:]
+	propertyID, patchPath := path[:index], strings.TrimPrefix(path[index:], ".")
 
-	valNode := constraint.NewNode(value)
-	if result, err = constraint.Patch(s.Props[propertyID], valNode, patchPath, op); nil != err {
+	valNode := tdtl.JSONNode(value)
+	if result, err = constraint.Patch(s.get(propertyID), valNode, patchPath, op); nil != err {
 		log.Error("patch state", zfield.Path(path), zap.Error(err), zfield.Eid(s.ID))
 		return nil, errors.Wrap(err, "patch state")
 	}
 
 	switch op {
-	case constraint.PatchOpCopy:
+	case constraint.OpCopy:
 		return result, nil
 	}
 
@@ -263,32 +271,44 @@ func (s *State) Patch(op constraint.PatchOperator, path string, value []byte) (c
 	return result, nil
 }
 
-func (s *State) patchProp(op constraint.PatchOperator, path string, value []byte) (constraint.Node, error) {
+func (s *State) get(pid string) tdtl.Node {
+	if val, ok := s.Props[pid]; ok {
+		return val
+	}
+	return tdtl.JSONNode("")
+}
+
+func (s *State) patchProp(op constraint.PatchOp, path string, value string) (tdtl.Node, error) {
 	var (
 		err    error
-		result constraint.Node
+		bytes  []byte
+		result tdtl.Node
 	)
 	switch op {
-	case constraint.PatchOpReplace:
-		s.Props[path] = constraint.NewNode(value)
-	case constraint.PatchOpAdd:
+	case constraint.OpReplace:
+		s.Props[path] = tdtl.JSONNode(value)
+	case constraint.OpAdd:
 		// patch property add.
 		prop := s.Props[path]
 		if nil == prop {
-			prop = constraint.JSONNode(`[]`)
+			prop = tdtl.JSONNode(`[]`)
 		}
 
 		// patch add val.
-		valNode := constraint.NewNode(value)
-		if result, err = constraint.Patch(prop, valNode, "", op); nil != err {
+		bytes, err = collectjs.Append([]byte(prop.String()), path, []byte(value))
+		if nil != err {
 			log.Error("patch add", zfield.Path(path), zap.Error(err))
 			return result, errors.Wrap(err, "patch add")
 		}
+		result = tdtl.JSONNode(bytes)
 		s.Props[path] = result
-	case constraint.PatchOpRemove:
+	case constraint.OpRemove:
 		delete(s.Props, path)
-	case constraint.PatchOpCopy:
-		result = s.Props[path]
+	case constraint.OpCopy:
+		var ok bool
+		if result, ok = s.Props[path]; !ok {
+			return result, xerrors.ErrPropertyNotFound
+		}
 	default:
 		return result, constraint.ErrJSONPatchReservedOp
 	}

@@ -17,8 +17,8 @@ import (
 const (
 	// store mapper prefix key.
 	MapperPrefix = "CORE.MAPPER"
-	// CORE.MAPPER.{type}.{entityID}.{name}.
-	fmtMapperString = "%s.%s.%s.%s"
+	// CORE.MAPPER.{mapperID}.
+	fmtMapperString = "%s.%s"
 )
 
 type MapperHandler func([]Mapper)
@@ -43,7 +43,7 @@ func (m *Mapper) Copy() Mapper {
 }
 
 func (m *Mapper) Key() string {
-	return fmt.Sprintf(fmtMapperString, MapperPrefix, m.EntityType, m.EntityID, m.ID)
+	return fmt.Sprintf(fmtMapperString, MapperPrefix, m.ID)
 }
 
 func (d *Dao) PutMapper(ctx context.Context, m *Mapper) error {

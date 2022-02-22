@@ -21,13 +21,13 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
 	"github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +53,7 @@ func interface2string(in interface{}) (out string) {
 	switch inString := in.(type) {
 	case string:
 		out = inString
-	case constraint.Node:
+	case tdtl.Node:
 		out = inString.String()
 	default:
 		out = ""
@@ -90,14 +90,14 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.Source = req.Source
 	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = map[string]constraint.Node{
-		runtime.SMFieldType:                      constraint.StringNode(entity.Type),
-		runtime.SMFieldOwner:                     constraint.StringNode(entity.Owner),
-		runtime.SMFieldSource:                    constraint.StringNode(entity.Source),
-		subscription.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		subscription.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		subscription.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		subscription.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+	entity.Properties = map[string]tdtl.Node{
+		runtime.SMFieldType:                      tdtl.StringNode(entity.Type),
+		runtime.SMFieldOwner:                     tdtl.StringNode(entity.Owner),
+		runtime.SMFieldSource:                    tdtl.StringNode(entity.Source),
+		subscription.SubscriptionFieldMode:       tdtl.StringNode(req.Subscription.Mode),
+		subscription.SubscriptionFieldTopic:      tdtl.StringNode(req.Subscription.Topic),
+		subscription.SubscriptionFieldFilter:     tdtl.StringNode(req.Subscription.Filter),
+		subscription.SubscriptionFieldPubsubName: tdtl.StringNode(req.Subscription.PubsubName),
 	}
 
 	if err = s.apiManager.CheckSubscription(ctx, entity); nil != err {
@@ -137,11 +137,11 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.Source = req.Source
 	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = map[string]constraint.Node{
-		subscription.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		subscription.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		subscription.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		subscription.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+	entity.Properties = map[string]tdtl.Node{
+		subscription.SubscriptionFieldFilter:     tdtl.StringNode(req.Subscription.Filter),
+		subscription.SubscriptionFieldTopic:      tdtl.StringNode(req.Subscription.Topic),
+		subscription.SubscriptionFieldMode:       tdtl.StringNode(req.Subscription.Mode),
+		subscription.SubscriptionFieldPubsubName: tdtl.StringNode(req.Subscription.PubsubName),
 	}
 
 	// set properties.

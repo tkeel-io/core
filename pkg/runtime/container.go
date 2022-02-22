@@ -52,6 +52,12 @@ func (c *Container) Remove(stateID string) {
 	delete(c.states, stateID)
 }
 
+func (c *Container) Get(stateID string) (machine state.Machiner, has bool) {
+	// load from container.
+	machine, has = c.states[stateID]
+	return machine, has
+}
+
 func (c *Container) Add(machine state.Machiner) {
 	eid := machine.GetID()
 	// load state context.
