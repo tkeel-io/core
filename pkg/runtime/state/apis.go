@@ -424,7 +424,6 @@ func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) (
 func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
 	var (
 		err   error
-		bytes []byte
 		reqEn dao.Entity
 	)
 
@@ -459,14 +458,23 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	}
 
 	// update configs.
-	collectjs.ForEach(reqEn.ConfigBytes, jsonparser.Object, func(key, value []byte) {
-		propertyKey := string(key)
-		if bytes, err = collectjs.Set(s.ConfigBytes, propertyKey, value); nil == err {
-			s.ConfigBytes = bytes
-		}
-		log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
-	})
+	var configBytes = []byte("{}")
+	collectjs.ForEach(reqEn.ConfigBytes, jsonparser.Object,
+		func(key, value []byte, dataType jsonparser.ValueType) {
+			propertyKey := string(key)
+			if configBytes, err = collectjs.Set(configBytes, propertyKey, value); nil != err {
+				log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
+				err = errors.Wrap(err, "patch config")
+			}
+		})
 
+	if nil != err {
+		log.Error("call core.APIs.PatchConfigs patch configs",
+			zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "update state configs")
+	}
+
+	s.ConfigBytes = configBytes
 	// reparse state configs.
 	s.reparseConfig()
 

@@ -652,9 +652,10 @@ func parseProps(props map[string]interface{}) (map[string]tdtl.Node, error) {
 	}
 
 	var result = make(map[string]tdtl.Node)
-	collectjs.ForEach(bytes, jsonparser.Object, func(key, value []byte) {
-		result[string(key)] = tdtl.JSONNode(value)
-	})
+	collectjs.ForEach(bytes, jsonparser.Object,
+		func(key, value []byte, dataType jsonparser.ValueType) {
+			result[string(key)] = constraint.NewNode(dataType, value)
+		})
 
-	return result, nil
+	return result, errors.Wrap(err, "parse properties")
 }

@@ -47,14 +47,15 @@ func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 
 	stateIns := s.getState(stateID)
 	watchKeys := make([]mapper.WatchKey, 0)
-	collectjs.ForEach(msgCtx.Message(), jsonparser.Object, func(key, value []byte) {
-		propertyKey := string(key)
-		if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
-			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
-		} else {
-			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
-		}
-	})
+	collectjs.ForEach(msgCtx.Message(), jsonparser.Object,
+		func(key, value []byte, dataType jsonparser.ValueType) {
+			propertyKey := string(key)
+			if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
+				log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
+			} else {
+				watchKeys = append(watchKeys, mapper.WatchKey{EntityID: stateID, PropertyKey: propertyKey})
+			}
+		})
 
 	// set last active tims.
 	if stateID == s.ID {
@@ -74,14 +75,15 @@ func (s *statem) invokeRepublishMessage(msgCtx message.Context) []WatchKey {
 
 	stateIns := s.getState(msgSender)
 	watchKeys := make([]mapper.WatchKey, 0)
-	collectjs.ForEach(msgCtx.Message(), jsonparser.Object, func(key, value []byte) {
-		propertyKey := string(key)
-		if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
-			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
-		} else {
-			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: msgSender, PropertyKey: propertyKey})
-		}
-	})
+	collectjs.ForEach(msgCtx.Message(), jsonparser.Object,
+		func(key, value []byte, dataType jsonparser.ValueType) {
+			propertyKey := string(key)
+			if _, err := stateIns.Patch(constraint.OpReplace, propertyKey, value); nil != err {
+				log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(propertyKey), zap.Error(err))
+			} else {
+				watchKeys = append(watchKeys, mapper.WatchKey{EntityID: msgSender, PropertyKey: propertyKey})
+			}
+		})
 
 	// set last active tims.
 	if stateID == s.ID {

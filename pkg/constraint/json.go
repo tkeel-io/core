@@ -19,6 +19,7 @@ package constraint
 import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -28,4 +29,23 @@ func EncodeJSON(kvalues map[string]tdtl.Node) ([]byte, error) {
 		collect.Set(key, []byte(val.String()))
 	}
 	return collect.GetRaw(), errors.Wrap(collect.GetError(), "Encode Json")
+}
+
+func NewNode(dataType jsonparser.ValueType, value []byte) tdtl.Node {
+	switch dataType {
+	case jsonparser.String:
+		return tdtl.StringNode(value)
+	case jsonparser.Number:
+		return tdtl.StringNode(value).To(tdtl.Number)
+	case jsonparser.Object:
+		return tdtl.JSONNode(value)
+	case jsonparser.Array:
+		return tdtl.JSONNode(value)
+	case jsonparser.Boolean:
+		return tdtl.StringNode(value).To(tdtl.Bool)
+	case jsonparser.Null:
+		return tdtl.NULL_RESULT
+	default:
+		return tdtl.UNDEFINED_RESULT
+	}
 }
