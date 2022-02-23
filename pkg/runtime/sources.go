@@ -53,7 +53,7 @@ func (m *Manager) listQueue() {
 	// start consumer inbox.
 	for id, inboxIns := range m.inboxes {
 		log.Info("start consumer inbox", zfield.ID(id))
-		inboxIns.Consume(m.ctx, m.handleMessage)
+		inboxIns.Consume(m.ctx, m.HandleMessage)
 		m.containers[id] = NewContainer(m.ctx, id, m)
 	}
 }
@@ -90,7 +90,7 @@ func (m *Manager) watchQueue() {
 
 					// start consumer inbox.
 					log.Info("start consumer inbox", zfield.ID(queue.ID))
-					inboxIns.Consume(m.ctx, m.handleMessage)
+					inboxIns.Consume(m.ctx, m.HandleMessage)
 					m.containers[inboxIns.ID()] = NewContainer(m.ctx, inboxIns.ID(), m)
 				}
 			default:

@@ -102,7 +102,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 	var (
 		messages        = make(map[string]map[string]tdtl.Node)
-		activeTentacles = make(map[string][]mapper.Tentacler)
+		activeTentacles = make([]string, 0)
 	)
 
 	for _, active := range actives {
@@ -112,7 +112,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 			for _, tentacle := range tentacles {
 				targetID := tentacle.TargetID()
 				if mapper.TentacleTypeMapper == tentacle.Type() {
-					activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
+					activeTentacles = append(activeTentacles, tentacle.TargetID())
 				} else if mapper.TentacleTypeEntity == tentacle.Type() {
 					// make if not exists.
 					if _, exists := messages[targetID]; !exists {
@@ -143,7 +143,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 					for _, tentacle := range tentacles {
 						targetID := tentacle.TargetID()
 						if mapper.TentacleTypeMapper == tentacle.Type() {
-							activeTentacles[targetID] = append(activeTentacles[targetID], tentacle)
+							activeTentacles = append(activeTentacles, targetID)
 						} else if mapper.TentacleTypeEntity == tentacle.Type() {
 							// make if not exists.
 							if _, exists := messages[targetID]; !exists {
@@ -215,14 +215,17 @@ func wrapStr(s string) string {
 }
 
 // activeMapper active mappers.
-func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
+func (s *statem) activeMapper(actives []string) {
 	if len(actives) == 0 {
 		return
 	}
 
+	// unique slice.
+	actives = util.Unique(actives)
+
 	var err error
 	var activeKeys []mapper.WatchKey
-	for mapperID := range actives {
+	for _, mapperID := range actives {
 		input := make(map[string]tdtl.Node)
 		for _, tentacle := range s.mappers[mapperID].Tentacles() {
 			for _, item := range tentacle.Items() {
@@ -264,6 +267,78 @@ func (s *statem) activeMapper(actives map[string][]mapper.Tentacler) {
 		}
 	}
 	s.activeTentacle(unique(activeKeys))
+}
+
+func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) []WatchKey {
+	var (
+		err      error
+		actives  []string
+		messages = make(map[string]map[string]tdtl.Node)
+	)
+
+	for _, tentacle := range s.sCtx.tentacles {
+		// inie mapper tentacle.
+		if tentacle.Version() == 0 {
+			switch tentacle.Type() {
+			case mapper.TentacleTypeMapper:
+				actives = append(actives, tentacle.TargetID())
+			case mapper.TentacleTypeEntity:
+				for _, item := range tentacle.Items() {
+					var res tdtl.Node
+					stateIns := s.getState(item.EntityID)
+					if res, err = stateIns.Get(item.PropertyKey); nil != err {
+						log.Error("init tentacle, patch copy",
+							zap.Error(err), zfield.Eid(s.ID), zfield.PK(item.String()))
+						continue
+					}
+
+					if _, ok := messages[item.EntityID]; !ok {
+						messages[item.EntityID] = make(map[string]tdtl.Node)
+					}
+
+					// set message.
+					messages[item.EntityID][item.PropertyKey] = res
+				}
+			}
+		}
+	}
+
+	// republish messages.
+	for stateID, msg := range messages {
+		ev := cloudevents.NewEvent()
+		ev.SetID(util.UUID())
+		ev.SetType("republish")
+		ev.SetSource("core.runtime")
+		ev.SetExtension(message.ExtEntityID, stateID)
+		ev.SetExtension(message.ExtMessageSender, s.ID)
+		ev.SetExtension(message.ExtMessageReceiver, stateID)
+		ev.SetDataContentType(cloudevents.ApplicationJSON)
+
+		var err error
+		var bytes []byte
+		// encode message.
+
+		msgArr := []string{}
+		for key, val := range msg {
+			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.String()))
+		}
+
+		bytes = []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ",")))
+
+		if err = ev.SetData(bytes); nil != err {
+			log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID))
+			continue
+		} else if err = ev.Validate(); nil != err {
+			log.Error("validate event", zap.Error(err), zfield.Eid(s.ID))
+			continue
+		}
+
+		s.dispatcher.Dispatch(context.Background(), ev)
+	}
+
+	s.activeMapper(actives)
+
+	return nil
 }
 
 func unique(actives []mapper.WatchKey) []mapper.WatchKey {

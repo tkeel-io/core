@@ -192,7 +192,19 @@ func (s *statem) updateFromContext() {
 	if atomic.LoadInt64(&s.sCtx.version) > s.version {
 		log.Debug("state context changed", zfield.Eid(s.ID), zfield.Type(s.Type))
 		s.mappers = s.sCtx.mappers
-		s.tentacles = s.sCtx.tentacles
+		s.tentacles = make(map[string][]mapper.Tentacler)
+
+		// deploy tentacles.
+		for _, t := range s.sCtx.tentacles {
+			for _, item := range t.Items() {
+				s.tentacles[item.String()] = append(s.tentacles[item.String()], t)
+				log.Debug("load environments, watching ", zfield.Eid(s.ID), zap.String("WatchKey", item.String()))
+			}
+			log.Debug("load environments, tentacle ", zfield.Eid(s.ID), zap.String("tid", t.ID()), zap.String("target", t.TargetID()), zap.String("type", t.Type()), zap.Any("items", t.Items()))
+		}
+
+		// set version.
+		atomic.SwapInt64(&s.version, s.sCtx.version)
 	}
 }
 
@@ -211,6 +223,8 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 			return errors.Wrap(err, "apis call")
 		}
 		s.activeTentacle(actives)
+	case message.MessageTypeMapperInit:
+		s.invokeMapperInit(ctx, msgCtx)
 	default:
 		// handle state message.
 		s.activeTentacle(s.msgHandler(msgCtx))

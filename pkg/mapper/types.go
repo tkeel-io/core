@@ -61,8 +61,8 @@ type Tentacler interface {
 	Items() []WatchKey
 	// Copy duplicate a mapper.
 	Copy() Tentacler
-	// IsRemote return remote flag.
-	IsRemote() bool
+	// Version return tentacle version.
+	Version() int64
 }
 
 type WatchKey struct {

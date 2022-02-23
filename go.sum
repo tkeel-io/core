@@ -1145,8 +1145,12 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tidwall/pretty v1.1.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
 github.com/tidwall/pretty v1.2.0/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
+github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90 h1:uJihdKjukQuUyxeuwVpcLtdNuDJuH8U3n8MnXGNjIIw=
+github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90/go.mod h1:c5fSVnTPWUv9SphLl+R+sWKTU/g8UmPRKa13cvI/nQ4=
 github.com/tkeel-io/kit v0.0.0-20220120160441-cb2a03de1073 h1:mThJTNTtnls4UATeysuiBFNLs4wAPHDBdGP+P4qzczU=
 github.com/tkeel-io/kit v0.0.0-20220120160441-cb2a03de1073/go.mod h1:FYeTM+tqf/tdrf2HxUX2wdAAHQM8ggN4+IbZv4b6+wU=
+github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c h1:jXEqvRJt3hM1lJTeqAbB7DtxD3VB/Zaqt5BJ4b98jMo=
+github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c/go.mod h1:G4pFVo3WJOvWjsNL19j4CQXXBASH8gtKHjHuZE+ixno=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730 h1:svDGUiiWKw7M2uXLj2Es+G4R3+cCYVOfJI/lS5nd11M=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730/go.mod h1:tjJgHPar2pFjydhnOCLspww8tSOvcKch241PeP9OL8E=
 github.com/tklauser/go-sysconf v0.3.6/go.mod h1:MkWzOF4RMCshBAMXuhXJs64Rte09mITnppBXY/rYEFI=

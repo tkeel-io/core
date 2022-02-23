@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"context"
+	"runtime"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -41,6 +42,7 @@ type Manager struct {
 	resourceManager types.ResourceManager
 	dispatcher      dispatch.Dispatcher
 	inboxes         map[string]inbox.Inboxer
+	processing      sync.Map
 
 	shutdown chan struct{}
 	lock     sync.RWMutex
@@ -58,6 +60,7 @@ func NewManager(ctx context.Context, resourceManager types.ResourceManager, disp
 		containers:      make(map[string]*Container),
 		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
+		processing:      sync.Map{},
 		lock:            sync.RWMutex{},
 	}
 
@@ -83,6 +86,22 @@ func (m *Manager) selectContainer(id string) *Container {
 	}
 
 	return m.containers[id]
+}
+
+func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.Context) error {
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	entityID := msgCtx.Get(message.ExtEntityID)
+	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
+	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
+
+	var loaded = true
+	for ; loaded; _, loaded = m.processing.Load(entityID) {
+		log.Debug("state processing, wait a moment",
+			zfield.ReqID(reqID), zfield.ID(entityID), zfield.Channel(channelID))
+		runtime.Gosched()
+	}
+
+	return errors.Wrap(m.handleMessage(ctx, msgCtx), "handle message")
 }
 
 func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) error {
@@ -155,11 +174,11 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 		}
 
 		// load state machine.
-		var has bool
+		var err error
 		var machine state.Machiner
-		if machine, has = container.Get(stateID); !has {
-			log.Debug("load state machine, runtime not found",
-				zfield.Queue(queue), zfield.Eid(stateID))
+		if machine, err = container.Load(context.Background(), stateID); nil != err {
+			log.Warn("load state machine, runtime not found",
+				zap.Error(err), zfield.Queue(queue), zfield.Eid(stateID))
 			continue
 		}
 
@@ -167,7 +186,14 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 		stateEnv := m.actorEnv.GetStateEnv(stateID)
 		machine.Context().LoadEnvironments(stateEnv)
 
-		// TODO: 初始化新创建的mapper.
+		ctx := context.Background()
+		msgCtx := message.New(ctx)
+		msgCtx.Set(message.ExtEntityID, stateID)
+		msgCtx.Set(message.ExtMessageType, string(message.MessageTypeMapperInit))
+
+		// set channel id.
+		ctx = context.WithValue(ctx, inbox.IDKey{}, queue.ID)
+		m.HandleMessage(ctx, msgCtx)
 	}
 }
 

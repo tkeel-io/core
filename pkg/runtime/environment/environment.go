@@ -102,7 +102,7 @@ func (env *Environment) StoreMappers(mappers []dao.Mapper) []dao.Mapper {
 
 		// parse mapper.
 		var mapperInstence mapper.Mapper
-		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL); nil != err {
+		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL, 1); nil != err {
 			log.Error("parse mapper", zap.Error(err), zfield.ID(m.ID), zfield.Eid(m.EntityID))
 			continue
 		}
@@ -128,7 +128,7 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
 		// parse mapper again.
 		var mapperInstence mapper.Mapper
-		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL); nil != err {
+		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL, 0); nil != err {
 			log.Error("parse mapper", zap.Error(err), zfield.ID(m.ID), zfield.Eid(m.EntityID))
 			return effect, errors.Wrap(err, "parse mapper again")
 		}
@@ -169,7 +169,7 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 		switch tentacle.Type() {
 		case mapper.TentacleTypeEntity:
 			remoteID := tentacle.TargetID()
-			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items())
+			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items(), tentacle.Version())
 			env.addTentacle(remoteID, m.ID(), tentacle)
 			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		case mapper.TentacleTypeMapper:
@@ -225,7 +225,7 @@ func (env *Environment) addTentacle(stateID, mapperID string, tentacle mapper.Te
 	}
 
 	env.index(stateID, mapperID)
-	mCache.tentacles = append(mCache.tentacles, tentacle.Copy())
+	mCache.tentacles = append(mCache.tentacles, tentacle)
 	sCache.mappers[mapperID] = mCache
 }
 

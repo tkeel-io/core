@@ -26,9 +26,9 @@ require (
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.12.0
-	github.com/tkeel-io/collectjs v0.0.0-20211130035606-e8d64c4a2a39
+	github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90
 	github.com/tkeel-io/kit v0.0.0-20220120160441-cb2a03de1073
-	github.com/tkeel-io/tdtl v0.0.0-00010101000000-000000000000
+	github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c
 	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730
 	go.etcd.io/etcd/api/v3 v3.5.1
 	go.etcd.io/etcd/client/v3 v3.5.1
@@ -43,7 +43,3 @@ require (
 )
 
 replace github.com/antlr/antlr4 => github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211221011931-643d94fcab96
-
-replace github.com/tkeel-io/tdtl => ../tdtl
-
-replace github.com/tkeel-io/collectjs => ../collectjs

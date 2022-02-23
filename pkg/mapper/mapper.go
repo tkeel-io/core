@@ -23,11 +23,12 @@ import (
 
 type mapper struct {
 	id      string
+	version int64
 	tqlText string
 	tqlInst tdtl.TDTL
 }
 
-func NewMapper(id, tqlText string) (Mapper, error) {
+func NewMapper(id, tqlText string, version int64) (Mapper, error) {
 	tqlInst, err := tdtl.NewTDTL(tqlText, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "construct mapper")
@@ -76,17 +77,17 @@ func (m *mapper) Tentacles() []Tentacler {
 			mItems = append(mItems, watchKey)
 		}
 
-		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, tentacleConf.SourceEntity, eItems))
+		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, tentacleConf.SourceEntity, eItems, m.version))
 	}
 
-	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.id, mItems))
+	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.id, mItems, m.version))
 
 	return tentacles
 }
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	mCopy, _ := NewMapper(m.id, m.tqlText)
+	mCopy, _ := NewMapper(m.id, m.tqlText, m.version)
 	return mCopy
 }
 
