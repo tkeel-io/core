@@ -15,8 +15,12 @@ type ProxyService struct {
 	apiManager apim.APIManager
 }
 
-func NewProxyService(apiManager apim.APIManager) *ProxyService {
-	return &ProxyService{apiManager: apiManager}
+func NewProxyService() *ProxyService {
+	return &ProxyService{}
+}
+
+func (p *ProxyService) Init(apiManager apim.APIManager) {
+	p.apiManager = apiManager
 }
 
 func (p *ProxyService) Respond(ctx context.Context, in *pb.RespondRequest) (*pb.RespondResponse, error) {

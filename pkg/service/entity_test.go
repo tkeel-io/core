@@ -25,11 +25,14 @@ func TestMain(m *testing.M) {
 	// logger initialized.
 	log.InitLogger("core-service", "DEBUG", true)
 
+	searchMock := mock.NewSearchMock()
 	apiManager = mock.NewAPIManagerMock()
-	entityService, err = NewEntityService(context.Background(), apiManager, mock.NewSearchMock())
+	entityService, err = NewEntityService(context.Background())
 	if nil != err {
 		os.Exit(1)
 	}
+
+	entityService.Init(apiManager, searchMock)
 	os.Exit(m.Run())
 }
 

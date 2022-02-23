@@ -43,14 +43,17 @@ const (
 	SubscriptionResponseStatusDrop = "DROP"
 )
 
-func NewTopicService(ctx context.Context, apiManager apim.APIManager) (*TopicService, error) {
+func NewTopicService(ctx context.Context) (*TopicService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &TopicService{
-		ctx:        ctx,
-		cancel:     cancel,
-		apiManager: apiManager,
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
+}
+
+func (s *TopicService) Init(apiManager apim.APIManager) {
+	s.apiManager = apiManager
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {

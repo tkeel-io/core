@@ -21,15 +21,27 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/atomic"
 )
 
 type SearchService struct {
 	pb.UnimplementedSearchServer
+
+	inited       *atomic.Bool
 	searchClient pb.SearchHTTPServer
 }
 
-func NewSearchService(searchClient pb.SearchHTTPServer) *SearchService {
-	return &SearchService{searchClient: searchClient}
+func NewSearchService() *SearchService {
+	return &SearchService{
+		inited: atomic.NewBool(false),
+	}
+}
+
+func (s *SearchService) Init(searchClient pb.SearchHTTPServer) {
+	s.searchClient = searchClient
+	s.inited.Store(true)
 }
 
 func (s *SearchService) Index(ctx context.Context, req *pb.IndexObject) (*pb.IndexResponse, error) {
@@ -40,6 +52,11 @@ func (s *SearchService) Index(ctx context.Context, req *pb.IndexObject) (*pb.Ind
 	return out, nil
 }
 func (s *SearchService) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready")
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	out, err := s.searchClient.Search(ctx, req)
 	if err != nil {
 		return out, errors.Wrap(err, "search failed")

@@ -9,7 +9,7 @@ import (
 type SearchMock struct {
 }
 
-func NewSearchMock() *SearchMock {
+func NewSearchMock() pb.SearchHTTPServer {
 	return &SearchMock{}
 }
 

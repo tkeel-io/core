@@ -21,13 +21,15 @@ import (
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logger"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
@@ -35,18 +37,24 @@ type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
 	ctx        context.Context
 	cancel     context.CancelFunc
+	inited     *atomic.Bool
 	apiManager apim.APIManager
 }
 
 // NewSubscriptionService returns a new SubscriptionService.
-func NewSubscriptionService(ctx context.Context, apiManager apim.APIManager) (*SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context) (*SubscriptionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &SubscriptionService{
-		ctx:        ctx,
-		cancel:     cancel,
-		apiManager: apiManager,
+		ctx:    ctx,
+		cancel: cancel,
+		inited: atomic.NewBool(false),
 	}, nil
+}
+
+func (s *SubscriptionService) Init(apiManager apim.APIManager) {
+	s.apiManager = apiManager
+	s.inited.Store(true)
 }
 
 func interface2string(in interface{}) (out string) {
@@ -80,8 +88,12 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 }
 
 func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.CreateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
-	var entity = new(Entity)
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
 
+	var entity = new(Entity)
 	if req.Id != "" {
 		entity.ID = req.Id
 	}
@@ -101,7 +113,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	if err = s.apiManager.CheckSubscription(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -113,14 +125,14 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	// set properties.
 	if entity, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
 	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		if err0 := s.apiManager.DeleteEntity(ctx, entity); nil != err0 {
-			log.Error("destroy subscription", zap.Error(err0), logger.Eid(req.Id))
+			log.Error("destroy subscription", zap.Error(err0), zfield.Eid(req.Id))
 		}
 		return
 	}
@@ -130,6 +142,11 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 
 	entity.ID = req.Id
@@ -146,7 +163,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 
 	// set properties.
 	if entity, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
-		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -157,7 +174,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}}
 
 	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("update subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -167,15 +184,19 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 }
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {
-	var entity = new(Entity)
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
 
+	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = runtime.SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
-		log.Error("delete subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("delete subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -184,15 +205,19 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 }
 
 func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
-	var entity = new(Entity)
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
 
+	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = runtime.SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-		log.Error("get subscription", zap.Error(err), logger.Eid(req.Id))
+		log.Error("get subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 	out = s.entity2SubscriptionResponse(entity)
@@ -200,5 +225,10 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 }
 
 func (s *SubscriptionService) ListSubscription(ctx context.Context, req *pb.ListSubscriptionRequest) (out *pb.ListSubscriptionResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready")
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	return &pb.ListSubscriptionResponse{}, nil
 }

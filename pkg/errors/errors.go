@@ -33,6 +33,7 @@ var (
 	ErrPatchPathLack            = errors.New("patch path lack")
 	ErrPatchPathRoot            = errors.New("patch path lack root")
 	ErrPatchTypeInvalid         = errors.New("patch config type invalid")
+	ErrServerNotReady           = errors.New("Core.Service.NotReady")
 )
 
 func New(code string) error {

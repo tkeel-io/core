@@ -34,6 +34,7 @@ import (
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -41,24 +42,36 @@ import (
 
 type EntityService struct {
 	pb.UnimplementedEntityServer
+
+	inited       *atomic.Bool
 	ctx          context.Context
 	cancel       context.CancelFunc
 	apiManager   apim.APIManager
 	searchClient pb.SearchHTTPServer
 }
 
-func NewEntityService(ctx context.Context, apiManager apim.APIManager, searchClient pb.SearchHTTPServer) (*EntityService, error) {
+func NewEntityService(ctx context.Context) (*EntityService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &EntityService{
-		ctx:          ctx,
-		cancel:       cancel,
-		searchClient: searchClient,
-		apiManager:   apiManager,
+		ctx:    ctx,
+		cancel: cancel,
+		inited: atomic.NewBool(false),
 	}, nil
 }
 
+func (s *EntityService) Init(apiManager apim.APIManager, searchClient pb.SearchHTTPServer) {
+	s.apiManager = apiManager
+	s.searchClient = searchClient
+	s.inited.Store(true)
+}
+
 func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 
 	entity.ID = req.Id
@@ -104,10 +117,20 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 }
 
 func (s *EntityService) UpdateEntity(ctx context.Context, in *pb.UpdateEntityRequest) (*pb.EntityResponse, error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	panic("implement me")
 }
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -126,6 +149,11 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 }
 
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -146,6 +174,11 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 }
 
 func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEntityPropsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -186,6 +219,11 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 }
 
 func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntityPropsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -257,6 +295,11 @@ func checkPatchData(patchData state.PatchData) error {
 }
 
 func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
@@ -280,11 +323,21 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 }
 
 func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEntityPropsRequest) (*pb.EntityResponse, error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	panic("implement me")
 }
 
 // SetConfigs set entity configs.
 func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEntityConfigsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
@@ -307,6 +360,11 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 }
 
 func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEntityConfigsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	entity := new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
@@ -368,6 +426,11 @@ func (s *EntityService) PatchEntityConfigsZ(ctx context.Context, req *pb.PatchEn
 
 // QueryConfigs query entity configs.
 func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityConfigsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
@@ -391,6 +454,11 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 
 // RemoveConfigs remove entity configs.
 func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEntityConfigsRequest) (out *pb.EntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(in.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
@@ -418,6 +486,11 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 }
 
 func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (out *pb.ListEntityResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Owner(req.Owner))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	searchReq := &pb.SearchRequest{}
 	searchReq.Query = req.Query
 	searchReq.Page = req.Page
@@ -466,6 +539,11 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 }
 
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -495,6 +573,11 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 }
 
 func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.RemoveMapperResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type

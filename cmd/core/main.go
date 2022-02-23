@@ -120,17 +120,17 @@ func main() {
 	}
 }
 
-func core(cmd *cobra.Command, args []string) { //nolint
+func core(cmd *cobra.Command, args []string) {
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
-	config.Init(_cfgFile)
+
+	{
+		// set default configurations.
+		config.SetDefaultEtcd(_etcdBrokers)
+		config.Init(_cfgFile)
+	}
 
 	// init gllbal placement.
 	placement.Initialize()
-
-	// user flags input recover config file content.
-	if _etcdBrokers != nil {
-		config.SetEtcdBrokers(_etcdBrokers)
-	}
 
 	// rewrite search engine config by flags input info.
 	if _searchEngine != "" {
@@ -175,6 +175,16 @@ func core(cmd *cobra.Command, args []string) { //nolint
 		serverList...,
 	)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
+	serviceRegisterToProxyV1(ctx, httpProxySrv, grpcProxySrv)
+
+	if err := coreApp.Run(context.TODO()); err != nil {
+		log.Fatal(err)
+	}
+
 	// register core service.
 	var err error
 	var discoveryEnd *discovery.Discovery
@@ -186,18 +196,16 @@ func core(cmd *cobra.Command, args []string) { //nolint
 		log.Fatal(err)
 	}
 
-	// core run context.Context.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// register service.
-	if err = discoveryEnd.Register(ctx, discovery.Service{
-		Name:     config.Get().Server.Name,
-		AppID:    config.Get().Server.AppID,
-		Port:     config.Get().Server.AppPort,
-		Host:     util.ResolveAddr(),
-		Metadata: map[string]string{},
-	}); nil != err {
+	if err = discoveryEnd.Register(
+		context.Background(),
+		discovery.Service{
+			Name:     config.Get().Server.Name,
+			AppID:    config.Get().Server.AppID,
+			Port:     config.Get().Server.AppPort,
+			Host:     util.ResolveAddr(),
+			Metadata: map[string]string{},
+		}); nil != err {
 		log.Fatal(err)
 	}
 
@@ -206,8 +214,8 @@ func core(cmd *cobra.Command, args []string) { //nolint
 		log.Fatal(err)
 	}
 
-	coreRepo := repository.New(coreDao)
 	// create message dispatcher.
+	coreRepo := repository.New(coreDao)
 	if err = loadDispatcher(context.Background(), coreRepo); nil != err {
 		log.Fatal(err)
 	}
@@ -221,18 +229,14 @@ func core(cmd *cobra.Command, args []string) { //nolint
 		log.Fatal(err)
 	}
 
-	serviceRegisterToCoreV1(ctx, httpSrv, grpcSrv)
-	serviceRegisterToProxyV1(ctx, httpProxySrv, grpcProxySrv)
-
-	if err = coreApp.Run(context.TODO()); err != nil {
-		log.Fatal(err)
-	}
-
 	if err = _apiManager.Start(); nil != err {
 		log.Fatal(err)
 	} else if err = stateManager.Start(); nil != err {
 		log.Fatal(err)
 	}
+
+	// initialize core services.
+	initialzeService(_apiManager, search.GlobalService)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
@@ -243,43 +247,62 @@ func core(cmd *cobra.Command, args []string) { //nolint
 	}
 }
 
+func initialzeService(apiManager apim.APIManager, searchClient corev1.SearchHTTPServer) {
+	// initialize entity service.
+	_entitySrv.Init(apiManager, searchClient)
+	// initialize subscription service.
+	_subscriptionSrv.Init(apiManager)
+	// initialize topic service.
+	_topicSrv.Init(apiManager)
+	// initialize search service.
+	_searchSrv.Init(searchClient)
+	// initialize proxy service.
+	_proxySrv.Init(apiManager)
+}
+
+var (
+	_topicSrv        *service.TopicService
+	_proxySrv        *service.ProxyService
+	_entitySrv       *service.EntityService
+	_searchSrv       *service.SearchService
+	_subscriptionSrv *service.SubscriptionService
+)
+
 // serviceRegisterToCoreV1 register your services here.
 func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
+	var err error
 	// register entity service.
-	EntitySrv, err := service.NewEntityService(ctx, _apiManager, search.GlobalService)
-	if nil != err {
+	if _entitySrv, err = service.NewEntityService(ctx); nil != err {
 		log.Fatal(err)
 	}
-	corev1.RegisterEntityHTTPServer(httpSrv.Container, EntitySrv)
-	corev1.RegisterEntityServer(grpcSrv.GetServe(), EntitySrv)
+	corev1.RegisterEntityHTTPServer(httpSrv.Container, _entitySrv)
+	corev1.RegisterEntityServer(grpcSrv.GetServe(), _entitySrv)
 
 	// register subscription service.
-	SubscriptionSrv, err := service.NewSubscriptionService(ctx, _apiManager)
-	if nil != err {
+	if _subscriptionSrv, err = service.NewSubscriptionService(ctx); nil != err {
 		log.Fatal(err)
 	}
-	corev1.RegisterSubscriptionHTTPServer(httpSrv.Container, SubscriptionSrv)
-	corev1.RegisterSubscriptionServer(grpcSrv.GetServe(), SubscriptionSrv)
+	corev1.RegisterSubscriptionHTTPServer(httpSrv.Container, _subscriptionSrv)
+	corev1.RegisterSubscriptionServer(grpcSrv.GetServe(), _subscriptionSrv)
 
 	// register topic service.
-	TopicSrv, err := service.NewTopicService(ctx, _apiManager)
-	if nil != err {
+	if _topicSrv, err = service.NewTopicService(ctx); nil != err {
 		log.Fatal(err)
 	}
-	corev1.RegisterTopicHTTPServer(httpSrv.Container, TopicSrv)
-	corev1.RegisterTopicServer(grpcSrv.GetServe(), TopicSrv)
+	corev1.RegisterTopicHTTPServer(httpSrv.Container, _topicSrv)
+	corev1.RegisterTopicServer(grpcSrv.GetServe(), _topicSrv)
 
 	// register search service.
-	SearchSrv := service.NewSearchService(search.GlobalService)
-	corev1.RegisterSearchHTTPServer(httpSrv.Container, SearchSrv)
-	corev1.RegisterSearchServer(grpcSrv.GetServe(), SearchSrv)
+	_searchSrv = service.NewSearchService()
+	corev1.RegisterSearchHTTPServer(httpSrv.Container, _searchSrv)
+	corev1.RegisterSearchServer(grpcSrv.GetServe(), _searchSrv)
 }
 
 func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
 	// register proxy service.
-	ProxyService := service.NewProxyService(_apiManager)
-	corev1.RegisterProxyHTTPServer(httpSrv.Container, ProxyService)
-	corev1.RegisterProxyServer(grpcSrv.GetServe(), ProxyService)
+	_proxySrv = service.NewProxyService()
+	corev1.RegisterProxyHTTPServer(httpSrv.Container, _proxySrv)
+	corev1.RegisterProxyServer(grpcSrv.GetServe(), _proxySrv)
 }
 
 func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {

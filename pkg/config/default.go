@@ -45,3 +45,14 @@ var (
 		Endpoints:   []string{"http://localhost:2379"},
 	}
 )
+
+func SetDefaultEtcd(etcdBrokers []string) {
+	if len(etcdBrokers) > 0 {
+		_defaultEtcdConfig.Endpoints = etcdBrokers
+		_defaultDiscovery.Endpoints = etcdBrokers
+	}
+}
+
+func SetDefaultES(esBrokers []string) {
+	_defaultESConfig.Endpoints = esBrokers
+}
