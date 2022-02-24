@@ -35,6 +35,7 @@ func NewMapper(id, tqlText string, version int64) (Mapper, error) {
 	}
 	return &mapper{
 		id:      id,
+		version: version,
 		tqlText: tqlText,
 		tqlInst: tqlInst,
 	}, nil
