@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -55,6 +56,13 @@ func (c *Container) Remove(stateID string) {
 func (c *Container) Get(stateID string) (machine state.Machiner, has bool) {
 	// load from container.
 	machine, has = c.states[stateID]
+
+	// check state status.
+	if machine.GetStatus() == state.SMStatusDeleted {
+		delete(c.states, stateID)
+		return nil, false
+	}
+
 	return machine, has
 }
 
@@ -75,6 +83,11 @@ func (c *Container) Load(ctx context.Context, stateID string) (machine state.Mac
 	)
 	// 1. load from container.
 	if machine, ok = c.states[stateID]; ok {
+		// check state status.
+		if machine.GetStatus() == state.SMStatusDeleted {
+			delete(c.states, stateID)
+			return nil, xerrors.ErrEntityNotFound
+		}
 		return machine, nil
 	}
 

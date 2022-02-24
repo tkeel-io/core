@@ -34,10 +34,22 @@ type Machiner interface {
 	// Context return state context.
 	Context() *StateContext
 	// OnMessage recv message from pubsub.
-	Invoke(ctx context.Context, msgCtx message.Context) error
+	Invoke(ctx context.Context, msgCtx message.Context) Result
 	// Flush flush entity data.
 	Flush(ctx context.Context) error
 }
+
+type Result struct {
+	Err    error
+	Status Status
+}
+
+const (
+	MCreated   Status = "Created"
+	MDeleted   Status = "Deleted"
+	MFailured  Status = "Failured"
+	MCompleted Status = "Completed"
+)
 
 type WatchKey = mapper.WatchKey
 

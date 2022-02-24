@@ -209,20 +209,17 @@ func (s *statem) updateFromContext() {
 }
 
 // OnMessage recive statem input messages.
-func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
+func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) Result {
 	// update state from StateContext.
 	s.updateFromContext()
 
 	// delive message.
-	var err error
-	var actives []WatchKey
 	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
 	case message.MessageTypeAPIRequest:
-		if actives, err = s.callAPIs(msgCtx.Context(), msgCtx); nil != err {
-			return errors.Wrap(err, "apis call")
-		}
+		actives, result := s.callAPIs(msgCtx.Context(), msgCtx)
 		s.activeTentacle(actives)
+		return result
 	case message.MessageTypeMapperInit:
 		s.invokeMapperInit(ctx, msgCtx)
 	default:
@@ -231,7 +228,7 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) error {
 		s.flush(ctx)
 	}
 
-	return nil
+	return Result{Status: MCompleted}
 }
 
 func (s *statem) State() State {

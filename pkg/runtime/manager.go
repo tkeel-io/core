@@ -91,17 +91,23 @@ func (m *Manager) selectContainer(id string) *Container {
 func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.Context) error {
 	reqID := msgCtx.Get(message.ExtAPIRequestID)
 	entityID := msgCtx.Get(message.ExtEntityID)
+	msgSender := msgCtx.Get(message.ExtMessageSender)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
 
-	var loaded = true
-	for ; loaded; _, loaded = m.processing.Load(entityID) {
-		log.Debug("state processing, wait a moment",
+	_, loaded := m.processing.Load(entityID)
+	for ; loaded; _, loaded = m.processing.LoadOrStore(entityID, struct{}{}) {
+		log.Debug("state processing, wait a moment", zfield.Sender(msgSender),
 			zfield.ReqID(reqID), zfield.ID(entityID), zfield.Channel(channelID))
 		runtime.Gosched()
 	}
 
-	return errors.Wrap(m.handleMessage(ctx, msgCtx), "handle message")
+	// handle message.
+	err := m.handleMessage(ctx, msgCtx)
+
+	// invoke message completed.
+	m.processing.Delete(entityID)
+	return errors.Wrap(err, "handle message")
 }
 
 func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) error {
@@ -110,7 +116,6 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
 
-	var flagCreate bool
 	container := m.selectContainer(channelID)
 	machine, err := container.Load(ctx, entityID)
 	if nil != err {
@@ -120,7 +125,6 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 			return xerrors.ErrInternal
 		}
 
-		flagCreate = true
 		// state machine not exists, then create.
 		enDao := message.ParseEntityFrom(msgCtx)
 		if machine, err = container.MakeMachine(enDao); nil != err {
@@ -130,23 +134,30 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 		}
 	}
 
-	log.Debug("handle message",
-		zfield.Eid(entityID),
-		zfield.ReqID(reqID),
-		zfield.Channel(channelID),
-		zfield.Header(msgCtx.Attributes()),
-		zfield.Message(string(msgCtx.Message())))
+	log.Debug("handle message", zfield.Channel(channelID), zfield.Header(msgCtx.Attributes()),
+		zfield.Eid(entityID), zfield.ReqID(reqID), zfield.Message(string(msgCtx.Message())))
 
-	if err = machine.Invoke(ctx, msgCtx); nil != err {
+	result := machine.Invoke(ctx, msgCtx)
+	if result.Err != nil {
 		log.Error("handle message", zap.Error(err),
 			zfield.ID(entityID), zfield.ReqID(reqID),
 			zfield.Message(string(msgCtx.Message())),
 			zfield.Channel(channelID), zfield.Header(msgCtx.Attributes()))
-	} else if flagCreate {
-		container.Add(machine)
+		return errors.Wrap(result.Err, "handle message")
 	}
 
-	return errors.Wrap(err, "handle message")
+	// handle result.
+	switch result.Status {
+	case state.MCreated:
+		container.Add(machine)
+	case state.MDeleted:
+		container.Remove(machine.GetID())
+	case state.MCompleted:
+	default:
+		// never.
+	}
+
+	return nil
 }
 
 // Resource return resource manager.

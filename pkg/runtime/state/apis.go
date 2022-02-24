@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
+	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -44,36 +45,49 @@ const (
 type APIHandler func(context.Context, message.Context) ([]WatchKey, error)
 
 // call core.APIs.
-func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
+func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) ([]WatchKey, Result) {
 	log.Debug("call core.APIs", zfield.Header(msgCtx.Attributes()))
 
+	var err error
+	var actives []WatchKey
+	result := Result{Status: MCompleted}
 	apiID := APIID(msgCtx.Get(message.ExtAPIIdentify))
 	switch apiID {
 	case APICreateEntity:
-		return s.cbCreateEntity(ctx, msgCtx)
+		result.Status = MCreated
+		actives, err = s.cbCreateEntity(ctx, msgCtx)
 	case APIUpdateEntity:
-		return s.cbUpdateEntity(ctx, msgCtx)
+		actives, err = s.cbUpdateEntity(ctx, msgCtx)
 	case APIGetEntity:
-		return s.cbGetEntity(ctx, msgCtx)
+		actives, err = s.cbGetEntity(ctx, msgCtx)
 	case APIDeleteEntity:
-		return s.cbDeleteEntity(ctx, msgCtx)
+		result.Status = MDeleted
+		actives, err = s.cbDeleteEntity(ctx, msgCtx)
 	case APIUpdataEntityProps:
-		return s.cbUpdateEntityProps(ctx, msgCtx)
+		actives, err = s.cbUpdateEntityProps(ctx, msgCtx)
 	case APIPatchEntityProps:
-		return s.cbPatchEntityProps(ctx, msgCtx)
+		actives, err = s.cbPatchEntityProps(ctx, msgCtx)
 	case APIGetEntityProps:
-		return s.cbGetEntityProps(ctx, msgCtx)
+		actives, err = s.cbGetEntityProps(ctx, msgCtx)
 	case APIUpdataEntityConfigs:
-		return s.cbUpdateEntityConfigs(ctx, msgCtx)
+		actives, err = s.cbUpdateEntityConfigs(ctx, msgCtx)
 	case APIPatchEntityConfigs:
-		return s.cbPatchEntityConfigs(ctx, msgCtx)
+		actives, err = s.cbPatchEntityConfigs(ctx, msgCtx)
 	case APIGetEntityConfigs:
-		return s.cbGetEntityConfigs(ctx, msgCtx)
+		actives, err = s.cbGetEntityConfigs(ctx, msgCtx)
 	default:
-		// nerver.
+		log.Error("call apis, apiid undefine",
+			zap.Error(err), zfield.Header(msgCtx.Attributes()))
 	}
 
-	return []WatchKey{}, nil
+	if nil != err {
+		result.Status = MFailured
+		log.Error("call apis", zap.Error(err),
+			zfield.Header(msgCtx.Attributes()))
+	}
+
+	result.Err = err
+	return actives, result
 }
 
 func (s *statem) makeEvent() cloudevents.Event {
@@ -231,6 +245,7 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]
 	var err error
 	// create event.
 	ev := s.makeEvent()
+	owner := msgCtx.Get(message.ExtEntityOwner)
 	reqID := msgCtx.Get(message.ExtAPIRequestID)
 	ev.SetExtension(message.ExtAPIRequestID, reqID)
 	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
@@ -251,6 +266,20 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]
 		err = xerrors.ErrEntityNotFound
 		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
+	// delete entity.
+	// 1. delete from state-store.
+	if err = s.Repo().DelEntity(ctx, &dao.Entity{ID: s.ID, Owner: owner}); nil != err {
+		log.Error("delete entity from state store", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "delete entity from state store")
+	}
+	// 2. delete from search engine.
+	in := &pb.DeleteByIDRequest{Id: s.ID, Owner: s.Owner, Source: s.Source}
+	if _, err = s.Search().DeleteByID(ctx, in); nil != err {
+		log.Error("delete entity from state store",
+			zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "delete entity from state store")
 	}
 
 	// set response.

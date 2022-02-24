@@ -12,6 +12,7 @@ func Test_getMachiner(t *testing.T) {
 
 func TestSyncMap(t *testing.T) {
 	m := sync.Map{}
-	res, loaded := m.LoadOrStore("xxx", struct{}{})
+	m.Store("xxx", "xxx")
+	res, loaded := m.LoadOrStore("xxx", "xxxxxxx")
 	t.Log(res, loaded)
 }

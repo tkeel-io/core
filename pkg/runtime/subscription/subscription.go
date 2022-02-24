@@ -128,8 +128,8 @@ func (s *subscription) Context() *state.StateContext {
 }
 
 // Invoke message from pubsub.
-func (s *subscription) Invoke(ctx context.Context, msgCtx message.Context) error {
-	return errors.Wrap(s.stateMachine.Invoke(ctx, msgCtx), "subscription invoke message")
+func (s *subscription) Invoke(ctx context.Context, msgCtx message.Context) state.Result {
+	return s.stateMachine.Invoke(ctx, msgCtx)
 }
 
 func (s *subscription) HandleMessage(msgCtx message.Context) []mapper.WatchKey {
