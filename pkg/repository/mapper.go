@@ -25,6 +25,11 @@ func (r *repo) HasMapper(ctx context.Context, m *dao.Mapper) (bool, error) {
 	return has, errors.Wrap(err, "exists mapper repository")
 }
 
+func (r *repo) ListMapper(ctx context.Context, rev int64, req *dao.ListMapperReq) ([]dao.Mapper, error) {
+	mappers, err := r.dao.ListMapper(ctx, rev, req)
+	return mappers, errors.Wrap(err, "list mapper repository")
+}
+
 func (r *repo) RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler) {
 	r.dao.RangeMapper(ctx, rev, handler)
 }

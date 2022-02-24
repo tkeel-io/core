@@ -267,13 +267,13 @@ service Entity {
 
 	rpc AppendMapper(AppendMapperRequest) returns (AppendMapperResponse) {
 		option (google.api.http) = {
-			post : "/entities/{id}/mappers"
+			post : "/entities/{entity_id}/mappers"
 			body: "mapper"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Append mapper for entity";
       operation_id: "AppendMapper";
-      tags: "Entity";
+      tags: ["Entity", "Mapper"];
       responses: {
         key: "200"
         value: {
@@ -283,14 +283,14 @@ service Entity {
     };
 	};
 
-	rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
+	rpc GetMapper(GetMapperRequest) returns (GetMapperResponse) {
 		option (google.api.http) = {
-			delete : "/entities/{id}/mappers/{mapper_id}"
+			get : "/entities/{entity_id}/mappers/{id}"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "remove mappers from entity";
-      operation_id: "RemoveMapper";
-      tags: "Entity";
+      summary: "get mapper by id";
+      operation_id: "GetMapper";
+      tags: ["Entity", "Mapper"];
       responses: {
         key: "200"
         value: {
@@ -299,6 +299,42 @@ service Entity {
       }
     };
 	};
+
+	rpc ListMapper(ListMapperRequest) returns (ListMapperResponse) {
+		option (google.api.http) = {
+			get : "/entities/{entity_id}/mappers"
+		};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "list mappers";
+      operation_id: "ListMapper";
+      tags: ["Entity", "Mapper"];
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
+	};
+
+
+	rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
+		option (google.api.http) = {
+			delete : "/entities/{entity_id}/mappers/{id}"
+		};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "remove mappers from entity";
+      operation_id: "RemoveMapper";
+      tags: ["Entity", "Mapper"];
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
+	};
+
 
 	rpc ListEntity (ListEntityRequest) returns (ListEntityResponse) {
 		option (google.api.http) = {
@@ -451,27 +487,58 @@ message Mapper {
 
 // Append Mapper Request.
 message AppendMapperRequest {
-    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  Mapper mapper = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper description"}];
+}
+
+// Get Mapper Request.
+message GetMapperRequest {
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper id"}];
+  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+}
+
+// List Mapper Request.
+message ListMapperRequest {
+  string type = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+  string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}]; 
+}
+
+
+// Remove Mapper Request.
+message RemoveMapperRequest {
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper id"}];
     string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-    Mapper mapper = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper description"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
+    string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
 }
 
 // Append Mapper Response.
 message AppendMapperResponse {}
-
-// Remove Mapper Request.
-message RemoveMapperRequest {
-    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
-    string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-    string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    string mapper_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper name"}];
-}
-
 // Remove Mapper Response.
 message RemoveMapperResponse {}
+
+// Get Mapper Response.
+message GetMapperResponse {
+  string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  Mapper mapper = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper description"}];
+} 
+
+// List Mapper Response.
+message ListMapperResponse {
+  string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  string owner = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  repeated Mapper mappers = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mappers description"}];
+} 
+
 
 // List Entity Request.
 message ListEntityRequest {

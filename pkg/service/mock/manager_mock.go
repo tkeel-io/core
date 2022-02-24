@@ -5,6 +5,7 @@ import (
 
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/manager/holder"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -77,13 +78,22 @@ func (m *APIManagerMock) RemoveEntityConfigs(ctx context.Context, en *apim.Base,
 }
 
 // AppendMapper append entity mapper.
-func (m *APIManagerMock) AppendMapper(ctx context.Context, en *apim.Base) error {
+func (m *APIManagerMock) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 	return nil
 }
 
 // RemoveMapper remove entity mapper.
-func (m *APIManagerMock) RemoveMapper(ctx context.Context, en *apim.Base) error {
+func (m *APIManagerMock) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
 	return nil
+}
+
+func (m *APIManagerMock) GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error) {
+	return &dao.Mapper{}, nil
+}
+
+// ListMapper returns entity mappers.
+func (m *APIManagerMock) ListMapper(context.Context, *apim.Base) ([]dao.Mapper, error) {
+	return []dao.Mapper{}, nil
 }
 
 // CheckSubscription check subscription.

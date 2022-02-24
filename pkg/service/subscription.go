@@ -24,8 +24,8 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -117,22 +117,25 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return
 	}
 
-	// set mapper.
-	entity.Mappers = []state.Mapper{{
-		Name: "subscription",
-		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
-	}}
-
 	// set properties.
 	if entity, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
-	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
+	mp := &dao.Mapper{
+		ID:          "Subscription",
+		TQL:         req.Subscription.Filter,
+		Name:        "SubscriptionMapper",
+		Owner:       entity.Owner,
+		EntityID:    entity.ID,
+		Description: "Subscription mapper instance",
+	}
+
+	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
 		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
-		if err0 := s.apiManager.DeleteEntity(ctx, entity); nil != err0 {
-			log.Error("destroy subscription", zap.Error(err0), zfield.Eid(req.Id))
+		if innerErr := s.apiManager.DeleteEntity(ctx, entity); nil != innerErr {
+			log.Error("destroy subscription", zap.Error(innerErr), zfield.Eid(req.Id))
 		}
 		return
 	}
@@ -167,19 +170,21 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return
 	}
 
-	// set mapper.
-	entity.Mappers = []state.Mapper{{
-		Name: "subscription",
-		TQL:  entity.Properties[subscription.SubscriptionFieldFilter].String(),
-	}}
+	mp := &dao.Mapper{
+		ID:          "Subscription",
+		TQL:         req.Subscription.Filter,
+		Name:        "SubscriptionMapper",
+		Owner:       entity.Owner,
+		EntityID:    entity.ID,
+		Description: "Subscription mapper instance",
+	}
 
-	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
+	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
 		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
 	out = s.entity2SubscriptionResponse(entity)
-
 	return out, errors.Wrap(err, "update subscription")
 }
 
@@ -200,8 +205,20 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 		return
 	}
 
+	// TODO： 不能保证一致性.
+	mp := dao.Mapper{
+		ID:       "Subscription",
+		Owner:    entity.Owner,
+		EntityID: entity.ID,
+	}
+
+	if err = s.apiManager.RemoveMapper(ctx, &mp); nil != err {
+		log.Error("delete subscription, remove mapper", zap.Error(err), zfield.Eid(req.Id))
+		return
+	}
+
 	out = &pb.DeleteSubscriptionResponse{Id: req.Id, Status: "ok"}
-	return
+	return out, nil
 }
 
 func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {

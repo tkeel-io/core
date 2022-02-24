@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	"github.com/tkeel-io/core/pkg/manager/holder"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
@@ -60,9 +61,13 @@ type APIManager interface {
 	// GetEntityConfigs returns entity configs.
 	GetEntityConfigs(context.Context, *Base, []string) (*Base, error)
 	// AppendMapper append entity mapper.
-	AppendMapper(context.Context, *Base) error
+	AppendMapper(context.Context, *dao.Mapper) error
 	// RemoveMapper remove entity mapper.
-	RemoveMapper(context.Context, *Base) error
+	RemoveMapper(context.Context, *dao.Mapper) error
+	// GetMapper returns entity mapper.
+	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
+	// ListMapper returns entity mappers.
+	ListMapper(context.Context, *Base) ([]dao.Mapper, error)
 	// CheckSubscription check subscription.
 	CheckSubscription(context.Context, *Base) error
 }

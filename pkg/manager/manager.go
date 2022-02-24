@@ -613,23 +613,16 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs
 }
 
 // AppendMapper append a mapper into entity.
-func (m *apiManager) AppendMapper(ctx context.Context, en *Base) error {
+func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 	log.Info("entity.AppendMapper",
-		zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
+		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
+
+	// validate mapper.
 
 	// upert mapper.
 	var err error
-	mp := en.Mappers[0]
-	if err = m.entityRepo.PutMapper(ctx, &dao.Mapper{
-		ID:          mp.ID,
-		TQL:         mp.TQL,
-		Name:        mp.Name,
-		EntityID:    en.ID,
-		EntityType:  en.Type,
-		Description: mp.Description,
-	}); nil != err {
-		log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
+	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
+		log.Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return errors.Wrap(err, "append mapper")
 	}
 
@@ -637,28 +630,51 @@ func (m *apiManager) AppendMapper(ctx context.Context, en *Base) error {
 }
 
 // DeleteMapper delete mapper from entity.
-func (m *apiManager) RemoveMapper(ctx context.Context, en *Base) error {
+func (m *apiManager) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
 	log.Info("entity.RemoveMapper",
-		zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
+		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	// delete mapper.
 	var err error
-	mp := en.Mappers[0]
-	if err = m.entityRepo.DelMapper(ctx,
-		&dao.Mapper{
-			ID:          mp.ID,
-			TQL:         mp.TQL,
-			Name:        mp.Name,
-			EntityID:    en.ID,
-			EntityType:  en.Type,
-			Description: mp.Description,
-		}); nil != err {
-		log.Error("remove mapper", zap.Error(err), zfield.Eid(en.ID))
+	if err = m.entityRepo.DelMapper(ctx, mp); nil != err {
+		log.Error("remove mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return errors.Wrap(err, "remove mapper")
 	}
 
 	return nil
+}
+
+func (m *apiManager) GetMapper(ctx context.Context, mp *dao.Mapper) (*dao.Mapper, error) {
+	log.Info("entity.GetMapper",
+		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
+
+	// delete mapper.
+	var err error
+	if mp, err = m.entityRepo.GetMapper(ctx, mp); nil != err {
+		log.Error("get mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+		return mp, errors.Wrap(err, "get mapper")
+	}
+
+	return mp, nil
+}
+
+func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, error) {
+	log.Info("entity.GetMapper", zfield.Eid(en.ID), zfield.Owner(en.Owner))
+
+	// delete mapper.
+	var err error
+	var mps []dao.Mapper
+	if mps, err = m.entityRepo.ListMapper(ctx,
+		m.entityRepo.GetLastRevision(ctx),
+		&dao.ListMapperReq{
+			Owner:    en.Owner,
+			EntityID: en.ID,
+		}); nil != err {
+		log.Error("list mapper", zap.Error(err), zfield.Eid(en.ID), zfield.Owner(en.Owner))
+		return mps, errors.Wrap(err, "list mapper")
+	}
+
+	return mps, nil
 }
 
 func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error) {

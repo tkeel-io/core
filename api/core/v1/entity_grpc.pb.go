@@ -33,6 +33,8 @@ type EntityClient interface {
 	RemoveEntityConfigs(ctx context.Context, in *RemoveEntityConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	GetEntityConfigs(ctx context.Context, in *GetEntityConfigsRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	AppendMapper(ctx context.Context, in *AppendMapperRequest, opts ...grpc.CallOption) (*AppendMapperResponse, error)
+	GetMapper(ctx context.Context, in *GetMapperRequest, opts ...grpc.CallOption) (*GetMapperResponse, error)
+	ListMapper(ctx context.Context, in *ListMapperRequest, opts ...grpc.CallOption) (*ListMapperResponse, error)
 	RemoveMapper(ctx context.Context, in *RemoveMapperRequest, opts ...grpc.CallOption) (*RemoveMapperResponse, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
 }
@@ -180,6 +182,24 @@ func (c *entityClient) AppendMapper(ctx context.Context, in *AppendMapperRequest
 	return out, nil
 }
 
+func (c *entityClient) GetMapper(ctx context.Context, in *GetMapperRequest, opts ...grpc.CallOption) (*GetMapperResponse, error) {
+	out := new(GetMapperResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/GetMapper", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) ListMapper(ctx context.Context, in *ListMapperRequest, opts ...grpc.CallOption) (*ListMapperResponse, error) {
+	out := new(ListMapperResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/ListMapper", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *entityClient) RemoveMapper(ctx context.Context, in *RemoveMapperRequest, opts ...grpc.CallOption) (*RemoveMapperResponse, error) {
 	out := new(RemoveMapperResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/RemoveMapper", in, out, opts...)
@@ -217,6 +237,8 @@ type EntityServer interface {
 	RemoveEntityConfigs(context.Context, *RemoveEntityConfigsRequest) (*EntityResponse, error)
 	GetEntityConfigs(context.Context, *GetEntityConfigsRequest) (*EntityResponse, error)
 	AppendMapper(context.Context, *AppendMapperRequest) (*AppendMapperResponse, error)
+	GetMapper(context.Context, *GetMapperRequest) (*GetMapperResponse, error)
+	ListMapper(context.Context, *ListMapperRequest) (*ListMapperResponse, error)
 	RemoveMapper(context.Context, *RemoveMapperRequest) (*RemoveMapperResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
@@ -270,6 +292,12 @@ func (UnimplementedEntityServer) GetEntityConfigs(context.Context, *GetEntityCon
 }
 func (UnimplementedEntityServer) AppendMapper(context.Context, *AppendMapperRequest) (*AppendMapperResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppendMapper not implemented")
+}
+func (UnimplementedEntityServer) GetMapper(context.Context, *GetMapperRequest) (*GetMapperResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMapper not implemented")
+}
+func (UnimplementedEntityServer) ListMapper(context.Context, *ListMapperRequest) (*ListMapperResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMapper not implemented")
 }
 func (UnimplementedEntityServer) RemoveMapper(context.Context, *RemoveMapperRequest) (*RemoveMapperResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveMapper not implemented")
@@ -560,6 +588,42 @@ func _Entity_AppendMapper_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_GetMapper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMapperRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).GetMapper(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/GetMapper",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).GetMapper(ctx, req.(*GetMapperRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_ListMapper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMapperRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).ListMapper(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/ListMapper",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).ListMapper(ctx, req.(*ListMapperRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Entity_RemoveMapper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RemoveMapperRequest)
 	if err := dec(in); err != nil {
@@ -662,6 +726,14 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AppendMapper",
 			Handler:    _Entity_AppendMapper_Handler,
+		},
+		{
+			MethodName: "GetMapper",
+			Handler:    _Entity_GetMapper_Handler,
+		},
+		{
+			MethodName: "ListMapper",
+			Handler:    _Entity_ListMapper_Handler,
 		},
 		{
 			MethodName: "RemoveMapper",

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -18,7 +19,7 @@ const (
 	// store mapper prefix key.
 	MapperPrefix = "CORE.MAPPER"
 	// CORE.MAPPER.{mapperID}.
-	fmtMapperString = "%s.%s.%s"
+	fmtMapperString = "%s.%s.%s.%s"
 )
 
 type MapperHandler func([]Mapper)
@@ -28,8 +29,8 @@ type Mapper struct {
 	ID          string
 	TQL         string
 	Name        string
+	Owner       string
 	EntityID    string
-	EntityType  string
 	Description string
 }
 
@@ -43,7 +44,7 @@ func (m *Mapper) Copy() Mapper {
 }
 
 func (m *Mapper) Key() string {
-	return fmt.Sprintf(fmtMapperString, MapperPrefix, m.EntityID, m.ID)
+	return fmt.Sprintf(fmtMapperString, MapperPrefix, m.Owner, m.EntityID, m.ID)
 }
 
 func (d *Dao) PutMapper(ctx context.Context, m *Mapper) error {
@@ -80,6 +81,61 @@ func (d *Dao) HasMapper(ctx context.Context, m *Mapper) (bool, error) {
 		err = xerrors.ErrMapperNotFound
 	}
 	return false, errors.Wrap(err, "exists mapper")
+}
+
+func (d *Dao) ListMapper(ctx context.Context, rev int64, req *ListMapperReq) ([]Mapper, error) {
+	// construct mapper prefix key.
+	arr := []string{MapperPrefix, req.Owner}
+	if req.Owner == "" {
+		return nil, xerrors.ErrEmptyParam
+	} else if req.EntityID != "" {
+		arr = append(arr, req.EntityID)
+	}
+
+	prefix := strings.Join(arr, ".")
+	opts := make([]clientv3.OpOption, 0)
+	opts = append(opts, clientv3.WithRev(rev),
+		clientv3.WithRange(clientv3.GetPrefixRangeEnd(prefix)))
+
+	var count int64
+	var mappers []Mapper
+	var elapsedTime = util.NewElapsed()
+	for {
+		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
+		if err != nil {
+			log.Error("list mapper", zap.Error(err), zfield.Prefix(prefix),
+				zfield.Count(count), zfield.Elapsedms(elapsedTime.Elapsed()))
+			return mappers, errors.Wrap(err, "list mapper")
+		} else if len(resp.Kvs) == 0 {
+			log.Info("list mapper", zfield.Prefix(prefix),
+				zfield.Count(count), zfield.Elapsedms(elapsedTime.Elapsed()))
+			return mappers, nil
+		}
+
+		for _, kv := range resp.Kvs {
+			var mapper Mapper
+			if err = json.Unmarshal(kv.Value, &mapper); nil != err {
+				log.Error("unmarshal mapper", zap.Error(err),
+					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
+				return mappers, errors.Wrap(err, "unmarshal mapper")
+			}
+			mappers = append(mappers, mapper)
+		}
+
+		select {
+		case <-ctx.Done():
+			return mappers, errors.Wrap(ctx.Err(), "list mapper")
+		default:
+		}
+
+		if !resp.More {
+			return mappers, nil
+		}
+		// count all.
+		count += int64(len(resp.Kvs))
+		// move to next prefix.
+		prefix = string(append(resp.Kvs[len(resp.Kvs)-1].Key, 0))
+	}
 }
 
 func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler) {

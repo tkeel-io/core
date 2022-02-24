@@ -134,6 +134,242 @@
         ]
       }
     },
+    "/entities/{entity_id}/mappers": {
+      "get": {
+        "summary": "list mappers",
+        "operationId": "ListMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1ListMapperResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Mapper"
+        ]
+      },
+      "post": {
+        "summary": "Append mapper for entity",
+        "operationId": "AppendMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1AppendMapperResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "mapper description",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Mapper",
+              "description": "mapper description"
+            }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Mapper"
+        ]
+      }
+    },
+    "/entities/{entity_id}/mappers/{id}": {
+      "get": {
+        "summary": "get mapper by id",
+        "operationId": "GetMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1GetMapperResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "description": "mapper id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Mapper"
+        ]
+      },
+      "delete": {
+        "summary": "remove mappers from entity",
+        "operationId": "RemoveMapper",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveMapperResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "description": "mapper id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Mapper"
+        ]
+      }
+    },
     "/entities/{id}": {
       "get": {
         "summary": "Get a entity",
@@ -570,129 +806,6 @@
               "type": "object",
               "description": "property configs"
             }
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Entity"
-        ]
-      }
-    },
-    "/entities/{id}/mappers": {
-      "post": {
-        "summary": "Append mapper for entity",
-        "operationId": "AppendMapper",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1AppendMapperResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "description": "mapper description",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1Mapper",
-              "description": "mapper description"
-            }
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Entity"
-        ]
-      }
-    },
-    "/entities/{id}/mappers/{mapper_id}": {
-      "delete": {
-        "summary": "remove mappers from entity",
-        "operationId": "RemoveMapper",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1RemoveMapperResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "mapper_id",
-            "description": "mapper name",
-            "in": "path",
-            "required": true,
-            "type": "string"
           },
           {
             "name": "type",
@@ -1502,6 +1615,20 @@
       },
       "description": "Entity Response."
     },
+    "v1GetMapperResponse": {
+      "type": "object",
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        },
+        "mapper": {
+          "$ref": "#/definitions/v1Mapper",
+          "description": "mapper description"
+        }
+      },
+      "description": "Get Mapper Response."
+    },
     "v1HealthResponse": {
       "type": "object"
     },
@@ -1575,6 +1702,27 @@
         }
       },
       "description": "List Entity Response."
+    },
+    "v1ListMapperResponse": {
+      "type": "object",
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "mappers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Mapper"
+          },
+          "description": "mappers description"
+        }
+      },
+      "description": "List Mapper Response."
     },
     "v1ListSubscriptionResponse": {
       "type": "object",

@@ -28,10 +28,10 @@ func (m *Manager) listMetadata() {
 	log.Info("initialize actor manager, mapper loadding...")
 	repo.RangeMapper(ctx, revision, func(mappers []dao.Mapper) {
 		for _, info := range m.actorEnv.StoreMappers(mappers) {
-			log.Debug("load actor", zfield.ID(info.ID), zfield.Name(info.Name), zfield.TQL(info.TQL),
-				zfield.Eid(info.EntityID), zfield.Type(info.EntityType), zfield.Desc(info.Description))
+			log.Debug("load actor", zfield.ID(info.ID), zfield.Name(info.Name),
+				zfield.TQL(info.TQL), zfield.Eid(info.EntityID), zfield.Desc(info.Description))
 			// load actor when environment initialized.
-			m.loadMachine(info.EntityID, info.EntityType)
+			m.loadMachine(info.EntityID)
 		}
 	})
 

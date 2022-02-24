@@ -538,62 +538,6 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	return out, nil
 }
 
-func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
-	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
-		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
-	}
-
-	var entity = new(Entity)
-	entity.ID = req.Id
-	entity.Type = req.Type
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-
-	parseHeaderFrom(ctx, entity)
-	if req.Mapper != nil {
-		entity.Mappers = []state.Mapper{{
-			ID:          req.Mapper.Id,
-			Name:        req.Mapper.Name,
-			TQL:         req.Mapper.TqlText,
-			Description: req.Mapper.Description,
-		}}
-	} else {
-		log.Error("append mapper failed.", zfield.Eid(req.Id), zap.Error(err))
-		return nil, xerrors.ErrInvalidRequest
-	}
-
-	// set properties.
-	if err = s.apiManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("append mapper", zfield.Eid(req.Id), zap.Error(err))
-		return
-	}
-
-	return &pb.AppendMapperResponse{}, nil
-}
-
-func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.RemoveMapperResponse, err error) {
-	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
-		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
-	}
-
-	var entity = new(Entity)
-	entity.ID = req.Id
-	entity.Type = req.Type
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-	parseHeaderFrom(ctx, entity)
-
-	entity.Mappers = []state.Mapper{{ID: req.MapperId}}
-	if err = s.apiManager.RemoveMapper(ctx, entity); nil != err {
-		log.Error("remove mapper", zfield.Eid(req.Id), zap.Error(err))
-		return
-	}
-
-	return &pb.RemoveMapperResponse{}, nil
-}
-
 // parseConfigFrom parse config.
 func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*constraint.Config, err error) {
 	// parse configs from.

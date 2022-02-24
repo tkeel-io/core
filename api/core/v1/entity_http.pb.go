@@ -27,7 +27,9 @@ type EntityHTTPServer interface {
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	GetEntityConfigs(context.Context, *GetEntityConfigsRequest) (*EntityResponse, error)
 	GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error)
+	GetMapper(context.Context, *GetMapperRequest) (*GetMapperResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	ListMapper(context.Context, *ListMapperRequest) (*ListMapperResponse, error)
 	PatchEntityConfigs(context.Context, *PatchEntityConfigsRequest) (*EntityResponse, error)
 	PatchEntityConfigsZ(context.Context, *PatchEntityConfigsRequest) (*EntityResponse, error)
 	PatchEntityProps(context.Context, *PatchEntityPropsRequest) (*EntityResponse, error)
@@ -268,6 +270,42 @@ func (h *EntityHTTPHandler) GetEntityProps(req *go_restful.Request, resp *go_res
 	}
 }
 
+func (h *EntityHTTPHandler) GetMapper(req *go_restful.Request, resp *go_restful.Response) {
+	in := GetMapperRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.GetMapper(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
 func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := ListEntityRequest{}
 	if err := transportHTTP.GetBody(req, &in); err != nil {
@@ -278,6 +316,42 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
 	out, err := h.srv.ListEntity(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteErrorString(httpCode, tErr.Message)
+		return
+	}
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+	_, err = resp.Write(result)
+	if err != nil {
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
+		return
+	}
+}
+
+func (h *EntityHTTPHandler) ListMapper(req *go_restful.Request, resp *go_restful.Response) {
+	in := ListMapperRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.ListMapper(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -728,9 +802,13 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.RemoveEntityConfigs))
 	ws.Route(ws.GET("/entities/{id}/configs").
 		To(handler.GetEntityConfigs))
-	ws.Route(ws.POST("/entities/{id}/mappers").
+	ws.Route(ws.POST("/entities/{entity_id}/mappers").
 		To(handler.AppendMapper))
-	ws.Route(ws.DELETE("/entities/{id}/mappers/{mapper_id}").
+	ws.Route(ws.GET("/entities/{entity_id}/mappers/{id}").
+		To(handler.GetMapper))
+	ws.Route(ws.GET("/entities/{entity_id}/mappers").
+		To(handler.ListMapper))
+	ws.Route(ws.DELETE("/entities/{entity_id}/mappers/{id}").
 		To(handler.RemoveMapper))
 	ws.Route(ws.POST("/entities/search").
 		To(handler.ListEntity))

@@ -140,10 +140,10 @@ func Test_ListEntity(t *testing.T) {
 
 func Test_AppendMapper(t *testing.T) {
 	_, err := entityService.AppendMapper(context.Background(), &pb.AppendMapperRequest{
-		Id:     "device123",
-		Owner:  "admin",
-		Type:   "DEVICE",
-		Source: "dm",
+		EntityId: "device123",
+		Owner:    "admin",
+		Type:     "DEVICE",
+		Source:   "dm",
 		Mapper: &pb.Mapper{
 			Id:          "mapper123",
 			Name:        "mapper123",
@@ -156,11 +156,11 @@ func Test_AppendMapper(t *testing.T) {
 
 func Test_RemoveMapper(t *testing.T) {
 	_, err := entityService.RemoveMapper(context.Background(), &pb.RemoveMapperRequest{
-		Id:       "device123",
+		Id:       "mapper123",
 		Owner:    "admin",
 		Type:     "DEVICE",
 		Source:   "dm",
-		MapperId: "mapper123",
+		EntityId: "device123",
 	})
 	assert.Nil(t, err)
 }

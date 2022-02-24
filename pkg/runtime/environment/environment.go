@@ -97,8 +97,8 @@ func (env *Environment) StoreMappers(mappers []dao.Mapper) []dao.Mapper {
 
 	var err error
 	for _, m := range mappers {
-		log.Debug("store mapper", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
-			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		log.Debug("store mapper", zfield.ID(m.ID), zfield.Name(m.Name),
+			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Desc(m.Description))
 
 		// parse mapper.
 		var mapperInstence mapper.Mapper
@@ -124,8 +124,8 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 
 	switch et {
 	case dao.PUT:
-		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
-			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name),
+			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Desc(m.Description))
 		// parse mapper again.
 		var mapperInstence mapper.Mapper
 		if mapperInstence, err = mapper.NewMapper(m.ID, m.TQL, 0); nil != err {
@@ -135,13 +135,13 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 		// add mapper into caches.
 		effect.EffectStateIDs = env.addMapper(mapperInstence)
 	case dao.DELETE:
-		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name), zfield.TQL(m.TQL),
-			zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		log.Debug("mapper changed", zfield.ID(m.ID), zfield.Name(m.Name),
+			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Desc(m.Description))
 		// remove mapper from caches.
 		effect.EffectStateIDs = env.removeMapper(m.EntityID, m.ID)
 	default:
-		log.Error("invalid operator", zap.Any("operator", et.String()), zfield.ID(m.ID), zfield.Name(m.Name),
-			zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Type(m.EntityType), zfield.Desc(m.Description))
+		log.Error("invalid operator", zap.Any("operator", et.String()), zfield.ID(m.ID),
+			zfield.Name(m.Name), zfield.TQL(m.TQL), zfield.Eid(m.EntityID), zfield.Desc(m.Description))
 	}
 
 	log.Debug("update environment", zfield.ID(m.ID),

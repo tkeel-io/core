@@ -154,7 +154,8 @@ func (m *Manager) Resource() types.ResourceManager {
 	return m.resourceManager
 }
 
-func (m *Manager) loadMachine(stateID, stateType string) {
+func (m *Manager) loadMachine(stateID string) {
+	var stateType string
 	switch stateType {
 	case SMTypeSubscription:
 		// TODO: load subscription.
