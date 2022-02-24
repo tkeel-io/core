@@ -81,3 +81,6 @@ func TestCollectEmptyPath(t *testing.T) {
 	result, _ = collectjs.Set([]byte(`{}`), "age", []byte(`2220`))
 	t.Log("result: ", string(result))
 }
+
+func BenchmarkStateMap(b *testing.B) {
+}
