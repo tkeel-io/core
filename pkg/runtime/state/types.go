@@ -27,8 +27,6 @@ import (
 type Machiner interface {
 	// GetID return state machine id.
 	GetID() string
-	// GetStatus returns actor status.
-	GetStatus() Status
 	// GetEntity returns this.Entity.
 	GetEntity() *dao.Entity
 	// Context return state context.

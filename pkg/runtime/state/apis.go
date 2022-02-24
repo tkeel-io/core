@@ -240,8 +240,6 @@ func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) ([]Wat
 }
 
 func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
-	s.status = SMStatusDeleted
-
 	var err error
 	// create event.
 	ev := s.makeEvent()

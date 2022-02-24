@@ -114,7 +114,6 @@ type statem struct {
 	dispatcher      dispatch.Dispatcher
 	resourceManager types.ResourceManager
 
-	status Status
 	// state machine message handler.
 	msgHandler MessageHandler
 
@@ -139,7 +138,6 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 
 		ctx:             ctx,
 		cancel:          cancel,
-		status:          SMStatusActive,
 		msgHandler:      msgHandler,
 		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
@@ -167,11 +165,6 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 // GetID returns state ID.
 func (s *statem) GetID() string {
 	return s.ID
-}
-
-// GetStatus returns state machine status.
-func (s *statem) GetStatus() Status {
-	return s.status
 }
 
 func (s *statem) GetEntity() *dao.Entity {

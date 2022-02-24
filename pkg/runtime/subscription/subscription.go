@@ -115,10 +115,6 @@ func (s *subscription) GetMode() string {
 	return s.Mode()
 }
 
-func (s *subscription) GetStatus() state.Status {
-	return s.stateMachine.GetStatus()
-}
-
 func (s *subscription) GetEntity() *dao.Entity {
 	return s.stateMachine.GetEntity()
 }
