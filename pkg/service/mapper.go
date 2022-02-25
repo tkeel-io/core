@@ -8,9 +8,22 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
+
+func (s *EntityService) checkMapper(m *dao.Mapper) error {
+	if m.ID == "" {
+		m.ID = util.UUID()
+	}
+
+	if m.TQL == "" {
+		return xerrors.ErrInvalidRequest
+	}
+
+	return nil
+}
 
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
 	if !s.inited.Load() {
@@ -34,13 +47,30 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		Description: req.Mapper.Description,
 	}
 
+	// check mapper.
+	if err = s.checkMapper(&mp); nil != err {
+		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
+		return
+	}
+
 	// append mapper.
 	if err = s.apiManager.AppendMapper(ctx, &mp); nil != err {
 		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
 		return
 	}
 
-	return &pb.AppendMapperResponse{}, nil
+	return &pb.AppendMapperResponse{
+		Type:     entity.Type,
+		Owner:    entity.Owner,
+		Source:   entity.Source,
+		EntityId: mp.EntityID,
+		Mapper: &pb.Mapper{
+			Id:          mp.ID,
+			Name:        mp.Name,
+			TqlText:     mp.TQL,
+			Description: mp.Description,
+		},
+	}, nil
 }
 
 func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.RemoveMapperResponse, err error) {
@@ -67,7 +97,13 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 		return
 	}
 
-	return &pb.RemoveMapperResponse{}, nil
+	return &pb.RemoveMapperResponse{
+		Id:       mp.ID,
+		Type:     entity.Type,
+		Owner:    entity.Owner,
+		Source:   entity.Source,
+		EntityId: mp.EntityID,
+	}, nil
 }
 
 func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) (out *pb.GetMapperResponse, err error) {
@@ -95,7 +131,10 @@ func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) 
 	}
 
 	return &pb.GetMapperResponse{
-		EntityId: in.EntityId,
+		Type:     entity.Type,
+		Owner:    entity.Owner,
+		Source:   entity.Source,
+		EntityId: mp.EntityID,
 		Mapper: &pb.Mapper{
 			Id:          mp.ID,
 			Name:        mp.Name,
@@ -135,6 +174,9 @@ func (s *EntityService) ListMapper(ctx context.Context, in *pb.ListMapperRequest
 	}
 
 	return &pb.ListMapperResponse{
+		Type:     entity.Type,
+		Owner:    entity.Owner,
+		Source:   entity.Source,
 		EntityId: in.EntityId,
 		Mappers:  mpDtos,
 	}, nil

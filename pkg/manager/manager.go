@@ -617,10 +617,8 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 	log.Info("entity.AppendMapper",
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
-	// validate mapper.
-
-	// upert mapper.
 	var err error
+	// upert mapper.
 	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
 		log.Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return errors.Wrap(err, "append mapper")
