@@ -23,16 +23,6 @@ func newContext(sm Machiner) StateContext {
 	}
 }
 
-func NewContext(sm Machiner, mappers map[string]mapper.Mapper, tentacles []mapper.Tentacler) StateContext {
-	stateCtx := StateContext{
-		stateMachine: sm,
-		mappers:      mappers,
-		tentacles:    tentacles,
-	}
-
-	return stateCtx
-}
-
 func (ctx *StateContext) LoadEnvironments(env environment.ActorEnv) {
 	// load actor mappers.
 	ctx.mappers = env.Mappers

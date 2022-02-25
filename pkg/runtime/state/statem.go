@@ -175,12 +175,6 @@ func (s *statem) Context() *StateContext {
 	return &s.sCtx
 }
 
-// WithContext set state Context.
-func (s *statem) WithContext(ctx StateContext) Machiner {
-	s.sCtx = ctx
-	return s
-}
-
 func (s *statem) updateFromContext() {
 	if atomic.LoadInt64(&s.sCtx.version) > s.version {
 		log.Debug("state context changed", zfield.Eid(s.ID), zfield.Type(s.Type))

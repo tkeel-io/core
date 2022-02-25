@@ -114,8 +114,6 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 	reqID := msgCtx.Get(message.ExtAPIRequestID)
 	entityID := msgCtx.Get(message.ExtEntityID)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
-	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
-
 	container := m.selectContainer(channelID)
 	machine, err := container.Load(ctx, entityID)
 	if nil != err {
@@ -185,18 +183,19 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 			continue
 		}
 
-		// load state machine.
+		var has bool
 		var err error
 		var machine state.Machiner
-		if machine, err = container.Load(context.Background(), stateID); nil != err {
+		// load state machine from runtime.
+		if machine, has = container.Get(stateID); has {
+			// update state machine context.
+			stateEnv := m.actorEnv.GetStateEnv(stateID)
+			machine.Context().LoadEnvironments(stateEnv)
+		} else if machine, err = container.Load(context.Background(), stateID); nil != err {
 			log.Warn("load state machine, runtime not found",
-				zap.Error(err), zfield.Queue(queue), zfield.Eid(stateID))
+				zap.Error(err), zfield.Queue(queue), zfield.Eid(machine.GetID()))
 			continue
 		}
-
-		// update state machine context.
-		stateEnv := m.actorEnv.GetStateEnv(stateID)
-		machine.Context().LoadEnvironments(stateEnv)
 
 		ctx := context.Background()
 		msgCtx := message.New(ctx)

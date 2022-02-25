@@ -88,6 +88,7 @@ func (env *Environment) GetStateEnv(stateID string) ActorEnv {
 			}
 		}
 	}
+
 	return actorEnv
 }
 
@@ -152,6 +153,7 @@ func (env *Environment) OnMapperChanged(et dao.EnventType, m dao.Mapper) (Effect
 
 // addMapper add mapper into Environment.
 func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
+	effects = env.cleanMapper(m.ID())
 	// create cache if not exist.
 	targetID := m.TargetEntity()
 	if _, has := env.stateCaches[targetID]; !has {
@@ -159,10 +161,6 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 	}
 
 	sCache := env.stateCaches[targetID]
-	if _, exists := sCache.mappers[m.ID()]; exists {
-		effects = env.cleanMapper(m.ID())
-	}
-
 	// generate tentacles.
 	mCache := newMapperCache(m.ID(), m)
 	for _, tentacle := range m.Tentacles() {
@@ -171,20 +169,18 @@ func (env *Environment) addMapper(m mapper.Mapper) (effects []string) {
 			remoteID := tentacle.TargetID()
 			tentacle = mapper.NewTentacle(tentacle.Type(), targetID, tentacle.Items(), tentacle.Version())
 			env.addTentacle(remoteID, m.ID(), tentacle)
-			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
+			log.Debug("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		case mapper.TentacleTypeMapper:
-			// 如果是Mapper类型的Tentacle，那么将该Tentacle分配到mapper所在stateMachine.
 			mCache.tentacles = append(mCache.tentacles, tentacle)
-			log.Info("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
+			log.Debug("tentacle ", zap.String("target", tentacle.TargetID()), zap.Any("items", tentacle.Items()))
 		default:
 			log.Error("invalid tentacle type", zap.String("target", tentacle.TargetID()), zap.String("type", tentacle.Type()))
 		}
 	}
 
 	// reset mapper cache.
-	sCache.mappers[m.ID()] = mCache
 	env.index(targetID, m.ID())
-
+	sCache.mappers[m.ID()] = mCache
 	return util.Unique(append(effects, env.mapperStates[m.ID()]...))
 }
 

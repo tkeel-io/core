@@ -77,7 +77,6 @@ func (m *mapper) Tentacles() []Tentacler {
 			eItems[index] = watchKey
 			mItems = append(mItems, watchKey)
 		}
-
 		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, tentacleConf.SourceEntity, eItems, m.version))
 	}
 

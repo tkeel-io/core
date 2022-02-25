@@ -32,12 +32,6 @@ func TestEnvironment(t *testing.T) {
 		t.Log("tentacle", tentacle)
 	}
 
-	stateEnv = env.GetStateEnv("device234")
-	t.Log("mappers", stateEnv.Mappers)
-	for _, tentacle := range stateEnv.Tentacles {
-		t.Log("tentacle", tentacle)
-	}
-
 	effect, _ := env.OnMapperChanged(dao.PUT, dao.Mapper{
 		ID:       "mapper123",
 		Name:     "mapping device234 props",
@@ -47,6 +41,12 @@ func TestEnvironment(t *testing.T) {
 
 	t.Log("effect: ", effect)
 
+	stateEnv = env.GetStateEnv("mapper123")
+	t.Log("mappers", stateEnv.Mappers)
+	for _, tentacle := range stateEnv.Tentacles {
+		t.Log("tentacle", tentacle)
+	}
+
 	effect, _ = env.OnMapperChanged(dao.PUT, dao.Mapper{
 		ID:       "mapper234",
 		Name:     "mapping device234 props",
@@ -55,6 +55,12 @@ func TestEnvironment(t *testing.T) {
 	})
 
 	t.Log("effect: ", effect)
+
+	stateEnv = env.GetStateEnv("device234")
+	t.Log("mappers", stateEnv.Mappers)
+	for _, tentacle := range stateEnv.Tentacles {
+		t.Log("tentacle", tentacle)
+	}
 
 	assert.Equal(t, "device123", infos[0].EntityID)
 }
