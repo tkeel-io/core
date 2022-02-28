@@ -4,49 +4,37 @@ import (
 	"sync"
 
 	daprSDK "github.com/dapr/go-sdk/client"
-	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
 var once sync.Once
 var pool *daprClientPool
 
-type Client struct {
-	id   string
-	conn daprSDK.Client
-}
-
-func (c *Client) Conn() daprSDK.Client {
-	return c.conn
-}
-
 type daprClientPool struct {
-	size    int
-	index   int
-	clients []Client
+	client daprSDK.Client
 }
 
-func newPool(size int) *daprClientPool {
-	return &daprClientPool{
-		size:    size,
-		clients: make([]Client, size),
+func newPool() *daprClientPool {
+	return &daprClientPool{}
+}
+
+func (p *daprClientPool) setup() {
+	// TODO: !!! daprSDK.NewClient() 可能返回 (nil, nil).
+	var err error
+	if p.client, err = daprSDK.NewClient(); nil != err {
+		log.Error("setup client pool", zap.Error(err))
 	}
 }
 
-func (p *daprClientPool) Select() *Client {
+func (p *daprClientPool) Select() daprSDK.Client {
 	once.Do(func() {
-		p.clients = make([]Client, p.size)
-		for index := range p.clients {
-			cli, err := daprSDK.NewClient()
-			if nil == err {
-				p.clients[index] =
-					Client{id: util.UUID(), conn: cli}
-			}
-		}
+		p.setup()
 	})
 
-	p.index = (p.index + p.size + 1) % p.size
-	return &Client{
-		id:   p.clients[p.index].id,
-		conn: p.clients[p.index].conn,
+	if p.client == nil {
+		p.setup()
 	}
+
+	return p.client
 }

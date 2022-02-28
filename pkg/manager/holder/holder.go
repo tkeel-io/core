@@ -3,6 +3,7 @@ package holder
 import (
 	"context"
 	"sync"
+	"time"
 
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/types"
@@ -26,6 +27,9 @@ func (h *holder) Wait(ctx context.Context, id string) Response {
 	waitCh := make(chan Response)
 	h.holdeds[id] = waitCh
 	h.lock.Unlock()
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	var resp Response
 	select {

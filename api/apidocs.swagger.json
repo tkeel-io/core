@@ -9,15 +9,6 @@
       "name": "Entity"
     },
     {
-      "name": "Topic"
-    },
-    {
-      "name": "Proxy"
-    },
-    {
-      "name": "Probe"
-    },
-    {
       "name": "Subscription"
     },
     {
@@ -1080,29 +1071,6 @@
         ]
       }
     },
-    "/health": {
-      "get": {
-        "summary": "health for probe",
-        "operationId": "Health",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1HealthResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "tags": [
-          "Probe"
-        ]
-      }
-    },
     "/index": {
       "post": {
         "summary": "Index a object",
@@ -1606,9 +1574,6 @@
       },
       "description": "Get Mapper Response."
     },
-    "v1HealthResponse": {
-      "type": "object"
-    },
     "v1IndexResponse": {
       "type": "object",
       "properties": {
@@ -1632,16 +1597,30 @@
           "type": "string",
           "description": "search keyword"
         },
-        "page": {
-          "$ref": "#/definitions/v1Pager",
-          "description": "page"
-        },
         "condition": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1SearchCondition"
           },
           "description": "search conditions"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "order_by": {
+          "type": "string",
+          "description": "排序字段"
+        },
+        "is_descending": {
+          "type": "boolean",
+          "description": "是否逆序， false：不逆序，true:逆序"
         }
       },
       "description": "List Entities Request",
@@ -1651,24 +1630,19 @@
       "type": "object",
       "properties": {
         "total": {
-          "type": "string",
-          "format": "int64",
+          "type": "integer",
+          "format": "int32",
           "description": "total count of the entities"
         },
-        "page": {
-          "type": "string",
-          "format": "int64",
-          "description": "page"
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
         },
-        "limit": {
-          "type": "string",
-          "format": "int64",
-          "description": "limit"
-        },
-        "offset": {
-          "type": "string",
-          "format": "int64",
-          "description": "offset"
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
         },
         "items": {
           "type": "array",
@@ -1747,54 +1721,6 @@
         }
       }
     },
-    "v1Metadata": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "specversion": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "source": {
-          "type": "string"
-        },
-        "datacontenttype": {
-          "type": "string"
-        },
-        "subject": {
-          "type": "string"
-        },
-        "topic": {
-          "type": "string"
-        },
-        "pubsubname": {
-          "type": "string"
-        }
-      }
-    },
-    "v1Pager": {
-      "type": "object",
-      "properties": {
-        "limit": {
-          "type": "string",
-          "format": "int64"
-        },
-        "offset": {
-          "type": "string",
-          "format": "int64"
-        },
-        "sort": {
-          "type": "string"
-        },
-        "reverse": {
-          "type": "boolean"
-        }
-      }
-    },
     "v1RemoveMapperResponse": {
       "type": "object",
       "properties": {
@@ -1820,9 +1746,6 @@
         }
       },
       "description": "Remove Mapper Response."
-    },
-    "v1RespondResponse": {
-      "type": "object"
     },
     "v1SearchCondition": {
       "type": "object",
@@ -1856,16 +1779,30 @@
           "type": "string",
           "description": "search keyword"
         },
-        "page": {
-          "$ref": "#/definitions/v1Pager",
-          "description": "page"
-        },
         "condition": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1SearchCondition"
           },
           "description": "conditions list"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "order_by": {
+          "type": "string",
+          "description": "排序字段"
+        },
+        "is_descending": {
+          "type": "boolean",
+          "description": "是否逆序， false：不逆序，true:逆序"
         }
       }
     },
@@ -1873,24 +1810,19 @@
       "type": "object",
       "properties": {
         "total": {
-          "type": "string",
-          "format": "int64",
+          "type": "integer",
+          "format": "int32",
           "description": "count of the results"
         },
-        "page": {
-          "type": "string",
-          "format": "int64",
-          "description": "page number"
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
         },
-        "limit": {
-          "type": "string",
-          "format": "int64",
-          "description": "limit"
-        },
-        "offset": {
-          "type": "string",
-          "format": "int64",
-          "description": "offset"
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
         },
         "items": {
           "type": "array",
@@ -1948,14 +1880,6 @@
         "subscription": {
           "$ref": "#/definitions/v1SubscriptionObject",
           "description": "subscription object"
-        }
-      }
-    },
-    "v1TopicEventResponse": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
         }
       }
     }

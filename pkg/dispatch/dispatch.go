@@ -70,7 +70,7 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
 	case message.MessageTypeAPIRespond:
 		log.Debug("dispatch callback", zfield.ID(ev.ID()),
 			zfield.Header(message.GetAttributes(ev)))
-		d.transmitter.Do(ctx, &transport.Request{
+		err = d.transmitter.Do(ctx, &transport.Request{
 			PackageID: ev.ID(),
 			Method:    http.MethodPost,
 			Address:   callbackEnd,
@@ -84,7 +84,7 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev cloudevents.Event) error {
 		}
 	}
 
-	return nil
+	return errors.Wrap(err, "dispatch event")
 }
 
 func (d *dispatcher) Run() error {
@@ -125,6 +125,7 @@ func (d *dispatcher) startConsumeQueue(id string, pubsubIns pubsub.Pubsub) {
 			if err = selectConn.Send(ctx, ev); nil != err {
 				log.Error("dispatch message", zfield.Eid(entityID),
 					zap.String("select_queue", selectQueue.ID))
+				return errors.Wrap(err, "dispatch event")
 			}
 
 			log.Debug("dispatch pubsub message",

@@ -8,6 +8,7 @@ import (
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/kit/log"
@@ -40,9 +41,18 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 	}
 
 	log.Debug("pubsub.dapr send message",
-		zfield.ID(d.id), zfield.Event(event))
+		zfield.ID(d.id), zfield.Event(event),
+		zfield.Pubsub(d.pubsubName), zfield.Topic(d.topicName))
 
-	err = pool.Select().Conn().PublishEvent(
+	var conn daprSDK.Client
+	if conn = pool.Select(); nil == conn {
+		log.Error("nil connection",
+			zfield.ID(d.id), zfield.Event(event),
+			zfield.Pubsub(d.pubsubName), zfield.Topic(d.topicName))
+		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
+	}
+
+	conn.PublishEvent(
 		ctx, d.pubsubName, d.topicName, bytes,
 		daprSDK.PublishEventWithMetadata(metadata),
 		daprSDK.PublishEventWithContentType(cloudevents.ApplicationJSON))
@@ -66,7 +76,7 @@ func (d *daprPubsub) Close() error {
 }
 
 func init() {
-	pool = newPool(20)
+	pool = newPool()
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.dapr> successful")
 	pubsub.Register("dapr", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
 		var daprMeta daprMetadata

@@ -34,6 +34,7 @@ var (
 	ErrPatchPathRoot            = errors.New("patch path lack root")
 	ErrPatchTypeInvalid         = errors.New("patch config type invalid")
 	ErrServerNotReady           = errors.New("Core.Service.NotReady")
+	ErrConnectionNil            = errors.New("Core.Resource.Connection.Nil")
 )
 
 func New(code string) error {

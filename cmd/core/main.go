@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "github.com/tkeel-io/core/api/core/v1"
@@ -184,6 +185,9 @@ func core(cmd *cobra.Command, args []string) {
 	if err := coreApp.Run(context.TODO()); err != nil {
 		log.Fatal(err)
 	}
+
+	// wait sidecar ready.
+	time.Sleep(1 * time.Second)
 
 	// register core service.
 	var err error

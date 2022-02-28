@@ -26,6 +26,7 @@ import (
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -72,6 +73,11 @@ func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
 
 func (es *ESClient) Delete(ctx context.Context, id string) error {
 	_, err := es.Client.Delete().Index(EntityIndex).Id(id).Do(ctx)
+	if nil != err {
+		if elastic.IsNotFound(err) {
+			return errors.Wrap(xerrors.ErrEntityNotFound, "elasticsearch delete by id")
+		}
+	}
 	return errors.Wrap(err, "elasticsearch delete by id")
 }
 
@@ -114,7 +120,7 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 		}
 	}
 
-	resp.Total = searchResult.TotalHits()
+	resp.Total = int32(searchResult.TotalHits())
 	resp.Data = data
 	resp.Raw, _ = json.Marshal(data)
 	if req.Page != nil {
@@ -158,7 +164,7 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Limit == 0 {
-		page.Limit = 10
+		page.Limit = 0
 	}
 	if page.Sort == "" {
 		page.Sort = "id"

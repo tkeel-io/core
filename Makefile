@@ -91,20 +91,20 @@ BINS_OUT_DIR := $(OUT_DIR)/$(GOOS)_$(GOARCH)/$(BUILDTYPE_DIR)
 LDFLAGS :="-X $(BASE_PACKAGE_NAME)/pkg/version.GitCommit=$(GIT_COMMIT) -X $(BASE_PACKAGE_NAME)/pkg/version.GitBranch=$(GIT_BRANCH) -X $(BASE_PACKAGE_NAME)/pkg/version.GitVersion=$(GIT_VERSION) -X $(BASE_PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_DATE) -X $(BASE_PACKAGE_NAME)/pkg/version.Version=$(CORE_VERSION)"
 
 INTERNAL_PROTO_FILES=$(shell find internal -name *.proto)
-API_PROTO_FILES=$(shell find api -name *.proto)
+API_PROTO_FILES := api/core/v1/entity.proto api/core/v1/subscription.proto api/core/v1/list.proto api/core/v1/search.proto
 
 .PHONY: init
 # init env
 init:
-	go get -d -u  github.com/tkeel-io/tkeel-interface/openapi
-	go get -d -u  github.com/tkeel-io/kit
+	go get -d -u  github.com/tkeel-io/tkeel-interface/openapi@latest
+	go get -d -u  github.com/tkeel-io/kit@latest
 	go get -d -u  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.7.0
 
 	go install  github.com/tkeel-io/tkeel-interface/tool/cmd/artisan@latest
 	go install  google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
 	go install  google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
-	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-http@v0.0.0-20211201125403-d4d4343c7730
-	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-errors@v0.0.0-20211201125403-d4d4343c7730
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-http@latest
+	go install  github.com/tkeel-io/tkeel-interface/protoc-gen-go-errors@latest
 	go install  github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.7.0
 
 .PHONY: api
@@ -179,9 +179,9 @@ else
 endif
 
 docker-build:
-	docker build -t tkeelio/core:${CORE_VERSION} .
+	sudo docker build -t tkeelio/core:${CORE_VERSION} .
 docker-push:
-	docker push tkeelio/core:${CORE_VERSION}
+	sudo docker push tkeelio/core:${CORE_VERSION}
 
 ################################################################################
 # Target: lint                                                                 #

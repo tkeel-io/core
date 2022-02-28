@@ -253,7 +253,7 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]
 			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
 			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
 		}
-		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != innerErr {
 			log.Error("diispatch event", zap.Error(innerErr),
 				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
 		}
@@ -275,9 +275,11 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]
 	// 2. delete from search engine.
 	in := &pb.DeleteByIDRequest{Id: s.ID, Owner: s.Owner, Source: s.Source}
 	if _, err = s.Search().DeleteByID(ctx, in); nil != err {
-		log.Error("delete entity from state store",
-			zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "delete entity from state store")
+		if !errors.Is(err, xerrors.ErrEntityNotFound) {
+			log.Error("delete entity from state store",
+				zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "delete entity from state store")
+		}
 	}
 
 	// set response.
