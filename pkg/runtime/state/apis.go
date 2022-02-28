@@ -419,7 +419,7 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	}
 
 	// update state properties.
-	enRes := s.Entity.Copy()
+	copyMap := make(map[string]tdtl.Node)
 	watchKeys := make([]mapper.WatchKey, 0)
 	stateIns := State{ID: s.ID, Props: s.Properties}
 	for index := range pds {
@@ -434,7 +434,7 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 		switch op {
 		case xjson.OpCopy:
 			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
-				enRes.Properties[pds[index].Path] = val
+				copyMap[pds[index].Path] = val
 			}
 		default:
 			if nil == err {
@@ -442,6 +442,11 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 					EntityID: s.ID, PropertyKey: pds[index].Path})
 			}
 		}
+	}
+
+	enRes := s.Entity.Copy()
+	for key, val := range copyMap {
+		enRes.Properties[key] = val
 	}
 
 	// set response.
