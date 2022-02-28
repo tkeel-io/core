@@ -22,6 +22,6 @@ COPY --from=builder /src/config.yml.example /keel/config.yml
 EXPOSE 6789
 WORKDIR /keel
 CMD ["/keel/core", "--search-engine", \
-    "es://admin:admin@tkeel-middleware-elasticsearch-master:9200", \
-    "--etcd", "http://tkeel-middleware-etcd:2379", \
+    "es://admin:admin@elasticsearch-master:9200", \
+    "--etcd", "http://etcd:2379", \
     "--conf", "/keel/config.yml"]
