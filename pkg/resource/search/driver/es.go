@@ -158,7 +158,7 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Limit == 0 {
-		page.Limit = 10
+		page.Limit = 0
 	}
 	if page.Sort == "" {
 		page.Sort = "id"
