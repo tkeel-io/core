@@ -166,7 +166,9 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "create entity")
 }
 
 func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) {
@@ -195,7 +197,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	}
 
 	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdateEntity.String())
+	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityProps.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("update entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "update entity")
@@ -222,7 +224,9 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "update entity")
 }
 
 // GetProperties returns Base.
@@ -277,7 +281,9 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "get entity")
 }
 
 // DeleteEntity delete an entity from manager.
@@ -392,7 +398,9 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "update entity props")
 }
 
 func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
@@ -448,7 +456,9 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "patch entity props")
 }
 
 func (m *apiManager) GetEntityProps(context.Context, *Base, []string) (*Base, error) {
@@ -513,7 +523,9 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "update entity confis")
 }
 
 // PatchConfigs patch properties into entity.
@@ -569,7 +581,9 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return entityToBase(&apiResp), nil
+	base := entityToBase(&apiResp)
+	err = m.addMapper(ctx, base)
+	return base, errors.Wrap(err, "patch entity configs")
 }
 
 // QueryConfigs query entity configs.
@@ -759,6 +773,30 @@ func (m *apiManager) makePatchEvent(en *dao.Entity, pds []state.PatchData) (clou
 	}
 
 	return ev, nil
+}
+
+func (m *apiManager) addMapper(ctx context.Context, base *Base) error {
+	mappers, err := m.entityRepo.ListMapper(ctx,
+		m.entityRepo.GetLastRevision(ctx),
+		&dao.ListMapperReq{
+			Owner:    base.Owner,
+			EntityID: base.ID,
+		})
+	if nil != err {
+		return errors.Wrap(err, "list mapper by entity id.")
+	}
+
+	for _, mp := range mappers {
+		base.Mappers = append(base.Mappers,
+			state.Mapper{
+				ID:          mp.ID,
+				TQL:         mp.TQL,
+				Name:        mp.Name,
+				Description: mp.Description,
+			})
+	}
+
+	return nil
 }
 
 func checkTQLs(en *Base) error {

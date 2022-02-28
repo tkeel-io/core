@@ -500,30 +500,34 @@
           },
           {
             "name": "body",
+            "description": "entity properties",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "description": "entity type"
-                },
-                "source": {
-                  "type": "string",
-                  "description": "source id"
-                },
-                "owner": {
-                  "type": "string",
-                  "description": "owner id"
-                },
-                "properties": {
-                  "type": "object",
-                  "description": "entity properties"
-                }
-              },
-              "description": "Update Entity Request."
+              "description": "entity properties"
             }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [

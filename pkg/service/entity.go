@@ -116,13 +116,49 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	return out, errors.Wrap(err, "create entity failed")
 }
 
-func (s *EntityService) UpdateEntity(ctx context.Context, in *pb.UpdateEntityRequest) (*pb.EntityResponse, error) {
+func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(in.Id))
+		log.Warn("service not ready", zfield.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	panic("implement me")
+	var entity = new(Entity)
+	entity.ID = req.Id
+	entity.Type = req.Type
+	entity.Owner = req.Owner
+	entity.Source = req.Source
+
+	parseHeaderFrom(ctx, entity)
+	entity.Properties = make(map[string]tdtl.Node)
+	switch kv := req.Properties.AsInterface().(type) {
+	case map[string]interface{}:
+		if entity.Properties, err = parseProps(kv); nil != err {
+			log.Error("create entity, but invalid params",
+				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			return out, errors.Wrap(err, "create entity")
+		}
+	case nil:
+		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
+	default:
+		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
+	}
+
+	// check properties.
+	if _, has := entity.Properties[""]; has {
+		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		return out, xerrors.ErrInvalidRequest
+	}
+
+	// set properties.
+	if entity, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
+		return out, errors.Wrap(err, "update entity failed")
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "update entity failed")
 }
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
