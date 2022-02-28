@@ -114,7 +114,7 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 		}
 	}
 
-	resp.Total = searchResult.TotalHits()
+	resp.Total = int32(searchResult.TotalHits())
 	resp.Data = data
 	resp.Raw, _ = json.Marshal(data)
 	if req.Page != nil {
