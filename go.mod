@@ -13,6 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/goinggo/mapstructure v0.0.0-20140717182941-194205d9b4a9
 	github.com/golang/protobuf v1.5.2
+	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0
 	github.com/influxdata/influxdb-client-go v1.4.0
 	github.com/mitchellh/mapstructure v1.4.2
@@ -27,9 +28,9 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.12.0
 	github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90
-	github.com/tkeel-io/kit v0.0.0-20220120160441-cb2a03de1073
+	github.com/tkeel-io/kit v0.0.0-20220216070111-216ac6e8fa29
 	github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c
-	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20211201125403-d4d4343c7730
+	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20220218062650-cbf6e212c1bd
 	go.etcd.io/etcd/api/v3 v3.5.1
 	go.etcd.io/etcd/client/v3 v3.5.1
 	go.uber.org/atomic v1.9.0
@@ -37,8 +38,8 @@ require (
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
-	google.golang.org/grpc v1.43.0
+	google.golang.org/genproto v0.0.0-20220222213610-43724f9ea8cf
+	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.27.1
 )
 

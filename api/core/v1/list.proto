@@ -3,8 +3,8 @@ package api.core.v1;
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 
 message Pager {
-	int64 limit = 1;
-	int64 offset = 2;
+	int32 limit = 1;
+	int32 offset = 2;
 	string sort = 3;
 	bool reverse = 4;
 }

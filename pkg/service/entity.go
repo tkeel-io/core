@@ -529,7 +529,10 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	searchReq := &pb.SearchRequest{}
 	searchReq.Query = req.Query
-	searchReq.Page = req.Page
+	searchReq.PageNum = req.PageNum
+	searchReq.PageSize = req.PageSize
+	searchReq.IsDescending = req.IsDescending
+	searchReq.OrderBy = req.OrderBy
 	searchReq.Condition = req.Condition
 
 	var resp *pb.SearchResponse
@@ -540,7 +543,8 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	out = &pb.ListEntityResponse{}
 	out.Total = resp.Total
-	out.Limit = resp.Limit
+	out.PageNum = resp.PageNum
+	out.PageSize = resp.PageSize
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:

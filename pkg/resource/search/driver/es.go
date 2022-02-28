@@ -114,7 +114,7 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 		}
 	}
 
-	resp.Total = searchResult.TotalHits()
+	resp.Total = int32(searchResult.TotalHits())
 	resp.Data = data
 	resp.Raw, _ = json.Marshal(data)
 	if req.Page != nil {
@@ -158,7 +158,7 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Limit == 0 {
-		page.Limit = 10
+		page.Limit = 0
 	}
 	if page.Sort == "" {
 		page.Sort = "id"
