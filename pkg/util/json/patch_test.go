@@ -84,3 +84,10 @@ func TestCollectEmptyPath(t *testing.T) {
 
 func BenchmarkStateMap(b *testing.B) {
 }
+
+func TestGet(t *testing.T) {
+	raw := tdtl.JSONNode(`{"temp":"555","append":[{"property1":12345},"test"]}`)
+	val, err := Patch(raw, nil, "append", OpCopy)
+	assert.Nil(t, err)
+	t.Log("result: ", val)
+}

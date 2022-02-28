@@ -20,6 +20,7 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -103,13 +104,40 @@ func (s *statem) makeEvent() cloudevents.Event {
 	return ev
 }
 
-func (s *statem) setEventPayload(ev *cloudevents.Event, reqID string) error {
+func (s *statem) setEventPayload(ev *cloudevents.Event, reqID string, en *dao.Entity) error {
 	var (
 		err   error
 		bytes []byte
 	)
 
-	if bytes, err = dao.GetEntityCodec().Encode(&s.Entity); nil != err {
+	if bytes, err = dao.GetEntityCodec().Encode(en); nil != err {
+		log.Error("set response", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		return nil
+	}
+
+	if err = ev.SetData(bytes); nil != err {
+		log.Error("set response event payload", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	} else if err = ev.Validate(); nil != err {
+		log.Error("validate response", zfield.Eid(s.ID), zap.Error(err))
+		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+	}
+
+	return errors.Wrap(err, "set event payload")
+}
+
+// setEventPayloadZ 当propertyKey 中包含 . [] 时.
+func (s *statem) setEventPayloadZ(ev *cloudevents.Event, reqID string, en *dao.Entity) error {
+	var (
+		err   error
+		bytes []byte
+	)
+
+	if bytes, err = dao.GetEntityCodec().EncodeZ(en); nil != err {
 		log.Error("set response", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
 		ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
@@ -185,7 +213,7 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) ([]
 	s.reparseConfig()
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set response event payload")
 	}
@@ -229,7 +257,7 @@ func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) ([]Wat
 		return nil, errors.Wrap(err, "state machine not exists")
 	}
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -283,7 +311,7 @@ func (s *statem) cbDeleteEntity(ctx context.Context, msgCtx message.Context) ([]
 	}
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -342,7 +370,7 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 	}
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -391,20 +419,33 @@ func (s *statem) cbPatchEntityProps(ctx context.Context, msgCtx message.Context)
 	}
 
 	// update state properties.
-	stateIns := State{ID: s.ID, Props: s.Properties}
+	enRes := s.Entity.Copy()
 	watchKeys := make([]mapper.WatchKey, 0)
+	stateIns := State{ID: s.ID, Props: s.Properties}
 	for index := range pds {
+		var val tdtl.Node
 		valBytes, _ := pds[index].Value.([]byte)
 		op := xjson.NewPatchOp(pds[index].Operator)
-		if _, err = stateIns.Patch(op, pds[index].Path, valBytes); nil != err {
-			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
-		} else {
-			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: pds[index].Path})
+		if val, err = stateIns.Patch(op, pds[index].Path, valBytes); nil != err {
+			log.Error("upsert state property", zfield.ReqID(reqID),
+				zfield.ID(s.ID), zfield.PK(pds[index].Path), zap.Error(err))
+		}
+
+		switch op {
+		case xjson.OpCopy:
+			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
+				enRes.Properties[pds[index].Path] = val
+			}
+		default:
+			if nil == err {
+				watchKeys = append(watchKeys, mapper.WatchKey{
+					EntityID: s.ID, PropertyKey: pds[index].Path})
+			}
 		}
 	}
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayloadZ(&ev, reqID, &enRes); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -440,8 +481,33 @@ func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) (
 		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "state machine not exists")
 	}
+
+	// decode request.
+	var apiRequest ItemsData
+	if err = json.Unmarshal(msgCtx.Message(), &apiRequest); nil != err {
+		log.Error("get entity properties, unmarshal request",
+			zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "unmarshal request")
+	}
+
+	var val tdtl.Node
+	enRes := s.Entity.Basic()
+	stateIns := State{ID: s.ID, Props: s.Properties}
+	for _, path := range apiRequest.PropertyKeys {
+		if val, err = stateIns.Get(path); nil != err {
+			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
+				log.Error("get entity properties",
+					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "get entity properties")
+			}
+			err = nil
+			continue
+		}
+		enRes.Properties[path] = val
+	}
+
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayloadZ(&ev, reqID, &enRes); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -509,7 +575,7 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	s.reparseConfig()
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "set event payload")
 	}
@@ -583,7 +649,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	s.reparseConfig()
 
 	// set response.
-	if err = s.setEventPayload(&ev, reqID); nil != err {
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
 		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "patch replace")
 	}
@@ -595,7 +661,71 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 }
 
 func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
-	panic("implement me")
+	var err error
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
+	// decode request.
+	var apiRequest ItemsData
+	if err = json.Unmarshal(msgCtx.Message(), &apiRequest); nil != err {
+		log.Error("get entity configs, unmarshal request",
+			zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "unmarshal request")
+	}
+
+	var val tdtl.Node
+	var enRes = s.Entity.Basic()
+	var destNodel tdtl.Node = tdtl.JSONNode(`{}`)
+	for _, path := range apiRequest.PropertyKeys {
+		if val, err = xjson.Patch(tdtl.JSONNode(s.ConfigBytes), nil, path, xjson.OpCopy); nil != err {
+			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
+				log.Error("get entity configs",
+					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "get entity configs")
+			}
+			continue
+		}
+
+		if destNodel, err = xjson.Patch(destNodel, val, path, xjson.OpReplace); nil != err {
+			log.Error("get entity configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "get entity configs")
+		}
+	}
+
+	err = nil
+	// set entity configs.
+	enRes.ConfigBytes = []byte(val.String())
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID, &enRes); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "set event payload")
+	}
+
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	return []WatchKey{}, nil
 }
 
 func (s *statem) reparseConfig() {

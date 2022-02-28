@@ -343,13 +343,14 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
-	if pids := strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
+	var pids []string
+	if pids = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
 		log.Error("patch entity properties, empty property ids.", zfield.Eid(in.Id))
 		return out, xerrors.ErrInvalidRequest
 	}
 
 	// get entity from entity manager.
-	if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
+	if entity, err = s.apiManager.GetEntityProps(ctx, entity, pids); nil != err {
 		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity properties")
 	}
@@ -358,13 +359,41 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	return out, errors.Wrap(err, "get entity properties")
 }
 
-func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEntityPropsRequest) (*pb.EntityResponse, error) {
+func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
 		log.Warn("service not ready", zfield.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	panic("implement me")
+	var entity = new(Entity)
+	entity.ID = in.Id
+	entity.Type = in.Type
+	entity.Owner = in.Owner
+	entity.Source = in.Source
+	parseHeaderFrom(ctx, entity)
+
+	var pids []string
+	if pids = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
+		log.Error("patch entity properties, empty property ids.", zfield.Eid(in.Id))
+		return out, xerrors.ErrInvalidRequest
+	}
+
+	pds := make([]state.PatchData, 0)
+	for index := range pids {
+		pds = append(pds, state.PatchData{
+			Path:     pids[index],
+			Operator: xjson.OpRemove.String(),
+		})
+	}
+
+	// get entity from entity manager.
+	if entity, err = s.apiManager.PatchEntityProps(ctx, entity, pds); nil != err {
+		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
+		return out, errors.Wrap(err, "get entity properties")
+	}
+
+	out = s.entity2EntityResponse(entity)
+	return out, errors.Wrap(err, "get entity properties")
 }
 
 // SetConfigs set entity configs.
@@ -676,11 +705,14 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	}
 
 	var err error
+	var bytes []byte
 	out = &pb.EntityResponse{}
-
 	properties := make(map[string]interface{})
-	bytes, _ := xjson.EncodeJSON(entity.Properties)
-	json.Unmarshal(bytes, &properties)
+	if bytes, err = xjson.EncodeJSONZ(entity.Properties); nil != err {
+		log.Error("marshal entity properties", zap.Error(err), zfield.Eid(entity.ID))
+	} else if err = json.Unmarshal(bytes, &properties); nil != err {
+		log.Error("unmarshal entity properties", zap.Error(err), zfield.Eid(entity.ID))
+	}
 
 	configs := make(map[string]interface{})
 	if err = json.Unmarshal(entity.ConfigFile, &configs); nil != err {

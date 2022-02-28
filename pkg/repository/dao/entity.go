@@ -52,14 +52,15 @@ func (e *Entity) Copy() Entity {
 
 func (e *Entity) Basic() Entity {
 	en := Entity{
-		ID:         e.ID,
-		Type:       e.Type,
-		Owner:      e.Owner,
-		Source:     e.Source,
-		Version:    e.Version,
-		LastTime:   e.LastTime,
-		TemplateID: e.TemplateID,
-		Properties: make(map[string]tdtl.Node),
+		ID:          e.ID,
+		Type:        e.Type,
+		Owner:       e.Owner,
+		Source:      e.Source,
+		Version:     e.Version,
+		LastTime:    e.LastTime,
+		TemplateID:  e.TemplateID,
+		ConfigBytes: []byte(`{}`),
+		Properties:  make(map[string]tdtl.Node),
 	}
 
 	return en

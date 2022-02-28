@@ -17,6 +17,9 @@ limitations under the License.
 package json
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
@@ -29,6 +32,16 @@ func EncodeJSON(kvalues map[string]tdtl.Node) ([]byte, error) {
 		collect.Set(key, []byte(val.String()))
 	}
 	return collect.GetRaw(), errors.Wrap(collect.GetError(), "Encode Json")
+}
+
+func EncodeJSONZ(kvalues map[string]tdtl.Node) ([]byte, error) {
+	msgArr := []string{}
+	for key, val := range kvalues {
+		msgArr = append(msgArr,
+			fmt.Sprintf("\"%s\":%s", key, val.String()))
+	}
+
+	return []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ","))), nil
 }
 
 func NewNode(dataType jsonparser.ValueType, value []byte) tdtl.Node {

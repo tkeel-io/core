@@ -32,3 +32,11 @@ func (c patchDataCodec) Decode(bytes []byte) ([]PatchData, error) {
 	err := msgpack.Unmarshal(bytes, &pds)
 	return pds, errors.Wrap(err, "decode patch data")
 }
+
+type ItemsData struct {
+	ID           string   `json:"id"`
+	Type         string   `json:"type"`
+	Owner        string   `json:"owner"`
+	Source       string   `json:"source"`
+	PropertyKeys []string `json:"property_keys"`
+}

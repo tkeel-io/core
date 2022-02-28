@@ -80,7 +80,7 @@ func (po PatchOp) String() string {
 
 func IsReversedOp(op string) bool {
 	switch op {
-	case "add", "remove", "replace":
+	case "add", "remove", "replace", "copy":
 		return false
 	default:
 		return true
@@ -107,6 +107,9 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch remove")
 	case OpCopy:
 		bytes, _, err = collectjs.Get(rawData, path)
+		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+			return tdtl.NULL_RESULT, xerrors.ErrPropertyNotFound
+		}
 		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch copy")
 	case OpAdd:
 	case OpReplace:
