@@ -89,7 +89,7 @@ service Entity {
 
 	rpc UpdateEntityProps (UpdateEntityPropsRequest) returns (EntityResponse) {
 		option (google.api.http) = {
-			put : "/entities/{id}/properties"
+			put : "/entities/{id}"
 			body : "properties"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {

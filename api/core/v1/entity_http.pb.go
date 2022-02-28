@@ -786,7 +786,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.GetEntity))
 	ws.Route(ws.DELETE("/entities/{id}").
 		To(handler.DeleteEntity))
-	ws.Route(ws.PUT("/entities/{id}/properties").
+	ws.Route(ws.PUT("/entities/{id}").
 		To(handler.UpdateEntityProps))
 	ws.Route(ws.PATCH("/entities/{id}").
 		To(handler.PatchEntityProps))

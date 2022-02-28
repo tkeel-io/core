@@ -22,7 +22,6 @@ type daprPubsub struct {
 	id         string
 	topicName  string
 	pubsubName string
-	daprClient daprSDK.Client
 }
 
 func (d *daprPubsub) ID() string {
@@ -43,7 +42,7 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 	log.Debug("pubsub.dapr send message",
 		zfield.ID(d.id), zfield.Event(event))
 
-	err = d.daprClient.PublishEvent(
+	err = pool.Select().Conn().PublishEvent(
 		ctx, d.pubsubName, d.topicName, bytes,
 		daprSDK.PublishEventWithMetadata(metadata),
 		daprSDK.PublishEventWithContentType(cloudevents.ApplicationJSON))
@@ -67,6 +66,7 @@ func (d *daprPubsub) Close() error {
 }
 
 func init() {
+	pool = newPool(20)
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.dapr> successful")
 	pubsub.Register("dapr", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
 		var daprMeta daprMetadata
@@ -76,13 +76,10 @@ func init() {
 
 		log.Info("create pubsub.dapr instance", zfield.ID(id))
 
-		// TODO: 这里并非每一个 daprPubsub 实例都需要持有一个 client, 可以整个 core 节点持有一个连接池.
-		daprClient, err := daprSDK.NewClient()
 		return &daprPubsub{
 			id:         id,
 			topicName:  daprMeta.TopicName,
 			pubsubName: daprMeta.PubsubName,
-			daprClient: daprClient,
-		}, errors.Wrap(err, "new dapr pubsub")
+		}, nil
 	})
 }
