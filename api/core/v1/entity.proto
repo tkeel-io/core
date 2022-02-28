@@ -107,7 +107,7 @@ service Entity {
 
   rpc PatchEntityProps (PatchEntityPropsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-        patch: "/entities/{id}/properties"
+        patch: "/entities/{id}"
         body: "properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
@@ -125,7 +125,7 @@ service Entity {
 
   rpc PatchEntityPropsZ (PatchEntityPropsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-        put: "/entities/{id}/properties/patch"
+        put: "/entities/{id}/patch"
         body: "properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
@@ -320,7 +320,7 @@ service Entity {
 
 	rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
 		option (google.api.http) = {
-			delete : "/entities/{entity_id}/mappers/{id}"
+			delete : "/entities/{entity_id}/mappers"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "remove mappers from entity";

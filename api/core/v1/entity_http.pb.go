@@ -784,9 +784,9 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.DeleteEntity))
 	ws.Route(ws.PUT("/entities/{id}/properties").
 		To(handler.UpdateEntityProps))
-	ws.Route(ws.PATCH("/entities/{id}/properties").
+	ws.Route(ws.PATCH("/entities/{id}").
 		To(handler.PatchEntityProps))
-	ws.Route(ws.PUT("/entities/{id}/properties/patch").
+	ws.Route(ws.PUT("/entities/{id}/patch").
 		To(handler.PatchEntityPropsZ))
 	ws.Route(ws.GET("/entities/{id}/properties").
 		To(handler.GetEntityProps))
@@ -808,7 +808,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.GetMapper))
 	ws.Route(ws.GET("/entities/{entity_id}/mappers").
 		To(handler.ListMapper))
-	ws.Route(ws.DELETE("/entities/{entity_id}/mappers/{id}").
+	ws.Route(ws.DELETE("/entities/{entity_id}/mappers").
 		To(handler.RemoveMapper))
 	ws.Route(ws.POST("/entities/search").
 		To(handler.ListEntity))
