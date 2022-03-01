@@ -139,7 +139,7 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$gte":
 			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
 		case "$neq":
-			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
+			boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$eq":
 			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$prefix":
