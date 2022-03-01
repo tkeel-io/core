@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -102,14 +103,20 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.Source = req.Source
 	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = map[string]tdtl.Node{
-		runtime.SMFieldType:                      tdtl.StringNode(entity.Type),
-		runtime.SMFieldOwner:                     tdtl.StringNode(entity.Owner),
-		runtime.SMFieldSource:                    tdtl.StringNode(entity.Source),
-		subscription.SubscriptionFieldMode:       tdtl.StringNode(req.Subscription.Mode),
-		subscription.SubscriptionFieldTopic:      tdtl.StringNode(req.Subscription.Topic),
-		subscription.SubscriptionFieldFilter:     tdtl.StringNode(req.Subscription.Filter),
-		subscription.SubscriptionFieldPubsubName: tdtl.StringNode(req.Subscription.PubsubName),
+	properties := map[string]interface{}{
+		runtime.SMFieldType:                      entity.Type,
+		runtime.SMFieldOwner:                     entity.Owner,
+		runtime.SMFieldSource:                    entity.Source,
+		subscription.SubscriptionFieldMode:       strings.ToUpper(req.Subscription.Mode),
+		subscription.SubscriptionFieldTopic:      req.Subscription.Topic,
+		subscription.SubscriptionFieldFilter:     req.Subscription.Filter,
+		subscription.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+	}
+
+	if entity.Properties, err = parseProps(properties); nil != err {
+		log.Error("create subscription, but invalid params",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+		return out, errors.Wrap(err, "create subscription")
 	}
 
 	if err = s.apiManager.CheckSubscription(ctx, entity); nil != err {
@@ -157,11 +164,17 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.Source = req.Source
 	entity.Type = runtime.SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = map[string]tdtl.Node{
-		subscription.SubscriptionFieldFilter:     tdtl.StringNode(req.Subscription.Filter),
-		subscription.SubscriptionFieldTopic:      tdtl.StringNode(req.Subscription.Topic),
-		subscription.SubscriptionFieldMode:       tdtl.StringNode(req.Subscription.Mode),
-		subscription.SubscriptionFieldPubsubName: tdtl.StringNode(req.Subscription.PubsubName),
+	properties := map[string]interface{}{
+		subscription.SubscriptionFieldFilter:     req.Subscription.Filter,
+		subscription.SubscriptionFieldTopic:      req.Subscription.Topic,
+		subscription.SubscriptionFieldMode:       strings.ToUpper(req.Subscription.Mode),
+		subscription.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+	}
+
+	if entity.Properties, err = parseProps(properties); nil != err {
+		log.Error("create subscription, but invalid params",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+		return out, errors.Wrap(err, "create subscription")
 	}
 
 	// set properties.

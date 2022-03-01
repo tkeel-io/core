@@ -19,11 +19,12 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/config"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/dispatch"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -31,6 +32,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -52,53 +54,53 @@ const (
 
 // subscription subscription actor based entity.
 type subscription struct {
+	onceFlag         sync.Once
 	pubsubClient     pubsub.Pubsub
 	stateMachine     state.Machiner
 	republishHandler state.MessageHandler
 }
 
 // NewSubscription returns a subscription.
-func NewSubscription(ctx context.Context, in *dao.Entity) (stateM state.Machiner, err error) {
+func NewSubscription(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, rs types.ResourceManager) (stateM state.Machiner, err error) {
 	subsc := subscription{}
 	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
 
-	if stateM, err = state.NewState(ctx, in, nil, nil, subsc.HandleMessage); nil != err {
+	if stateM, err = state.NewState(ctx, in, dispatcher, rs, subsc.HandleMessage); nil != err {
 		return nil, errFunc(err)
 	}
 
 	// decode in.Properties into subsc.
 	subsc.stateMachine = stateM
-	if err = subsc.checkSubscription(); nil != err {
-		return nil, errFunc(err)
-	}
 
-	// bind republish handler.
-	switch subsc.Mode() {
-	case SubscriptionModeRealtime:
-		subsc.republishHandler = subsc.invokeRealtime
-	case SubscriptionModePeriod:
-		subsc.republishHandler = subsc.invokePeriod
-	case SubscriptionModeChanged:
-		subsc.republishHandler = subsc.invokeChanged
-	default:
-		// invalid subscription mode.
-		log.Error("undefine subscription mode, mode.",
-			zap.String("mode", subsc.Mode()), zap.Any("entity", in))
-		return nil, errFunc(xerrors.ErrInvalidSubscriptionMode)
-	}
+	subsc.onceFlag = sync.Once{}
 
+	return &subsc, nil
+}
+
+func (s *subscription) initPushClient() {
 	// create pubsub client.
-	subsc.pubsubClient = pubsub.NewPubsub(
+	s.pubsubClient = pubsub.NewPubsub(
 		util.UUID(),
 		resource.Metadata{
 			Name: "dapr",
 			Properties: map[string]interface{}{
-				"pubsub_name": subsc.PubsubName(),
-				"topic_name":  subsc.Topic(),
+				"pubsub_name": s.PubsubName(),
+				"topic_name":  s.Topic(),
 			},
 		})
 
-	return &subsc, nil
+	// bind republish handler.
+	switch s.Mode() {
+	case SubscriptionModeRealtime:
+		s.republishHandler = s.invokeRealtime
+	case SubscriptionModePeriod:
+		s.republishHandler = s.invokePeriod
+	case SubscriptionModeChanged:
+		s.republishHandler = s.invokeChanged
+	default:
+		// invalid subscription mode.
+		log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode()))
+	}
 }
 
 func (s *subscription) Flush(ctx context.Context) error {
@@ -125,6 +127,9 @@ func (s *subscription) Context() *state.StateContext {
 
 // Invoke message from pubsub.
 func (s *subscription) Invoke(ctx context.Context, msgCtx message.Context) state.Result {
+	s.onceFlag.Do(func() {
+		s.initPushClient()
+	})
 	return s.stateMachine.Invoke(ctx, msgCtx)
 }
 
@@ -229,7 +234,7 @@ func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
 	return nil
 }
 
-func (s *subscription) checkSubscription() error {
+func (s *subscription) checkSubscription() error { //nolint
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return errors.Wrap(sb.Validate(), "check subscription required fileds")

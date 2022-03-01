@@ -115,7 +115,7 @@ func (c *Container) MakeMachine(en *dao.Entity) (machine state.Machiner, err err
 	// make state machine.
 	switch en.Type {
 	case SMTypeSubscription:
-		if machine, err = subscription.NewSubscription(c.ctx, en); nil != err {
+		if machine, err = subscription.NewSubscription(c.ctx, en, c.manager.dispatcher, c.manager.resourceManager); nil != err {
 			log.Error("load subscription", zap.Error(err), zfield.Eid(en.ID), zfield.Type(en.Type))
 		}
 	default:
