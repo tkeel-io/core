@@ -80,7 +80,7 @@ func NewSubscription(ctx context.Context, in *dao.Entity, dispatcher dispatch.Di
 func (s *subscription) initPushClient() {
 	// create pubsub client.
 	s.pubsubClient = pubsub.NewPubsub(
-		util.UUID(),
+		util.UUID(""),
 		resource.Metadata{
 			Name: "dapr",
 			Properties: map[string]interface{}{
@@ -149,7 +149,7 @@ func eventSender(sender string) string {
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey {
 	var (
-		eventID = util.UUID()
+		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
 		ev      = cloudevents.NewEvent()
 	)
@@ -179,7 +179,7 @@ func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey 
 // invokePeriod.
 func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
 	var (
-		eventID = util.UUID()
+		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
 		ev      = cloudevents.NewEvent()
 	)
@@ -209,7 +209,7 @@ func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
 // invokeChanged.
 func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
 	var (
-		eventID = util.UUID()
+		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
 		ev      = cloudevents.NewEvent()
 	)

@@ -31,7 +31,7 @@ func (n *noopStore) Del(ctx context.Context, key string) error {
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.noop> successful")
 	store.Register("noop", func(properties map[string]interface{}) (store.Store, error) {
-		id := util.UUID()
+		id := util.UUID("snoop")
 		log.Info("create store.noop instance", zfield.ID(id))
 		return &noopStore{id: id}, nil
 	})

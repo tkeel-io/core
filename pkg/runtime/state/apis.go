@@ -93,7 +93,7 @@ func (s *statem) callAPIs(ctx context.Context, msgCtx message.Context) ([]WatchK
 
 func (s *statem) makeEvent() cloudevents.Event {
 	ev := cloudevents.NewEvent()
-	ev.SetID(util.UUID())
+	ev.SetID(util.UUID("ev"))
 	ev.SetSource("core.runtime")
 	ev.SetType(message.MessageTypeAPIRespond.String())
 	ev.SetExtension(message.ExtEntityID, s.ID)

@@ -20,6 +20,10 @@ import (
 )
 
 func (s *statem) getState(stateID string) State {
+	if s.ID == stateID {
+		return State{ID: s.ID, Props: s.Properties}
+	}
+
 	if _, ok := s.cacheProps[stateID]; !ok {
 		s.cacheProps[stateID] = make(map[string]tdtl.Node)
 	}
@@ -41,9 +45,6 @@ func (s *statem) invokeMessage(msgCtx message.Context) []WatchKey {
 // invokePropertyMessage invoke property message.
 func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
-	if _, has := s.cacheProps[stateID]; !has {
-		s.cacheProps[stateID] = make(map[string]tdtl.Node)
-	}
 
 	stateIns := s.getState(stateID)
 	watchKeys := make([]mapper.WatchKey, 0)
@@ -69,9 +70,6 @@ func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 func (s *statem) invokeRepublishMessage(msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
 	msgSender := msgCtx.Get(message.ExtMessageSender)
-	if _, has := s.cacheProps[msgSender]; !has {
-		s.cacheProps[msgSender] = make(map[string]tdtl.Node)
-	}
 
 	stateIns := s.getState(msgSender)
 	watchKeys := make([]mapper.WatchKey, 0)
@@ -162,7 +160,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 	for stateID, msg := range messages {
 		ev := cloudevents.NewEvent()
-		ev.SetID(util.UUID())
+		ev.SetID(util.UUID("ev"))
 		ev.SetType("republish")
 		ev.SetSource("core.runtime")
 		ev.SetExtension(message.ExtEntityID, stateID)
@@ -284,8 +282,11 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 					var res tdtl.Node
 					stateIns := s.getState(item.EntityID)
 					if res, err = stateIns.Get(item.PropertyKey); nil != err {
-						log.Warn("init tentacle, patch copy", zfield.Reason(err.Error()),
-							zfield.Eid(s.ID), zfield.PK(item.String()), zfield.Value(stateIns.Props), zfield.Path(item.String()))
+						log.Warn("init tentacle, patch copy",
+							zap.String("dispose_entity", item.EntityID),
+							zfield.Eid(s.ID), zfield.PK(item.String()),
+							zfield.Reason(err.Error()), zap.Any("cache", s.cacheProps),
+							zfield.Value(stateIns.Props), zfield.Path(item.String()))
 						continue
 					}
 
@@ -303,7 +304,7 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 	// republish messages.
 	for stateID, msg := range messages {
 		ev := cloudevents.NewEvent()
-		ev.SetID(util.UUID())
+		ev.SetID(util.UUID("ev"))
 		ev.SetType("republish")
 		ev.SetSource("core.runtime")
 		ev.SetExtension(message.ExtEntityID, stateID)

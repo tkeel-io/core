@@ -15,7 +15,7 @@ import (
 
 func (s *EntityService) checkMapper(m *dao.Mapper) error {
 	if m.ID == "" {
-		m.ID = util.UUID()
+		m.ID = util.UUID("mapper")
 	}
 
 	if m.TQL == "" {

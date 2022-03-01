@@ -29,6 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
+	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -97,9 +98,10 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	var entity = new(Entity)
 	if req.Id != "" {
-		entity.ID = req.Id
+		req.Id = util.UUID("sub")
 	}
 
+	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	entity.Type = runtime.SMTypeSubscription

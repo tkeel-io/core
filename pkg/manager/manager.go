@@ -41,6 +41,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const evIDPrefix = "ev"
+const reqIDPrefix = "req"
 const eventSender = "Core.APIManager"
 const respondFmt = "http://%s:%d/v1/respond"
 
@@ -84,7 +86,7 @@ func (m *apiManager) OnRespond(ctx context.Context, resp *holder.Response) {
 
 func (m *apiManager) checkID(base *Base) {
 	if base.ID == "" {
-		base.ID = util.UUID()
+		base.ID = util.UUID("en")
 	}
 }
 
@@ -102,7 +104,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	)
 
 	m.checkID(en)
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.CreateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -175,7 +177,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.UpdateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
@@ -234,7 +236,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.GetProperties", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
@@ -291,7 +293,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -347,7 +349,7 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.UpdateEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -407,7 +409,7 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -465,7 +467,7 @@ func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys 
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.GetEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
@@ -523,7 +525,7 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 		ev    cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.UpdateEntityConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -585,7 +587,7 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
@@ -643,7 +645,7 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs
 		ev  cloudevents.Event
 	)
 
-	reqID := util.UUID()
+	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.GetEntityConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
@@ -783,7 +785,7 @@ func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {
 	var bytes []byte
 	ev := cloudevents.NewEvent()
 
-	ev.SetID(util.UUID())
+	ev.SetID(util.UUID(evIDPrefix))
 	ev.SetType(eventType)
 	ev.SetSource(en.Source)
 	ev.SetExtension(message.ExtEntityID, en.ID)
@@ -815,7 +817,7 @@ func (m *apiManager) makeItemEvent(en *dao.Entity, propertyKeys []string) (cloud
 	var bytes []byte
 	ev := cloudevents.NewEvent()
 
-	ev.SetID(util.UUID())
+	ev.SetID(util.UUID(evIDPrefix))
 	ev.SetType(eventType)
 	ev.SetSource(en.Source)
 	ev.SetExtension(message.ExtEntityID, en.ID)
@@ -856,7 +858,7 @@ func (m *apiManager) makePatchEvent(en *dao.Entity, pds []state.PatchData) (clou
 	var bytes []byte
 	ev := cloudevents.NewEvent()
 
-	ev.SetID(util.UUID())
+	ev.SetID(util.UUID(evIDPrefix))
 	ev.SetType(eventType)
 	ev.SetSource(en.Source)
 	ev.SetExtension(message.ExtEntityID, en.ID)

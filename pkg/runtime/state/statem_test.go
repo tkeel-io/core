@@ -266,3 +266,27 @@ func BenchmarkStateMap(b *testing.B) {
 		stateIns.Patch(xjson.OpCopy, "attributes.metrics.temp", nil)
 	}
 }
+
+type A struct {
+	Props map[string]string
+}
+
+type B struct {
+	A
+	caches map[string]map[string]string
+}
+
+func NewB() *B {
+	b := &B{
+		A:      A{Props: make(map[string]string)},
+		caches: make(map[string]map[string]string),
+	}
+	b.caches["A"] = b.Props
+	return b
+}
+
+func TestMapReference(t *testing.T) {
+	b := NewB()
+	b.Props["name"] = "tom"
+	t.Log(b.caches)
+}

@@ -34,7 +34,6 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
-	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -127,10 +126,6 @@ type statem struct {
 
 // NewState create an statem object.
 func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, resourceManager types.ResourceManager, msgHandler MessageHandler) (Machiner, error) {
-	if in.ID == "" {
-		in.ID = util.UUID()
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := &statem{
@@ -150,9 +145,6 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 	if nil == state.Entity.Properties {
 		state.Properties = make(map[string]tdtl.Node)
 	}
-
-	// set properties into cacheProps.
-	state.cacheProps[in.ID] = state.Properties
 
 	state.msgHandler = state.invokeMessage
 

@@ -13,7 +13,7 @@ type Dispatcher interface {
 }
 
 var loopbackQueue = &dao.Queue{
-	ID:           util.UUID(),
+	ID:           util.UUID("queue"),
 	Name:         "loopback-core-route-and-republish",
 	Type:         "loopback",
 	Consumers:    []string{},

@@ -61,7 +61,7 @@ func init() {
 			return nil, errors.Wrap(err, "decode store.dapr configuration")
 		}
 
-		id := util.UUID()
+		id := util.UUID("sdapr")
 		log.Info("create store.dapr instance", zfield.ID(id))
 
 		daprClient, err := daprSDK.NewClient()

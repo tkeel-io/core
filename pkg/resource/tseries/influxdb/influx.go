@@ -76,7 +76,7 @@ func init() {
 		client := influxdb2.NewClient(influxMeta.URL, influxMeta.Token)
 		writeAPI := client.WriteAPIBlocking(influxMeta.Org, influxMeta.Bucket)
 
-		id := util.UUID()
+		id := util.UUID("tsinflux")
 		log.Info("create pubsub.noop instance", zfield.ID(id))
 
 		return &Influx{
