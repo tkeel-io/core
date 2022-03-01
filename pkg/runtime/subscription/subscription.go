@@ -99,7 +99,8 @@ func (s *subscription) initPushClient() {
 		s.republishHandler = s.invokeChanged
 	default:
 		// invalid subscription mode.
-		log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode()))
+		log.Error("undefine subscription mode, mode.",
+			zfield.Eid(s.GetID()), zap.String("mode", s.Mode()))
 	}
 }
 
@@ -127,13 +128,14 @@ func (s *subscription) Context() *state.StateContext {
 
 // Invoke message from pubsub.
 func (s *subscription) Invoke(ctx context.Context, msgCtx message.Context) state.Result {
-	s.onceFlag.Do(func() {
-		s.initPushClient()
-	})
 	return s.stateMachine.Invoke(ctx, msgCtx)
 }
 
 func (s *subscription) HandleMessage(msgCtx message.Context) []mapper.WatchKey {
+	s.onceFlag.Do(func() {
+		s.initPushClient()
+	})
+
 	log.Debug("on subscribe", zfield.ID(s.GetID()), zfield.Message(msgCtx))
 	return s.republishHandler(msgCtx)
 }

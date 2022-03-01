@@ -191,9 +191,9 @@ func (m *Manager) reloadMachineEnv(stateIDs []string) {
 			// update state machine context.
 			stateEnv := m.actorEnv.GetStateEnv(stateID)
 			machine.Context().LoadEnvironments(stateEnv)
-		} else if machine, err = container.Load(context.Background(), stateID); nil != err {
-			log.Warn("load state machine, runtime not found",
-				zap.Error(err), zfield.Queue(queue), zfield.Eid(machine.GetID()))
+		} else if _, err = container.Load(context.Background(), stateID); nil != err {
+			log.Warn("load state machine from state store",
+				zfield.Reason(err.Error()), zfield.Queue(queue), zfield.Eid(stateID))
 			continue
 		}
 

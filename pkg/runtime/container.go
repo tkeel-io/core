@@ -84,7 +84,7 @@ func (c *Container) Load(ctx context.Context, stateID string) (machine state.Mac
 	repo = c.manager.Resource().Repo()
 	if en, err = repo.GetEntity(ctx, &dao.Entity{ID: stateID}); nil != err {
 		log.Warn("load machine from store",
-			zap.Error(err), zfield.ID(stateID), zfield.Channel(c.id))
+			zfield.Reason(err.Error()), zfield.ID(stateID), zfield.Channel(c.id))
 		return nil, errors.Wrap(err, "load entity from store")
 	}
 

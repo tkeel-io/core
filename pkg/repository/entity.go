@@ -13,7 +13,7 @@ func (r *repo) PutEntity(ctx context.Context, en *dao.Entity) error {
 
 func (r *repo) GetEntity(ctx context.Context, en *dao.Entity) (*dao.Entity, error) {
 	en, err := r.dao.GetEntity(ctx, en.ID)
-	return en, errors.Wrap(err, "put entity repository")
+	return en, errors.Wrap(err, "get entity repository")
 }
 
 func (r *repo) DelEntity(ctx context.Context, en *dao.Entity) error {

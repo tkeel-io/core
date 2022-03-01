@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -28,6 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/subscription"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
@@ -81,10 +83,9 @@ func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *
 	out.Owner = entity.Owner
 	out.Source = entity.Source
 	out.Subscription = &pb.SubscriptionObject{}
-	out.Subscription.Filter = interface2string(entity.Properties[subscription.SubscriptionFieldFilter])
-	out.Subscription.Topic = interface2string(entity.Properties[subscription.SubscriptionFieldTopic])
-	out.Subscription.Mode = interface2string(entity.Properties[subscription.SubscriptionFieldMode])
-	out.Subscription.PubsubName = interface2string(entity.Properties[subscription.SubscriptionFieldPubsubName])
+
+	bytes, _ := xjson.EncodeJSON(entity.Properties)
+	json.Unmarshal(bytes, &out.Subscription)
 	return out
 }
 

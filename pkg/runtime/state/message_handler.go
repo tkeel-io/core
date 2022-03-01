@@ -232,7 +232,8 @@ func (s *statem) activeMapper(actives []string) {
 				var val tdtl.Node
 				stateIns := s.getState(item.EntityID)
 				if val, err = stateIns.Patch(xjson.OpCopy, item.PropertyKey, nil); nil != err {
-					log.Error("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err))
+					log.Warn("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err), zfield.Mid(mapperID),
+						zfield.Eid(item.EntityID), zfield.PK(item.PropertyKey), zap.String("dispose_entity", s.ID), zfield.Value(stateIns.Props))
 					continue
 				} else if nil != val {
 					input[item.String()] = unwrap(val)
@@ -287,8 +288,8 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 					var res tdtl.Node
 					stateIns := s.getState(item.EntityID)
 					if res, err = stateIns.Get(item.PropertyKey); nil != err {
-						log.Error("init tentacle, patch copy",
-							zap.Error(err), zfield.Eid(s.ID), zfield.PK(item.String()))
+						log.Warn("init tentacle, patch copy",
+							zfield.Reason(err.Error()), zfield.Eid(s.ID), zfield.PK(item.String()))
 						continue
 					}
 
