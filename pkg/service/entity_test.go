@@ -147,7 +147,7 @@ func Test_AppendMapper(t *testing.T) {
 		Mapper: &pb.Mapper{
 			Id:          "mapper123",
 			Name:        "mapper123",
-			TqlText:     "insert into device123 select device234.temp as temp",
+			Tql:         "insert into device123 select device234.temp as temp",
 			Description: "test mapper.",
 		},
 	})

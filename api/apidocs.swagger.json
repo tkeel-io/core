@@ -1711,7 +1711,7 @@
           "type": "string",
           "description": "mapper name"
         },
-        "tql_text": {
+        "tql": {
           "type": "string",
           "description": "mapper tql text"
         },

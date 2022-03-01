@@ -40,7 +40,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 	mp := dao.Mapper{
 		ID:          req.Mapper.Id,
-		TQL:         req.Mapper.TqlText,
+		TQL:         req.Mapper.Tql,
 		Name:        req.Mapper.Name,
 		Owner:       entity.Owner,
 		EntityID:    req.EntityId,
@@ -67,7 +67,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		Mapper: &pb.Mapper{
 			Id:          mp.ID,
 			Name:        mp.Name,
-			TqlText:     mp.TQL,
+			Tql:     mp.TQL,
 			Description: mp.Description,
 		},
 	}, nil
@@ -138,7 +138,7 @@ func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) 
 		Mapper: &pb.Mapper{
 			Id:          mp.ID,
 			Name:        mp.Name,
-			TqlText:     mp.TQL,
+			Tql:     mp.TQL,
 			Description: mp.Description,
 		},
 	}, nil
@@ -168,7 +168,7 @@ func (s *EntityService) ListMapper(ctx context.Context, in *pb.ListMapperRequest
 		mpDtos[index] = &pb.Mapper{
 			Id:          mps[index].ID,
 			Name:        mps[index].Name,
-			TqlText:     mps[index].TQL,
+			Tql:     mps[index].TQL,
 			Description: mps[index].Description,
 		}
 	}

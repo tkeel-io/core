@@ -480,7 +480,7 @@ message RemoveEntityConfigsRequest {
 message Mapper {
   string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper id"}];
   string name = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper name"}];
-  string tql_text = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper tql text"}];
+  string tql = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper tql text"}];
   string description = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "mapper description"}];
 }
 
