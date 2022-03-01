@@ -686,7 +686,7 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 			&pb.Mapper{
 				Id:          mDesc.ID,
 				Name:        mDesc.Name,
-				Tql:     mDesc.TQL,
+				Tql:         mDesc.TQL,
 				Description: mDesc.Description,
 			})
 	}
@@ -731,7 +731,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 			&pb.Mapper{
 				Id:          mDesc.ID,
 				Name:        mDesc.Name,
-				Tql:     mDesc.TQL,
+				Tql:         mDesc.TQL,
 				Description: mDesc.Description,
 			})
 	}
