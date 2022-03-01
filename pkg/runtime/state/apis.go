@@ -628,29 +628,31 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		return nil, errors.Wrap(err, "set event payload")
 	}
 
+	// TODO: 复制.
+	// copyPds := make([]PatchData, 0)
+	// for _, pd := range pds {
+	// 	copyPds = append(copyPds, pd)
+	// }
+
+	// copy config bytes.
+	bytes = make([]byte, len(s.ConfigBytes))
+	copy(bytes, s.ConfigBytes)
+	var destNode tdtl.Node = tdtl.JSONNode(bytes)
+	// patch configs.
 	for _, pd := range pds {
-		switch xjson.NewPatchOp(pd.Operator) {
+		bytesSrc, _ := pd.Value.([]byte)
+		op := xjson.NewPatchOp(pd.Operator)
+		switch op {
 		case xjson.OpAdd:
-			if bytes, err = collectjs.Append(s.ConfigBytes, pd.Path, pd.Value.([]byte)); nil != err {
-				log.Error("call core.APIs.PatchConfigs patch add",
-					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-				continue
+		default:
+			if destNode, err = xjson.Patch(destNode, tdtl.JSONNode(bytesSrc), pd.Path, op); nil != err {
+				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "patch entity configs")
 			}
-			s.ConfigBytes = bytes
-		case xjson.OpRemove:
-			s.ConfigBytes = collectjs.Del(s.ConfigBytes, pd.Path)
-		case xjson.OpReplace:
-			if valBytes, ok := pd.Value.([]byte); ok {
-				if bytes, err = collectjs.Set(s.ConfigBytes, pd.Path, valBytes); nil != err {
-					log.Error("call core.APIs.PatchConfigs patch replace", zap.Error(err))
-					return nil, errors.Wrap(err, "patch replace")
-				}
-				s.ConfigBytes = bytes
-			}
-			log.Error("assert patch data value", zfield.Eid(s.ID), zfield.ReqID(reqID))
 		}
 	}
 
+	s.ConfigBytes = []byte(destNode.String())
 	s.reparseConfig()
 
 	// set response.
