@@ -148,8 +148,11 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 								messages[targetID] = make(map[string]tdtl.Node)
 							}
 
+							stateIns := s.getState(active.EntityID)
 							segments := strings.Split(active.PropertyKey, ".")
-							messages[targetID][segments[0]] = s.getState(active.EntityID).Props[segments[0]]
+							if prop, has := stateIns.Props[segments[0]]; has {
+								messages[targetID][segments[0]] = prop
+							}
 						}
 					}
 				}
