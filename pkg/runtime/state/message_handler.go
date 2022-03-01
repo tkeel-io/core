@@ -119,13 +119,11 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 						messages[targetID] = make(map[string]tdtl.Node)
 					}
 
-					// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
-					// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-
-					if prop, err := stateIns.Patch(xjson.OpCopy, active.PropertyKey, nil); nil == err {
+					if prop, err := stateIns.Patch(xjson.OpCopy, active.PropertyKey, nil); nil != err {
+						log.Warn("patch copy property", zfield.Eid(s.ID),
+							zfield.Target(targetID), zfield.PK(active.String()), zfield.Reason(err.Error()))
+					} else if nil != prop {
 						messages[targetID][active.PropertyKey] = prop
-					} else {
-						log.Warn("patch copy property", zfield.Eid(s.ID), zfield.PK(active.PropertyKey))
 					}
 				} else {
 					// undefined tentacle typs.
@@ -151,13 +149,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 							}
 
 							segments := strings.Split(active.PropertyKey, ".")
-							// 在组装成Msg后，SendMsg的时候会对消息进行序列化，所以这里不需要Deep Copy.
-							// 在这里我们需要解析PropertyKey, PropertyKey中可能存在嵌套层次.
-							// TODO:
 							messages[targetID][segments[0]] = s.getState(active.EntityID).Props[segments[0]]
-						} else {
-							// undefined tentacle typs.
-							log.Warn("undefined tentacle type", zap.Any("tentacle", tentacle))
 						}
 					}
 				}
@@ -232,8 +224,8 @@ func (s *statem) activeMapper(actives []string) {
 				var val tdtl.Node
 				stateIns := s.getState(item.EntityID)
 				if val, err = stateIns.Patch(xjson.OpCopy, item.PropertyKey, nil); nil != err {
-					log.Warn("patch copy", zfield.ReqID(item.PropertyKey), zap.Error(err), zfield.Mid(mapperID),
-						zfield.Eid(item.EntityID), zfield.PK(item.PropertyKey), zap.String("dispose_entity", s.ID), zfield.Value(stateIns.Props))
+					log.Warn("patch copy", zfield.Reason(err.Error()), zfield.Mid(mapperID), zap.String("dispose_entity", s.ID),
+						zfield.Eid(item.EntityID), zfield.PK(item.PropertyKey), zfield.Value(stateIns.Props))
 					continue
 				} else if nil != val {
 					input[item.String()] = unwrap(val)
@@ -280,6 +272,7 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 	for _, tentacle := range s.sCtx.tentacles {
 		// inie mapper tentacle.
 		if tentacle.Version() == 0 {
+			targetID := tentacle.TargetID()
 			switch tentacle.Type() {
 			case mapper.TentacleTypeMapper:
 				actives = append(actives, tentacle.TargetID())
@@ -288,17 +281,17 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 					var res tdtl.Node
 					stateIns := s.getState(item.EntityID)
 					if res, err = stateIns.Get(item.PropertyKey); nil != err {
-						log.Warn("init tentacle, patch copy",
-							zfield.Reason(err.Error()), zfield.Eid(s.ID), zfield.PK(item.String()))
+						log.Warn("init tentacle, patch copy", zfield.Reason(err.Error()),
+							zfield.Eid(s.ID), zfield.PK(item.String()), zfield.Value(stateIns.Props), zfield.Path(item.String()))
 						continue
 					}
 
-					if _, ok := messages[item.EntityID]; !ok {
-						messages[item.EntityID] = make(map[string]tdtl.Node)
+					if _, ok := messages[targetID]; !ok {
+						messages[targetID] = make(map[string]tdtl.Node)
 					}
 
 					// set message.
-					messages[item.EntityID][item.PropertyKey] = res
+					messages[targetID][item.PropertyKey] = res
 				}
 			}
 		}
