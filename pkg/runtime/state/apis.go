@@ -498,23 +498,31 @@ func (s *statem) cbGetEntityProps(ctx context.Context, msgCtx message.Context) (
 	var val tdtl.Node
 	enRes := s.Entity.Basic()
 	stateIns := State{ID: s.ID, Props: s.Properties}
-	for _, path := range apiRequest.PropertyKeys {
-		if val, err = stateIns.Get(path); nil != err {
-			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
-				log.Error("get entity properties",
-					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-				return nil, errors.Wrap(err, "get entity properties")
+	if len(apiRequest.PropertyKeys) > 0 {
+		for _, path := range apiRequest.PropertyKeys {
+			if val, err = stateIns.Get(path); nil != err {
+				if !errors.Is(err, xerrors.ErrPropertyNotFound) {
+					log.Error("get entity properties",
+						zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+					return nil, errors.Wrap(err, "get entity properties")
+				}
+				err = nil
+				continue
 			}
-			err = nil
-			continue
+			enRes.Properties[path] = val
 		}
-		enRes.Properties[path] = val
-	}
-
-	// set response.
-	if err = s.setEventPayloadZ(&ev, reqID, &enRes); nil != err {
-		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "set event payload")
+		// set response.
+		if err = s.setEventPayloadZ(&ev, reqID, &enRes); nil != err {
+			log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "set event payload")
+		}
+	} else {
+		// set response.
+		enRes.Properties = s.Properties
+		if err = s.setEventPayload(&ev, reqID, &enRes); nil != err {
+			log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "set event payload")
+		}
 	}
 
 	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
@@ -628,7 +636,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		return nil, errors.Wrap(err, "set event payload")
 	}
 
-	// TODO: 复制.
+	// TODO: patch copy.
 	// copyPds := make([]PatchData, 0)
 	// for _, pd := range pds {
 	// 	copyPds = append(copyPds, pd)

@@ -344,9 +344,8 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	parseHeaderFrom(ctx, entity)
 
 	var pids []string
-	if pids = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
-		log.Error("patch entity properties, empty property ids.", zfield.Eid(in.Id))
-		return out, xerrors.ErrInvalidRequest
+	if pidsStr := strings.TrimSpace(in.PropertyKeys); len(pidsStr) > 0 {
+		pids = strings.Split(pidsStr, ",")
 	}
 
 	// get entity from entity manager.
