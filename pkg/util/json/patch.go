@@ -104,13 +104,13 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 	switch op {
 	case OpRemove:
 		bytes = collectjs.Del(rawData, path)
-		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch remove")
+		return tdtl.New(bytes), errors.Wrap(err, "patch remove")
 	case OpCopy:
 		bytes, _, err = collectjs.Get(rawData, path)
 		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
 			return tdtl.NULL_RESULT, xerrors.ErrPropertyNotFound
 		}
-		return tdtl.JSONNode(bytes), errors.Wrap(err, "patch copy")
+		return tdtl.New(bytes), errors.Wrap(err, "patch copy")
 	case OpAdd:
 	case OpReplace:
 	default:
@@ -121,7 +121,7 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 	if nil != srcNode {
 		setVal := []byte(srcNode.String())
 		resBytes, err := setValue(rawData, setVal, path, op)
-		return tdtl.JSONNode(resBytes), errors.Wrap(err, "patch json")
+		return tdtl.New(resBytes), errors.Wrap(err, "patch json")
 	}
 	return destNode, xerrors.ErrEmptyParam
 }

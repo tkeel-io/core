@@ -51,9 +51,9 @@ func NewNode(dataType jsonparser.ValueType, value []byte) tdtl.Node {
 	case jsonparser.Number:
 		return tdtl.StringNode(value).To(tdtl.Number)
 	case jsonparser.Object:
-		return tdtl.JSONNode(value)
+		return tdtl.New(value)
 	case jsonparser.Array:
-		return tdtl.JSONNode(value)
+		return tdtl.New(value)
 	case jsonparser.Boolean:
 		return tdtl.StringNode(value).To(tdtl.Bool)
 	case jsonparser.Null:

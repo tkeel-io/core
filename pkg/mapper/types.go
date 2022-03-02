@@ -39,7 +39,7 @@ type Mapper interface {
 	// TargetEntity returns target entity.
 	TargetEntity() string
 	// SourceEntities returns source entities.
-	SourceEntities() []string
+	SourceEntities() map[string][]string
 	// Tentacles returns tentacles.
 	Tentacles() []Tentacler
 	// Copy duplicate a mapper.

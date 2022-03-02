@@ -1152,8 +1152,8 @@ github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90 h1:uJihdKjukQuU
 github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90/go.mod h1:c5fSVnTPWUv9SphLl+R+sWKTU/g8UmPRKa13cvI/nQ4=
 github.com/tkeel-io/kit v0.0.0-20220216070111-216ac6e8fa29 h1:3E2nIkgPWdHTb4YuRd8oGjk3TkOnUp7W0sMZIdeWDq4=
 github.com/tkeel-io/kit v0.0.0-20220216070111-216ac6e8fa29/go.mod h1:FYeTM+tqf/tdrf2HxUX2wdAAHQM8ggN4+IbZv4b6+wU=
-github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c h1:jXEqvRJt3hM1lJTeqAbB7DtxD3VB/Zaqt5BJ4b98jMo=
-github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c/go.mod h1:G4pFVo3WJOvWjsNL19j4CQXXBASH8gtKHjHuZE+ixno=
+github.com/tkeel-io/tdtl v0.1.0 h1:g66tGSfM25ifd3LZFD8AB8Bt9c04lLP10F+CNkwsp5c=
+github.com/tkeel-io/tdtl v0.1.0/go.mod h1:fYdrUyx4Bsvs70/sY61xVt7B88tO9mNLftHtqxgck2g=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20220218062650-cbf6e212c1bd h1:YkV5HcR55JDkvqWvP0KXkLphv4g0c3SXYS2jPcZK1ns=
 github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20220218062650-cbf6e212c1bd/go.mod h1:tjJgHPar2pFjydhnOCLspww8tSOvcKch241PeP9OL8E=
 github.com/tklauser/go-sysconf v0.3.6/go.mod h1:MkWzOF4RMCshBAMXuhXJs64Rte09mITnppBXY/rYEFI=
