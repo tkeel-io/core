@@ -730,7 +730,9 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 
 	err = nil
 	// set entity configs.
-	enRes.ConfigBytes = []byte(val.String())
+	if nil != val {
+		enRes.ConfigBytes = []byte(val.String())
+	}
 
 	// set response.
 	if err = s.setEventPayload(&ev, reqID, &enRes); nil != err {
