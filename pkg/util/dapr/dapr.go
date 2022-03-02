@@ -8,15 +8,24 @@ import (
 	"go.uber.org/zap"
 )
 
+/*
+	APIS:
+		Get() *daprClientPool
+
+	TODO: 此实例存在的原因在于延迟 dapr.NewClient 的调用.
+*/
+
+type Client = daprSDK.Client
+
+func Get() *daprClientPool { //nolint
+	return pool
+}
+
 var once sync.Once
 var pool *daprClientPool
 
 type daprClientPool struct {
 	client daprSDK.Client
-}
-
-func newPool() *daprClientPool {
-	return &daprClientPool{}
 }
 
 func (p *daprClientPool) setup() {
@@ -37,4 +46,8 @@ func (p *daprClientPool) Select() daprSDK.Client {
 	}
 
 	return p.client
+}
+
+func init() {
+	pool = &daprClientPool{}
 }
