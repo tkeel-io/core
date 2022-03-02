@@ -93,7 +93,9 @@ func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.Context) err
 	entityID := msgCtx.Get(message.ExtEntityID)
 	msgSender := msgCtx.Get(message.ExtMessageSender)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
-	log.Debug("dispose message", zfield.ID(entityID), zfield.Message(msgCtx))
+	log.Debug("dispose message", zfield.ReqID(reqID),
+		zfield.Header(msgCtx.Attributes()), zfield.ID(entityID),
+		zfield.Message(string(msgCtx.Message())), zfield.Channel(channelID))
 
 	_, loaded := m.processing.Load(entityID)
 	for ; loaded; _, loaded = m.processing.LoadOrStore(entityID, struct{}{}) {
@@ -143,6 +145,10 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 			zfield.Channel(channelID), zfield.Header(msgCtx.Attributes()))
 		return errors.Wrap(result.Err, "handle message")
 	}
+
+	log.Debug("invoke message completed",
+		zfield.ID(entityID), zfield.ReqID(reqID),
+		zap.String("result.status", string(result.Status)))
 
 	// handle result.
 	switch result.Status {

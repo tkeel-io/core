@@ -53,7 +53,7 @@ type WatchKey = mapper.WatchKey
 
 type Status string
 
-type MessageHandler = func(message.Context) []WatchKey
+type MessageHandler = func(context.Context, message.Context) []WatchKey
 
 type Mapper struct {
 	ID          string `json:"id" msgpack:"id"`

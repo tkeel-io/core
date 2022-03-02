@@ -31,20 +31,11 @@ func (s *statem) getState(stateID string) State {
 	return State{ID: stateID, Props: s.cacheProps[stateID]}
 }
 
-func (s *statem) invokeMessage(msgCtx message.Context) []WatchKey {
-	msgType := msgCtx.Get(message.ExtMessageType)
-	switch message.MessageType(msgType) {
-	case message.MessageTypeAPIRequest:
-		return s.invokeStateMessage(msgCtx)
-	case message.MessageTypeAPIRepublish:
-		return s.invokeRepublishMessage(msgCtx)
-	}
-	return nil
-}
-
 // invokePropertyMessage invoke property message.
-func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
+func (s *statem) invokeStateMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
+	log.Debug("invoke state message", zfield.Eid(s.ID), zfield.Type(s.Type),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 
 	stateIns := s.getState(stateID)
 	watchKeys := make([]mapper.WatchKey, 0)
@@ -67,9 +58,11 @@ func (s *statem) invokeStateMessage(msgCtx message.Context) []WatchKey {
 	return watchKeys
 }
 
-func (s *statem) invokeRepublishMessage(msgCtx message.Context) []WatchKey {
+func (s *statem) invokeRepublishMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
 	msgSender := msgCtx.Get(message.ExtMessageSender)
+	log.Debug("invoke republish message", zfield.Eid(s.ID), zfield.Type(s.Type),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 
 	stateIns := s.getState(msgSender)
 	watchKeys := make([]mapper.WatchKey, 0)
@@ -97,6 +90,9 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	if len(actives) == 0 {
 		return
 	}
+
+	log.Debug("active state tentacle", zfield.Eid(s.ID),
+		zfield.Type(s.Type), zap.Any("actives", actives))
 
 	var (
 		messages        = make(map[string]map[string]tdtl.Node)
@@ -213,6 +209,9 @@ func (s *statem) activeMapper(actives []string) {
 		return
 	}
 
+	log.Debug("active state mapper", zfield.Eid(s.ID),
+		zfield.Type(s.Type), zap.Strings("actives", actives))
+
 	// unique slice.
 	actives = util.Unique(actives)
 
@@ -260,6 +259,8 @@ func (s *statem) activeMapper(actives []string) {
 			activeKeys = append(activeKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: propertyKey})
 		}
 	}
+
+	// TODO: 这里需要注意循环调用.
 	s.activeTentacle(unique(activeKeys))
 }
 

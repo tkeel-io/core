@@ -124,7 +124,7 @@ func (d *dispatcher) startConsumeQueue(id string, pubsubIns pubsub.Pubsub) {
 			// send event.
 			if err = selectConn.Send(ctx, ev); nil != err {
 				log.Error("dispatch message", zfield.Eid(entityID),
-					zap.String("select_queue", selectQueue.ID))
+					zap.String("select_queue", selectQueue.ID), zap.Error(err))
 				return errors.Wrap(err, "dispatch event")
 			}
 

@@ -52,7 +52,7 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
 
-	conn.PublishEvent(
+	err = conn.PublishEvent(
 		ctx, d.pubsubName, d.topicName, bytes,
 		daprSDK.PublishEventWithMetadata(metadata),
 		daprSDK.PublishEventWithContentType(cloudevents.ApplicationJSON))

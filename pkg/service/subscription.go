@@ -97,7 +97,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	var entity = new(Entity)
-	if req.Id != "" {
+	if req.Id == "" {
 		req.Id = util.UUID("sub")
 	}
 

@@ -114,7 +114,7 @@ type statem struct {
 	resourceManager types.ResourceManager
 
 	// state machine message handler.
-	msgHandler MessageHandler
+	republisher MessageHandler
 
 	// state Context, state context version.
 	sCtx    StateContext
@@ -125,7 +125,7 @@ type statem struct {
 }
 
 // NewState create an statem object.
-func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, resourceManager types.ResourceManager, msgHandler MessageHandler) (Machiner, error) {
+func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, resourceManager types.ResourceManager, republisher MessageHandler) (Machiner, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := &statem{
@@ -133,7 +133,7 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 
 		ctx:             ctx,
 		cancel:          cancel,
-		msgHandler:      msgHandler,
+		republisher:     republisher,
 		dispatcher:      dispatcher,
 		resourceManager: resourceManager,
 		mappers:         make(map[string]mapper.Mapper),
@@ -146,7 +146,10 @@ func NewState(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatche
 		state.Properties = make(map[string]tdtl.Node)
 	}
 
-	state.msgHandler = state.invokeMessage
+	if nil == republisher {
+		// default message handler.
+		state.republisher = state.invokeRepublishMessage
+	}
 
 	// initialize state context.
 	state.sCtx = newContext(state)
@@ -193,21 +196,31 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) Result {
 	s.updateFromContext()
 
 	// delive message.
+	var actives []WatchKey
+	result := Result{Status: MCompleted}
 	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
+	case message.MessageTypeState:
+		actives = s.invokeStateMessage(ctx, msgCtx)
+	case message.MessageTypeAPIRepublish:
+		actives = s.republisher(ctx, msgCtx)
 	case message.MessageTypeAPIRequest:
-		actives, result := s.callAPIs(msgCtx.Context(), msgCtx)
+		actives, result = s.callAPIs(ctx, msgCtx)
 		s.activeTentacle(actives)
 		return result
 	case message.MessageTypeMapperInit:
-		s.invokeMapperInit(ctx, msgCtx)
+		actives = s.invokeMapperInit(ctx, msgCtx)
 	default:
-		// handle state message.
-		s.activeTentacle(s.msgHandler(msgCtx))
+		log.Error("message type not support", zfield.Type(msgType))
+	}
+
+	// exec tentacles.
+	if result.Err == nil {
+		s.activeTentacle(actives)
 		s.flush(ctx)
 	}
 
-	return Result{Status: MCompleted}
+	return result
 }
 
 func (s *statem) State() State {
@@ -233,9 +246,7 @@ func (s *State) Patch(op xjson.PatchOp, path string, value []byte) (tdtl.Node, e
 		result tdtl.Node
 	)
 	if !strings.ContainsAny(path, ".[") {
-		if result, err = s.patchProp(op, path, string(value)); nil != err {
-			log.Error("patch state property", zap.Error(err), zfield.Eid(s.ID))
-		}
+		result, err = s.patchProp(op, path, string(value))
 		return result, errors.Wrap(err, "patch state property")
 	}
 
@@ -245,7 +256,6 @@ func (s *State) Patch(op xjson.PatchOp, path string, value []byte) (tdtl.Node, e
 
 	valNode := tdtl.JSONNode(value)
 	if result, err = xjson.Patch(s.get(propertyID), valNode, patchPath, op); nil != err {
-		log.Error("patch state", zfield.Path(path), zap.Error(err), zfield.Eid(s.ID))
 		return nil, errors.Wrap(err, "patch state")
 	}
 
@@ -284,7 +294,6 @@ func (s *State) patchProp(op xjson.PatchOp, path string, value string) (tdtl.Nod
 		// patch add val.
 		bytes, err = collectjs.Append([]byte(prop.String()), path, []byte(value))
 		if nil != err {
-			log.Error("patch add", zfield.Path(path), zap.Error(err))
 			return result, errors.Wrap(err, "patch add")
 		}
 		result = tdtl.JSONNode(bytes)

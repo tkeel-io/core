@@ -61,17 +61,23 @@ type subscription struct {
 }
 
 // NewSubscription returns a subscription.
-func NewSubscription(ctx context.Context, in *dao.Entity, dispatcher dispatch.Dispatcher, rs types.ResourceManager) (stateM state.Machiner, err error) {
+func NewSubscription(
+	ctx context.Context,
+	in *dao.Entity,
+	dispatcher dispatch.Dispatcher,
+	rs types.ResourceManager) (stateM state.Machiner, err error) {
 	subsc := subscription{}
-	errFunc := func(err error) error { return errors.Wrap(err, "create subscription") }
+	errFunc := func(err error) error {
+		return errors.Wrap(err, "create subscription")
+	}
 
-	if stateM, err = state.NewState(ctx, in, dispatcher, rs, subsc.HandleMessage); nil != err {
+	if stateM, err = state.NewState(ctx, in,
+		dispatcher, rs, subsc.handleMessage); nil != err {
 		return nil, errFunc(err)
 	}
 
 	// decode in.Properties into subsc.
 	subsc.stateMachine = stateM
-
 	subsc.onceFlag = sync.Once{}
 
 	return &subsc, nil
@@ -98,6 +104,7 @@ func (s *subscription) initPushClient() {
 	case SubscriptionModeChanged:
 		s.republishHandler = s.invokeChanged
 	default:
+		s.republishHandler = s.invokeRealtime
 		// invalid subscription mode.
 		log.Error("undefine subscription mode, mode.",
 			zfield.Eid(s.GetID()), zap.String("mode", s.Mode()))
@@ -131,13 +138,13 @@ func (s *subscription) Invoke(ctx context.Context, msgCtx message.Context) state
 	return s.stateMachine.Invoke(ctx, msgCtx)
 }
 
-func (s *subscription) HandleMessage(msgCtx message.Context) []mapper.WatchKey {
+func (s *subscription) handleMessage(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
 	s.onceFlag.Do(func() {
 		s.initPushClient()
 	})
 
-	log.Debug("on subscribe", zfield.ID(s.GetID()), zfield.Message(msgCtx))
-	return s.republishHandler(msgCtx)
+	log.Debug("on subscribe", zfield.ID(s.GetID()), zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+	return s.republishHandler(ctx, msgCtx)
 }
 
 const eventType = "Core.Subscription"
@@ -147,7 +154,7 @@ func eventSender(sender string) string {
 }
 
 // invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey {
+func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
 	var (
 		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
@@ -167,7 +174,7 @@ func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey 
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+	if err := s.pubsubClient.Send(ctx, ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
 		log.Error("invoke realtime subscription",
 			zfield.Message(msgCtx), zap.Error(err))
@@ -177,7 +184,7 @@ func (s *subscription) invokeRealtime(msgCtx message.Context) []mapper.WatchKey 
 }
 
 // invokePeriod.
-func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
+func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
 	var (
 		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
@@ -197,7 +204,7 @@ func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
 	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
 
 	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+	if err := s.pubsubClient.Send(ctx, ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
 		log.Error("invoke period subscription",
 			zfield.Message(msgCtx), zap.Error(err))
@@ -207,7 +214,7 @@ func (s *subscription) invokePeriod(msgCtx message.Context) []mapper.WatchKey {
 }
 
 // invokeChanged.
-func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
+func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
 	var (
 		eventID = util.UUID("ev")
 		entity  = s.GetEntity()
@@ -227,7 +234,7 @@ func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(context.Background(), ev); nil != err {
+	if err := s.pubsubClient.Send(ctx, ev); nil != err {
 		// TODO: 对于发送失败的消息需要重新处理.
 		log.Error("invoke onchanged subscription",
 			zfield.Message(msgCtx), zap.Error(err))
@@ -236,32 +243,26 @@ func (s *subscription) invokeChanged(msgCtx message.Context) []mapper.WatchKey {
 	return nil
 }
 
-func (s *subscription) checkSubscription() error { //nolint
-	sb := Base{}
-	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
-	return errors.Wrap(sb.Validate(), "check subscription required fileds")
-}
-
 func (s *subscription) Mode() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
-	return sb.Mode
+	return util.UnwrapS(sb.Mode)
 }
 
 func (s *subscription) Filter() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
-	return sb.Filter
+	return util.UnwrapS(sb.Filter)
 }
 
 func (s *subscription) Topic() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
-	return sb.Topic
+	return util.UnwrapS(sb.Topic)
 }
 
 func (s *subscription) PubsubName() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
-	return sb.PubsubName
+	return util.UnwrapS(sb.PubsubName)
 }
