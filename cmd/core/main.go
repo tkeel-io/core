@@ -303,7 +303,9 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), _searchSrv)
 
 	// register search service.
-	_tsSrv = service.NewTSService()
+	if _tsSrv, err = service.NewTSService(); nil != err {
+		log.Fatal(err)
+	}
 	corev1.RegisterTSHTTPServer(httpSrv.Container, _tsSrv)
 }
 

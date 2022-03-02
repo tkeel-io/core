@@ -25,17 +25,17 @@ type TSService struct {
 	lock          *sync.RWMutex
 }
 
-func NewTSService() *TSService {
+func NewTSService() (*TSService, error) {
 	tseriesClient := tseries.NewTimeSerier(config.Get().Components.TimeSeries.Name)
 	if err := tseriesClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries)); nil != err {
 		log.Error(err)
-		return nil
+		return nil, errors.Wrap(err, "init ts service")
 	}
 	return &TSService{
 		tseriesClient: tseriesClient,
 		entityCache:   make(map[string][]string),
 		lock:          new(sync.RWMutex),
-	}
+	}, nil
 }
 
 func (s *TSService) AddEntity(user, entityID string) {
