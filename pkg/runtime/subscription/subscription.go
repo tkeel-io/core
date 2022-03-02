@@ -18,22 +18,19 @@ package subscription
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -55,7 +52,6 @@ const (
 // subscription subscription actor based entity.
 type subscription struct {
 	onceFlag         sync.Once
-	pubsubClient     pubsub.Pubsub
 	stateMachine     state.Machiner
 	republishHandler state.MessageHandler
 }
@@ -84,17 +80,6 @@ func NewSubscription(
 }
 
 func (s *subscription) initPushClient() {
-	// create pubsub client.
-	s.pubsubClient = pubsub.NewPubsub(
-		util.UUID(""),
-		resource.Metadata{
-			Name: "dapr",
-			Properties: map[string]interface{}{
-				"pubsub_name": s.PubsubName(),
-				"topic_name":  s.Topic(),
-			},
-		})
-
 	// bind republish handler.
 	switch s.Mode() {
 	case SubscriptionModeRealtime:
@@ -147,37 +132,27 @@ func (s *subscription) handleMessage(ctx context.Context, msgCtx message.Context
 	return s.republishHandler(ctx, msgCtx)
 }
 
-const eventType = "Core.Subscription"
-
-func eventSender(sender string) string {
-	return fmt.Sprintf("%s.%s", eventType, sender)
-}
-
 // invokeRealtime invoke property where mode is realtime.
 func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
-	var (
-		eventID = util.UUID("ev")
-		entity  = s.GetEntity()
-		ev      = cloudevents.NewEvent()
-	)
+	var err error
+	var payload []byte
+	var conn dapr.Client
+	if conn = dapr.Get().Select(); nil == conn {
+		log.Error("nil connection", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetID(eventID)
-	ev.SetType(eventType)
-	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtEntityID, entity.ID)
-	ev.SetExtension(message.ExtEntityType, entity.Type)
-	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
-	ev.SetExtension(message.ExtEntitySource, entity.Source)
-	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
-	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
-	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	if payload, err = s.makePayload(msgCtx); nil != err {
+		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(ctx, ev); nil != err {
-		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke realtime subscription",
-			zfield.Message(msgCtx), zap.Error(err))
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+		log.Error("invoke realtime subscription", zap.Error(err),
+			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
 	}
 
 	return nil
@@ -185,29 +160,25 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 
 // invokePeriod.
 func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
-	var (
-		eventID = util.UUID("ev")
-		entity  = s.GetEntity()
-		ev      = cloudevents.NewEvent()
-	)
+	var err error
+	var payload []byte
+	var conn dapr.Client
+	if conn = dapr.Get().Select(); nil == conn {
+		log.Error("nil connection", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetID(eventID)
-	ev.SetType(eventType)
-	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtEntityID, entity.ID)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
-	ev.SetExtension(message.ExtEntityType, entity.Type)
-	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
-	ev.SetExtension(message.ExtEntitySource, entity.Source)
-	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
-	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
-	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
+	if payload, err = s.makePayload(msgCtx); nil != err {
+		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(ctx, ev); nil != err {
-		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke period subscription",
-			zfield.Message(msgCtx), zap.Error(err))
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+		log.Error("invoke period subscription", zap.Error(err),
+			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
 	}
 
 	return nil
@@ -215,29 +186,25 @@ func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context)
 
 // invokeChanged.
 func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context) []mapper.WatchKey {
-	var (
-		eventID = util.UUID("ev")
-		entity  = s.GetEntity()
-		ev      = cloudevents.NewEvent()
-	)
+	var err error
+	var payload []byte
+	var conn dapr.Client
+	if conn = dapr.Get().Select(); nil == conn {
+		log.Error("nil connection", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetID(eventID)
-	ev.SetType(eventType)
-	ev.SetSource(config.Get().Server.Name)
-	ev.SetExtension(message.ExtEntityID, entity.ID)
-	ev.SetExtension(message.ExtEntityType, entity.Type)
-	ev.SetExtension(message.ExtEntityOwner, entity.Owner)
-	ev.SetExtension(message.ExtEntitySource, entity.Source)
-	ev.SetExtension(message.ExtTemplateID, entity.TemplateID)
-	ev.SetExtension(message.ExtMessageReceiver, s.PubsubName())
-	ev.SetExtension(message.ExtMessageSender, eventSender(s.GetID()))
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
+	if payload, err = s.makePayload(msgCtx); nil != err {
+		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
 
-	ev.SetData(msgCtx.Message())
-	if err := s.pubsubClient.Send(ctx, ev); nil != err {
-		// TODO: 对于发送失败的消息需要重新处理.
-		log.Error("invoke onchanged subscription",
-			zfield.Message(msgCtx), zap.Error(err))
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+		log.Error("invoke changed subscription", zap.Error(err),
+			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
 	}
 
 	return nil
@@ -265,4 +232,28 @@ func (s *subscription) PubsubName() string {
 	sb := Base{}
 	decode2Subscription(s.stateMachine.GetEntity().Properties, &sb)
 	return util.UnwrapS(sb.PubsubName)
+}
+
+func (s *subscription) makePayload(msgCtx message.Context) ([]byte, error) {
+	var err error
+	bytes := msgCtx.Message()
+	if len(bytes) == 0 {
+		bytes = []byte(`{}`)
+	}
+
+	basics := map[string]string{
+		"id":     msgCtx.Get(message.ExtMessageSender),
+		"type":   msgCtx.Get(message.ExtEntityType),
+		"owner":  msgCtx.Get(message.ExtEntityOwner),
+		"source": msgCtx.Get(message.ExtEntitySource),
+	}
+
+	for key, val := range basics {
+		if bytes, err = collectjs.Set(bytes, key, []byte(util.WrapS(val))); nil != err {
+			log.Error("set basic field", zfield.Header(basics), zap.Error(err))
+			return nil, errors.Wrap(err, "set basic field")
+		}
+	}
+
+	return bytes, nil
 }
