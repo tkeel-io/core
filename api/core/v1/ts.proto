@@ -1,0 +1,88 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "api/core/v1/entity.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+service Ts {
+	rpc GetTsData (GetTsDataRequest) returns (GetTsDataResponse) {
+		option (google.api.http) = {
+			post : "/ts/{id}"
+            body : "*"
+		};
+	};
+	rpc DownloadTsData (DownloadTsDataRequest) returns (DownloadTsDataResponse) {
+		option (google.api.http) = {
+			get: "/ts/{id}"
+
+		};
+	};
+	rpc GetLatestEntities (GetLatestEntitiesRequest) returns (GetLatestEntitiesResponse) {
+		option (google.api.http) = {
+			get : "/ts"
+		};
+	};
+}
+
+
+message GetTsDataRequest {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+              json_schema: {
+                title: "GetTsData"
+                description: "Get time series Request"
+              }
+            };
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体 id"}];
+    int64 start_time = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "起始时间"}];
+    int64 end_time = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "终止时间"}];
+    string identifiers = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "标识符"}];
+    int32 page_num= 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
+    int32 page_size = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
+}
+
+message GetTsDataResponse {
+    int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "total count of the entities"}];
+    int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
+    int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
+    repeated TsResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "data list"}];
+}
+
+message TsResponse {
+    int64 time = 1;
+    map<string, float> value = 2;
+}
+
+message DownloadTsDataRequest {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+              json_schema: {
+                title: "GetTsData"
+                description: "Get time series Request"
+              }
+            };
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体 id"}];
+    int64 start_time = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "起始时间"}];
+    int64 end_time = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "终止时间"}];
+    string identifiers = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "标识符"}];
+}
+
+message DownloadTsDataResponse {
+    bytes data = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content"}];
+    string length = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content length in string"}];
+    string filename = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "filename"}];
+}
+
+message GetLatestEntitiesRequest {
+
+}
+
+message GetLatestEntitiesResponse {
+    int64 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "total count of the entities"}];
+    repeated EntityResponse items = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity list"}];
+}

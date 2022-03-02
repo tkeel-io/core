@@ -300,6 +300,10 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	_searchSrv = service.NewSearchService()
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, _searchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), _searchSrv)
+
+	// register search service.
+	TsSrv := service.NewTsService()
+	corev1.RegisterTsHTTPServer(httpSrv.Container, TsSrv)
 }
 
 func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
@@ -312,7 +316,7 @@ func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv
 func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	log.Info("create core default resources")
 	// default time series.
-	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries))
+	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
 
 	return runtime.NewResources(search.GlobalService, tsdbClient, coreRepo)
 }
