@@ -27,22 +27,22 @@ var (
 	_ = emptypb.Empty{}
 )
 
-type TsHTTPServer interface {
-	DownloadTsData(context.Context, *DownloadTsDataRequest) (*DownloadTsDataResponse, error)
+type TSHTTPServer interface {
+	DownloadTSData(context.Context, *DownloadTSDataRequest) (*DownloadTSDataResponse, error)
 	GetLatestEntities(context.Context, *GetLatestEntitiesRequest) (*GetLatestEntitiesResponse, error)
-	GetTsData(context.Context, *GetTsDataRequest) (*GetTsDataResponse, error)
+	GetTSData(context.Context, *GetTSDataRequest) (*GetTSDataResponse, error)
 }
 
-type TsHTTPHandler struct {
-	srv TsHTTPServer
+type TSHTTPHandler struct {
+	srv TSHTTPServer
 }
 
-func newTsHTTPHandler(s TsHTTPServer) *TsHTTPHandler {
-	return &TsHTTPHandler{srv: s}
+func newTSHTTPHandler(s TSHTTPServer) *TSHTTPHandler {
+	return &TSHTTPHandler{srv: s}
 }
 
-func (h *TsHTTPHandler) DownloadTsData(req *go_restful.Request, resp *go_restful.Response) {
-	in := DownloadTsDataRequest{}
+func (h *TSHTTPHandler) DownloadTSData(req *go_restful.Request, resp *go_restful.Response) {
+	in := DownloadTSDataRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
@@ -56,7 +56,7 @@ func (h *TsHTTPHandler) DownloadTsData(req *go_restful.Request, resp *go_restful
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
-	out, err := h.srv.DownloadTsData(ctx, &in)
+	out, err := h.srv.DownloadTSData(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -64,16 +64,42 @@ func (h *TsHTTPHandler) DownloadTsData(req *go_restful.Request, resp *go_restful
 			result.Set(tErr.Reason, tErr.Message, out), "application/json")
 		return
 	}
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
 
-	resp.AddHeader("Content-Type", "application/octet-stream")
-	resp.AddHeader("Content-Disposition", "attachment; filename="+out.Filename)
-	resp.AddHeader("Content-Transfer-Encoding", "binary")
-	resp.AddHeader("Accept-ranges", "bytes")
-	resp.AddHeader("Accept-length", out.Length)
-	resp.Write(out.Data)
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
 }
 
-func (h *TsHTTPHandler) GetLatestEntities(req *go_restful.Request, resp *go_restful.Response) {
+func (h *TSHTTPHandler) GetLatestEntities(req *go_restful.Request, resp *go_restful.Response) {
 	in := GetLatestEntitiesRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
@@ -126,8 +152,8 @@ func (h *TsHTTPHandler) GetLatestEntities(req *go_restful.Request, resp *go_rest
 	}
 }
 
-func (h *TsHTTPHandler) GetTsData(req *go_restful.Request, resp *go_restful.Response) {
-	in := GetTsDataRequest{}
+func (h *TSHTTPHandler) GetTSData(req *go_restful.Request, resp *go_restful.Response) {
+	in := GetTSDataRequest{}
 	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
@@ -141,7 +167,7 @@ func (h *TsHTTPHandler) GetTsData(req *go_restful.Request, resp *go_restful.Resp
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
-	out, err := h.srv.GetTsData(ctx, &in)
+	out, err := h.srv.GetTSData(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -184,7 +210,7 @@ func (h *TsHTTPHandler) GetTsData(req *go_restful.Request, resp *go_restful.Resp
 	}
 }
 
-func RegisterTsHTTPServer(container *go_restful.Container, srv TsHTTPServer) {
+func RegisterTSHTTPServer(container *go_restful.Container, srv TSHTTPServer) {
 	var ws *go_restful.WebService
 	for _, v := range container.RegisteredWebServices() {
 		if v.RootPath() == "/v1" {
@@ -199,11 +225,11 @@ func RegisterTsHTTPServer(container *go_restful.Container, srv TsHTTPServer) {
 		container.Add(ws)
 	}
 
-	handler := newTsHTTPHandler(srv)
+	handler := newTSHTTPHandler(srv)
 	ws.Route(ws.POST("/ts/{id}").
-		To(handler.GetTsData))
+		To(handler.GetTSData))
 	ws.Route(ws.GET("/ts/{id}").
-		To(handler.DownloadTsData))
+		To(handler.DownloadTSData))
 	ws.Route(ws.GET("/ts").
 		To(handler.GetLatestEntities))
 }

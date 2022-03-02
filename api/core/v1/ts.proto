@@ -11,14 +11,14 @@ option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 option java_multiple_files = true;
 option java_package = "api.core.v1";
 
-service Ts {
-	rpc GetTsData (GetTsDataRequest) returns (GetTsDataResponse) {
+service TS {
+	rpc GetTSData (GetTSDataRequest) returns (GetTSDataResponse) {
 		option (google.api.http) = {
 			post : "/ts/{id}"
             body : "*"
 		};
 	};
-	rpc DownloadTsData (DownloadTsDataRequest) returns (DownloadTsDataResponse) {
+	rpc DownloadTSData (DownloadTSDataRequest) returns (DownloadTSDataResponse) {
 		option (google.api.http) = {
 			get: "/ts/{id}"
 
@@ -32,10 +32,10 @@ service Ts {
 }
 
 
-message GetTsDataRequest {
+message GetTSDataRequest {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
               json_schema: {
-                title: "GetTsData"
+                title: "GetTSData"
                 description: "Get time series Request"
               }
             };
@@ -47,22 +47,22 @@ message GetTsDataRequest {
     int32 page_size = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
 }
 
-message GetTsDataResponse {
+message GetTSDataResponse {
     int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "total count of the entities"}];
     int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
     int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    repeated TsResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "data list"}];
+    repeated TSResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "data list"}];
 }
 
-message TsResponse {
+message TSResponse {
     int64 time = 1;
     map<string, float> value = 2;
 }
 
-message DownloadTsDataRequest {
+message DownloadTSDataRequest {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
               json_schema: {
-                title: "GetTsData"
+                title: "GetTSData"
                 description: "Get time series Request"
               }
             };
@@ -72,7 +72,7 @@ message DownloadTsDataRequest {
     string identifiers = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "标识符"}];
 }
 
-message DownloadTsDataResponse {
+message DownloadTSDataResponse {
     bytes data = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content"}];
     string length = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content length in string"}];
     string filename = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "filename"}];

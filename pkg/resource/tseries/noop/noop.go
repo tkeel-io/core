@@ -25,7 +25,7 @@ func (n *noop) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries
 	log.Debug("insert time series data, noop.", zap.Any("data", req.Data), zap.Any("metadata", req.Metadata))
 	return &tseries.TSeriesResponse{}, nil
 }
-func (n *noop) Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTsDataResponse, error) {
+func (n *noop) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	return nil, nil
 }
 

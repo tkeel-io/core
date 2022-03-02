@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/resource"
@@ -18,27 +18,27 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
-type TsService struct {
-	pb.UnimplementedTsServer
+type TSService struct {
+	pb.UnimplementedTSServer
 	tseriesClient tseries.TimeSerier
 	entityCache   map[string][]string
 	lock          *sync.RWMutex
 }
 
-func NewTsService() *TsService {
+func NewTSService() *TSService {
 	tseriesClient := tseries.NewTimeSerier(config.Get().Components.TimeSeries.Name)
 	if err := tseriesClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries)); nil != err {
 		log.Error(err)
 		return nil
 	}
-	return &TsService{
+	return &TSService{
 		tseriesClient: tseriesClient,
 		entityCache:   make(map[string][]string),
 		lock:          new(sync.RWMutex),
 	}
 }
 
-func (s *TsService) AddEntity(user, entityID string) {
+func (s *TSService) AddEntity(user, entityID string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if _, ok := s.entityCache[user]; !ok {
@@ -61,19 +61,21 @@ func (s *TsService) AddEntity(user, entityID string) {
 		}
 		s.entityCache[user] = append(s.entityCache[user], v)
 		cacheMap[v] = struct{}{}
-		count = count + 1
+		count++
 		if count >= 5 {
 			break
 		}
 	}
 }
 
-func (s *TsService) GetTsData(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTsDataResponse, error) {
+func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	if err := checkParams(req.StartTime, req.EndTime, req.Identifiers); err != nil {
 		return nil, err
 	}
-	user := "testuser"
-	resp := &pb.GetTsDataResponse{}
+
+	// TODO: ...
+	user := "testuser" //nolint
+	resp := &pb.GetTSDataResponse{}
 	if req.PageNum <= 0 {
 		req.PageNum = 1
 	}
@@ -83,7 +85,7 @@ func (s *TsService) GetTsData(ctx context.Context, req *pb.GetTsDataRequest) (*p
 
 	res, err := s.tseriesClient.Query(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "query time series data")
 	}
 	resp.Total = res.Total
 	resp.Items = res.Items
@@ -104,8 +106,8 @@ func checkParams(startTime, endTime int64, identifiers string) error {
 	return nil
 }
 
-func (s *TsService) DownloadTsData(ctx context.Context, req *pb.DownloadTsDataRequest) (*pb.DownloadTsDataResponse, error) {
-	resp := &pb.DownloadTsDataResponse{}
+func (s *TSService) DownloadTSData(ctx context.Context, req *pb.DownloadTSDataRequest) (*pb.DownloadTSDataResponse, error) {
+	resp := &pb.DownloadTSDataResponse{}
 
 	if err := checkParams(req.StartTime, req.EndTime, req.Identifiers); err != nil {
 		resp.Data = []byte("error")
@@ -125,7 +127,7 @@ func (s *TsService) DownloadTsData(ctx context.Context, req *pb.DownloadTsDataRe
 
 	run := true
 	for i := 1; run; i++ {
-		reqGet := &pb.GetTsDataRequest{
+		reqGet := &pb.GetTSDataRequest{
 			Id:          req.Id,
 			StartTime:   req.StartTime,
 			EndTime:     req.EndTime,
@@ -139,8 +141,7 @@ func (s *TsService) DownloadTsData(ctx context.Context, req *pb.DownloadTsDataRe
 			resp.Data = []byte("error")
 			resp.Length = "5"
 			resp.Filename = "error.txt"
-
-			return resp, err
+			return resp, errors.Wrap(err, "query time series data")
 		}
 		if res.Total < pageSize {
 			run = false
@@ -165,7 +166,7 @@ func (s *TsService) DownloadTsData(ctx context.Context, req *pb.DownloadTsDataRe
 
 	return resp, nil
 }
-func (s *TsService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEntitiesRequest) (*pb.GetLatestEntitiesResponse, error) {
+func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEntitiesRequest) (*pb.GetLatestEntitiesResponse, error) {
 	resp := &pb.GetLatestEntitiesResponse{}
 	user := "testuser"
 	s.lock.RLock()
@@ -174,7 +175,7 @@ func (s *TsService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 		resp.Total = 0
 		resp.Items = make([]*pb.EntityResponse, 0)
 		return resp, nil
-	} else {
+	} else { //nolint
 		resp.Total = int64(len(cache))
 		for _, v := range cache {
 			resp.Items = append(resp.Items, &pb.EntityResponse{

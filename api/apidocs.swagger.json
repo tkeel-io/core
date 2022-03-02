@@ -13,6 +13,9 @@
     },
     {
       "name": "Search"
+    },
+    {
+      "name": "TS"
     }
   ],
   "consumes": [
@@ -1417,6 +1420,147 @@
           "Subscription"
         ]
       }
+    },
+    "/ts": {
+      "get": {
+        "operationId": "TS_GetLatestEntities",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetLatestEntitiesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "TS"
+        ]
+      }
+    },
+    "/ts/{id}": {
+      "get": {
+        "operationId": "TS_DownloadTSData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DownloadTSDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "实体 id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "start_time",
+            "description": "起始时间",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "end_time",
+            "description": "终止时间",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "identifiers",
+            "description": "标识符",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "TS"
+        ]
+      },
+      "post": {
+        "operationId": "TS_GetTSData",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetTSDataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "实体 id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "start_time": {
+                  "type": "string",
+                  "format": "int64",
+                  "description": "起始时间"
+                },
+                "end_time": {
+                  "type": "string",
+                  "format": "int64",
+                  "description": "终止时间"
+                },
+                "identifiers": {
+                  "type": "string",
+                  "description": "标识符"
+                },
+                "page_num": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "记录开始位置"
+                },
+                "page_size": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "每页限制条数"
+                }
+              },
+              "description": "Get time series Request",
+              "title": "GetTSData"
+            }
+          }
+        ],
+        "tags": [
+          "TS"
+        ]
+      }
     }
   },
   "definitions": {
@@ -1511,6 +1655,24 @@
         }
       }
     },
+    "v1DownloadTSDataResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "content"
+        },
+        "length": {
+          "type": "string",
+          "description": "content length in string"
+        },
+        "filename": {
+          "type": "string",
+          "description": "filename"
+        }
+      }
+    },
     "v1EntityResponse": {
       "type": "object",
       "properties": {
@@ -1548,6 +1710,23 @@
       },
       "description": "Entity Response."
     },
+    "v1GetLatestEntitiesResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "format": "int64",
+          "description": "total count of the entities"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1EntityResponse"
+          },
+          "description": "entity list"
+        }
+      }
+    },
     "v1GetMapperResponse": {
       "type": "object",
       "properties": {
@@ -1573,6 +1752,33 @@
         }
       },
       "description": "Get Mapper Response."
+    },
+    "v1GetTSDataResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "description": "total count of the entities"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1TSResponse"
+          },
+          "description": "data list"
+        }
+      }
     },
     "v1IndexResponse": {
       "type": "object",
@@ -1880,6 +2086,22 @@
         "subscription": {
           "$ref": "#/definitions/v1SubscriptionObject",
           "description": "subscription object"
+        }
+      }
+    },
+    "v1TSResponse": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "string",
+          "format": "int64"
+        },
+        "value": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "format": "float"
+          }
         }
       }
     }

@@ -111,7 +111,7 @@ func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseri
 	return &tseries.TSeriesResponse{Metadata: req.Metadata}, nil
 }
 
-func (i *Influx) WriteData(req *pb.GetTsDataRequest) {
+func (i *Influx) WriteData(req *pb.GetTSDataRequest) {
 	points := make([]string, 1000)
 
 	identifiers := strings.Split(req.Identifiers, ",")
@@ -120,7 +120,7 @@ func (i *Influx) WriteData(req *pb.GetTsDataRequest) {
 		data := fmt.Sprintf("keel,id=%s ", req.Id)
 		ident := make([]string, 0)
 		for _, ideidentifier := range identifiers {
-			value := float32(rand.Intn(100)) / 10.0
+			value := float32(rand.Intn(100)) / 10.0 //nolint
 			ident = append(ident, fmt.Sprintf("%s=%f", ideidentifier, value))
 		}
 		data = data + strings.Join(ident, ",") + fmt.Sprintf(" %d", (req.StartTime+(req.EndTime-req.StartTime)/int64(1000)*int64((i+1)))*1e9)
@@ -133,7 +133,7 @@ func (i *Influx) WriteData(req *pb.GetTsDataRequest) {
 	}
 }
 
-func (i *Influx) Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTsDataResponse, error) {
+func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	bucket := "core"
 	measurement := "keel"
 	startTime := req.StartTime
@@ -142,7 +142,7 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTs
 	offset := (req.PageNum - 1) * req.PageSize
 	pageSize := req.PageSize
 
-	resp := &pb.GetTsDataResponse{}
+	resp := &pb.GetTSDataResponse{}
 
 	queryString := `
 	from(bucket: "%s")
@@ -177,8 +177,9 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTs
 			if !ok {
 				resultPoints[result.Record().Time()] = make(map[string]float32)
 			}
-			resultPoints[result.Record().Time()][result.Record().Field()] = float32(result.Record().Value().(float64))
 
+			floatVal, _ := result.Record().Value().(float64)
+			resultPoints[result.Record().Time()][result.Record().Field()] = float32(floatVal)
 		}
 		// check for an error
 		if result.Err() != nil {
@@ -189,7 +190,7 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTs
 	}
 
 	for k, v := range resultPoints {
-		resp.Items = append(resp.Items, &pb.TsResponse{
+		resp.Items = append(resp.Items, &pb.TSResponse{
 			Time:  k.UnixMilli(),
 			Value: v,
 		})

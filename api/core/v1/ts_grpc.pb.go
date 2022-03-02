@@ -14,158 +14,158 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// TsClient is the client API for Ts service.
+// TSClient is the client API for TS service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type TsClient interface {
-	GetTsData(ctx context.Context, in *GetTsDataRequest, opts ...grpc.CallOption) (*GetTsDataResponse, error)
-	DownloadTsData(ctx context.Context, in *DownloadTsDataRequest, opts ...grpc.CallOption) (*DownloadTsDataResponse, error)
+type TSClient interface {
+	GetTSData(ctx context.Context, in *GetTSDataRequest, opts ...grpc.CallOption) (*GetTSDataResponse, error)
+	DownloadTSData(ctx context.Context, in *DownloadTSDataRequest, opts ...grpc.CallOption) (*DownloadTSDataResponse, error)
 	GetLatestEntities(ctx context.Context, in *GetLatestEntitiesRequest, opts ...grpc.CallOption) (*GetLatestEntitiesResponse, error)
 }
 
-type tsClient struct {
+type tSClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewTsClient(cc grpc.ClientConnInterface) TsClient {
-	return &tsClient{cc}
+func NewTSClient(cc grpc.ClientConnInterface) TSClient {
+	return &tSClient{cc}
 }
 
-func (c *tsClient) GetTsData(ctx context.Context, in *GetTsDataRequest, opts ...grpc.CallOption) (*GetTsDataResponse, error) {
-	out := new(GetTsDataResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Ts/GetTsData", in, out, opts...)
+func (c *tSClient) GetTSData(ctx context.Context, in *GetTSDataRequest, opts ...grpc.CallOption) (*GetTSDataResponse, error) {
+	out := new(GetTSDataResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.TS/GetTSData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *tsClient) DownloadTsData(ctx context.Context, in *DownloadTsDataRequest, opts ...grpc.CallOption) (*DownloadTsDataResponse, error) {
-	out := new(DownloadTsDataResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Ts/DownloadTsData", in, out, opts...)
+func (c *tSClient) DownloadTSData(ctx context.Context, in *DownloadTSDataRequest, opts ...grpc.CallOption) (*DownloadTSDataResponse, error) {
+	out := new(DownloadTSDataResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.TS/DownloadTSData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *tsClient) GetLatestEntities(ctx context.Context, in *GetLatestEntitiesRequest, opts ...grpc.CallOption) (*GetLatestEntitiesResponse, error) {
+func (c *tSClient) GetLatestEntities(ctx context.Context, in *GetLatestEntitiesRequest, opts ...grpc.CallOption) (*GetLatestEntitiesResponse, error) {
 	out := new(GetLatestEntitiesResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Ts/GetLatestEntities", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.core.v1.TS/GetLatestEntities", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// TsServer is the server API for Ts service.
-// All implementations must embed UnimplementedTsServer
+// TSServer is the server API for TS service.
+// All implementations must embed UnimplementedTSServer
 // for forward compatibility
-type TsServer interface {
-	GetTsData(context.Context, *GetTsDataRequest) (*GetTsDataResponse, error)
-	DownloadTsData(context.Context, *DownloadTsDataRequest) (*DownloadTsDataResponse, error)
+type TSServer interface {
+	GetTSData(context.Context, *GetTSDataRequest) (*GetTSDataResponse, error)
+	DownloadTSData(context.Context, *DownloadTSDataRequest) (*DownloadTSDataResponse, error)
 	GetLatestEntities(context.Context, *GetLatestEntitiesRequest) (*GetLatestEntitiesResponse, error)
-	mustEmbedUnimplementedTsServer()
+	mustEmbedUnimplementedTSServer()
 }
 
-// UnimplementedTsServer must be embedded to have forward compatible implementations.
-type UnimplementedTsServer struct {
+// UnimplementedTSServer must be embedded to have forward compatible implementations.
+type UnimplementedTSServer struct {
 }
 
-func (UnimplementedTsServer) GetTsData(context.Context, *GetTsDataRequest) (*GetTsDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTsData not implemented")
+func (UnimplementedTSServer) GetTSData(context.Context, *GetTSDataRequest) (*GetTSDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTSData not implemented")
 }
-func (UnimplementedTsServer) DownloadTsData(context.Context, *DownloadTsDataRequest) (*DownloadTsDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DownloadTsData not implemented")
+func (UnimplementedTSServer) DownloadTSData(context.Context, *DownloadTSDataRequest) (*DownloadTSDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadTSData not implemented")
 }
-func (UnimplementedTsServer) GetLatestEntities(context.Context, *GetLatestEntitiesRequest) (*GetLatestEntitiesResponse, error) {
+func (UnimplementedTSServer) GetLatestEntities(context.Context, *GetLatestEntitiesRequest) (*GetLatestEntitiesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLatestEntities not implemented")
 }
-func (UnimplementedTsServer) mustEmbedUnimplementedTsServer() {}
+func (UnimplementedTSServer) mustEmbedUnimplementedTSServer() {}
 
-// UnsafeTsServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to TsServer will
+// UnsafeTSServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TSServer will
 // result in compilation errors.
-type UnsafeTsServer interface {
-	mustEmbedUnimplementedTsServer()
+type UnsafeTSServer interface {
+	mustEmbedUnimplementedTSServer()
 }
 
-func RegisterTsServer(s grpc.ServiceRegistrar, srv TsServer) {
-	s.RegisterService(&Ts_ServiceDesc, srv)
+func RegisterTSServer(s grpc.ServiceRegistrar, srv TSServer) {
+	s.RegisterService(&TS_ServiceDesc, srv)
 }
 
-func _Ts_GetTsData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTsDataRequest)
+func _TS_GetTSData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTSDataRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TsServer).GetTsData(ctx, in)
+		return srv.(TSServer).GetTSData(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.core.v1.Ts/GetTsData",
+		FullMethod: "/api.core.v1.TS/GetTSData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TsServer).GetTsData(ctx, req.(*GetTsDataRequest))
+		return srv.(TSServer).GetTSData(ctx, req.(*GetTSDataRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Ts_DownloadTsData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DownloadTsDataRequest)
+func _TS_DownloadTSData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadTSDataRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TsServer).DownloadTsData(ctx, in)
+		return srv.(TSServer).DownloadTSData(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.core.v1.Ts/DownloadTsData",
+		FullMethod: "/api.core.v1.TS/DownloadTSData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TsServer).DownloadTsData(ctx, req.(*DownloadTsDataRequest))
+		return srv.(TSServer).DownloadTSData(ctx, req.(*DownloadTSDataRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Ts_GetLatestEntities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _TS_GetLatestEntities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetLatestEntitiesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TsServer).GetLatestEntities(ctx, in)
+		return srv.(TSServer).GetLatestEntities(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.core.v1.Ts/GetLatestEntities",
+		FullMethod: "/api.core.v1.TS/GetLatestEntities",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TsServer).GetLatestEntities(ctx, req.(*GetLatestEntitiesRequest))
+		return srv.(TSServer).GetLatestEntities(ctx, req.(*GetLatestEntitiesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Ts_ServiceDesc is the grpc.ServiceDesc for Ts service.
+// TS_ServiceDesc is the grpc.ServiceDesc for TS service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Ts_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "api.core.v1.Ts",
-	HandlerType: (*TsServer)(nil),
+var TS_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "api.core.v1.TS",
+	HandlerType: (*TSServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetTsData",
-			Handler:    _Ts_GetTsData_Handler,
+			MethodName: "GetTSData",
+			Handler:    _TS_GetTSData_Handler,
 		},
 		{
-			MethodName: "DownloadTsData",
-			Handler:    _Ts_DownloadTsData_Handler,
+			MethodName: "DownloadTSData",
+			Handler:    _TS_DownloadTSData_Handler,
 		},
 		{
 			MethodName: "GetLatestEntities",
-			Handler:    _Ts_GetLatestEntities_Handler,
+			Handler:    _TS_GetLatestEntities_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

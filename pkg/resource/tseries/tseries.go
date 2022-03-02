@@ -29,7 +29,7 @@ type TSeriesResponse struct { //nolint
 }
 
 type TSeriesQueryRequest struct { //nolint
-	Id          string `json:"id"`
+	ID          string `json:"id"`
 	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers,omitempty"`
@@ -41,15 +41,15 @@ type TSData struct {
 }
 
 type TSeriesQueryResponse struct { //nolint
-	Items []*pb.TsResponse `json:"items"`
-	Id    string           `json:"id"`
+	Items []*pb.TSResponse `json:"items"`
+	ID    string           `json:"id"`
 	Total int32            `json:"total"`
 }
 
 type TimeSerier interface {
 	Init(resource.Metadata) error
 	Write(ctx context.Context, req *TSeriesRequest) (*TSeriesResponse, error)
-	Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTsDataResponse, error)
+	Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error)
 }
 
 type TSGenerator func() TimeSerier

@@ -265,6 +265,7 @@ func initialzeService(apiManager apim.APIManager, searchClient corev1.SearchHTTP
 }
 
 var (
+	_tsSrv           *service.TSService
 	_topicSrv        *service.TopicService
 	_proxySrv        *service.ProxyService
 	_entitySrv       *service.EntityService
@@ -302,8 +303,8 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), _searchSrv)
 
 	// register search service.
-	TsSrv := service.NewTsService()
-	corev1.RegisterTsHTTPServer(httpSrv.Container, TsSrv)
+	_tsSrv = service.NewTSService()
+	corev1.RegisterTSHTTPServer(httpSrv.Container, _tsSrv)
 }
 
 func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
