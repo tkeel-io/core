@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync"
 
+	cloudevents "github.com/cloudevents/sdk-go"
+	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/dispatch"
@@ -149,7 +151,8 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 		return nil
 	}
 
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke realtime subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(payload)))
@@ -175,7 +178,8 @@ func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context)
 		return nil
 	}
 
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke period subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
@@ -201,7 +205,8 @@ func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context
 		return nil
 	}
 
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke changed subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
