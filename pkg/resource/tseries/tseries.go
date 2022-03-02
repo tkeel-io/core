@@ -2,16 +2,15 @@ package tseries
 
 import (
 	"context"
+	"time"
 
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
-var registeredTS = make(map[string]Generator)
+var registeredTS = make(map[string]TSGenerator)
 
-type TSeriesData struct { // nolint
+type TSeriesData struct { //nolint
 	Measurement string
 	Tags        map[string]string
 	Fields      map[string]string
@@ -19,39 +18,49 @@ type TSeriesData struct { // nolint
 	Timestamp   int64
 }
 
-type TSeriesRequest struct { // nolint
+type TSeriesRequest struct { //nolint
 	Data     interface{}       `json:"data"`
 	Metadata map[string]string `json:"metadata"`
 }
 
-type TSeriesResponse struct { // nolint
+type TSeriesResponse struct { //nolint
 	Data     []byte            `json:"data"`
 	Metadata map[string]string `json:"metadata"`
 }
 
+type TSeriesQueryRequest struct { //nolint
+	Id          string `json:"id"`
+	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers,omitempty"`
+}
+
+type TSData struct {
+	Time  time.Time              `json:"time"`
+	Value map[string]interface{} `json:"value"`
+}
+
+type TSeriesQueryResponse struct { //nolint
+	Items []*pb.TsResponse `json:"items"`
+	Id    string           `json:"id"`
+	Total int32            `json:"total"`
+}
+
 type TimeSerier interface {
-	Write(context.Context, *TSeriesRequest) (*TSeriesResponse, error)
+	Init(resource.Metadata) error
+	Write(ctx context.Context, req *TSeriesRequest) (*TSeriesResponse, error)
+	Query(ctx context.Context, req *pb.GetTsDataRequest) (*pb.GetTsDataResponse, error)
 }
 
-type Generator func(map[string]interface{}) (TimeSerier, error)
+type TSGenerator func() TimeSerier
 
-func NewTimeSerier(metadata resource.Metadata) TimeSerier {
-	var err error
-	var tsClient TimeSerier
-	if generator, has := registeredTS[metadata.Name]; has {
-		if tsClient, err = generator(metadata.Properties); nil != err {
-			log.Debug("new TSDB instance", zfield.Type(metadata.Name))
-			return tsClient
-		}
-		log.Error("new TSDB instance", zap.Error(err),
-			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
+func NewTimeSerier(name string) TimeSerier {
+	if generator, has := registeredTS[name]; has {
+		return generator()
 	}
-
-	log.Warn("new TSDB.noop instance")
-	tsClient, _ = registeredTS["noop"](metadata.Properties)
-	return tsClient
+	return registeredTS["noop"]()
 }
 
-func Register(name string, handler Generator) {
+func Register(name string, handler TSGenerator) {
 	registeredTS[name] = handler
 }
