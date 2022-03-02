@@ -91,6 +91,7 @@ func (tm *httpTransmitter) process(in *Request) {
 		log.Error("do http request", zap.Error(err),
 			zfield.ID(in.PackageID), zfield.Method(in.Method),
 			zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
+		return
 	}
 
 	log.Debug("process request completed", zfield.ID(in.PackageID),

@@ -103,6 +103,12 @@ func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseri
 	default:
 		return nil, ErrInfluxInvalidParams
 	}
+
+	// TODO: 时序 Client 有问题.
+	if nil == i.writeAPI {
+		return &tseries.TSeriesResponse{Metadata: req.Metadata}, nil
+	}
+
 	// write the point.
 	if err := i.writeAPI.WriteRecord(ctx, points...); err != nil {
 		return nil, errors.Wrap(err, "write influxdb")

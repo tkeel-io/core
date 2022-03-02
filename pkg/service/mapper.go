@@ -47,6 +47,11 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		Description: req.Mapper.Description,
 	}
 
+	// TODO: 兼容v0.3, 后面去掉.
+	if mp.ID == "" && req.Mapper.Name != "" {
+		mp.ID = req.Mapper.Name
+	}
+
 	// check mapper.
 	if err = s.checkMapper(&mp); nil != err {
 		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
