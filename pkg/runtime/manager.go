@@ -91,7 +91,7 @@ func (m *Manager) selectContainer(id string) *Container {
 func (m *Manager) HandleMessage(ctx context.Context, msgCtx message.Context) error {
 	reqID := msgCtx.Get(message.ExtAPIRequestID)
 	entityID := msgCtx.Get(message.ExtEntityID)
-	msgSender := msgCtx.Get(message.ExtMessageSender)
+	msgSender := msgCtx.Get(message.ExtSenderID)
 	channelID, _ := ctx.Value(inbox.IDKey{}).(string)
 	log.Debug("dispose message", zfield.ReqID(reqID),
 		zfield.Header(msgCtx.Attributes()), zfield.ID(entityID),

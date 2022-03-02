@@ -152,7 +152,7 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
 		log.Error("invoke realtime subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(payload)))
 	}
 
 	return nil
@@ -242,10 +242,10 @@ func (s *subscription) makePayload(msgCtx message.Context) ([]byte, error) {
 	}
 
 	basics := map[string]string{
-		"id":     msgCtx.Get(message.ExtMessageSender),
-		"type":   msgCtx.Get(message.ExtEntityType),
-		"owner":  msgCtx.Get(message.ExtEntityOwner),
-		"source": msgCtx.Get(message.ExtEntitySource),
+		"id":     msgCtx.Get(message.ExtSenderID),
+		"type":   msgCtx.Get(message.ExtSenderType),
+		"owner":  msgCtx.Get(message.ExtSenderOwner),
+		"source": msgCtx.Get(message.ExtSenderSource),
 	}
 
 	for key, val := range basics {

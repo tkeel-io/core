@@ -1,7 +1,7 @@
 package util
 
-func WrapS(str string) []byte {
-	return []byte("\"" + str + "\"")
+func WrapS(str string) string {
+	return "\"" + str + "\""
 }
 
 func UnwrapS(s string) string {

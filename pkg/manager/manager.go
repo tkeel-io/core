@@ -794,7 +794,7 @@ func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageSender, eventSender)
+	ev.SetExtension(message.ExtSenderID, eventSender)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode request & set event payload.
@@ -826,7 +826,7 @@ func (m *apiManager) makeItemEvent(en *dao.Entity, propertyKeys []string) (cloud
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageSender, eventSender)
+	ev.SetExtension(message.ExtSenderID, eventSender)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// construct api request.
@@ -867,7 +867,7 @@ func (m *apiManager) makePatchEvent(en *dao.Entity, pds []state.PatchData) (clou
 	ev.SetExtension(message.ExtMessageReceiver, en.ID)
 	ev.SetExtension(message.ExtEntitySource, en.Source)
 	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtMessageSender, eventSender)
+	ev.SetExtension(message.ExtSenderID, eventSender)
 	ev.SetDataContentType(cloudevents.ApplicationJSON)
 
 	// encode request & set event payload.

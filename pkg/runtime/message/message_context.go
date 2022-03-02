@@ -13,14 +13,19 @@ import (
 
 const (
 	// event Extension fields definitions.
-	ExtEntityID        = "extenid"
-	ExtEntityType      = "extentype"
-	ExtEntityOwner     = "extowner"
-	ExtEntitySource    = "extsource"
-	ExtTemplateID      = "exttemplate"
-	ExtMessageID       = "extmsgid"
-	ExtMessageType     = "extmsgtype"
-	ExtMessageSender   = "extsender"
+	ExtEntityID     = "extenid"
+	ExtEntityType   = "extentype"
+	ExtEntityOwner  = "extowner"
+	ExtEntitySource = "extsource"
+	ExtTemplateID   = "exttemplate"
+	ExtMessageID    = "extmsgid"
+	ExtMessageType  = "extmsgtype"
+
+	ExtSenderID     = "extsender"
+	ExtSenderType   = "extsendertype"
+	ExtSenderOwner  = "extsenderowner"
+	ExtSenderSource = "extsendersource"
+
 	ExtMessageReceiver = "extreceiver"
 	ExtChannelID       = "extchid"
 	ExtCallback        = "extcallback"

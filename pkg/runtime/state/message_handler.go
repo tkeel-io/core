@@ -60,7 +60,7 @@ func (s *statem) invokeStateMessage(ctx context.Context, msgCtx message.Context)
 
 func (s *statem) invokeRepublishMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
-	msgSender := msgCtx.Get(message.ExtMessageSender)
+	msgSender := msgCtx.Get(message.ExtSenderID)
 	log.Debug("invoke republish message", zfield.Eid(s.ID), zfield.Type(s.Type),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 
@@ -163,7 +163,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 		ev.SetExtension(message.ExtEntityType, s.Type)
 		ev.SetExtension(message.ExtEntityOwner, s.Owner)
 		ev.SetExtension(message.ExtEntitySource, s.Source)
-		ev.SetExtension(message.ExtMessageSender, s.ID)
+		ev.SetExtension(message.ExtSenderID, s.ID)
 		ev.SetExtension(message.ExtMessageReceiver, stateID)
 		ev.SetDataContentType(cloudevents.ApplicationJSON)
 
@@ -312,7 +312,10 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 		ev.SetType("republish")
 		ev.SetSource("core.runtime")
 		ev.SetExtension(message.ExtEntityID, stateID)
-		ev.SetExtension(message.ExtMessageSender, s.ID)
+		ev.SetExtension(message.ExtSenderID, s.ID)
+		ev.SetExtension(message.ExtSenderType, s.Type)
+		ev.SetExtension(message.ExtSenderOwner, s.Owner)
+		ev.SetExtension(message.ExtSenderSource, s.Source)
 		ev.SetExtension(message.ExtMessageReceiver, stateID)
 		ev.SetDataContentType(cloudevents.ApplicationJSON)
 
