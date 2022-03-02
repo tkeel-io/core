@@ -92,7 +92,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	}
 
 	log.Debug("active state tentacle", zfield.Eid(s.ID),
-		zfield.Type(s.Type), zap.Any("actives", actives))
+		zfield.Type(s.Type), zap.Any("actives", actives), zap.Any("tetacles", s.tentacles))
 
 	var (
 		messages        = make(map[string]map[string]tdtl.Node)

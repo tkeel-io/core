@@ -183,6 +183,11 @@ docker-build:
 docker-push:
 	sudo docker push tkeelio/core:${CORE_VERSION}
 
+docker-auto:
+	sudo docker build -t tkeelio/core:${CORE_VERSION} .
+	sudo docker push tkeelio/core:${CORE_VERSION}
+
+
 ################################################################################
 # Target: lint                                                                 #
 ################################################################################

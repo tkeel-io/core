@@ -147,9 +147,15 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 
 	if payload, err = s.makePayload(msgCtx); nil != err {
 		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
 		return nil
+	} else if len(payload) == 0 {
+		log.Warn("empty payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 	}
+
+	log.Debug("publish data", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Payload(payload))
 
 	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
 	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
