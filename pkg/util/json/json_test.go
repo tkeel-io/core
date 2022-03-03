@@ -31,8 +31,8 @@ func TestEncodeJSON(t *testing.T) {
 		"type":       tdtl.StringNode("DEVICE"),
 		"temp":       tdtl.IntNode(25),
 		"cpu_used":   tdtl.FloatNode(0.25),
-		"interfaces": tdtl.JSONNode(`["eth0"]`),
-		"conns": tdtl.JSONNode(`{
+		"interfaces": tdtl.New(`["eth0"]`),
+		"conns": tdtl.New(`{
 			"hello":     "world",
 			"helloss":   "world",
 			"hellosss":  "world",
@@ -148,8 +148,8 @@ func BenchmarkCollectJson(b *testing.B) {
 		"type":       tdtl.StringNode("DEVICE"),
 		"temp":       tdtl.IntNode(25),
 		"cpu_used":   tdtl.FloatNode(0.25),
-		"interfaces": tdtl.JSONNode(`["eth0"]`),
-		"conns": tdtl.JSONNode(`{
+		"interfaces": tdtl.New(`["eth0"]`),
+		"conns": tdtl.New(`{
 			"hello":     "world",
 			"helloss":   "world",
 			"hellosss":  "world",
@@ -165,7 +165,7 @@ func BenchmarkCollectJson(b *testing.B) {
 				"interfaces": ["eth888", "xxxx"],
 			},
 		}`),
-		"conns1": tdtl.JSONNode(`{
+		"conns1": tdtl.New(`{
 			"hello":     "world",
 			"helloss":   "world",
 			"hellosss":  "world",
@@ -181,7 +181,7 @@ func BenchmarkCollectJson(b *testing.B) {
 				"interfaces": ["eth888", "xxxx"],
 			},
 		}`),
-		"conns2": tdtl.JSONNode(`{
+		"conns2": tdtl.New(`{
 			"hello":     "world",
 			"helloss":   "world",
 			"hellosss":  "world",
@@ -197,7 +197,7 @@ func BenchmarkCollectJson(b *testing.B) {
 				"interfaces": ["eth888", "xxxx"],
 			},
 		}`),
-		"conns3": tdtl.JSONNode(`{
+		"conns3": tdtl.New(`{
 			"hello":     "world",
 			"helloss":   "world",
 			"hellosss":  "world",

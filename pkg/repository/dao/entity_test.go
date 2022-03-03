@@ -73,14 +73,14 @@ func BenchmarkCopy(b *testing.B) {
 		LastTime: time.Now().UnixNano() / 1e6,
 		Properties: map[string]tdtl.Node{
 			"temp":     tdtl.FloatNode(123.3),
-			"metrics0": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics1": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics2": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics3": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics4": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics5": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics6": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
-			"metrics7": tdtl.JSONNode(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics0": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics1": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics2": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics3": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics4": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics5": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics6": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
+			"metrics7": tdtl.New(`{"cpu_used": 0.2, "mem_used": 0.7}`),
 		},
 	}
 

@@ -17,8 +17,9 @@ limitations under the License.
 package mapper
 
 import (
-	"github.com/tkeel-io/tdtl"
 	"strings"
+
+	"github.com/tkeel-io/tdtl"
 )
 
 // ------------------------.
@@ -27,7 +28,7 @@ type TentacleConfig struct {
 	PropertyKeys []string
 }
 
-type TQLConfig struct { // nolint
+type TQLConfig struct {
 	TargetEntity   string
 	SourceEntities []string
 	Tentacles      []TentacleConfig

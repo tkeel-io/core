@@ -32,7 +32,7 @@ func (s *statem) getState(stateID string) State {
 }
 
 func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
-	s.Properties["rawData"] = tdtl.JSONNode(msgCtx.Message())
+	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
 	log.Debug("invoke raw message", zfield.Eid(s.ID), zfield.Type(s.Type),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 
