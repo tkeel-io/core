@@ -16,14 +16,16 @@ import (
 )
 
 type daprMetadata struct {
-	TopicName  string `mapstructure:"topic_name"`
-	PubsubName string `mapstructure:"pubsub_name"`
+	TopicName    string `json:"topic_name" mapstructure:"topic_name"`
+	PubsubName   string `json:"pubsub_name" mapstructure:"pubsub_name"`
+	ConsumerType string `json:"consumer_type" mapstructure:"consumer_type"`
 }
 
 type daprPubsub struct {
-	id         string
-	topicName  string
-	pubsubName string
+	id           string
+	topicName    string
+	pubsubName   string
+	consumerType string
 }
 
 func (d *daprPubsub) ID() string {
@@ -62,7 +64,7 @@ func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 
 func (d *daprPubsub) Received(ctx context.Context, handler pubsub.EventHandler) error {
 	log.Debug("pubsub.dapr start receive message", zfield.ID(d.id))
-	err := registerConsumer(d.pubsubName, d.topicName, &Consumer{id: d.id, handler: handler})
+	err := Get().Register(d.consumerType, d.pubsubName, d.topicName, &Consumer{id: d.id, handler: handler})
 	return errors.Wrap(err, "register message handler")
 }
 
@@ -72,7 +74,7 @@ func (d *daprPubsub) Commit(v interface{}) error {
 
 func (d *daprPubsub) Close() error {
 	log.Debug("pubsub.dapr close", zfield.ID(d.id))
-	err := unregisterConsumer(d.pubsubName, d.topicName, &Consumer{id: d.id})
+	err := Get().Unregister(d.consumerType, d.pubsubName, d.topicName, &Consumer{id: d.id})
 	return errors.Wrap(err, "unregister message handler")
 }
 
@@ -87,9 +89,10 @@ func init() {
 		log.Info("create pubsub.dapr instance", zfield.ID(id))
 
 		return &daprPubsub{
-			id:         id,
-			topicName:  daprMeta.TopicName,
-			pubsubName: daprMeta.PubsubName,
+			id:           id,
+			topicName:    daprMeta.TopicName,
+			pubsubName:   daprMeta.PubsubName,
+			consumerType: daprMeta.ConsumerType,
 		}, nil
 	})
 }

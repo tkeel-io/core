@@ -26,6 +26,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
@@ -73,7 +74,10 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "unmarshal event")
 	}
 
-	res, err := dapr.HandleEvent(ctx, ev)
+	ev.SetExtension(message.ExtCloudEventTopic, req.Meta.Topic)
+	ev.SetExtension(message.ExtCloudEventPubsub, req.Meta.Pubsubname)
+	ev.SetExtension(message.ExtCloudEventConsumerType, dao.ConsumerTypeCore.String())
+	res, err := dapr.Get().DeliveredEvent(ctx, ev)
 	return res, errors.Wrap(err, "handle event")
 }
 
@@ -98,6 +102,7 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 	ev.SetExtension(message.ExtEntityType, m["type"])
 	ev.SetExtension(message.ExtEntityOwner, m["owner"])
 	ev.SetExtension(message.ExtEntitySource, m["source"])
+	ev.SetExtension(message.ExtCloudEventConsumerType, dao.ConsumerTypeDispatch.String())
 
 	var payload []byte
 	// set event payload.
@@ -112,6 +117,6 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "set event payload")
 	}
 
-	res, err := dapr.HandleEvent(ctx, ev)
+	res, err := dapr.Get().DeliveredEvent(ctx, ev)
 	return res, errors.Wrap(err, "handle event")
 }
