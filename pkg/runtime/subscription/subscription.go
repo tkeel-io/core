@@ -18,9 +18,9 @@ package subscription
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
@@ -147,11 +147,17 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 
 	if payload, err = s.makePayload(msgCtx); nil != err {
 		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
 		return nil
+	} else if len(payload) == 0 {
+		log.Warn("empty payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 	}
 
-	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	log.Debug("publish data", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Payload(payload))
+
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
 	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke realtime subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
@@ -178,7 +184,7 @@ func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context)
 		return nil
 	}
 
-	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
 	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke period subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
@@ -205,7 +211,7 @@ func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context
 		return nil
 	}
 
-	ctOpts := daprSDK.PublishEventWithContentType(cloudevents.ApplicationCloudEventsJSON)
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
 	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke changed subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
@@ -240,12 +246,6 @@ func (s *subscription) PubsubName() string {
 }
 
 func (s *subscription) makePayload(msgCtx message.Context) ([]byte, error) {
-	var err error
-	bytes := msgCtx.Message()
-	if len(bytes) == 0 {
-		bytes = []byte(`{}`)
-	}
-
 	basics := map[string]string{
 		"id":     msgCtx.Get(message.ExtSenderID),
 		"type":   msgCtx.Get(message.ExtSenderType),
@@ -253,11 +253,11 @@ func (s *subscription) makePayload(msgCtx message.Context) ([]byte, error) {
 		"source": msgCtx.Get(message.ExtSenderSource),
 	}
 
-	for key, val := range basics {
-		if bytes, err = collectjs.Set(bytes, key, []byte(util.WrapS(val))); nil != err {
-			log.Error("set basic field", zfield.Header(basics), zap.Error(err))
-			return nil, errors.Wrap(err, "set basic field")
-		}
+	var err error
+	bytes, _ := json.Marshal(basics)
+	if bytes, err = collectjs.Set(bytes, "properties", msgCtx.Message()); nil != err {
+		log.Error("set properties field", zfield.Header(basics), zap.Error(err))
+		return nil, errors.Wrap(err, "set properties field")
 	}
 
 	return bytes, nil

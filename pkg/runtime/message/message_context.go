@@ -34,17 +34,19 @@ const (
 	ExtAPIRespStatus   = "extrespstatus"
 	ExtAPIRespErrCode  = "extresperrcode"
 
-	ExtCloudEventID          = "exteventid"
-	ExtCloudEventSpec        = "exteventspec"
-	ExtCloudEventType        = "exteventtype"
-	ExtCloudEventSource      = "exteventsource"
-	ExtCloudEventSubject     = "exteventsubject"
-	ExtCloudEventDataSchema  = "exteventschema"
-	ExtCloudEventContentType = "exteventcontenttype"
+	ExtCloudEventID           = "exteventid"
+	ExtCloudEventSpec         = "exteventspec"
+	ExtCloudEventType         = "exteventtype"
+	ExtCloudEventTopic        = "exteventtopic"
+	ExtCloudEventPubsub       = "exteventpubsub"
+	ExtCloudEventSource       = "exteventsource"
+	ExtCloudEventSubject      = "exteventsubject"
+	ExtCloudEventDataSchema   = "exteventschema"
+	ExtCloudEventContentType  = "exteventcontenttype"
+	ExtCloudEventConsumerType = "exteventconsumertype"
 )
 
 /*
-
 定义消息：
 	1. 来自 api 的消息 event.Data 中包含 api 调用的参数.
 	2. 状态的消息，定义为 满足 json.Json.

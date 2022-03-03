@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	"github.com/tkeel-io/core/pkg/runtime/message"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -31,70 +35,119 @@ const (
 )
 
 var (
-	lock      = sync.RWMutex{}
-	consumers map[string][]*Consumer
+	consumerManager *ConsumerManager
 )
+
+func Get() *ConsumerManager {
+	return consumerManager
+}
+
+type ConsumerManager struct {
+	lock            sync.RWMutex
+	clusterConsumer *Consumer
+	nodeConsumers   map[string][]*Consumer
+}
+
+func (cm *ConsumerManager) Register(consumerType, pubsubName, topicName string, consumer *Consumer) error {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+	switch dao.ConsumerType(consumerType) {
+	case dao.ConsumerTypeDispatch:
+		cm.clusterConsumer = consumer
+	case dao.ConsumerTypeCore:
+		group := consumerGroup(pubsubName, topicName)
+		cm.nodeConsumers[group] = append(cm.nodeConsumers[group], consumer)
+	default:
+		return xerrors.ErrInvalidQueueConsumerType
+	}
+
+	return nil
+}
+
+func (cm *ConsumerManager) Unregister(consumerType, pubsubName, topicName string, consumer *Consumer) error {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+	switch dao.ConsumerType(consumerType) {
+	case dao.ConsumerTypeDispatch:
+		cm.clusterConsumer = defaultConsumer
+	case dao.ConsumerTypeCore:
+		groupName := consumerGroup(pubsubName, topicName)
+		consumerGrop := cm.nodeConsumers[groupName]
+		for index, cs := range consumerGrop {
+			if cs.id == consumer.id {
+				cm.nodeConsumers[groupName] =
+					append(consumerGrop[:index], consumerGrop[index+1:]...)
+				break
+			}
+		}
+	default:
+		return xerrors.ErrInvalidQueueConsumerType
+	}
+
+	return nil
+}
+
+func (cm *ConsumerManager) DeliveredEvent(ctx context.Context, ev cloudevents.Event) (out *pb.TopicEventResponse, err error) {
+	var topic string
+	var pubsubName string
+	var consumerType string
+	ev.ExtensionAs(message.ExtCloudEventTopic, &topic)
+	ev.ExtensionAs(message.ExtCloudEventPubsub, &pubsubName)
+	ev.ExtensionAs(message.ExtCloudEventConsumerType, &consumerType)
+
+	// dispatch message.
+	elapsedTime := util.NewElapsed()
+	log.Debug("handle event", zfield.Topic(topic),
+		zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
+
+	cm.lock.RLock()
+	handlers := make([]pubsub.EventHandler, 0)
+	switch dao.ConsumerType(consumerType) {
+	case dao.ConsumerTypeDispatch:
+		handlers = append(handlers, cm.clusterConsumer.handler)
+	case dao.ConsumerTypeCore:
+		groupName := consumerGroup(pubsubName, topic)
+		for _, consumer := range cm.nodeConsumers[groupName] {
+			handlers = append(handlers, consumer.handler)
+		}
+	default:
+		log.Error("handle event", zfield.Topic(topic), zap.Error(err),
+			zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
+	}
+	cm.lock.RUnlock()
+
+	// dispose event.
+	for _, handler := range handlers {
+		if err = handler(ctx, ev); nil != err {
+			log.Error("handle event", zfield.Topic(topic), zap.Error(err),
+				zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
+		}
+	}
+
+	log.Debug("handle event completed", zfield.Topic(topic),
+		zfield.Elapsedms(time.Duration(elapsedTime.ElapsedMilli())),
+		zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
+	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
+}
 
 type Consumer struct {
 	id      string
 	handler pubsub.EventHandler
 }
 
-func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	// parse CloudEvent from pb.TopicEventRequest.
-	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id),
-		zap.String("raw_data", string(req.RawData)), zap.Any("meta", req.Meta))
-
-	ev := cloudevents.NewEvent()
-	err = ev.UnmarshalJSON(req.RawData)
-	if nil != err {
-		log.Warn("data must be CloudEvents spec", zap.String("id", req.Meta.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "unmarshal event")
-	}
-
-	// dispatch message.
-	groupName := consumerGroup(req.Meta.Pubsubname, req.Meta.Topic)
-
-	lock.RLock()
-	for _, consumer := range consumers[groupName] {
-		log.Debug("handle event",
-			zfield.Topic(req.Meta.Topic),
-			zfield.Pubsub(req.Meta.Pubsubname),
-			zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
-		consumer.handler(ctx, ev)
-	}
-	lock.RUnlock()
-
-	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
-}
+var defaultConsumer = &Consumer{id: "defaultConsumer", handler: func(ctx context.Context, e cloudevents.Event) error {
+	log.Warn("empty cluster consumer", zfield.Header(message.GetAttributes(e)), zfield.Event(e))
+	return nil
+}}
 
 func consumerGroup(pubsubName, topicName string) string {
 	return fmt.Sprintf("%s/%s", pubsubName, topicName)
 }
 
-func registerConsumer(pubsubName, topicName string, consumer *Consumer) error {
-	lock.Lock()
-	defer lock.Unlock()
-	group := consumerGroup(pubsubName, topicName)
-	consumers[group] = append(consumers[group], consumer)
-	return nil
-}
-
-func unregisterConsumer(pubsubName, topicName string, consumer *Consumer) error {
-	lock.Lock()
-	defer lock.Unlock()
-	groupName := consumerGroup(pubsubName, topicName)
-	consumerGrop := consumers[groupName]
-	for index, cs := range consumerGrop {
-		if cs.id == consumer.id {
-			consumers[groupName] =
-				append(consumerGrop[:index], consumerGrop[index+1:]...)
-			break
-		}
-	}
-	return nil
-}
-
 func init() {
-	consumers = make(map[string][]*Consumer)
+	consumerManager = &ConsumerManager{
+		lock:          sync.RWMutex{},
+		nodeConsumers: make(map[string][]*Consumer),
+	}
 }

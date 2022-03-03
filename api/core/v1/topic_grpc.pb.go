@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TopicClient interface {
 	TopicEventHandler(ctx context.Context, in *TopicEventRequest, opts ...grpc.CallOption) (*TopicEventResponse, error)
+	TopicClusterEventHandler(ctx context.Context, in *TopicEventRequest, opts ...grpc.CallOption) (*TopicEventResponse, error)
 }
 
 type topicClient struct {
@@ -38,11 +39,21 @@ func (c *topicClient) TopicEventHandler(ctx context.Context, in *TopicEventReque
 	return out, nil
 }
 
+func (c *topicClient) TopicClusterEventHandler(ctx context.Context, in *TopicEventRequest, opts ...grpc.CallOption) (*TopicEventResponse, error) {
+	out := new(TopicEventResponse)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Topic/TopicClusterEventHandler", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TopicServer is the server API for Topic service.
 // All implementations must embed UnimplementedTopicServer
 // for forward compatibility
 type TopicServer interface {
 	TopicEventHandler(context.Context, *TopicEventRequest) (*TopicEventResponse, error)
+	TopicClusterEventHandler(context.Context, *TopicEventRequest) (*TopicEventResponse, error)
 	mustEmbedUnimplementedTopicServer()
 }
 
@@ -52,6 +63,9 @@ type UnimplementedTopicServer struct {
 
 func (UnimplementedTopicServer) TopicEventHandler(context.Context, *TopicEventRequest) (*TopicEventResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TopicEventHandler not implemented")
+}
+func (UnimplementedTopicServer) TopicClusterEventHandler(context.Context, *TopicEventRequest) (*TopicEventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TopicClusterEventHandler not implemented")
 }
 func (UnimplementedTopicServer) mustEmbedUnimplementedTopicServer() {}
 
@@ -84,6 +98,24 @@ func _Topic_TopicEventHandler_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Topic_TopicClusterEventHandler_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TopicEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TopicServer).TopicClusterEventHandler(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Topic/TopicClusterEventHandler",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TopicServer).TopicClusterEventHandler(ctx, req.(*TopicEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Topic_ServiceDesc is the grpc.ServiceDesc for Topic service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -94,6 +126,10 @@ var Topic_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TopicEventHandler",
 			Handler:    _Topic_TopicEventHandler_Handler,
+		},
+		{
+			MethodName: "TopicClusterEventHandler",
+			Handler:    _Topic_TopicClusterEventHandler_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

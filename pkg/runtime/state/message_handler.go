@@ -31,6 +31,18 @@ func (s *statem) getState(stateID string) State {
 	return State{ID: stateID, Props: s.cacheProps[stateID]}
 }
 
+func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
+	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
+	log.Debug("invoke raw message", zfield.Eid(s.ID), zfield.Type(s.Type),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+
+	// TODO: rawData 需要设置默认tentacle.
+	return []WatchKey{{
+		EntityID:    s.ID,
+		PropertyKey: "rawData",
+	}}
+}
+
 // invokePropertyMessage invoke property message.
 func (s *statem) invokeStateMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
@@ -92,7 +104,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 	}
 
 	log.Debug("active state tentacle", zfield.Eid(s.ID),
-		zfield.Type(s.Type), zap.Any("actives", actives))
+		zfield.Type(s.Type), zap.Any("actives", actives), zap.Any("tetacles", s.tentacles))
 
 	var (
 		messages        = make(map[string]map[string]tdtl.Node)

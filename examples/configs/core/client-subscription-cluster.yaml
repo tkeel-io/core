@@ -4,7 +4,7 @@ metadata:
   name: cluster-subscriber
 spec:
   topic: cluster-pub
-  route: /v1/topic
+  route: /v1/cluster
   pubsubname: cluster-pubsub
 scopes:
   - core

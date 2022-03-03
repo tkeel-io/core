@@ -3,7 +3,7 @@ kind: Subscription
 metadata:
   name: core-subscriber
 spec:
-  topic: core-pub
+  topic: core-inner
   route: /v1/topic
   pubsubname: core-pubsub
 scopes:

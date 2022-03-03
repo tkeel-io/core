@@ -13,20 +13,33 @@ option java_multiple_files = true;
 option java_package = "api.core.v1";
 
 service Topic {
-    rpc TopicEventHandler(TopicEventRequest) returns(TopicEventResponse) {
+  rpc TopicEventHandler(TopicEventRequest) returns(TopicEventResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "TopicEvent handler";
+      operation_id: "TopicEventHandler";
+      tags: "TopicEvent";
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
+  }
 
-        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "TopicEvent handler";
-            operation_id: "topicEventHandler";
-            tags: "TopicEvent";
-            responses: {
-              key: "200"
-              value: {
-                description: "OK";
-              }
-            }
-          };
-    }
+  rpc TopicClusterEventHandler(TopicEventRequest) returns(TopicEventResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "TopicEvent handler";
+      operation_id: "TopicClusterEventHandler";
+      tags: "TopicEvent";
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
+  }
 }
 
 

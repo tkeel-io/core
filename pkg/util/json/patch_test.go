@@ -26,7 +26,7 @@ import (
 
 func TestPatch(t *testing.T) {
 	var err error
-	var dest tdtl.Node = tdtl.JSONNode(`{"temp":20}`)
+	var dest tdtl.Node = tdtl.New(`{"temp":20}`)
 	dest, err = Patch(dest, tdtl.IntNode(22), "temp", OpReplace)
 	assert.Nil(t, err)
 	assert.Equal(t, `{"temp":22}`, dest.String())
@@ -43,7 +43,7 @@ func TestPatch(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, `{"temp":"555","append":[]}`, dest.String())
 
-	dest, err = Patch(dest, tdtl.JSONNode(`{"property1": 12345}`), "append", OpAdd)
+	dest, err = Patch(dest, tdtl.New(`{"property1": 12345}`), "append", OpAdd)
 	assert.Nil(t, err)
 	assert.Equal(t, "{\"temp\":\"555\",\"append\":[{\"property1\": 12345}]}", dest.String())
 
@@ -54,13 +54,13 @@ func TestPatch(t *testing.T) {
 
 func TestPatch2(t *testing.T) {
 	raw := `{"_spacePath":"tesxt"}`
-	res, err := Patch(tdtl.JSONNode(raw), tdtl.StringNode(`"test"`), "_spacePath", OpReplace)
+	res, err := Patch(tdtl.New(raw), tdtl.StringNode(`"test"`), "_spacePath", OpReplace)
 	assert.Nil(t, err)
 	t.Log(res.String())
 }
 
 func BenchmarkPatch1(b *testing.B) {
-	raw := tdtl.JSONNode(`{"temp":"555"}`)
+	raw := tdtl.New(`{"temp":"555"}`)
 	//	expect := `{"temp":"555","append":[{"property1":9999},"test"]}`
 	for n := 0; n < b.N; n++ {
 		Patch(raw, tdtl.IntNode(9999), "temp", OpReplace)
@@ -68,7 +68,7 @@ func BenchmarkPatch1(b *testing.B) {
 }
 
 func BenchmarkPatch2(b *testing.B) {
-	raw := tdtl.JSONNode(`{"temp":"555","append":[{"property1":12345},"test"]}`)
+	raw := tdtl.New(`{"temp":"555","append":[{"property1":12345},"test"]}`)
 	//	expect := `{"temp":"555","append":[{"property1":9999},"test"]}`
 	for n := 0; n < b.N; n++ {
 		Patch(raw, tdtl.IntNode(9999), "append[0].property1", OpRemove)
@@ -86,7 +86,7 @@ func BenchmarkStateMap(b *testing.B) {
 }
 
 func TestGet(t *testing.T) {
-	raw := tdtl.JSONNode(`{"temp":"555","append":[{"property1":12345},"test"]}`)
+	raw := tdtl.New(`{"temp":"555","append":[{"property1":12345},"test"]}`)
 	val, err := Patch(raw, nil, "append", OpCopy)
 	assert.Nil(t, err)
 	t.Log("result: ", val)

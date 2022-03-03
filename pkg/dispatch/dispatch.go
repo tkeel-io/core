@@ -177,6 +177,7 @@ func (d *dispatcher) constructQueues(queues []dao.Queue) {
 }
 
 func (d *dispatcher) constructUpstreamQueue(queue *dao.Queue) pubsub.Pubsub {
+	queue.Metadata["consumer_type"] = queue.ConsumerType
 	pubsubInst := pubsub.NewPubsub(queue.ID, resource.Metadata{
 		Name:       queue.Type.String(),
 		Properties: queue.Metadata,
@@ -196,6 +197,7 @@ func (d *dispatcher) constructUpstreamQueue(queue *dao.Queue) pubsub.Pubsub {
 }
 
 func (d *dispatcher) constructDownstreamQueue(queue *dao.Queue) pubsub.Pubsub {
+	queue.Metadata["consumer_type"] = queue.ConsumerType
 	pubsubInst := pubsub.NewPubsub(queue.ID, resource.Metadata{
 		Name:       queue.Type.String(),
 		Properties: queue.Metadata,

@@ -34,6 +34,7 @@ func (m *Manager) listQueue() {
 				if coreNodeName == queue.NodeName {
 					log.Info("append queue", zfield.ID(queue.ID))
 					// create receiver instance.
+					queue.Metadata["consumer_type"] = queue.ConsumerType
 					receiver := pubsub.NewPubsub(queue.ID, resource.Metadata{
 						Name:       queue.Type.String(),
 						Properties: queue.Metadata,
@@ -77,6 +78,7 @@ func (m *Manager) watchQueue() {
 				if coreNodeName == queue.NodeName {
 					log.Info("append queue", zfield.ID(queue.ID))
 					// create receiver instance.
+					queue.Metadata["consumer_type"] = queue.ConsumerType
 					receiver := pubsub.NewPubsub(queue.ID, resource.Metadata{
 						Name:       queue.Type.String(),
 						Properties: queue.Metadata,

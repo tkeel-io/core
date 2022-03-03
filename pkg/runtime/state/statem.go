@@ -200,6 +200,8 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) Result {
 	result := Result{Status: MCompleted}
 	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
+	case message.MessageTypeRaw:
+		actives = s.invokeRawMessage(ctx, msgCtx)
 	case message.MessageTypeState:
 		actives = s.invokeStateMessage(ctx, msgCtx)
 	case message.MessageTypeAPIRepublish:

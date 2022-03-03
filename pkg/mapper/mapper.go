@@ -61,8 +61,6 @@ func (m *mapper) SourceEntities() map[string][]string {
 	return m.tqlInst.Entities()
 }
 
-
-
 // Tentacles returns tentacles.
 func (m *mapper) Tentacles() []Tentacler {
 	tentacleConfigs := tentacles(m.tqlInst)
