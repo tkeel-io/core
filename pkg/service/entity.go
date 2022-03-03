@@ -576,26 +576,16 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
-			id := interface2string(kv["id"])
-			source := interface2string(kv["source"])
-			owner := interface2string(kv["owner"])
-			entityType := interface2string(kv["type"])
-
-			delete(kv, "id")
-			delete(kv, "source")
-			delete(kv, "owner")
-			delete(kv, "type")
-			delete(kv, "version")
-			delete(kv, "last_time")
-			properties, _ := structpb.NewValue(kv)
-			entityItem := &pb.EntityResponse{
-				Id:         id,
-				Source:     source,
-				Owner:      owner,
-				Type:       entityType,
-				Properties: properties,
-				Mappers:    []*pb.Mapper{},
+			var entity = new(Entity)
+			entity.ID = interface2string(kv["id"])
+			entity.Source = interface2string(kv["source"])
+			entity.Owner = interface2string(kv["owner"])
+			entity.Type = interface2string(kv["type"])
+			if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
+				log.Error("get entity failed.", zfield.Eid(interface2string(kv["id"])), zap.Error(err))
+				continue
 			}
+			entityItem := s.entity2EntityResponse(entity)
 			out.Items = append(out.Items, entityItem)
 		}
 	}
