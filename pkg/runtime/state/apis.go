@@ -362,7 +362,7 @@ func (s *statem) cbUpdateEntityProps(ctx context.Context, msgCtx message.Context
 
 	watchKeys := make([]mapper.WatchKey, 0)
 	for key, val := range reqEn.Properties {
-		if _, err = stateIns.Patch(xjson.OpReplace, key, []byte(val.String())); nil != err {
+		if _, err = stateIns.Patch(xjson.OpReplace, key, val.Raw()); nil != err {
 			log.Error("upsert state property", zfield.ID(s.ID), zfield.PK(key), zap.Error(err))
 		} else {
 			watchKeys = append(watchKeys, mapper.WatchKey{EntityID: s.ID, PropertyKey: key})
@@ -660,7 +660,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		}
 	}
 
-	s.ConfigBytes = []byte(destNode.String())
+	s.ConfigBytes = destNode.Raw()
 	s.reparseConfig()
 
 	// set response.
@@ -731,7 +731,7 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 	err = nil
 	// set entity configs.
 	if nil != val {
-		enRes.ConfigBytes = []byte(val.String())
+		enRes.ConfigBytes = val.Raw()
 	}
 
 	// set response.

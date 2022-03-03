@@ -700,7 +700,7 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	if bytes, err = xjson.EncodeJSONZ(entity.Properties); nil != err {
 		log.Error("marshal entity properties", zap.Error(err), zfield.Eid(entity.ID))
 	} else if err = json.Unmarshal(bytes, &properties); nil != err {
-		log.Error("unmarshal entity properties", zap.Error(err), zfield.Eid(entity.ID))
+		log.Error("unmarshal entity properties", zap.Error(err), zfield.Eid(entity.ID), zfield.Value(string(bytes)))
 	}
 
 	configs := make(map[string]interface{})

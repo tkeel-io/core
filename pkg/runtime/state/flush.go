@@ -134,9 +134,9 @@ func (s *statem) toGolang(vals map[string]tdtl.Node) map[string]interface{} {
 			}
 			res = i
 		case tdtl.String:
-			res = util.UnwrapS(val.String())
+			res = val.String()
 		case tdtl.JSON:
-			err := json.Unmarshal([]byte(val.String()), &res)
+			err := json.Unmarshal(val.Raw(), &res)
 			if nil != err {
 				log.Warn("parse json type", zap.Error(err))
 			}

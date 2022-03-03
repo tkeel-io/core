@@ -39,18 +39,18 @@ func (s *Base) Validate() error {
 func decode2Subscription(kvalues map[string]tdtl.Node, subsc *Base) {
 	// parse Mode.
 	if node, has := kvalues[SubscriptionFieldMode]; has {
-		subsc.Mode = node.String()
+		subsc.Mode = string(node.Raw())
 	}
 	// parse Filter.
 	if node, has := kvalues[SubscriptionFieldFilter]; has {
-		subsc.Filter = node.String()
+		subsc.Filter = string(node.Raw())
 	}
 	// parse Topic.
 	if node, has := kvalues[SubscriptionFieldTopic]; has {
-		subsc.Topic = node.String()
+		subsc.Topic = string(node.Raw())
 	}
 	// parse PubsubName.
 	if node, has := kvalues[SubscriptionFieldPubsubName]; has {
-		subsc.PubsubName = node.String()
+		subsc.PubsubName = string(node.Raw())
 	}
 }

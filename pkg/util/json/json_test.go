@@ -227,3 +227,15 @@ func TestObject(t *testing.T) {
 	collect := collectjs.ByteNew([]byte(`{}`))
 	t.Log(collect.GetDataType() == jsonparser.Object.String())
 }
+
+func TestJsonParser(t *testing.T) {
+	bytes, err := jsonparser.Set([]byte(`{}}`), []byte(`"tom"`), "__name", "_def")
+	t.Log(err)
+	t.Log(string(bytes))
+}
+
+func TestParserType(t *testing.T) {
+	tt, err := jsonparser.ParseType([]byte(`"ssssssss"`))
+	t.Log(err)
+	t.Log(tt.String())
+}

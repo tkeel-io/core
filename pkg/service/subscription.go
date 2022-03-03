@@ -66,7 +66,7 @@ func interface2string(in interface{}) (out string) {
 	case string:
 		out = inString
 	case tdtl.Node:
-		out = inString.String()
+		out = string(inString.Raw())
 	default:
 		out = ""
 	}

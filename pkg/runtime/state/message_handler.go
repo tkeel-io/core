@@ -166,7 +166,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 					}
 
 					if prop, err := stateIns.Patch(xjson.OpCopy, active.PropertyKey, nil); nil != err {
-						log.Warn("patch copy property", zfield.Eid(s.ID),
+						log.Warn("patch copy property", zfield.Eid(s.ID), zfield.Value(stateIns.Props),
 							zfield.Target(targetID), zfield.PK(active.String()), zfield.Reason(err.Error()))
 					} else if nil != prop {
 						messages[targetID][active.PropertyKey] = prop
@@ -198,6 +198,9 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 							segments := strings.Split(active.PropertyKey, ".")
 							if prop, has := stateIns.Props[segments[0]]; has {
 								messages[targetID][segments[0]] = prop
+							} else {
+								log.Warn("patch copy property", zfield.Eid(s.ID), zfield.Value(stateIns.Props),
+									zfield.Target(targetID), zfield.PK(active.String()), zfield.Reason("path not found"))
 							}
 						}
 					}
@@ -225,7 +228,7 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 		msgArr := []string{}
 		for key, val := range msg {
-			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.String()))
+			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, string(val.Raw())))
 		}
 
 		bytes = []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ",")))
@@ -245,17 +248,6 @@ func (s *statem) activeTentacle(actives []mapper.WatchKey) { //nolint
 
 	// active mapper.
 	s.activeMapper(activeTentacles)
-}
-
-func unwrap(s tdtl.Node) tdtl.Node {
-	if len(s.String()) > 0 {
-		return tdtl.StringNode(s.String()[1 : len(s.String())-1])
-	}
-	return s
-}
-
-func wrapStr(s string) string {
-	return "\"" + s + "\""
 }
 
 // activeMapper active mappers.
@@ -283,7 +275,7 @@ func (s *statem) activeMapper(actives []string) {
 						zfield.Eid(item.EntityID), zfield.PK(item.PropertyKey), zfield.Value(stateIns.Props))
 					continue
 				} else if nil != val {
-					input[item.String()] = unwrap(val)
+					input[item.String()] = val
 				}
 			}
 		}
@@ -299,12 +291,11 @@ func (s *statem) activeMapper(actives []string) {
 		if properties, err = s.mappers[mapperID].Exec(input); nil != err {
 			log.Error("exec statem mapper failed ", zap.Error(err))
 		}
-
 		log.Debug("exec mapper", zfield.Mid(mapperID), zap.Any("input", input), zap.Any("output", properties))
 
 		stateIns := s.getState(s.ID)
 		for propertyKey, value := range properties {
-			setVal := []byte(wrapStr(value.String()))
+			setVal := []byte(string(value.Raw()))
 			if _, err = stateIns.Patch(xjson.OpReplace, propertyKey, setVal); nil != err {
 				log.Error("set property", zfield.ID(s.ID), zap.Error(err),
 					zap.String("property_key", propertyKey), zap.String("value", string(setVal)))
@@ -377,7 +368,7 @@ func (s *statem) invokeMapperInit(ctx context.Context, msgCtx message.Context) [
 
 		msgArr := []string{}
 		for key, val := range msg {
-			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.String()))
+			msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, string(val.Raw())))
 		}
 
 		bytes = []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ",")))

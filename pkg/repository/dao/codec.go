@@ -27,8 +27,7 @@ func (ec entityCodec) Key(id string) string {
 func (ec entityCodec) Encode(en *Entity) (bytes []byte, err error) {
 	bytes = []byte(`{}`)
 	for key, val := range en.Properties {
-		if bytes, err = collectjs.Set(bytes,
-			key, []byte(val.String())); nil != err {
+		if bytes, err = collectjs.Set(bytes, key, val.Raw()); nil != err {
 			return bytes, errors.Wrap(err, "patch replace")
 		}
 	}
@@ -44,7 +43,7 @@ func (ec entityCodec) Encode(en *Entity) (bytes []byte, err error) {
 func (ec entityCodec) EncodeZ(en *Entity) (bytes []byte, err error) {
 	msgArr := []string{}
 	for key, val := range en.Properties {
-		msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.String()))
+		msgArr = append(msgArr, fmt.Sprintf("\"%s\":%s", key, val.Raw()))
 	}
 
 	bytes = []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ",")))

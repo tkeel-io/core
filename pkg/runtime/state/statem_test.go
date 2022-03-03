@@ -290,3 +290,19 @@ func TestMapReference(t *testing.T) {
 	b.Props["name"] = "tom"
 	t.Log(b.caches)
 }
+
+func TestPatch(t *testing.T) {
+	stateIns := State{ID: "xxxxxxxx", Props: map[string]tdtl.Node{
+		"temp":    tdtl.New("20"),
+		"metrics": tdtl.New(`{"name": "tom"}`),
+	}}
+
+	val, err := stateIns.Get("metrics.name")
+	t.Log(err)
+	t.Log(val.String())
+	t.Log(string(val.Raw()))
+
+	stateIns.Patch(xjson.OpReplace, "sysField._spacePath", []byte(`"tom"`))
+
+	t.Log(stateIns)
+}

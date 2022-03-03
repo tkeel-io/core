@@ -98,7 +98,7 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 	var (
 		err     error
 		bytes   []byte
-		rawData = []byte(destNode.String())
+		rawData = destNode.Raw()
 	)
 
 	switch op {
@@ -117,10 +117,9 @@ func Patch(destNode, srcNode tdtl.Node, path string, op PatchOp) (tdtl.Node, err
 		return destNode, xerrors.ErrJSONPatchReservedOp
 	}
 
-	// dispose 'remove' & 'add'
+	// dispose 'remove' & 'add'.
 	if nil != srcNode {
-		setVal := []byte(srcNode.String())
-		resBytes, err := setValue(rawData, setVal, path, op)
+		resBytes, err := setValue(rawData, srcNode.Raw(), path, op)
 		return tdtl.New(resBytes), errors.Wrap(err, "patch json")
 	}
 	return destNode, xerrors.ErrEmptyParam
@@ -146,7 +145,7 @@ func check(raw []byte, path string) ([]byte, []string, []string, error) {
 
 	prevalueT, err = jsonparser.ParseType(raw)
 	if nil != err {
-		return raw, nil, nil, errors.Wrap(err, "check path")
+		return raw, nil, nil, errors.Wrap(err, "check path 1")
 	}
 
 	for index := range segs {
@@ -162,7 +161,7 @@ func check(raw []byte, path string) ([]byte, []string, []string, error) {
 			if errors.Is(err, jsonparser.KeyPathNotFoundError) {
 				return raw, segs[:index], segs[index:], nil
 			}
-			return raw, nil, nil, errors.Wrap(err, "check path")
+			return raw, nil, nil, errors.Wrap(err, "check path 2")
 		}
 		prevalueT = valueT
 	}

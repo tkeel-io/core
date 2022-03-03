@@ -29,7 +29,7 @@ import (
 func EncodeJSON(kvalues map[string]tdtl.Node) ([]byte, error) {
 	collect := collectjs.New("{}")
 	for key, val := range kvalues {
-		collect.Set(key, []byte(val.String()))
+		collect.Set(key, val.Raw())
 	}
 	return collect.GetRaw(), errors.Wrap(collect.GetError(), "Encode Json")
 }
@@ -38,7 +38,7 @@ func EncodeJSONZ(kvalues map[string]tdtl.Node) ([]byte, error) {
 	msgArr := []string{}
 	for key, val := range kvalues {
 		msgArr = append(msgArr,
-			fmt.Sprintf("\"%s\":%s", key, val.String()))
+			fmt.Sprintf("\"%s\":%s", key, string(val.Raw())))
 	}
 
 	return []byte(fmt.Sprintf("{%s}", strings.Join(msgArr, ","))), nil
@@ -47,15 +47,15 @@ func EncodeJSONZ(kvalues map[string]tdtl.Node) ([]byte, error) {
 func NewNode(dataType jsonparser.ValueType, value []byte) tdtl.Node {
 	switch dataType {
 	case jsonparser.String:
-		return tdtl.StringNode(value)
+		return tdtl.New(value)
 	case jsonparser.Number:
-		return tdtl.StringNode(value).To(tdtl.Number)
+		return tdtl.New(value).To(tdtl.Number)
 	case jsonparser.Object:
 		return tdtl.New(value)
 	case jsonparser.Array:
 		return tdtl.New(value)
 	case jsonparser.Boolean:
-		return tdtl.StringNode(value).To(tdtl.Bool)
+		return tdtl.New(value).To(tdtl.Bool)
 	case jsonparser.Null:
 		return tdtl.NULL_RESULT
 	default:
