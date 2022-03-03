@@ -645,7 +645,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 	// copy config bytes.
 	bytes = make([]byte, len(s.ConfigBytes))
 	copy(bytes, s.ConfigBytes)
-	var destNode tdtl.Node = tdtl.JSONNode(bytes)
+	var destNode tdtl.Node = tdtl.New(bytes)
 	// patch configs.
 	for _, pd := range pds {
 		bytesSrc, _ := pd.Value.([]byte)
@@ -653,7 +653,7 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		switch op {
 		case xjson.OpAdd:
 		default:
-			if destNode, err = xjson.Patch(destNode, tdtl.JSONNode(bytesSrc), pd.Path, op); nil != err {
+			if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
 			}
@@ -711,9 +711,9 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 
 	var val tdtl.Node
 	var enRes = s.Entity.Basic()
-	var destNodel tdtl.Node = tdtl.JSONNode(`{}`)
+	var destNodel tdtl.Node = tdtl.New(`{}`)
 	for _, path := range apiRequest.PropertyKeys {
-		if val, err = xjson.Patch(tdtl.JSONNode(s.ConfigBytes), nil, path, xjson.OpCopy); nil != err {
+		if val, err = xjson.Patch(tdtl.New(s.ConfigBytes), nil, path, xjson.OpCopy); nil != err {
 			if !errors.Is(err, xerrors.ErrPropertyNotFound) {
 				log.Error("get entity configs",
 					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
