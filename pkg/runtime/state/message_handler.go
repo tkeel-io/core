@@ -2,6 +2,8 @@ package state
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -32,15 +34,53 @@ func (s *statem) getState(stateID string) State {
 }
 
 func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
-	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
 	log.Debug("invoke raw message", zfield.Eid(s.ID), zfield.Type(s.Type),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 
-	// TODO: rawData 需要设置默认tentacle.
-	return []WatchKey{{
-		EntityID:    s.ID,
-		PropertyKey: "rawData",
-	}}
+	var err error
+	var rawData RawData
+	// decode raw data json.
+	if err = json.Unmarshal(msgCtx.Message(), &rawData); nil != err {
+		log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
+
+	// set raw data.
+	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
+
+	// dispose rawdata.
+	var bytes []byte
+	if bytes, err = base64.StdEncoding.DecodeString(rawData.Values); nil != err {
+		log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+		return nil
+	}
+
+	actives := make([]WatchKey, 0)
+	collect := collectjs.ByteNew(bytes)
+	stateIns := State{ID: s.ID, Props: s.Properties}
+	if err = collect.GetError(); nil != err {
+		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
+		return nil
+	} else if jsonparser.Object.String() != collect.GetDataType() {
+		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
+		return nil
+	}
+
+	collect.Foreach(func(key, value []byte, dataType jsonparser.ValueType) {
+		path := rawData.Type + strings.Trim(string(key), `"`)
+		if _, err = stateIns.Patch(xjson.OpReplace, path, value); nil != err {
+			log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
+				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+			return
+		}
+		actives = append(actives, WatchKey{EntityID: s.ID, PropertyKey: path})
+	})
+
+	return actives
 }
 
 // invokePropertyMessage invoke property message.

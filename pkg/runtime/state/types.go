@@ -61,3 +61,12 @@ type Mapper struct {
 	Name        string `json:"name" msgpack:"name"`
 	Description string `json:"description" msgpack:"description"`
 }
+
+type RawData struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Mark      string `json:"mark"`
+	Path      string `json:"path"`
+	Values    string `json:"values"`
+	Timestamp int64  `json:"ts"` //nolint
+}

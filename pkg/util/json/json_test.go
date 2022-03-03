@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -219,4 +221,9 @@ func BenchmarkCollectJson(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		EncodeJSON(kvalues)
 	}
+}
+
+func TestObject(t *testing.T) {
+	collect := collectjs.ByteNew([]byte(`{}`))
+	t.Log(collect.GetDataType() == jsonparser.Object.String())
 }
