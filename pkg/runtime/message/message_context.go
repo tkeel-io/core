@@ -37,6 +37,8 @@ const (
 	ExtCloudEventID          = "exteventid"
 	ExtCloudEventSpec        = "exteventspec"
 	ExtCloudEventType        = "exteventtype"
+	ExtCloudEventTopic       = "exteventtopic"
+	ExtCloudEventPubsub      = "exteventpubsub"
 	ExtCloudEventSource      = "exteventsource"
 	ExtCloudEventSubject     = "exteventsubject"
 	ExtCloudEventDataSchema  = "exteventschema"

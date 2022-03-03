@@ -6,12 +6,11 @@ import (
 	"sync"
 
 	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
+	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 // 场景：
@@ -40,27 +39,19 @@ type Consumer struct {
 	handler pubsub.EventHandler
 }
 
-func HandleEvent(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	// parse CloudEvent from pb.TopicEventRequest.
-	log.Debug("received TopicEvent", zfield.ID(req.Meta.Id),
-		zap.String("raw_data", string(req.RawData)), zap.Any("meta", req.Meta))
-
-	ev := cloudevents.NewEvent()
-	err = ev.UnmarshalJSON(req.RawData)
-	if nil != err {
-		log.Warn("data must be CloudEvents spec", zap.String("id", req.Meta.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "unmarshal event")
-	}
+func HandleEvent(ctx context.Context, ev cloudevents.Event) (out *pb.TopicEventResponse, err error) {
+	var topic string
+	var pubsubName string
+	ev.ExtensionAs(message.ExtCloudEventTopic, &topic)
+	ev.ExtensionAs(message.ExtCloudEventPubsub, &pubsubName)
 
 	// dispatch message.
-	groupName := consumerGroup(req.Meta.Pubsubname, req.Meta.Topic)
+	groupName := consumerGroup(pubsubName, topic)
+	log.Debug("handle event", zfield.Topic(topic),
+		zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
 
 	lock.RLock()
 	for _, consumer := range consumers[groupName] {
-		log.Debug("handle event",
-			zfield.Topic(req.Meta.Topic),
-			zfield.Pubsub(req.Meta.Pubsubname),
-			zfield.ReqID(req.Meta.Id), zap.Any("meta", req.Meta))
 		consumer.handler(ctx, ev)
 	}
 	lock.RUnlock()

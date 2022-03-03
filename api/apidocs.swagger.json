@@ -16,6 +16,9 @@
     },
     {
       "name": "TS"
+    },
+    {
+      "name": "Topic"
     }
   ],
   "consumes": [
@@ -1927,6 +1930,35 @@
         }
       }
     },
+    "v1Metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "specversion": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "datacontenttype": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "pubsubname": {
+          "type": "string"
+        }
+      }
+    },
     "v1RemoveMapperResponse": {
       "type": "object",
       "properties": {
@@ -2102,6 +2134,14 @@
             "type": "number",
             "format": "float"
           }
+        }
+      }
+    },
+    "v1TopicEventResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
         }
       }
     }

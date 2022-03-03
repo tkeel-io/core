@@ -31,6 +31,18 @@ func (s *statem) getState(stateID string) State {
 	return State{ID: stateID, Props: s.cacheProps[stateID]}
 }
 
+func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
+	s.Properties["rawData"] = tdtl.JSONNode(msgCtx.Message())
+	log.Debug("invoke raw message", zfield.Eid(s.ID), zfield.Type(s.Type),
+		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+
+	// TODO: rawData 需要设置默认tentacle.
+	return []WatchKey{{
+		EntityID:    s.ID,
+		PropertyKey: "rawData",
+	}}
+}
+
 // invokePropertyMessage invoke property message.
 func (s *statem) invokeStateMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	stateID := msgCtx.Get(message.ExtEntityID)
