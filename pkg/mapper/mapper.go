@@ -57,13 +57,15 @@ func (m *mapper) TargetEntity() string {
 }
 
 // SourceEntities returns source entities(include target entity).
-func (m *mapper) SourceEntities() []string {
+func (m *mapper) SourceEntities() map[string][]string {
 	return m.tqlInst.Entities()
 }
 
+
+
 // Tentacles returns tentacles.
 func (m *mapper) Tentacles() []Tentacler {
-	tentacleConfigs := m.tqlInst.Tentacles()
+	tentacleConfigs := tentacles(m.tqlInst)
 	tentacles := make([]Tentacler, 0, len(tentacleConfigs))
 	mItems := make([]WatchKey, 0)
 

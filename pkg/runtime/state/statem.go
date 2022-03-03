@@ -256,7 +256,7 @@ func (s *State) Patch(op xjson.PatchOp, path string, value []byte) (tdtl.Node, e
 	index := strings.IndexAny(path, ".[")
 	propertyID, patchPath := path[:index], strings.TrimPrefix(path[index:], ".")
 
-	valNode := tdtl.JSONNode(value)
+	valNode := tdtl.New(value)
 	if result, err = xjson.Patch(s.get(propertyID), valNode, patchPath, op); nil != err {
 		return nil, errors.Wrap(err, "patch state")
 	}
@@ -274,7 +274,7 @@ func (s *State) get(pid string) tdtl.Node {
 	if val, ok := s.Props[pid]; ok {
 		return val
 	}
-	return tdtl.JSONNode("")
+	return tdtl.New("")
 }
 
 func (s *State) patchProp(op xjson.PatchOp, path string, value string) (tdtl.Node, error) {
@@ -285,12 +285,12 @@ func (s *State) patchProp(op xjson.PatchOp, path string, value string) (tdtl.Nod
 	)
 	switch op {
 	case xjson.OpReplace:
-		s.Props[path] = tdtl.JSONNode(value)
+		s.Props[path] = tdtl.New(value)
 	case xjson.OpAdd:
 		// patch property add.
 		prop := s.Props[path]
 		if nil == prop {
-			prop = tdtl.JSONNode(`[]`)
+			prop = tdtl.New(`[]`)
 		}
 
 		// patch add val.
@@ -298,7 +298,7 @@ func (s *State) patchProp(op xjson.PatchOp, path string, value string) (tdtl.Nod
 		if nil != err {
 			return result, errors.Wrap(err, "patch add")
 		}
-		result = tdtl.JSONNode(bytes)
+		result = tdtl.New(bytes)
 		s.Props[path] = result
 	case xjson.OpRemove:
 		delete(s.Props, path)
