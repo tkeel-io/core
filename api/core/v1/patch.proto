@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package api.core.v1;
+
+
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+message Patch {
+  enum Type{
+    OpReplace = 0;
+    OpAdd = 1;
+    OpTest = 2;
+    OpCopy = 3;
+    OpMove = 4;
+    OpRemove = 5;
+    OpUndef = 6;
+  }
+  string path = 10 ;
+  Type operator = 11;
+  bytes data = 12;
+}
+
+
+message PatchList {
+  repeated Patch patchs = 1 ;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
