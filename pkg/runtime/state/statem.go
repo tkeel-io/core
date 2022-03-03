@@ -200,17 +200,17 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) Result {
 	result := Result{Status: MCompleted}
 	msgType := msgCtx.Get(message.ExtMessageType)
 	switch message.MessageType(msgType) {
-	case message.MessageTypeRaw:
+	case message.MessageTypeRaw:            // 外部输入（iothub）
 		actives = s.invokeRawMessage(ctx, msgCtx)
-	case message.MessageTypeState:
+	case message.MessageTypeState:          //
 		actives = s.invokeStateMessage(ctx, msgCtx)
-	case message.MessageTypeAPIRepublish:
+	case message.MessageTypeAPIRepublish:   // 其他实体的状态，通过订阅过来【Runtime处理】
 		actives = s.republisher(ctx, msgCtx)
-	case message.MessageTypeAPIRequest:
+	case message.MessageTypeAPIRequest:     // API 调用
 		actives, result = s.callAPIs(ctx, msgCtx)
 		s.activeTentacle(actives)
 		return result
-	case message.MessageTypeMapperInit:
+	case message.MessageTypeMapperInit:     // Mapper 初始化（ETCD 获取）  【系统消息，Runtime处理】
 		actives = s.invokeMapperInit(ctx, msgCtx)
 	default:
 		log.Error("message type not support", zfield.Type(msgType))
