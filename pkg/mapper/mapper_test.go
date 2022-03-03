@@ -104,7 +104,7 @@ func TestMapper123(t *testing.T) {
 	}
 
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
-		"49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.JSONNode(`tom`),
+		"49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.New(`"tom"`),
 	})
 
 	assert.Nil(t, err)
