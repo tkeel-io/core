@@ -16,10 +16,6 @@ type RuntimeConfig struct {
 	Source SourceConf
 }
 
-func NewContainer(ctx context.Context) *Container {
-	return &Container{}
-}
-
 type Runtime struct {
 	containers map[string]*Container
 	dispatch   Dispatch
@@ -54,7 +50,7 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 		sourceIns := NewPartitionSource(r.ctx, sourceUrl)
 
 		// new container.
-		container := NewContainer(r.ctx)
+		container := NewContainer(1)
 
 		// consume source.
 		err := sourceIns.StartReceiver(r.ctx, container.DeliveredEvent)
