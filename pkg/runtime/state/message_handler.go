@@ -71,7 +71,7 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 	}
 
 	collect.Foreach(func(key, value []byte, dataType jsonparser.ValueType) {
-		path := rawData.Type + strings.Trim(string(key), `"`)
+		path := strings.Join([]string{rawData.Type, strings.Trim(string(key), `"`)}, ".")
 		if _, err = stateIns.Patch(xjson.OpReplace, path, value); nil != err {
 			log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
 				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
