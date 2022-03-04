@@ -16,6 +16,11 @@ limitations under the License.
 
 package runtime2
 
+import (
+	"context"
+	"github.com/tkeel-io/tdtl"
+)
+
 //Manager 负责当前服务的 Runtime
 // CORE: partitionNum := 9
 // Kafka: core_0\core_1....core_8
@@ -39,51 +44,6 @@ type Manager struct {
 	dao        Dao
 }
 
-//Container 作为 Runtime 负责 Entity 的生命周期管理
-//Container 初始化时
-//1. 初始化 Inbox(partition)，注册 MessageHandle
-//
-//2. MessageHandle 消息处理逻辑
-//2.1 实体必须包含 entityID，创建、删除等消息：由 Container 处理
-//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
-//
-//升级Mapper执行的环境
-//2.1 Cache 消息直接更新 Container 的 caches
-//2.3 实体消息：首先查找 StateMachine，如果没有初始化,且加入map
-//              machines[entityID]=StateMachine(entityID,dispatch,stateBytes)
-//2.3 更新实体，记录下变更
-//
-//3  MessageHandle 处理完毕后后
-//2.2  Mapper处理：首先查找 Mapper，如果没有初始化,且加入map
-//              mappers[entityID]=Mapper(dispatch,stateBytes)
-//3.3 触发对应的Mapper（执行-target）
-//3.4 更新实体（target），记录下变更
-//
-//4.收尾
-//4.1 依照订阅发布实体变更
-//4.2 处理 API 回调
-//
-//5. 初始化 StateMachine
-//5.1 从 StateMachine 中读取 stateBytes
-//5.2 从 stateBytes 中新建 StateMachine
-//
-//Q:
-//Container 需要知道Event类型
-//- 系统消息
-//- 有没有回调
-//- 是否为cache更新
-// ContainerEvent
-// - Manger\Entity\Cache
-type Container struct {
-	//inbox    Inbox
-	caches   map[string]*StateMachine //存放其他Container的实体
-	machines map[string]*StateMachine //存放Container的实体
-	mappers  map[string]*Mapper       //存放Container的Mapper
-	dispatch *Dispatch
-	dao      Dao
-	//kafka client
-}
-
 //Inbox 负责消费Kafka的单个 partition 消息，维护该partition的Ack与Offset
 type Inbox struct {
 	handle MessageHandle
@@ -95,8 +55,41 @@ type Mapper struct {
 
 //StateMachine 作为 Entity 负责接收消息并处理自身状态
 // 处理 EntityEvent
-type StateMachine struct {
-	handle MessageHandle
+type EventHandle func(ctx context.Context, message interface{}) (*StateResult, error)
+type Patch struct {
+	JSONPath string
+	OP       string
+	Value    []byte
+}
+
+//Feed 包含实体最新状态以及变更
+type StateResult struct {
+	State  []byte
+	Patchs []Patch
+}
+
+type TEntity struct {
+	ID            string               `json:"id" msgpack:"id" mapstructure:"id"`
+	Type          string               `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner         string               `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source        string               `json:"source" msgpack:"source" mapstructure:"source"`
+	Version       int64                `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime      int64                `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	TemplateID    string               `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	Properties    map[string]tdtl.Node `json:"-" msgpack:"-" mapstructure:"-"`
+	ConfigBytes   []byte               `json:"-" msgpack:"config_bytes" mapstructure:"config_bytes"`
+	PropertyBytes []byte               `json:"property_bytes" msgpack:"property_bytes" mapstructure:"property_bytes"`
+}
+
+func (e *TEntity) Handle(ctx context.Context, message interface{}) (*StateResult, error) {
+	//@TODO config
+	//message -> Patch
+	//e.update(Patch)
+	return nil, nil
+}
+
+func (e *TEntity) RawByte(ctx context.Context) ([]byte, error) {
+	return nil, nil
 }
 
 //Dispatch功能如下：
@@ -115,3 +108,39 @@ type Dispatch struct {
 type Dao struct {
 }
 
+
+// 原有结构体
+/*
+type PatchData struct {
+	Path     string      `json:"path"`
+	Operator string      `json:"operator"`
+	Value    interface{} `json:"value"`
+}
+
+type Entity struct {
+	ID            string               `json:"id" msgpack:"id" mapstructure:"id"`
+	Type          string               `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner         string               `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source        string               `json:"source" msgpack:"source" mapstructure:"source"`
+	Version       int64                `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime      int64                `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	TemplateID    string               `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	ConfigBytes   []byte               `json:"-" msgpack:"config_bytes" mapstructure:"config_bytes"`
+	PropertyBytes []byte               `json:"property_bytes" msgpack:"property_bytes" mapstructure:"property_bytes"`
+}
+
+type ItemsData struct {
+	ID           string   `json:"id"`
+	Type         string   `json:"type"`
+	Owner        string   `json:"owner"`
+	Source       string   `json:"source"`
+	PropertyKeys []string `json:"property_keys"`
+}
+
+{
+OP: Props/Config - Update\Replace\GET
+Path:
+Value:
+}
+
+*/
