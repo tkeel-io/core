@@ -46,8 +46,15 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	}
 
+	actives := make([]WatchKey, 0)
+	actives = append(actives, WatchKey{EntityID: s.ID, PropertyKey: "rawData"})
+	stateIns := State{ID: s.ID, Props: s.Properties}
+
 	// set raw data.
-	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
+	stateIns.Patch(xjson.OpReplace, "rawData", msgCtx.Message())
+	if rawData.Type == "rawData" {
+		return actives
+	}
 
 	// dispose rawdata.
 	var bytes []byte
@@ -57,9 +64,7 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	}
 
-	actives := make([]WatchKey, 0)
 	collect := collectjs.ByteNew(bytes)
-	stateIns := State{ID: s.ID, Props: s.Properties}
 	if err = collect.GetError(); nil != err {
 		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
@@ -71,7 +76,7 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 	}
 
 	collect.Foreach(func(key, value []byte, dataType jsonparser.ValueType) {
-		path := rawData.Type + strings.Trim(string(key), `"`)
+		path := strings.Join([]string{rawData.Type, strings.Trim(string(key), `"`)}, ".")
 		if _, err = stateIns.Patch(xjson.OpReplace, path, value); nil != err {
 			log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
 				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
