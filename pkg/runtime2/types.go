@@ -18,6 +18,7 @@ package runtime2
 
 import (
 	"context"
+
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -107,7 +108,6 @@ type Dispatch struct {
 //Dao 负责读取实体状态，Dao不负责具体的序列化，提供 KV 存储。
 type Dao struct {
 }
-
 
 // 原有结构体
 /*

@@ -70,10 +70,15 @@ type Container struct {
 
 //处理消息
 type ContainerEvent struct {
-	Type string
+	Type  string
 	Value interface{}
 	//ID
 	//TYPE = Manger\Entity\Cache
+}
+
+func (e *Container) DeliveredEvent(ctx context.Context, event interface{}) error {
+	// 1. 通过 inbox 实现event 转换.
+	panic("implement me.")
 }
 
 func (e *Container) HandleEvent(ctx context.Context, event ContainerEvent) (*StateResult, error) {
@@ -131,4 +136,3 @@ func (e *Container) handleCallback(ctx context.Context, event ContainerEvent, re
 	// 1. dispatch.respose(ret)
 	return nil, nil
 }
-
