@@ -70,7 +70,7 @@ type Container struct {
 
 //处理消息
 type ContainerEvent struct {
-	Type string
+	Type  string
 	Value interface{}
 	//ID
 	//TYPE = Manger\Entity\Cache
@@ -131,4 +131,3 @@ func (e *Container) handleCallback(ctx context.Context, event ContainerEvent, re
 	// 1. dispatch.respose(ret)
 	return nil, nil
 }
-
