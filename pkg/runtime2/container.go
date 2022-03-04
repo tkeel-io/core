@@ -76,6 +76,11 @@ type ContainerEvent struct {
 	//TYPE = Manger\Entity\Cache
 }
 
+func (e *Container) DeliveredEvent(ctx context.Context, event interface{}) error {
+	// 1. 通过 inbox 实现event 转换.
+	panic("implement me.")
+}
+
 func (e *Container) HandleEvent(ctx context.Context, event ContainerEvent) (*StateResult, error) {
 	var EntityID string
 	//2.1 实体必须包含 entityID，创建、删除等消息：由 Container 处理

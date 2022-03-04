@@ -16,12 +16,12 @@ type RuntimeConfig struct {
 	Source SourceConf
 }
 
-func NewContainer(ctx context.Context, inbox Inboxer) *Container {
+func NewContainer(ctx context.Context) *Container {
 	return &Container{}
 }
 
 type Runtime struct {
-	containers map[string]Container
+	containers map[string]*Container
 	dispatch   Dispatch
 	dao        Dao
 
@@ -36,7 +36,7 @@ func NewRuntime(ctx context.Context, d Dao, dispatcher Dispatch) *Runtime {
 		ctx:        ctx,
 		cancel:     cacel,
 		dispatch:   dispatcher,
-		containers: make(map[string]Container),
+		containers: make(map[string]*Container),
 	}
 }
 
@@ -53,11 +53,14 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 	for _, sourceUrl := range sourceUrls {
 		sourceIns := NewPartitionSource(r.ctx, sourceUrl)
 
-		// create inbox.
-		inboxIns := NewInbox(r.ctx, sourceIns)
-
 		// new container.
-		NewContainer(r.ctx, inboxIns)
+		container := NewContainer(r.ctx)
+
+		// consume source.
+		err := sourceIns.StartReceiver(r.ctx, container.DeliveredEvent)
+		if nil != err {
+			panic(err)
+		}
 	}
 
 	return nil

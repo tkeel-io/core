@@ -1,13 +1,14 @@
 package runtime2
 
 import (
+	"context"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestRuntime_Start(t *testing.T) {
-
-	rt := NewRuntime(Dao{}, Dispatch{})
+	rt := NewRuntime(context.TODO(), Dao{}, Dispatch{})
 	rt.Start(RuntimeConfig{
 		Source: SourceConf{
 			Topic:      "core",
@@ -16,6 +17,7 @@ func TestRuntime_Start(t *testing.T) {
 		},
 	})
 
+	time.Sleep(1 * time.Hour)
 }
 
 func TestParse(t *testing.T) {
