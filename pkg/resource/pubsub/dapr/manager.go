@@ -101,9 +101,14 @@ func (cm *ConsumerManager) DeliveredEvent(ctx context.Context, ev cloudevents.Ev
 		zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
 
 	cm.lock.RLock()
+	defer cm.lock.RUnlock()
 	handlers := make([]pubsub.EventHandler, 0)
 	switch dao.ConsumerType(consumerType) {
 	case dao.ConsumerTypeDispatch:
+		if cm.clusterConsumer == nil {
+			time.Sleep(time.Millisecond * 100)
+			return &pb.TopicEventResponse{Status: SubscriptionResponseStatusRetry}, nil
+		}
 		handlers = append(handlers, cm.clusterConsumer.handler)
 	case dao.ConsumerTypeCore:
 		groupName := consumerGroup(pubsubName, topic)
@@ -115,7 +120,6 @@ func (cm *ConsumerManager) DeliveredEvent(ctx context.Context, ev cloudevents.Ev
 			zfield.Header(message.GetAttributes(ev)), zfield.Pubsub(pubsubName))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
 	}
-	cm.lock.RUnlock()
 
 	// dispose event.
 	for _, handler := range handlers {

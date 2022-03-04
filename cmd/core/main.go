@@ -19,8 +19,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -123,6 +125,13 @@ func main() {
 
 func core(cmd *cobra.Command, args []string) {
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
+	envETCD := os.Getenv("TKEEL_REGISTRY")
+	if envETCD != "" {
+		etcdURL, err := url.Parse(envETCD)
+		if err == nil {
+			_etcdBrokers = strings.Split(etcdURL.Host, ",")
+		}
+	}
 
 	{
 		// set default configurations.
@@ -134,6 +143,10 @@ func core(cmd *cobra.Command, args []string) {
 	placement.Initialize()
 
 	// rewrite search engine config by flags input info.
+	envES := os.Getenv("TKEEL_SEARCH")
+	if envES != "" {
+		_searchEngine = envES
+	}
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
 		if err != nil {
