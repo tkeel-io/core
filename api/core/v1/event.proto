@@ -1,0 +1,25 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto"; 
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+
+
+
+message ProtoMessage {
+    string id = 1;
+    bytes raw_data = 2;
+    map<string, string> matedata = 3;
+    google.protobuf.Timestamp time = 12 [(gogoproto.nullable) = false];
+}
+
