@@ -135,11 +135,13 @@ func (s *statem) toGolang(vals map[string]tdtl.Node) map[string]interface{} {
 			res = i
 		case tdtl.String:
 			res = val.String()
-		case tdtl.JSON:
+		case tdtl.JSON, tdtl.Array, tdtl.Object:
 			err := json.Unmarshal(val.Raw(), &res)
 			if nil != err {
 				log.Warn("parse json type", zap.Error(err))
 			}
+		default:
+			log.Warn("type error", val.Type())
 		}
 		result[key] = res
 	}

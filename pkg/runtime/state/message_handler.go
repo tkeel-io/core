@@ -71,7 +71,7 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	} else if jsonparser.Object.String() != collect.GetDataType() {
 		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 		return nil
 	}
 
