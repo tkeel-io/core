@@ -205,6 +205,14 @@ func (s *statem) Invoke(ctx context.Context, msgCtx message.Context) Result {
 	case message.MessageTypeState:
 		actives = s.invokeStateMessage(ctx, msgCtx)
 	case message.MessageTypeAPIRepublish:
+		// check version.
+		if s.Version == 0 {
+			err := xerrors.ErrEntityNotFound
+			log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID),
+				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
+			return Result{Status: MFailured, Err: err}
+		}
+
 		actives = s.republisher(ctx, msgCtx)
 	case message.MessageTypeAPIRequest:
 		actives, result = s.callAPIs(ctx, msgCtx)

@@ -113,6 +113,10 @@ func ParseEntityFrom(msgCtx Context) *dao.Entity {
 		ConfigBytes: []byte("{}"),
 	}
 
+	if en.Type == "" {
+		en.Type = "BASIC"
+	}
+
 	return en
 }
 
