@@ -46,9 +46,9 @@ type Manager struct {
 }
 
 //Inbox 负责消费Kafka的单个 partition 消息，维护该partition的Ack与Offset
-type Inbox struct {
-	handle MessageHandle
-}
+// type Inbox struct {
+// 	handle MessageHandle
+// }
 
 //Mapper 负责处理对应的实体状态更新
 type Mapper struct {

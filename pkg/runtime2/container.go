@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Shopify/sarama"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -74,7 +75,9 @@ type Container struct {
 	//kafka client
 	//inbox    Inbox
 
-	lock sync.RWMutex
+	lock   sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type ContainerEventType string
@@ -102,27 +105,36 @@ type Entity interface {
 	Raw() ([]byte, error)
 }
 
-func NewContainer(partitionID int32) *Container {
+func NewContainer(ctx context.Context, partitionID int32) *Container {
+	ctx, cancel := context.WithCancel(ctx)
 	return &Container{
 		Index:    partitionID,
 		caches:   map[string]Entity{},
 		entities: map[string]Entity{},
 		mappers:  map[string]*Mapper{},
 		lock:     sync.RWMutex{},
+		cancel:   cancel,
+		ctx:      ctx,
 	}
 }
 
 //处理消息
 type ContainerEvent struct {
-	ID    string
-	Type  ContainerEventType
-	Value interface{}
+	ID     string
+	Type   ContainerEventType
+	Value  []byte
+	Header map[string]string
 	//ID
 	//TYPE = Manger\Entity\Cache
 }
 
 func (e *Container) DeliveredEvent(ctx context.Context, event interface{}) error {
-	// 1. 通过 inbox 实现event 转换.
+	// 1. 通过 inbox 实现event 转换. 暂时忽略Inbox.
+	msg, _ := event.(*sarama.ConsumerMessage)
+
+	ev := deliveredEvent(msg)
+	e.HandleEvent(ctx, ev)
+
 	panic("implement me.")
 }
 

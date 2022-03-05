@@ -18,9 +18,10 @@ package runtime2
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestContainer_HandleEvent(t *testing.T) {
@@ -34,7 +35,7 @@ func TestContainer_HandleEvent(t *testing.T) {
 			Value:    []byte(`"abc"`),
 		},
 	}
-	cc := NewContainer(1)
+	cc := NewContainer(ctx, 1)
 	ret, err := cc.HandleEvent(ctx, &ev)
 	assert.NoError(t, err, "err is %v", err)
 	byt, err := cc.entities["entity1"].Raw()
@@ -83,6 +84,6 @@ func TestContainer_HandleEvent1(t *testing.T) {
 }
 
 func newContainer() *Container {
-	cc := NewContainer(1)
+	cc := NewContainer(context.Background(), 1)
 	return cc
 }
