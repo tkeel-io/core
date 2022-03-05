@@ -1,4 +1,4 @@
-package runtime2
+package runtime3
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -23,19 +24,19 @@ type RuntimeConfig struct {
 
 type Runtime struct {
 	containers map[string]*Container
-	dispatch   Dispatch
-	dao        Dao
+	dispatch   Dispatcher
+	repo       repository.IRepository
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, d Dao, dispatcher Dispatch) *Runtime {
+func NewRuntime(ctx context.Context, repo repository.IRepository, dispatcher Dispatcher) *Runtime {
 	ctx, cacel := context.WithCancel(ctx)
 	return &Runtime{
-		dao:        d,
 		ctx:        ctx,
 		cancel:     cacel,
+		repo:       repo,
 		dispatch:   dispatcher,
 		containers: make(map[string]*Container),
 	}
@@ -53,7 +54,8 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 		return errors.Wrap(err, "create consumer")
 	}
 
-	if err = gconsumer.Consume(r.ctx, cfg.Source.Topics, r); nil != err {
+	consumerProxy := newConsumers(r.ctx, r)
+	if err = gconsumer.Consume(r.ctx, cfg.Source.Topics, consumerProxy); nil != err {
 		log.Error("consume source", zfield.Endpoints(cfg.Source.Brokers), zap.Error(err))
 		return errors.Wrap(err, "consume source")
 	}
@@ -61,38 +63,50 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 	return nil
 }
 
+func (r *Runtime) GetContainer(id string) *Container {
+	if _, has := r.containers[id]; !has {
+		log.Info("create container", zfield.ID(id))
+		r.containers[id] = NewContainer(r.ctx, id)
+	}
+
+	return r.containers[id]
+}
+
+type runtimeConsumer struct {
+	runtime *Runtime
+	ctx     context.Context
+}
+
+func newConsumers(ctx context.Context, r *Runtime) *runtimeConsumer {
+	return &runtimeConsumer{ctx: ctx, runtime: r}
+}
+
 // Setup is run at the beginning of a new session, before ConsumeClaim.
-func (r *Runtime) Setup(sarama.ConsumerGroupSession) error {
+func (rc *runtimeConsumer) Setup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
-func (r *Runtime) Cleanup(sarama.ConsumerGroupSession) error {
+func (rc *runtimeConsumer) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
-func (r *Runtime) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (rc *runtimeConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 
 	for {
 		select {
-		case <-r.ctx.Done():
+		case <-rc.ctx.Done():
 			return nil
 		case msg := <-claim.Messages():
 			log.Debug("consume message", zfield.Offset(msg.Offset),
 				zfield.Partition(msg.Partition), zfield.Topic(msg.Topic), zap.Any("header", msg.Headers))
 
 			containerID := fmt.Sprintf("%s-%d", msg.Topic, msg.Partition)
-			if _, has := r.containers[containerID]; !has {
-				log.Info("create container", zfield.ID(containerID),
-					zfield.Partition(msg.Partition), zfield.Topic(msg.Topic))
-				r.containers[containerID] = NewContainer(r.ctx, msg.Partition)
-			}
-
-			container := r.containers[containerID]
+			container := rc.runtime.GetContainer(containerID)
 			container.DeliveredEvent(context.Background(), msg)
 		}
 	}
