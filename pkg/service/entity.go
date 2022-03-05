@@ -581,8 +581,9 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			entity.Source = interface2string(kv["source"])
 			entity.Owner = interface2string(kv["owner"])
 			entity.Type = interface2string(kv["type"])
-			if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-				log.Error("get entity failed.", zfield.Eid(interface2string(kv["id"])), zap.Error(err))
+			var err1 error
+			if entity, err1 = s.apiManager.GetEntity(ctx, entity); nil != err1 {
+				log.Error("get entity failed.", zfield.Eid(interface2string(kv["id"])), zap.Error(err1))
 				continue
 			}
 			entityItem := s.entity2EntityResponse(entity)

@@ -46,8 +46,15 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	}
 
+	actives := make([]WatchKey, 0)
+	actives = append(actives, WatchKey{EntityID: s.ID, PropertyKey: "rawData"})
+	stateIns := State{ID: s.ID, Props: s.Properties}
+
 	// set raw data.
-	s.Properties["rawData"] = tdtl.New(msgCtx.Message())
+	stateIns.Patch(xjson.OpReplace, "rawData", msgCtx.Message())
+	if rawData.Type == "rawData" {
+		return actives
+	}
 
 	// dispose rawdata.
 	var bytes []byte
@@ -57,16 +64,14 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	}
 
-	actives := make([]WatchKey, 0)
 	collect := collectjs.ByteNew(bytes)
-	stateIns := State{ID: s.ID, Props: s.Properties}
 	if err = collect.GetError(); nil != err {
 		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
 		return nil
 	} else if jsonparser.Object.String() != collect.GetDataType() {
 		log.Warn("raw data content type unknown", zfield.Eid(s.ID), zfield.Type(s.Type),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Reason(err.Error()))
+			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 		return nil
 	}
 
