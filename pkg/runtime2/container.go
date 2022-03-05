@@ -19,7 +19,6 @@ package runtime2
 import (
 	"context"
 	"fmt"
-	"github.com/tkeel-io/tdtl"
 	"sync"
 )
 
@@ -27,6 +26,7 @@ import (
 //Container 初始化时
 //1. 初始化 Inbox(partition)，注册 HandleEvent
 //
+
 //2. HandleEvent 消息处理逻辑
 //2.1 实体必须包含 entityID，创建、删除等消息：由 Container 处理
 //    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
@@ -76,25 +76,28 @@ type Container struct {
 	lock sync.RWMutex
 }
 
+type EventType string
 type ContainerEventType string
 
 const (
-	APICreateEntity ContainerEventType = "core.apis.Entity.Create"
-	APIUpdateEntity ContainerEventType = "core.apis.Entity.Update"
-	APIDeleteEntity ContainerEventType = "core.apis.Entity.Delete"
+	OpContainer    EventType          = "core.operation.Container"
+	OpEntity       EventType          = "core.operation.Entity"
+	OpCache        EventType          = "core.operation.Cache"
+	OpMapperCreate ContainerEventType = "core.operation.Mapper.Create"
+	OpMapperUpdate ContainerEventType = "core.operation.Mapper.Update"
+	OpMapperDelete ContainerEventType = "core.operation.Mapper.Delete"
+	OpEntityCreate ContainerEventType = "core.operation.Entity.Create"
+	OpEntityUpdate ContainerEventType = "core.operation.Entity.Update"
+	OpEntityDelete ContainerEventType = "core.operation.Entity.Delete"
 )
 
-type EntityEventType string
-
-const (
-	APIGetEntity           EntityEventType = "core.apis.Entity.Get"
-	APIUpdataEntityProps   EntityEventType = "core.apis.Entity.Props.Update"
-	APIPatchEntityProps    EntityEventType = "core.apis.Entity.Props.Patch"
-	APIGetEntityProps      EntityEventType = "core.apis.Entity.Props.Get"
-	APIUpdataEntityConfigs EntityEventType = "core.apis.Entity.Configs.Update"
-	APIPatchEntityConfigs  EntityEventType = "core.apis.Entity.Configs.Patch"
-	APIGetEntityConfigs    EntityEventType = "core.apis.Entity.Configs.Get"
-)
+//处理消息
+type ContainerEvent struct {
+	ID       string
+	Type     EventType
+	Callback string
+	Value    interface{}
+}
 
 type Entity interface {
 	Handle(ctx context.Context, message interface{}) (*StateResult, error)
@@ -109,15 +112,6 @@ func NewContainer(partitionID int) *Container {
 		mappers:  map[string]*Mapper{},
 		lock:     sync.RWMutex{},
 	}
-}
-
-//处理消息
-type ContainerEvent struct {
-	ID    string
-	Type  ContainerEventType
-	Value interface{}
-	//ID
-	//TYPE = Manger\Entity\Cache
 }
 
 func (e *Container) DeliveredEvent(ctx context.Context, event interface{}) error {
@@ -167,9 +161,9 @@ func (e *Container) UpdateWithEvent(ctx context.Context, event *ContainerEvent) 
 	//2.1 实体必须包含 entityID，创建、删除等消息：由 Container 处理
 	//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
 	switch event.Type {
-	case "Manger":
+	case OpContainer:
 		return e.handleMangerEvent(ctx, event)
-	case "Entity":
+	case OpEntity:
 		EntityID := event.ID
 		entity, err := e.Entity(EntityID)
 		if err != nil {
@@ -177,10 +171,10 @@ func (e *Container) UpdateWithEvent(ctx context.Context, event *ContainerEvent) 
 		}
 		ret, err := entity.Handle(ctx, event.Value)
 		return ret, err
-	case "Cache":
+	case OpCache:
 		return e.handleCacheEvent(ctx, event)
 	default:
-		return nil, fmt.Errorf(" unknown Type")
+		return nil, fmt.Errorf(" unknown ContainerEvent Type")
 	}
 }
 
@@ -222,6 +216,7 @@ func (e *Container) handleSubscribe(ctx context.Context, ret *StateResult) (*Sta
 func (e *Container) handleCallback(ctx context.Context, event *ContainerEvent, ret *StateResult) (*StateResult, error) {
 	//@TODO 处理回调
 	// 1. dispatch.respose(ret)
+	fmt.Println("handleCallback", event.Callback)
 	return nil, nil
 }
 
@@ -247,80 +242,4 @@ func (e *Container) Mapper(id string) (*Mapper, error) {
 	mapper := &Mapper{}
 	e.mappers[id] = mapper
 	return mapper, nil
-}
-
-type EntityEvent struct {
-	JSONPath string
-	OP       EntityEventType
-	Value    []byte
-}
-type mockEntity struct {
-	Property *tdtl.Collect
-	Scheme   *tdtl.Collect
-}
-
-func NewEntity() Entity {
-	Property := tdtl.New(`{}`)
-	Scheme := tdtl.New(`{}`)
-	return &mockEntity{
-		Property: Property,
-		Scheme:   Scheme,
-	}
-}
-
-func (m *mockEntity) Handle(ctx context.Context, msg interface{}) (*StateResult, error) {
-	ev, ok := msg.(*EntityEvent)
-	if !ok {
-		return nil, fmt.Errorf("Handle unknown type.")
-	}
-	switch ev.OP {
-	case APIGetEntity:
-		m.Property.Set(ev.JSONPath, tdtl.New(ev.Value))
-		ret, err := m.Raw()
-		if err != nil {
-			return nil, err
-		}
-		return &StateResult{State: ret}, nil
-	case APIUpdataEntityProps:
-		m.Property.Set(ev.JSONPath, tdtl.New(ev.Value))
-		ret, err := m.Raw()
-		if err != nil {
-			return nil, err
-		}
-		return &StateResult{State: ret}, nil
-	//case APIPatchEntityProps:
-	//	m.Property.Set(ev.JSONPath, tdtl.New(ev.Value))
-	//	ret, err := m.Raw()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	return &StateResult{State: ret}, nil
-	case APIGetEntityProps:
-		ret, err := m.Raw()
-		if err != nil {
-			return nil, err
-		}
-		return &StateResult{State: ret}, nil
-	case APIUpdataEntityConfigs:
-		m.Scheme.Set(ev.JSONPath, tdtl.New(ev.Value))
-		ret, err := m.Raw()
-		if err != nil {
-			return nil, err
-		}
-		return &StateResult{State: ret}, nil
-	case APIGetEntityConfigs:
-		ret, err := m.Raw()
-		if err != nil {
-			return nil, err
-		}
-		return &StateResult{State: ret}, nil
-	}
-	return nil, fmt.Errorf("Handle unknown type.")
-}
-
-func (m *mockEntity) Raw() ([]byte, error) {
-	ret := tdtl.New("{}")
-	ret.Set("Property", m.Property)
-	ret.Set("Scheme", m.Scheme)
-	return ret.Raw(), m.Property.Error()
 }
