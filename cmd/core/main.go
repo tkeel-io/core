@@ -123,7 +123,7 @@ func main() {
 	}
 }
 
-func core(cmd *cobra.Command, args []string) {
+func core(cmd *cobra.Command, args []string) { //nolint
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
 	envETCD := os.Getenv("TKEEL_REGISTRY")
 	if envETCD != "" {

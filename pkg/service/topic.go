@@ -58,6 +58,7 @@ func NewTopicService(ctx context.Context) (*TopicService, error) {
 	return &TopicService{
 		ctx:    ctx,
 		cancel: cancel,
+		inited: atomic.NewBool(false),
 	}, nil
 }
 
