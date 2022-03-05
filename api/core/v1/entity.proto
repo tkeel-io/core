@@ -596,16 +596,7 @@ message EntityResponse {
 
 
 
-message PatchData {
-    string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property path"}];
-    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator"}];
-    google.protobuf.Value value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator value"}];
-}
 
-
-message PatchDatas {
-    repeated PatchData properties = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "path datas"}];
-}
 
 
 

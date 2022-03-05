@@ -1,25 +1,22 @@
-package runtime3
+package runtime
 
 import (
 	"context"
 	"net/url"
 	"testing"
-	"time"
 
-	"github.com/tkeel-io/core/pkg/runtime3/mock"
+	"github.com/tkeel-io/core/pkg/runtime/mock"
 )
 
-func TestRuntime_Start(t *testing.T) {
-	rt := NewRuntime(context.TODO(), mock.NewRepo(), nil)
-	rt.Start(RuntimeConfig{
+func TestNode_Start(t *testing.T) {
+	node := NewNode(context.TODO(), mock.NewRepo(), nil)
+	node.Start(NodeConf{
 		Source: SourceConf{
 			Topics:    []string{"core"},
 			Brokers:   []string{"192.168.0.103:9092"},
 			GroupName: "core",
 		},
 	})
-
-	time.Sleep(1 * time.Hour)
 }
 
 func TestParse(t *testing.T) {

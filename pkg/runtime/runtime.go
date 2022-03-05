@@ -1,4 +1,4 @@
-package runtime3
+package runtime
 
 import (
 	"context"
@@ -6,12 +6,15 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
+	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 )
 
-type Container struct {
+type Runtime struct {
 	id       string
-	caches   map[string]Entity //存放其他Container的实体
-	entities map[string]Entity //存放Container的实体
+	caches   map[string]Entity //存放其他Runtime的实体
+	entities map[string]Entity //存放Runtime的实体
 	dispatch Dispatcher
 	//inbox    Inbox
 
@@ -20,9 +23,9 @@ type Container struct {
 	cancel context.CancelFunc
 }
 
-func NewContainer(ctx context.Context, id string) *Container {
+func NewRuntime(ctx context.Context, id string) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Container{
+	return &Runtime{
 		id:       id,
 		caches:   map[string]Entity{},
 		entities: map[string]Entity{},
@@ -32,15 +35,18 @@ func NewContainer(ctx context.Context, id string) *Container {
 	}
 }
 
-func (e *Container) DeliveredEvent(ctx context.Context, event interface{}) {
-	// 1. 通过 inbox 实现event 转换. 暂时忽略Inbox.
-	msg, _ := event.(*sarama.ConsumerMessage)
+func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessage) {
+	var err error
+	var ev v1.ProtoEvent
+	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
+		log.Error("decode Event", zap.Error(err))
+		return
+	}
 
-	ev := deliveredEvent(msg)
-	e.HandleEvent(ctx, ev)
+	e.HandleEvent(ctx, &ev)
 }
 
-func (e *Container) HandleEvent(ctx context.Context, event *ContainerEvent) (*Result, error) {
+func (e *Runtime) HandleEvent(ctx context.Context, event v1.Event) (*Result, error) {
 	var (
 		ret *Result
 		err error
@@ -49,7 +55,7 @@ func (e *Container) HandleEvent(ctx context.Context, event *ContainerEvent) (*Re
 	//1.BeforeProcess
 	//1. 升级执行的环境
 	//1.1 处理 Entity 的创建、删除
-	//1.2 Cache 消息直接更新 Container 的 caches
+	//1.2 Cache 消息直接更新 Runtime 的 caches
 	//1.3 更新实体，记录下变更    -> Result
 	ret, err = e.UpdateWithEvent(ctx, event)
 	if err != nil {
@@ -78,39 +84,39 @@ func (e *Container) HandleEvent(ctx context.Context, event *ContainerEvent) (*Re
 	return ret, nil
 }
 
-func (e *Container) UpdateWithEvent(ctx context.Context, event *ContainerEvent) (*Result, error) {
-	//2.1 实体必须包含 entityID，创建、删除等消息：由 Container 处理
+func (e *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) (*Result, error) {
+	//2.1 实体必须包含 entityID，创建、删除等消息：由 Runtime 处理
 	//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
-	switch event.Type {
-	case OpContainer:
-		return e.handleMangerEvent(ctx, event)
-	case OpEntity:
-		EntityID := event.ID
+	switch EventType(event.Type()) {
+	case ETRuntime:
+		return e.handleRuntimeEvent(ctx, event)
+	case ETEntity:
+		EntityID := event.Entity()
 		entity, err := e.Entity(EntityID)
 		if err != nil {
 			return nil, err
 		}
-		ret, err := entity.Handle(ctx, event.Value)
+		ret, err := entity.Handle(ctx, event)
 		return ret, err
-	case OpCache:
+	case ETCache:
 		return e.handleCacheEvent(ctx, event)
 	default:
-		return nil, fmt.Errorf(" unknown ContainerEvent Type")
+		return nil, fmt.Errorf(" unknown RuntimeEvent Type")
 	}
 }
 
 //处理实体生命周期
-func (e *Container) handleMangerEvent(ctx context.Context, event *ContainerEvent) (*Result, error) {
+func (e *Runtime) handleRuntimeEvent(ctx context.Context, event v1.Event) (*Result, error) {
 	panic("implement me")
 }
 
 //处理Cache
-func (e *Container) handleCacheEvent(ctx context.Context, event *ContainerEvent) (*Result, error) {
+func (e *Runtime) handleCacheEvent(ctx context.Context, event v1.Event) (*Result, error) {
 	panic("implement me")
 }
 
-//Container 处理 event
-func (e *Container) Process(ctx context.Context, event *ContainerEvent) (*Result, error) {
+//Runtime 处理 event
+func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) {
 	panic("implement me")
 	//2.2  Mapper处理：首先查找 Mapper，如果没有初始化,且加入map
 	//              mappers[entityID]=Mapper(dispatch,stateBytes)
@@ -126,7 +132,7 @@ func (e *Container) Process(ctx context.Context, event *ContainerEvent) (*Result
 }
 
 //处理订阅
-func (e *Container) handleSubscribe(ctx context.Context, ret *Result) (*Result, error) {
+func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) (*Result, error) {
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	// 2. 执行对应的订阅，
@@ -134,14 +140,13 @@ func (e *Container) handleSubscribe(ctx context.Context, ret *Result) (*Result, 
 	return nil, nil
 }
 
-func (e *Container) handleCallback(ctx context.Context, event *ContainerEvent, ret *Result) (*Result, error) {
+func (e *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) (*Result, error) {
 	//@TODO 处理回调
 	// 1. dispatch.respose(ret)
-	fmt.Println("handleCallback", event.Callback)
 	return nil, nil
 }
 
-func (e *Container) Entity(id string) (Entity, error) {
+func (e *Runtime) Entity(id string) (Entity, error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	if state, ok := e.entities[id]; ok {

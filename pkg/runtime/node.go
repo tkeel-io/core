@@ -1,4 +1,4 @@
-package runtime3
+package runtime
 
 import (
 	"context"
@@ -18,31 +18,33 @@ type SourceConf struct {
 	GroupName string
 }
 
-type RuntimeConfig struct {
+type NodeConf struct {
 	Source SourceConf
 }
 
-type Runtime struct {
-	containers map[string]*Container
-	dispatch   Dispatcher
-	repo       repository.IRepository
+type Node struct {
+	runtimes map[string]*Runtime
+	dispatch Dispatcher
+	repo     repository.IRepository
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, repo repository.IRepository, dispatcher Dispatcher) *Runtime {
+func NewNode(ctx context.Context, repo repository.IRepository, dispatcher Dispatcher) *Node {
 	ctx, cacel := context.WithCancel(ctx)
-	return &Runtime{
-		ctx:        ctx,
-		cancel:     cacel,
-		repo:       repo,
-		dispatch:   dispatcher,
-		containers: make(map[string]*Container),
+	return &Node{
+		ctx:      ctx,
+		cancel:   cacel,
+		repo:     repo,
+		dispatch: dispatcher,
+		runtimes: make(map[string]*Runtime),
 	}
 }
 
-func (r *Runtime) Start(cfg RuntimeConfig) error {
+func (n *Node) Start(cfg NodeConf) error {
+	log.Info("start node...")
+
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_3_0_0
 	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
@@ -54,8 +56,8 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 		return errors.Wrap(err, "create consumer")
 	}
 
-	consumerProxy := newConsumers(r.ctx, r)
-	if err = gconsumer.Consume(r.ctx, cfg.Source.Topics, consumerProxy); nil != err {
+	consumerProxy := newConsumers(n.ctx, n)
+	if err = gconsumer.Consume(n.ctx, cfg.Source.Topics, consumerProxy); nil != err {
 		log.Error("consume source", zfield.Endpoints(cfg.Source.Brokers), zap.Error(err))
 		return errors.Wrap(err, "consume source")
 	}
@@ -63,51 +65,50 @@ func (r *Runtime) Start(cfg RuntimeConfig) error {
 	return nil
 }
 
-func (r *Runtime) GetContainer(id string) *Container {
-	if _, has := r.containers[id]; !has {
-		log.Info("create container", zfield.ID(id))
-		r.containers[id] = NewContainer(r.ctx, id)
+func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) {
+	rid := fmt.Sprintf("%s-%d", msg.Topic, msg.Partition)
+	if _, has := n.runtimes[rid]; !has {
+		log.Info("create container", zfield.ID(rid))
+		n.runtimes[rid] = NewRuntime(n.ctx, rid)
 	}
 
-	return r.containers[id]
+	// load runtime spec.
+	runtime := n.runtimes[rid]
+	runtime.DeliveredEvent(context.Background(), msg)
 }
 
-type runtimeConsumer struct {
-	runtime *Runtime
-	ctx     context.Context
+type nodeConsumer struct {
+	node *Node
+	ctx  context.Context
 }
 
-func newConsumers(ctx context.Context, r *Runtime) *runtimeConsumer {
-	return &runtimeConsumer{ctx: ctx, runtime: r}
+func newConsumers(ctx context.Context, node *Node) *nodeConsumer {
+	return &nodeConsumer{ctx: ctx, node: node}
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
-func (rc *runtimeConsumer) Setup(sarama.ConsumerGroupSession) error {
+func (c *nodeConsumer) Setup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
-func (rc *runtimeConsumer) Cleanup(sarama.ConsumerGroupSession) error {
+func (c *nodeConsumer) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
-func (rc *runtimeConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-
+func (c *nodeConsumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for {
 		select {
-		case <-rc.ctx.Done():
+		case <-c.ctx.Done():
 			return nil
 		case msg := <-claim.Messages():
 			log.Debug("consume message", zfield.Offset(msg.Offset),
 				zfield.Partition(msg.Partition), zfield.Topic(msg.Topic), zap.Any("header", msg.Headers))
-
-			containerID := fmt.Sprintf("%s-%d", msg.Topic, msg.Partition)
-			container := rc.runtime.GetContainer(containerID)
-			container.DeliveredEvent(context.Background(), msg)
+			c.node.HandleMessage(context.Background(), msg)
 		}
 	}
 }
