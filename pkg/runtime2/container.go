@@ -120,10 +120,9 @@ func NewContainer(ctx context.Context, partitionID int32) *Container {
 
 //处理消息
 type ContainerEvent struct {
-	ID     string
-	Type   ContainerEventType
-	Value  []byte
-	Header map[string]string
+	ID    string
+	Type  ContainerEventType
+	Value interface{}
 	//ID
 	//TYPE = Manger\Entity\Cache
 }
