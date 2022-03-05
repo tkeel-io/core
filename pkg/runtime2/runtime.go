@@ -21,10 +21,6 @@ type RuntimeConfig struct {
 	Source SourceConf
 }
 
-func NewContainer(ctx context.Context) *Container {
-	return &Container{}
-}
-
 type Runtime struct {
 	containers map[string]*Container
 	dispatch   Dispatch
@@ -92,7 +88,7 @@ func (r *Runtime) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 			containerID := fmt.Sprintf("%s-%d", msg.Topic, msg.Partition)
 			if _, has := r.containers[containerID]; !has {
 				log.Info("create container", zfield.ID(containerID))
-				r.containers[containerID] = NewContainer(r.ctx)
+				r.containers[containerID] = NewContainer(msg.Partition)
 			}
 
 			container := r.containers[containerID]
