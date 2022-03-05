@@ -24,12 +24,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	pb "github.com/tkeel-io/core/api/core/v1"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +39,7 @@ type TopicService struct {
 	pb.UnimplementedTopicServer
 	ctx        context.Context
 	cancel     context.CancelFunc
+	inited     *atomic.Bool
 	apiManager apim.APIManager
 }
 
@@ -60,9 +63,15 @@ func NewTopicService(ctx context.Context) (*TopicService, error) {
 
 func (s *TopicService) Init(apiManager apim.APIManager) {
 	s.apiManager = apiManager
+	s.inited.Store(true)
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zap.Any("meta", req.Meta))
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusRetry}, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	// parse CloudEvent from pb.TopicEventRequest.
 	log.Debug("received event", zfield.ReqID(req.Meta.Id), zfield.Type(req.Meta.Type),
 		zfield.Pubsub(req.Meta.Pubsubname), zfield.Topic(req.Meta.Topic), zfield.Source(req.Meta.Source))
@@ -82,6 +91,11 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 }
 
 func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
+	if !s.inited.Load() {
+		log.Warn("service not ready", zap.Any("meta", req.Meta))
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusRetry}, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	log.Debug("received event", zfield.ReqID(req.Meta.Id),
 		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
 		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))

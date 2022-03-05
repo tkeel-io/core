@@ -125,6 +125,9 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 			return xerrors.ErrInternal
 		}
 
+		log.Debug("create state machine", zfield.ReqID(reqID), zfield.Channel(channelID),
+			zfield.Header(msgCtx.Attributes()), zfield.ID(entityID), zfield.Message(string(msgCtx.Message())))
+
 		// state machine not exists, then create.
 		enDao := message.ParseEntityFrom(msgCtx)
 		if machine, err = container.MakeMachine(enDao); nil != err {
@@ -146,20 +149,22 @@ func (m *Manager) handleMessage(ctx context.Context, msgCtx message.Context) err
 		return errors.Wrap(result.Err, "handle message")
 	}
 
-	log.Debug("invoke message completed",
-		zfield.ID(entityID), zfield.ReqID(reqID),
-		zap.String("result.status", string(result.Status)))
-
 	// handle result.
 	switch result.Status {
 	case state.MCreated:
 		container.Add(machine)
+		log.Info("create machine sucessed", zfield.Eid(entityID), zfield.ReqID(reqID))
 	case state.MDeleted:
 		container.Remove(machine.GetID())
+		log.Info("delete machine sucessed", zfield.Eid(entityID), zfield.ReqID(reqID))
 	case state.MCompleted:
 	default:
 		// never.
 	}
+
+	log.Debug("invoke message completed",
+		zfield.ID(entityID), zfield.ReqID(reqID),
+		zap.String("result.status", string(result.Status)))
 
 	return nil
 }

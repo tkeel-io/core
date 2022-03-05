@@ -134,7 +134,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	mp := &dao.Mapper{
-		ID:          "Subscription",
+		ID:          entity.ID + "Subscription",
 		TQL:         req.Subscription.Filter,
 		Name:        "SubscriptionMapper",
 		Owner:       entity.Owner,
@@ -187,7 +187,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	mp := &dao.Mapper{
-		ID:          "Subscription",
+		ID:          entity.ID + "Subscription",
 		TQL:         req.Subscription.Filter,
 		Name:        "SubscriptionMapper",
 		Owner:       entity.Owner,
@@ -223,7 +223,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 
 	// TODO： 不能保证一致性.
 	mp := dao.Mapper{
-		ID:       "Subscription",
+		ID:       entity.ID + "Subscription",
 		Owner:    entity.Owner,
 		EntityID: entity.ID,
 	}
