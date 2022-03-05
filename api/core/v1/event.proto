@@ -3,9 +3,6 @@ syntax = "proto3";
 
 package api.core.v1;
 
-import "google/api/annotations.proto";
-import "google/api/field_behavior.proto";
-import "google/protobuf/struct.proto"; 
 import "protoc-gen-openapiv2/options/annotations.proto";
 
 
@@ -14,12 +11,47 @@ option java_multiple_files = true;
 option java_package = "api.core.v1";
 
 
-
-
-message ProtoMessage {
-    string id = 1;
-    bytes raw_data = 2;
-    map<string, string> matedata = 3;
-    google.protobuf.Timestamp time = 12 [(gogoproto.nullable) = false];
+message PatchData {
+    string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property path"}];
+    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator"}];
+    bytes value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator value"}];
 }
+
+
+message PatchDatas {
+    repeated PatchData patches = 1;
+}
+
+
+
+message SystemData {
+    string operator = 1;
+    bytes data      = 2;
+}
+
+message ProtoEvent {
+    string id = 1;
+    int64 timestamp = 2;
+    map<string, string> metadata = 3;
+    oneof data {
+        bytes raw_data = 8;
+        PatchDatas patches = 9;
+        SystemData action = 10;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

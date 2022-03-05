@@ -1,42 +1,29 @@
-/*
-Copyright 2021 The tKeel Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package runtime
 
 import (
-	"errors"
+	"context"
 
-	"github.com/tkeel-io/core/pkg/mapper"
+	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/tdtl"
 )
 
-type WatchKey = mapper.WatchKey
+type Patch struct {
+	Op    PatchOp
+	Path  string
+	Value *tdtl.Collect
+}
 
-const (
-	SMTypeBasic        = "BASIC"
-	SMTypeSubscription = "SUBSCRIPTION"
+//Feed 包含实体最新状态以及变更
+type Result struct {
+	State   []byte
+	Changes []Patch
+}
 
-	// state machine required fileds.
-	SMFieldType     = "type"
-	SMFieldOwner    = "owner"
-	SMFieldSource   = "source"
-	SMFieldTemplate = "template"
-)
+type Entity interface {
+	Handle(context.Context, v1.Event) (*Result, error)
+	Raw() []byte
+}
 
-var (
-	ErrInvalidParams       = errors.New("invalid params")
-	ErrInvalidTQLKey       = errors.New("invalid TQL key")
-	ErrSubscriptionInvalid = errors.New("invalid subscription")
-)
+type Dispatcher interface {
+	Dispatch(context.Context) error
+}

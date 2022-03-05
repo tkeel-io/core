@@ -64,12 +64,39 @@ func (h *TSHTTPHandler) DownloadTSData(req *go_restful.Request, resp *go_restful
 			result.Set(tErr.Reason, tErr.Message, out), "application/json")
 		return
 	}
-	resp.AddHeader("Content-Type", "application/octet-stream")
-	resp.AddHeader("Content-Disposition", "attachment; filename="+out.Filename)
-	resp.AddHeader("Content-Transfer-Encoding", "binary")
-	resp.AddHeader("Accept-ranges", "bytes")
-	resp.AddHeader("Accept-length", out.Length)
-	resp.Write(out.Data)
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
 }
 
 func (h *TSHTTPHandler) GetLatestEntities(req *go_restful.Request, resp *go_restful.Response) {
