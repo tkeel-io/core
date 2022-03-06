@@ -18,9 +18,9 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -28,7 +28,6 @@ import (
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
-	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
@@ -73,20 +72,18 @@ func interface2string(in interface{}) (out string) {
 	return
 }
 
-func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *pb.SubscriptionResponse) {
-	if entity == nil {
+func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (out *pb.SubscriptionResponse) {
+	if base == nil {
 		return
 	}
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Id = entity.ID
-	out.Owner = entity.Owner
-	out.Source = entity.Source
+	out.Id = base.ID
+	out.Owner = base.Owner
+	out.Source = base.Source
 	out.Subscription = &pb.SubscriptionObject{}
-
-	bytes, _ := xjson.EncodeJSON(entity.Properties)
-	json.Unmarshal(bytes, &out.Subscription)
+	mapstructure.Decode(base.Properties, &out.Subscription)
 	return out
 }
 
@@ -123,7 +120,8 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	// set properties.
-	if entity, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
@@ -145,7 +143,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return
 	}
 
-	out = s.entity2SubscriptionResponse(entity)
+	out = s.entity2SubscriptionResponse(baseRet)
 	return out, errors.Wrap(err, "create subscription")
 }
 
@@ -176,7 +174,8 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	// set properties.
-	if entity, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
 		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
@@ -195,7 +194,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return
 	}
 
-	out = s.entity2SubscriptionResponse(entity)
+	out = s.entity2SubscriptionResponse(baseRet)
 	return out, errors.Wrap(err, "update subscription")
 }
 
@@ -244,11 +243,13 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if entity, err = s.apiManager.GetEntity(ctx, entity); nil != err {
+
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
 		log.Error("get subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
-	out = s.entity2SubscriptionResponse(entity)
+	out = s.entity2SubscriptionResponse(baseRet)
 	return
 }
 

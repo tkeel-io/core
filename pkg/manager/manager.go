@@ -98,7 +98,7 @@ func (m *apiManager) callbackAddr() string {
 }
 
 // CreateEntity create a entity.
-func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, error) {
 	var (
 		err        error
 		has        bool
@@ -168,22 +168,24 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("create entity, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "create entity, decode response")
-	}
-
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "create entity")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if err = m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response, list mapper")
+	}
+
+	return &baseRet, errors.Wrap(err, "create entity")
 }
 
-func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*BaseRet, error) {
 	var (
 		err   error
 		bytes []byte
@@ -235,24 +237,25 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("update entity, decode response",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "update entity, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if err = m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response, list mapper")
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "update entity")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // GetProperties returns Base.
-func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) {
 	var err error
 	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
@@ -293,20 +296,20 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("get entity, decode response",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "get entity")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // DeleteEntity delete an entity from manager.
@@ -363,7 +366,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 }
 
 // SetProperties set properties into entity.
-func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*BaseRet, error) {
 	var (
 		err   error
 		bytes []byte
@@ -415,23 +418,23 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("set entity properties, decode response", zap.Error(err),
-			zfield.ReqID(reqID), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "set entity properties, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "update entity props")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
-func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.PatchData) (*BaseRet, error) {
 	var (
 		err error
 	)
@@ -472,23 +475,23 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.P
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("set entity properties, decode response",
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
 			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "set entity properties, decode response")
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "patch entity props")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
-func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys []string) (*Base, error) {
+func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys []string) (*BaseRet, error) {
 	var (
 		err error
 	)
@@ -545,24 +548,24 @@ func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys 
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("get entity, decode response props",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity props, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "get entity props")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // SetProperties set properties into entity.
-func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, error) {
+func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*BaseRet, error) {
 	var (
 		err   error
 		bytes []byte
@@ -613,24 +616,24 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("set entity configs, decode response",
-			zfield.ReqID(reqID), zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "set entity configs, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "update entity confis")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // PatchConfigs patch properties into entity.
-func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1.PatchData) (*BaseRet, error) {
 	var (
 		err error
 	)
@@ -672,23 +675,24 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1
 	}
 
 	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("patch entity configs, decode response",
-			zfield.ReqID(reqID), zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "patch entity configs, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "patch entity configs")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // QueryConfigs query entity configs.
-func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKeys []string) (*Base, error) {
+func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKeys []string) (*BaseRet, error) {
 	var (
 		err error
 	)
@@ -746,19 +750,20 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKey
 	}
 
 	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("get entity, decode response configs",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity configs, decode response")
+	var baseRet BaseRet
+	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
+		log.Error("create entity, decode response", zfield.ReqID(reqID),
+			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		return nil, errors.Wrap(err, "create entity, decode response")
+	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
+		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	base := entityToBase(&apiResp)
-	err = m.addMapper(ctx, base)
-	return base, errors.Wrap(err, "get entity configs")
+	return &baseRet, errors.Wrap(err, "update entity")
 }
 
 // AppendMapper append a mapper into entity.
@@ -824,7 +829,7 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 	return mps, nil
 }
 
-func (m *apiManager) addMapper(ctx context.Context, base *Base) error {
+func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
 	mappers, err := m.entityRepo.ListMapper(ctx,
 		m.entityRepo.GetLastRevision(ctx),
 		&dao.ListMapperReq{

@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -33,8 +32,8 @@ type BaseRet struct {
 	LastTime   int64                  `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
 	Mappers    []*v1.Mapper           `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
 	TemplateID string                 `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
-	Properties map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"-"`
-	Configs    map[string]interface{} `json:"configs" msgpack:"-" mapstructure:"-"`
+	Properties map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"properties"`
+	Configs    map[string]interface{} `json:"configs" msgpack:"-" mapstructure:"configs"`
 }
 
 func (b *Base) Basic() Base {
@@ -74,20 +73,4 @@ func (b *Base) JSON() map[string]interface{} {
 	info["configs"] = string(bytes)
 	info["config_file"] = string(b.ConfigFile)
 	return info
-}
-
-func entityToBase(en *dao.Entity) *Base {
-	base := &Base{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Version:    en.Version,
-		LastTime:   en.LastTime,
-		TemplateID: en.TemplateID,
-		Properties: en.Properties,
-		ConfigFile: en.ConfigBytes,
-	}
-
-	return base
 }

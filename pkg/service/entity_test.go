@@ -9,9 +9,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/service/mock"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	"github.com/tkeel-io/tdtl"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -33,26 +31,6 @@ func TestMain(m *testing.M) {
 
 	entityService.Init(apiManager, searchMock)
 	os.Exit(m.Run())
-}
-
-func Test_entity2EntityResponse(t *testing.T) {
-	base := apim.Base{
-		ID:         "device123",
-		Type:       "DEVICE",
-		Owner:      "admin",
-		Source:     "dm",
-		Version:    0,
-		LastTime:   util.UnixMilli(),
-		Mappers:    []*pb.Mapper{{Name: "mapper123", Tql: "insert into device123 select device234.temp as temp"}},
-		Properties: map[string]tdtl.Node{"temp": tdtl.IntNode(25)},
-		ConfigFile: nil,
-	}
-
-	out := entityService.entity2EntityResponse(&base)
-	assert.Equal(t, base.ID, out.Id)
-	assert.Equal(t, base.Type, out.Type)
-	assert.Equal(t, base.Owner, out.Owner)
-	assert.Equal(t, base.Source, out.Source)
 }
 
 func Test_CreateEntity(t *testing.T) {
