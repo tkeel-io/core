@@ -7,13 +7,12 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/dapr/kit/retry"
 	"github.com/goinggo/mapstructure"
 	"github.com/pkg/errors"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -70,7 +69,7 @@ func (k *kafkaPubsub) ID() string {
 	return k.id
 }
 
-func (k *kafkaPubsub) Send(ctx context.Context, event cloudevents.Event) error {
+func (k *kafkaPubsub) Send(ctx context.Context, event v1.Event) error {
 	log.Debug("pubsub.kafka send", zfield.Message(event), zfield.Topic(k.kafkaMetadata.Topic),
 		zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 
@@ -79,21 +78,17 @@ func (k *kafkaPubsub) Send(ctx context.Context, event cloudevents.Event) error {
 		bytes    []byte
 		entityID string
 	)
-	event.ExtensionAs(message.ExtEntityID, &entityID)
-	if bytes, err = event.DataBytes(); nil != err {
-		log.Error("encode payload", zap.Error(err), zfield.ID(k.id),
-			zfield.Topic(k.kafkaMetadata.Topic), zfield.Eid(entityID))
-		return errors.Wrap(err, "encode payload")
+
+	entityID = event.Entity()
+	bytes, err = v1.Marshal(event)
+	if nil != err {
+		return errors.Wrap(err, "encode event")
 	}
 
 	msg := &sarama.ProducerMessage{
+		Key:   sarama.StringEncoder(entityID),
 		Topic: k.kafkaMetadata.Topic,
 		Value: sarama.ByteEncoder(bytes),
-	}
-
-	for key, val := range message.GetAttributes(event) {
-		msg.Headers = append(msg.Headers,
-			sarama.RecordHeader{Key: []byte(key), Value: []byte(val)})
 	}
 
 	_, _, err = k.kafkaProducer.SendMessage(msg)
@@ -159,7 +154,13 @@ func (consumer *kafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 			var innerErr error
 			log.Debug("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
-			if innerErr = consumer.receiverHandler(session.Context(), makeEvent(msg)); innerErr == nil {
+
+			var ev v1.ProtoEvent
+			if innerErr = v1.Unmarshal(msg.Value, &ev); nil != innerErr {
+				log.Error("processing kafka message", zfield.Topic(msg.Topic),
+					zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
+				return errors.Wrap(innerErr, "decode event")
+			} else if innerErr = consumer.receiverHandler(session.Context(), &ev); innerErr == nil {
 				session.MarkMessage(msg, "")
 			}
 			log.Error("processing kafka message", zfield.Topic(msg.Topic),
@@ -187,10 +188,6 @@ func (consumer *kafkaConsumer) Cleanup(sarama.ConsumerGroupSession) error {
 
 func (consumer *kafkaConsumer) Setup(sarama.ConsumerGroupSession) error {
 	return nil
-}
-
-func makeEvent(msg *sarama.ConsumerMessage) cloudevents.Event {
-	return cloudevents.NewEvent()
 }
 
 func init() {

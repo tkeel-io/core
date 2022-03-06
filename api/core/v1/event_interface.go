@@ -8,11 +8,14 @@ import (
 
 // definition message header field.
 const (
-	META_OP       = "x-msg-op"
-	META_TTL      = "x-msg-ttl"
-	META_TYPE     = "x-msg-type"
-	META_ENTITYID = "x-msg-enid"
-	META_VERSION  = "x-msg-version"
+	META_OP              = "x-msg-op"
+	META_TTL             = "x-msg-ttl"
+	META_TYPE            = "x-msg-type"
+	META_ENTITYID        = "x-msg-enid"
+	META_VERSION         = "x-msg-version"
+	META_REQUESTID       = "x-msg-request-id"
+	META_RESPONSESTATUS  = "x-msg-response-status"
+	META_RESPONSEERRCODE = "x-msg-response-errcode"
 )
 
 type EventType string

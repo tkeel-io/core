@@ -6,7 +6,6 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/manager/holder"
-	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/types"
 )
 
@@ -24,9 +23,9 @@ func (p *ProxyService) Init(apiManager apim.APIManager) {
 }
 
 func (p *ProxyService) Respond(ctx context.Context, in *pb.RespondRequest) (*pb.RespondResponse, error) {
-	reqID := in.Metadata[message.ExtAPIRequestID]
-	status := in.Metadata[message.ExtAPIRespStatus]
-	errCode := in.Metadata[message.ExtAPIRespErrCode]
+	reqID := in.Metadata[pb.META_REQUESTID]
+	status := in.Metadata[pb.META_RESPONSESTATUS]
+	errCode := in.Metadata[pb.META_RESPONSEERRCODE]
 
 	p.apiManager.OnRespond(ctx, &holder.Response{
 		ID:       reqID,

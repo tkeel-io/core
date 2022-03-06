@@ -8,7 +8,7 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
-	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/types"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/kit/log"
 )
@@ -18,30 +18,30 @@ type NodeConf struct {
 }
 
 type Node struct {
-	runtimes map[string]*Runtime
-	dispatch dispatch.Dispatcher
-	repo     repository.IRepository
+	runtimes        map[string]*Runtime
+	dispatch        dispatch.Dispatcher
+	resourceManager types.ResourceManager
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewNode(ctx context.Context, repo repository.IRepository, dispatcher dispatch.Dispatcher) *Node {
+func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher) *Node {
 	ctx, cacel := context.WithCancel(ctx)
 	return &Node{
-		ctx:      ctx,
-		cancel:   cacel,
-		repo:     repo,
-		dispatch: dispatcher,
-		runtimes: make(map[string]*Runtime),
+		ctx:             ctx,
+		cancel:          cacel,
+		dispatch:        dispatcher,
+		resourceManager: resourceManager,
+		runtimes:        make(map[string]*Runtime),
 	}
 }
 
-func (n *Node) Start(cfg NodeConf) error {
+func (n *Node) Start(sources []string) error {
 	log.Info("start node...")
 
-	for index := range cfg.Sources {
-		sourceIns, err := xkafka.NewKafkaPubsub(cfg.Sources[index])
+	for index := range sources {
+		sourceIns, err := xkafka.NewKafkaPubsub(sources[index])
 		if nil != err {
 			return errors.Wrap(err, "create source instance")
 		}

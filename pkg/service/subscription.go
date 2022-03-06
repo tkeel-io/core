@@ -27,8 +27,6 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
@@ -36,6 +34,8 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
+
+const SMTypeSubscription = "SUBSCRIPTION"
 
 type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
@@ -104,27 +104,22 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.SMTypeSubscription
+	entity.Type = SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	properties := map[string]interface{}{
-		runtime.SMFieldType:                      entity.Type,
-		runtime.SMFieldOwner:                     entity.Owner,
-		runtime.SMFieldSource:                    entity.Source,
-		subscription.SubscriptionFieldMode:       strings.ToUpper(req.Subscription.Mode),
-		subscription.SubscriptionFieldTopic:      req.Subscription.Topic,
-		subscription.SubscriptionFieldFilter:     req.Subscription.Filter,
-		subscription.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+		"type":        entity.Type,
+		"owner":       entity.Owner,
+		"source":      entity.Source,
+		"mode":        strings.ToUpper(req.Subscription.Mode),
+		"topic":       req.Subscription.Topic,
+		"filter":      req.Subscription.Filter,
+		"pubsub_name": req.Subscription.PubsubName,
 	}
 
 	if entity.Properties, err = parseProps(properties); nil != err {
 		log.Error("create subscription, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, errors.Wrap(err, "create subscription")
-	}
-
-	if err = s.apiManager.CheckSubscription(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
-		return
 	}
 
 	// set properties.
@@ -165,13 +160,13 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.SMTypeSubscription
+	entity.Type = SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
 	properties := map[string]interface{}{
-		subscription.SubscriptionFieldFilter:     req.Subscription.Filter,
-		subscription.SubscriptionFieldTopic:      req.Subscription.Topic,
-		subscription.SubscriptionFieldMode:       strings.ToUpper(req.Subscription.Mode),
-		subscription.SubscriptionFieldPubsubName: req.Subscription.PubsubName,
+		"mode":        strings.ToUpper(req.Subscription.Mode),
+		"topic":       req.Subscription.Topic,
+		"filter":      req.Subscription.Filter,
+		"pubsub_name": req.Subscription.PubsubName,
 	}
 
 	if entity.Properties, err = parseProps(properties); nil != err {
@@ -212,7 +207,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 
 	var entity = new(Entity)
 	entity.ID = req.Id
-	entity.Type = runtime.SMTypeSubscription
+	entity.Type = SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
@@ -245,7 +240,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 
 	var entity = new(Entity)
 	entity.ID = req.Id
-	entity.Type = runtime.SMTypeSubscription
+	entity.Type = SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)

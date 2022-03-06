@@ -21,9 +21,10 @@ import (
 )
 
 type Server struct {
-	Name    string `yaml:"name" mapstructure:"name"`
-	AppID   string `yaml:"app_id" mapstructure:"app_id"`
-	AppPort int    `yaml:"app_port" mapstructure:"app_port"`
+	Name    string   `yaml:"name" mapstructure:"name"`
+	AppID   string   `yaml:"app_id" mapstructure:"app_id"`
+	AppPort int      `yaml:"app_port" mapstructure:"app_port"`
+	Sources []string `yaml:"sources" mapstructure:"sources"`
 }
 
 type TSeriesServer struct {

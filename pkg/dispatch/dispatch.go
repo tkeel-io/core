@@ -9,6 +9,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
+	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/kit/log"
@@ -28,6 +29,17 @@ type DispatchConf struct {
 	Sinks []string
 }
 
+func New(ctx context.Context) *dispatcher { //nolint
+	ctx, cancel := context.WithCancel(ctx)
+	return &dispatcher{
+		id:          util.UUID("dispatcher"),
+		ctx:         ctx,
+		cancel:      cancel,
+		transmitter: transport.New(transport.TransTypeHTTP),
+		sinks:       make(map[string]*xkafka.KafkaPubsub),
+	}
+}
+
 type dispatcher struct {
 	id          string
 	ctx         context.Context
@@ -40,7 +52,7 @@ type dispatcher struct {
 func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 	var err error
 	switch ev.Type() {
-	case "core.event.Callback":
+	case v1.ETCallback:
 		err = d.transmitter.Do(ctx, &transport.Request{
 			PackageID: ev.ID(),
 			Method:    http.MethodPost,
@@ -59,7 +71,6 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 }
 
 func (d *dispatcher) Start(cfg DispatchConf) error {
-
 	// start loopback.
 	d.loopback = loopback.NewLoopback()
 	d.loopback.Received(d.ctx, func(ctx context.Context, e v1.Event) error {

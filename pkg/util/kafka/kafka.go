@@ -182,7 +182,7 @@ func (consumer *kafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 			if innerErr = consumer.receiver.HandleMessage(session.Context(), msg); innerErr == nil {
 				session.MarkMessage(msg, "")
 			}
-			log.Error("processing kafka message", zfield.Topic(msg.Topic),
+			log.Debug("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 			return errors.Wrap(innerErr, "handle message")
 		}, b, func(err error, d time.Duration) {

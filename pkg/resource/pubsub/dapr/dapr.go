@@ -4,14 +4,11 @@ import (
 	"context"
 	"os"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
-	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -32,40 +29,14 @@ func (d *daprPubsub) ID() string {
 	return d.id
 }
 
-func (d *daprPubsub) Send(ctx context.Context, event cloudevents.Event) error {
-	var (
-		err      error
-		bytes    []byte
-		metadata = make(map[string]string)
-	)
-
-	if bytes, err = event.MarshalJSON(); nil != err {
-		return errors.Wrap(err, "dapr send")
-	}
-
-	log.Debug("pubsub.dapr send message",
-		zfield.ID(d.id), zfield.Event(event),
-		zfield.Pubsub(d.pubsubName), zfield.Topic(d.topicName))
-
-	var conn dapr.Client
-	if conn = dapr.Get().Select(); nil == conn {
-		log.Error("nil connection",
-			zfield.ID(d.id), zfield.Event(event),
-			zfield.Pubsub(d.pubsubName), zfield.Topic(d.topicName))
-		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
-	}
-
-	err = conn.PublishEvent(
-		ctx, d.pubsubName, d.topicName, bytes,
-		daprSDK.PublishEventWithMetadata(metadata),
-		daprSDK.PublishEventWithContentType(cloudevents.ApplicationJSON))
-	return errors.Wrap(err, "dapr send")
+func (d *daprPubsub) Send(ctx context.Context, event v1.Event) error {
+	panic("never used")
 }
 
 func (d *daprPubsub) Received(ctx context.Context, handler pubsub.EventHandler) error {
 	log.Debug("pubsub.dapr start receive message", zfield.ID(d.id))
-	err := Get().Register(d.consumerType, d.pubsubName, d.topicName, &Consumer{id: d.id, handler: handler})
-	return errors.Wrap(err, "register message handler")
+	Register(&Consumer{id: d.id, handler: handler})
+	return errors.Wrap(nil, "register message handler")
 }
 
 func (d *daprPubsub) Commit(v interface{}) error {
@@ -74,8 +45,8 @@ func (d *daprPubsub) Commit(v interface{}) error {
 
 func (d *daprPubsub) Close() error {
 	log.Debug("pubsub.dapr close", zfield.ID(d.id))
-	err := Get().Unregister(d.consumerType, d.pubsubName, d.topicName, &Consumer{id: d.id})
-	return errors.Wrap(err, "unregister message handler")
+	Unregister(&Consumer{id: d.id})
+	return errors.Wrap(nil, "unregister message handler")
 }
 
 func init() {

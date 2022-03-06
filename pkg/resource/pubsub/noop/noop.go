@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/kit/log"
@@ -18,7 +18,7 @@ func (d *noopPubsub) ID() string {
 	return d.id
 }
 
-func (d *noopPubsub) Send(ctx context.Context, event cloudevents.Event) error {
+func (d *noopPubsub) Send(ctx context.Context, event v1.Event) error {
 	log.Debug("pubsub.noop send", zfield.Message(event), zfield.ID(d.id))
 	return nil
 }

@@ -132,7 +132,6 @@ func core(cmd *cobra.Command, args []string) {
 
 	// init gllbal placement.
 	placement.Initialize()
-
 	// rewrite search engine config by flags input info.
 	if _searchEngine != "" {
 		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
@@ -224,18 +223,14 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var stateManager types.Manager
-	if stateManager, err = runtime.NewManager(context.Background(), newResourceManager(coreRepo), _dispatcher); nil != err {
-		log.Fatal(err)
-	}
-
+	stateManager := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
 	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
 		log.Fatal(err)
 	}
 
 	if err = _apiManager.Start(); nil != err {
 		log.Fatal(err)
-	} else if err = stateManager.Start(); nil != err {
+	} else if err = stateManager.Start(config.Get().Server.Sources); nil != err {
 		log.Fatal(err)
 	}
 
@@ -326,57 +321,12 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 
 func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
 	log.Info("load local Queues.")
-	// load loacal Queues.
-	for _, queue := range config.Get().Dispatcher.Queues {
-		properties := make(map[string]interface{})
-		for _, pair := range queue.Metadata {
-			properties[pair.Key] = pair.Value
-		}
-
-		if queue.Version > 0 {
-			// compare version.
-			var err error
-			var remoteQueue *dao.Queue
-			if remoteQueue, err = repo.GetQueue(context.Background(), &dao.Queue{ID: queue.ID}); nil != err {
-				log.Warn("query Queue", zap.Error(err), logger.ID(queue.ID))
-				continue
-			}
-
-			if remoteQueue.Version >= queue.Version {
-				continue
-			}
-		}
-
-		repo.PutQueue(ctx, &dao.Queue{
-			ID:           queue.ID,
-			Name:         queue.Name,
-			Type:         dao.QueueType(queue.Type),
-			Version:      queue.Version,
-			NodeName:     config.Get().Server.Name,
-			Consumers:    queue.Consumers,
-			ConsumerType: dao.ConsumerType(queue.ConsumerType),
-			Description:  queue.Description,
-			Metadata:     properties,
-		})
-		log.Info("load local Queue", logger.ID(queue.ID),
-			zap.String("consumer_type", queue.ConsumerType),
-			logger.Type(queue.Type), logger.Version(queue.Version),
-			logger.Name(queue.Name), logger.Desc(queue.Description),
-			zap.Any("metadata", queue.Metadata), zap.Strings("consumers", queue.Consumers))
-	}
-
-	dispatcher := dispatch.New(
-		context.Background(),
-		config.Get().Dispatcher.ID,
-		config.Get().Dispatcher.Name,
-		config.Get().Dispatcher.Enabled, repo)
-
-	if err := dispatcher.Run(); nil != err {
+	dispatcher := dispatch.New(ctx)
+	if err := dispatcher.Start(dispatch.DispatchConf{Sinks: config.Get().Dispatcher.Sinks}); nil != err {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 
 	_dispatcher = dispatcher
-
 	return nil
 }

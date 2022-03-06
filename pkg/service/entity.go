@@ -30,7 +30,6 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -279,18 +278,14 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 			return nil, errors.Wrap(err, "json unmarshal patch data")
 		}
 
+		pds := []*pb.PatchData{}
 		for index := range patchData {
 			// encode value.
 			bytes, _ := json.Marshal(patchData[index].Value)
-			patchData[index].Value = bytes
-		}
-
-		pds := []state.PatchData{}
-		for index := range patchData {
-			pd := state.PatchData{
+			pd := &pb.PatchData{
 				Path:     patchData[index].Path,
 				Operator: patchData[index].Operator,
-				Value:    patchData[index].Value,
+				Value:    bytes,
 			}
 
 			if err = checkPatchData(pd); nil != err {
@@ -321,7 +316,7 @@ func (s *EntityService) PatchEntityPropsZ(ctx context.Context, req *pb.PatchEnti
 	return s.PatchEntityProps(ctx, req)
 }
 
-func checkPatchData(patchData state.PatchData) error {
+func checkPatchData(patchData *pb.PatchData) error {
 	if xjson.IsReversedOp(patchData.Operator) {
 		return xerrors.ErrJSONPatchReservedOp
 	} else if !xjson.IsValidPath(patchData.Path) {
@@ -377,9 +372,9 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 		return out, xerrors.ErrInvalidRequest
 	}
 
-	pds := make([]state.PatchData, 0)
+	pds := make([]*pb.PatchData, 0)
 	for index := range pids {
-		pds = append(pds, state.PatchData{
+		pds = append(pds, &pb.PatchData{
 			Path:     pids[index],
 			Operator: xjson.OpRemove.String(),
 		})
@@ -439,17 +434,17 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 
 	switch kv := in.Configs.AsInterface().(type) {
 	case []interface{}:
-		patchData := make([]*pb.PatchData, 0)
+		patchData := make([]PatchData, 0)
 		data, _ := json.Marshal(kv)
 		if err = json.Unmarshal(data, &patchData); nil != err {
 			log.Error("patch entity  configs", zfield.Eid(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "json unmarshal request")
 		}
 
-		var pds []state.PatchData
+		var pds []*pb.PatchData
 		for _, pd := range patchData {
 			var cfg constraint.Config
-			switch value := pd.Value.AsInterface().(type) {
+			switch value := pd.Value.(type) {
 			case map[string]interface{}:
 				if cfg, err = constraint.ParseConfigFrom(value); nil != err {
 					return out, errors.Wrap(err, "parse entity configs")
@@ -461,7 +456,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				log.Error("json marshal", zap.Error(err), zfield.Eid(in.Id))
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
-			pds = append(pds, state.PatchData{
+			pds = append(pds, &pb.PatchData{
 				Path:     pd.Path,
 				Operator: pd.Operator,
 				Value:    bytes,
@@ -532,9 +527,9 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyKeys, ",")
-	pds := make([]state.PatchData, 0)
+	pds := make([]*pb.PatchData, 0)
 	for index := range propertyIDs {
-		pds = append(pds, state.PatchData{
+		pds = append(pds, &pb.PatchData{
 			Path:     propertyIDs[index],
 			Operator: xjson.OpRemove.String(),
 		})
@@ -673,9 +668,9 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 	for _, mDesc := range entity.Mappers {
 		out.Mappers = append(out.Mappers,
 			&pb.Mapper{
-				Id:          mDesc.ID,
+				Id:          mDesc.Id,
 				Name:        mDesc.Name,
-				Tql:         mDesc.TQL,
+				Tql:         mDesc.Tql,
 				Description: mDesc.Description,
 			})
 	}
@@ -718,9 +713,9 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	for _, mDesc := range entity.Mappers {
 		out.Mappers = append(out.Mappers,
 			&pb.Mapper{
-				Id:          mDesc.ID,
+				Id:          mDesc.Id,
 				Name:        mDesc.Name,
-				Tql:         mDesc.TQL,
+				Tql:         mDesc.Tql,
 				Description: mDesc.Description,
 			})
 	}
