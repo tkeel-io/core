@@ -152,7 +152,7 @@ func Unmarshal(data []byte, e *ProtoEvent) error {
 
 type SystemEvent interface {
 	Event
-	Action() *ProtoEvent_SystemData
+	Action() *SystemData
 }
 
 func (e *ProtoEvent) Action() *SystemData {

@@ -97,7 +97,7 @@ func (r *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) *Result {
 //处理实体生命周期
 func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result {
 	ev, _ := event.(v1.SystemEvent)
-	action := ev.Action().Action
+	action := ev.Action()
 	operator := action.Operator
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
