@@ -30,10 +30,8 @@ import (
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/runtime/message"
 	"github.com/tkeel-io/core/pkg/runtime/state"
-	"github.com/tkeel-io/core/pkg/runtime/subscription"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -756,26 +754,6 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 	}
 
 	return mps, nil
-}
-
-func (m *apiManager) CheckSubscription(ctx context.Context, en *Base) (err error) {
-	// check TQLs.
-	if err = checkTQLs(en); nil != err {
-		return errors.Wrap(err, "check subscription")
-	}
-
-	// check request.
-	mode := getString(en.Properties[subscription.SubscriptionFieldMode])
-	topic := getString(en.Properties[subscription.SubscriptionFieldTopic])
-	filter := getString(en.Properties[subscription.SubscriptionFieldFilter])
-	pubsubName := getString(en.Properties[subscription.SubscriptionFieldPubsubName])
-	log.Infof("check subscription, mode: %s, topic: %s, filter:%s, pubsub: %s, source: %s", mode, topic, filter, pubsubName, en.Source)
-	if mode == subscription.SubscriptionModeUndefine || en.Source == "" || filter == "" || topic == "" || pubsubName == "" {
-		log.Error("create subscription", zap.Error(runtime.ErrSubscriptionInvalid), zap.String("subscription", en.ID))
-		return runtime.ErrSubscriptionInvalid
-	}
-
-	return nil
 }
 
 var eventType = message.MessageTypeAPIRequest.String()
