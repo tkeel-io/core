@@ -7,14 +7,16 @@ server:
   name: core
   app_id: core
   app_port: 6789
-  coroutine_pool_size: 500
+  sources:
+    - kafka://139.198.125.147:9092/core0/core
+    - kafka://139.198.125.147:9092/core1/core
 proxy:
   name: core0
   http_port: 20000
   grpc_port: 20001
 components:
   store:
-    name: dapr
+    name: noop
     properties:
       - key: store_name
         value: core-state
@@ -23,22 +25,12 @@ dispatcher:
   id: dispatcher0
   enabled: true
   name: core-dispatcher
-  queues:
-    - id: upstream1
-      name: upstream1
-      type: dapr
-      consumer_type: dispatcher 
-      metadata:
-        - key: pubsub_name
-          value: cluster-pubsub
-        - key: topic_name
-          value: cluster-pub
-    - id: core-queue1
-      name: core-queue1
-      type: dapr
-      consumer_type: core
-      metadata:
-        - key: pubsub_name
-          value: core-pubsub
-        - key: topic_name
-          value: core-inner
+  sinks:
+    - kafka://139.198.125.147:9092/core0/core
+    - kafka://139.198.125.147:9092/core1/core
+    - kafka://139.198.125.147:9092/core2/core
+    - kafka://139.198.125.147:9092/core3/core
+    - kafka://139.198.125.147:9092/core4/core
+    - kafka://139.198.125.147:9092/core5/core
+    - kafka://139.198.125.147:9092/core6/core
+    - kafka://139.198.125.147:9092/core7/core
