@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/resource/store"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -21,6 +22,23 @@ type Entity struct {
 	Properties    map[string]tdtl.Node `json:"-" msgpack:"-" mapstructure:"-"`
 	ConfigBytes   []byte               `json:"-" msgpack:"config_bytes" mapstructure:"config_bytes"`
 	PropertyBytes []byte               `json:"property_bytes" msgpack:"property_bytes" mapstructure:"property_bytes"`
+}
+
+func Encode(en *Entity) ([]byte, error) {
+	properties, err := xjson.EncodeJSON(en.Properties)
+	if nil != err {
+		return nil, errors.Wrap(err, "encode json")
+	}
+
+	bytes, err := json.Marshal(en)
+	if nil != err {
+		return nil, errors.Wrap(err, "encode json")
+	}
+
+	cc := tdtl.New(bytes)
+	cc.Del("property_bytes")
+	cc.Set("properties", tdtl.New(properties))
+	return cc.Raw(), cc.Error()
 }
 
 func (e *Entity) Copy() Entity {

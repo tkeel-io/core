@@ -60,3 +60,29 @@ func TestMarshal2(t *testing.T) {
 	assert.Equal(t, 1, len(patches))
 	assert.Equal(t, "metrics.temp", patches[0].Path)
 }
+
+func TestMarshal3(t *testing.T) {
+	ev := &ProtoEvent{
+		Id:        "ev-12345",
+		Timestamp: time.Now().UnixNano(),
+		Metadata:  map[string]string{},
+		Data: &ProtoEvent_SystemData{
+			SystemData: &SystemData{
+				Operator: "Create",
+				Data:     []byte(`{"id": "en-123", "properties": {"temp": 20}}`),
+			},
+		},
+	}
+
+	bytes, err := Marshal(ev)
+	assert.Nil(t, err)
+
+	// unmarshal .
+	var e ProtoEvent
+	err = Unmarshal(bytes, &e)
+	assert.Nil(t, err)
+	assert.Equal(t, "ev-12345", e.Id)
+
+	t.Log(string(e.Action().GetData()))
+
+}

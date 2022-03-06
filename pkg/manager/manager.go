@@ -124,14 +124,15 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 		}
 	}
 
-	if bytes, err = dao.GetEntityCodec().Encode(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		TemplateID: templateID,
-		Properties: en.Properties,
-	}); nil != err {
+	if bytes, err = dao.Encode(
+		&dao.Entity{
+			ID:         en.ID,
+			Type:       en.Type,
+			Owner:      en.Owner,
+			Source:     en.Source,
+			TemplateID: templateID,
+			Properties: en.Properties,
+		}); nil != err {
 		log.Error("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity")
@@ -145,8 +146,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 		Metadata: map[string]string{
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
-			v1.MetaEntityID:  en.ID,
-		},
+			v1.MetaEntityID:  en.ID},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
 				Operator: string(v1.OpCreate),
@@ -211,8 +211,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 			Metadata: map[string]string{
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-			},
+				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -271,8 +270,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 			Metadata: map[string]string{
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-			},
+				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -329,8 +327,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		Metadata: map[string]string{
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
-			v1.MetaEntityID:  en.ID,
-		},
+			v1.MetaEntityID:  en.ID},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
 				Operator: string(v1.OpDelete),
@@ -349,14 +346,6 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		log.Error("delete entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
 		return xerrors.New(resp.ErrCode)
-	}
-
-	// decode response.
-	var apiResp dao.Entity
-	if err = dao.GetEntityCodec().Decode(resp.Data, &apiResp); nil != err {
-		log.Error("delete entity, decode response",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return errors.Wrap(err, "delete entity, decode response")
 	}
 
 	log.Info("processing completed", zfield.Eid(en.ID),
@@ -392,8 +381,7 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*BaseRet,
 			Metadata: map[string]string{
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-			},
+				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -453,8 +441,7 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.P
 			Metadata: map[string]string{
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-			},
+				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: pds,
@@ -526,13 +513,11 @@ func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys 
 			Metadata: map[string]string{
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-			},
+				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patches,
-				},
-			},
+				}},
 		}); nil != err {
 		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "create entity, dispatch event")

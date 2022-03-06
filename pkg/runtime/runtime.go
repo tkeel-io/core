@@ -114,7 +114,8 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result
 		// create entity.
 		en, err := NewEntity(ev.Entity(), action.GetData())
 		if nil != err {
-			log.Error("create entity", zfield.Eid(ev.Entity()))
+			log.Error("create entity", zfield.Eid(ev.Entity()),
+				zfield.Value(string(action.GetData())), zap.Error(err))
 			return &Result{Err: err}
 		}
 
