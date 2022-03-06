@@ -15,15 +15,13 @@ type Patch struct {
 
 //Feed 包含实体最新状态以及变更
 type Result struct {
+	// TODO: 将 error 放到这里的原因： 在UpdateWithEvent无论失败还是成功，callback都是可能被执行的.
+	Err     error
 	State   []byte
 	Changes []Patch
 }
 
 type Entity interface {
-	Handle(context.Context, v1.Event) (*Result, error)
+	Handle(context.Context, v1.Event) *Result
 	Raw() []byte
-}
-
-type Dispatcher interface {
-	Dispatch(context.Context) error
 }

@@ -18,7 +18,7 @@ func NewEntity(id string, state []byte) (Entity, error) {
 	return &entity{id: id, state: *s}, s.Error()
 }
 
-func (e *entity) Handle(ctx context.Context, event v1.Event) (*Result, error) {
+func (e *entity) Handle(ctx context.Context, event v1.Event) *Result {
 	var changes []Patch
 	ev, _ := event.(v1.PatchEvent)
 
@@ -38,7 +38,7 @@ func (e *entity) Handle(ctx context.Context, event v1.Event) (*Result, error) {
 		case OpReplace:
 			cc.Set(patch.Path, patchVal)
 		default:
-			return nil, xerrors.ErrPatchPathInvalid
+			return &Result{Err: xerrors.ErrPatchPathInvalid}
 		}
 
 		if nil != cc.Error() {
@@ -61,7 +61,7 @@ func (e *entity) Handle(ctx context.Context, event v1.Event) (*Result, error) {
 		e.state = *cc
 	}
 
-	return &Result{State: cc.Raw(), Changes: changes}, cc.Error()
+	return &Result{State: cc.Raw(), Changes: changes, Err: cc.Error()}
 }
 
 func (e *entity) Raw() []byte {

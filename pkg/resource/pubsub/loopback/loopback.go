@@ -2,49 +2,45 @@ package loopback
 
 import (
 	"context"
-	"os"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/kit/log"
 )
 
-type loopbackPubsub struct {
+type EventFunc func(context.Context, v1.Event) error
+
+type Loopback struct {
 	id           string
-	eventHandler pubsub.EventHandler
+	eventHandler EventFunc
 }
 
-func (d *loopbackPubsub) ID() string {
+func NewLoopback() *Loopback {
+	return &Loopback{id: "loopback"}
+}
+
+func (d *Loopback) ID() string {
 	return d.id
 }
 
-func (d *loopbackPubsub) Send(ctx context.Context, event cloudevents.Event) error {
+func (d *Loopback) Send(ctx context.Context, event v1.Event) error {
 	log.Debug("pubsub.loopback send", zfield.Message(event), zfield.ID(d.id))
 	err := d.eventHandler(ctx, event)
 	return errors.Wrap(err, "send event")
 }
 
-func (d *loopbackPubsub) Received(ctx context.Context, receiver pubsub.EventHandler) error {
+func (d *Loopback) Received(ctx context.Context, handler EventFunc) error {
 	log.Info("pubsub.loopback start receive message", zfield.ID(d.id))
-	d.eventHandler = receiver
+	d.eventHandler = handler
 	return nil
 }
 
-func (d *loopbackPubsub) Commit(v interface{}) error {
+func (d *Loopback) Commit(v interface{}) error {
 	return nil
 }
 
-func (d *loopbackPubsub) Close() error {
+func (d *Loopback) Close() error {
 	log.Info("pubsub.loopback close", zfield.ID(d.id))
 	return nil
-}
-
-func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.loopback> successful")
-	pubsub.Register("loopback", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
-		log.Info("create pubsub.loopback instance", zfield.ID(id))
-		return &loopbackPubsub{id: id}, nil
-	})
 }

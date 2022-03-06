@@ -23,7 +23,8 @@ type EventType string
 const (
 	ETCache        EventType = "core.event.Cache"
 	ETEntity       EventType = "core.event.Entity"
-	ETRuntime      EventType = "core.event.Runtime"
+	ETSystem       EventType = "core.event.System"
+	ETCallback     EventType = "core.event.Callback"
 	ETMapperCreate EventType = "core.event.Mapper.Create"
 	ETMapperUpdate EventType = "core.event.Mapper.Update"
 	ETMapperDelete EventType = "core.event.Mapper.Delete"
@@ -43,4 +44,11 @@ const (
 	OpMerge   PatchOp = "merge"
 	OpRemove  PatchOp = "remove"
 	OpReplace PatchOp = "replace"
+)
+
+type SystemOp string
+
+const (
+	OpCreate SystemOp = "core.event.System.Create"
+	OpDelete SystemOp = "core.event.System.Delete"
 )

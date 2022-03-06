@@ -23,6 +23,8 @@ type Attribution interface {
 
 type Event interface {
 	Attribution
+
+	ID() string
 	Copy() Event
 	Type() string
 	Version() string
@@ -34,6 +36,11 @@ type Event interface {
 	RawData() []byte
 	Payload() isProtoEvent_Data
 	SetPayload(payload isProtoEvent_Data) Event
+	CallbackAddr() string
+}
+
+func (e *ProtoEvent) ID() string {
+	return e.Id
 }
 
 func (e *ProtoEvent) Copy() Event {
@@ -95,6 +102,10 @@ func (e *ProtoEvent) ForeachAttr(handler func(key, val string)) {
 	}
 }
 
+func (e *ProtoEvent) CallbackAddr() string {
+	return e.Callback
+}
+
 // ----------------------
 
 type PatchEvent interface {
@@ -112,8 +123,9 @@ func (e *ProtoEvent) Patches() []*PatchData {
 	panic("invalid data type")
 }
 
-func Marshal(e *ProtoEvent) ([]byte, error) {
-	return proto.Marshal(e)
+func Marshal(e Event) ([]byte, error) {
+	ev, _ := e.(*ProtoEvent)
+	return proto.Marshal(ev)
 }
 
 func Unmarshal(data []byte, e *ProtoEvent) error {
@@ -123,6 +135,7 @@ func Unmarshal(data []byte, e *ProtoEvent) error {
 //-----------------------------------------------
 
 type SystemEvent interface {
+	Event
 	Action() *ProtoEvent_Action
 }
 

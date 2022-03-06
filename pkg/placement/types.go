@@ -1,11 +1,14 @@
 package placement
 
-import "github.com/tkeel-io/core/pkg/repository/dao"
+type Info struct {
+	ID   string
+	Flag bool
+}
 
 type Placement interface {
-	Select(string) dao.Queue
-	AppendQueue(dao.Queue)
-	RemoveQueue(dao.Queue)
+	Select(string) Info
+	Append(Info)
+	Remove(Info)
 }
 
 func Global() Placement {

@@ -6,17 +6,22 @@ import (
 	"testing"
 
 	"github.com/tkeel-io/core/pkg/runtime/mock"
+	"github.com/tkeel-io/kit/log"
 )
 
 func TestNode_Start(t *testing.T) {
-	node := NewNode(context.TODO(), mock.NewRepo(), nil)
-	node.Start(NodeConf{
-		Source: SourceConf{
-			Topics:    []string{"core"},
-			Brokers:   []string{"192.168.0.103:9092"},
-			GroupName: "core",
+	log.InitLogger("core.node", "DEBUG", true)
+	node := NewNode(context.Background(), mock.NewRepo(), mock.NewDispatcher())
+
+	err := node.Start(NodeConf{
+		Sources: []string{
+			"kafka://192.168.0.103:9092/core/core",
 		},
 	})
+
+	if nil != err {
+		panic(err)
+	}
 }
 
 func TestParse(t *testing.T) {

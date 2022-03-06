@@ -3,21 +3,9 @@ package dispatch
 import (
 	"context"
 
-	cloudevents "github.com/cloudevents/sdk-go"
-	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/util"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 )
 
 type Dispatcher interface {
-	Dispatch(ctx context.Context, ev cloudevents.Event) error
-}
-
-var loopbackQueue = &dao.Queue{
-	ID:           util.UUID("queue"),
-	Name:         "loopback-core-route-and-republish",
-	Type:         "loopback",
-	Consumers:    []string{},
-	ConsumerType: dao.ConsumerTypeDispatch,
-	Metadata:     map[string]interface{}{},
-	Description:  "used for core.runtime actor republish event and core.APIs route request.",
+	Dispatch(context.Context, v1.Event) error
 }

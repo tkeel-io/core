@@ -77,8 +77,8 @@ func TestEntity_Handle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			result, err := en.Handle(context.TODO(), test)
-			assert.Nil(t, err)
+			result := en.Handle(context.TODO(), test)
+			assert.Nil(t, result.Err)
 			t.Log("result", result)
 		})
 	}

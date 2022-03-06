@@ -32,7 +32,8 @@ message SystemData {
 message ProtoEvent {
     string id = 1;
     int64 timestamp = 2;
-    map<string, string> metadata = 3;
+    string callback = 3;
+    map<string, string> metadata = 4;
     oneof data {
         bytes raw_data = 8;
         PatchDatas patches = 9;
