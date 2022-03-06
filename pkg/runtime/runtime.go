@@ -157,6 +157,10 @@ func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) 
 
 //处理订阅
 func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
+	if nil != ret.Err {
+		return ret
+	}
+
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	// 2. 执行对应的订阅，
@@ -165,6 +169,10 @@ func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
 }
 
 func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) *Result {
+	if nil != ret.Err {
+		return ret
+	}
+
 	ev := &v1.ProtoEvent{
 		Id:        event.ID(),
 		Timestamp: time.Now().UnixNano(),
