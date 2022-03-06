@@ -37,7 +37,7 @@ message ProtoEvent {
     oneof data {
         bytes raw_data = 8;
         PatchDatas patches = 9;
-        SystemData action = 10;
+        SystemData system_data = 10;
     }
 }
 

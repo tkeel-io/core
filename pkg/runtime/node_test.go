@@ -5,23 +5,28 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime/mock"
 	"github.com/tkeel-io/kit/log"
 )
 
 func TestNode_Start(t *testing.T) {
+	stopCh := make(chan struct{})
+	placement.Initialize()
 	log.InitLogger("core.node", "DEBUG", true)
 	node := NewNode(context.Background(), mock.NewRepo(), mock.NewDispatcher())
 
 	err := node.Start(NodeConf{
 		Sources: []string{
-			"kafka://192.168.0.103:9092/core/core",
+			"kafka://139.198.125.147:9092/core/core",
 		},
 	})
 
 	if nil != err {
 		panic(err)
 	}
+
+	<-stopCh
 }
 
 func TestParse(t *testing.T) {

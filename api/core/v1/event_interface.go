@@ -15,6 +15,22 @@ const (
 	META_VERSION  = "x-msg-version"
 )
 
+type EventType string
+
+const (
+	ETCache    EventType = "core.event.Cache"
+	ETEntity   EventType = "core.event.Entity"
+	ETSystem   EventType = "core.event.System"
+	ETCallback EventType = "core.event.Callback"
+)
+
+type SystemOp string
+
+const (
+	OpCreate SystemOp = "core.event.System.Create"
+	OpDelete SystemOp = "core.event.System.Delete"
+)
+
 type Attribution interface {
 	Attr(key string) string
 	SetAttr(key string, value string) Event
@@ -26,7 +42,7 @@ type Event interface {
 
 	ID() string
 	Copy() Event
-	Type() string
+	Type() EventType
 	Version() string
 	Validate() error
 	Entity() string
@@ -47,8 +63,8 @@ func (e *ProtoEvent) Copy() Event {
 	return e
 }
 
-func (e *ProtoEvent) Type() string {
-	return e.Metadata[META_TYPE]
+func (e *ProtoEvent) Type() EventType {
+	return EventType(e.Metadata[META_TYPE])
 }
 
 func (e *ProtoEvent) Version() string {
@@ -136,9 +152,9 @@ func Unmarshal(data []byte, e *ProtoEvent) error {
 
 type SystemEvent interface {
 	Event
-	Action() *ProtoEvent_Action
+	Action() *ProtoEvent_SystemData
 }
 
 func (e *ProtoEvent) Action() *SystemData {
-	return e.GetAction()
+	return e.GetSystemData()
 }

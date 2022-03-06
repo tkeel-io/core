@@ -20,9 +20,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -30,10 +31,10 @@ import (
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime/message"
-	"github.com/tkeel-io/core/pkg/runtime/state"
+	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -97,7 +98,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 	var (
 		err        error
 		has        bool
-		ev         cloudevents.Event
+		bytes      []byte
 		templateID string
 	)
 
@@ -119,8 +120,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		}
 	}
 
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
+	if bytes, err = dao.GetEntityCodec().Encode(&dao.Entity{
 		ID:         en.ID,
 		Type:       en.Type,
 		Owner:      en.Owner,
@@ -128,18 +128,23 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 		TemplateID: templateID,
 		Properties: en.Properties,
 	}); nil != err {
-		log.Info("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+		log.Error("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity")
 	}
 
-	// add event header fields.
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtTemplateID, en.TemplateID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APICreateEntity.String())
-
 	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
+	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+		Id:        reqID,
+		Timestamp: time.Now().UnixNano(),
+		Callback:  util.ResolveAddr(),
+		Data: &v1.ProtoEvent_SystemData{
+			SystemData: &v1.SystemData{
+				Operator: string(v1.OpCreate),
+				Data:     bytes,
+			},
+		},
+	}); nil != err {
 		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
@@ -171,8 +176,8 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 
 func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) {
 	var (
-		err error
-		ev  cloudevents.Event
+		err   error
+		bytes []byte
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -180,25 +185,30 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	log.Info("entity.UpdateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:          en.ID,
-		Type:        en.Type,
-		Owner:       en.Owner,
-		Source:      en.Source,
-		Properties:  en.Properties,
-		ConfigBytes: en.ConfigFile,
-	}); nil != err {
-		log.Info("update entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+	if bytes, err = xjson.EncodeJSON(en.Properties); nil != err {
+		log.Error("update entity", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 		return nil, errors.Wrap(err, "update entity")
 	}
 
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityProps.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("update entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "update entity")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: []*v1.PatchData{{
+						Path:     "properties",
+						Value:    bytes,
+						Operator: string(runtime.OpMerge),
+					}},
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -229,33 +239,29 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 
 // GetProperties returns Base.
 func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
-	var (
-		err error
-		ev  cloudevents.Event
-	)
-
+	var err error
 	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.GetProperties", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:     en.ID,
-		Type:   en.Type,
-		Owner:  en.Owner,
-		Source: en.Source,
-	}); nil != err {
-		log.Error("get entity", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return nil, errors.Wrap(err, "get entity")
-	}
-
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIGetEntity.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("get entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: []*v1.PatchData{{
+						Path:     "",
+						Operator: string(runtime.OpCopy),
+					}},
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -286,34 +292,26 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 
 // DeleteEntity delete an entity from manager.
 func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
-	var (
-		err error
-		ev  cloudevents.Event
-	)
+	var err error
 
 	reqID := util.UUID(reqIDPrefix)
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+		Id:        reqID,
+		Timestamp: time.Now().UnixNano(),
+		Callback:  util.ResolveAddr(),
+		Data: &v1.ProtoEvent_SystemData{
+			SystemData: &v1.SystemData{
+				Operator: string(v1.OpDelete),
+			},
+		},
 	}); nil != err {
-		log.Error("delete entity", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return errors.Wrap(err, "delete entity")
-	}
-
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIDeleteEntity.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("delete entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return errors.Wrap(err, "delete entity, dispatch event")
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -343,8 +341,8 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 // SetProperties set properties into entity.
 func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, error) {
 	var (
-		err error
-		ev  cloudevents.Event
+		err   error
+		bytes []byte
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -352,27 +350,30 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 	log.Info("entity.UpdateEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	// create event & set payload.
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
-	}); nil != err {
-		log.Info("set entity properties", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "set entity properties")
+	if bytes, err = xjson.EncodeJSON(en.Properties); nil != err {
+		log.Error("update entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
+		return nil, errors.Wrap(err, "update entity")
 	}
 
-	// set event header fields.
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityProps.String())
-
 	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("set entity properties", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "set entity properties")
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: []*v1.PatchData{{
+						Path:     "properties",
+						Value:    bytes,
+						Operator: string(runtime.OpMerge),
+					}},
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -401,10 +402,9 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 	return base, errors.Wrap(err, "update entity props")
 }
 
-func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.PatchData) (*Base, error) {
 	var (
 		err error
-		ev  cloudevents.Event
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -412,25 +412,20 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state
 	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	if ev, err = m.makePatchEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
-	}, pds); nil != err {
-		log.Error("make patch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "make patch event")
-	}
-
-	// set event header fields.
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIPatchEntityProps.String())
-
 	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("patch entity properties", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "patch entity properties")
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: pds,
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -462,7 +457,6 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []state
 func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys []string) (*Base, error) {
 	var (
 		err error
-		ev  cloudevents.Event
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -470,23 +464,36 @@ func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys 
 	log.Info("entity.GetEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
-	// create event & set payload.
-	if ev, err = m.makeItemEvent(&dao.Entity{
-		ID:     en.ID,
-		Type:   en.Type,
-		Owner:  en.Owner,
-		Source: en.Source,
-	}, propertyKeys); nil != err {
-		log.Error("get entity props", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return nil, errors.Wrap(err, "get entity props")
+	patches := make([]*v1.PatchData, 0)
+	if len(propertyKeys) > 0 {
+		for _, propKey := range propertyKeys {
+			patches = append(patches,
+				&v1.PatchData{
+					Path:     "properties." + propKey,
+					Operator: string(runtime.OpCopy),
+				})
+		}
+	} else {
+		patches = append(patches, &v1.PatchData{
+			Path:     "properties",
+			Operator: string(runtime.OpCopy),
+		})
 	}
 
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIGetEntityProps.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("get entity props", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity props")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: patches,
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -520,7 +527,6 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 	var (
 		err   error
 		bytes []byte
-		ev    cloudevents.Event
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -533,23 +539,24 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 		return nil, errors.Wrap(err, "encode entity configs")
 	}
 
-	if ev, err = m.makeEvent(&dao.Entity{
-		ID:          en.ID,
-		Type:        en.Type,
-		Owner:       en.Owner,
-		Source:      en.Source,
-		ConfigBytes: bytes,
-	}); nil != err {
-		log.Error("set entity configs", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "set entity configs")
-	}
-
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityConfigs.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("set entity configs, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "set entity configs, dispatch event")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: []*v1.PatchData{{
+						Path:     "scheme",
+						Value:    bytes,
+						Operator: string(runtime.OpMerge),
+					}},
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -579,10 +586,9 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 }
 
 // PatchConfigs patch properties into entity.
-func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []state.PatchData) (*Base, error) {
+func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1.PatchData) (*Base, error) {
 	var (
 		err error
-		ev  cloudevents.Event
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -590,24 +596,20 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 	log.Info("entity.PatchConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
-	// create event & set payload.
-	if ev, err = m.makePatchEvent(&dao.Entity{
-		ID:         en.ID,
-		Type:       en.Type,
-		Owner:      en.Owner,
-		Source:     en.Source,
-		Properties: en.Properties,
-	}, pds); nil != err {
-		log.Error("make patch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "make patch event")
-	}
-
-	// set event header fields.
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIPatchEntityConfigs.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("patch entity configs", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "patch entity configs")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: pds,
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -637,10 +639,9 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []sta
 }
 
 // QueryConfigs query entity configs.
-func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs []string) (*Base, error) {
+func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKeys []string) (*Base, error) {
 	var (
 		err error
-		ev  cloudevents.Event
 	)
 
 	reqID := util.UUID(reqIDPrefix)
@@ -648,23 +649,36 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyIDs
 	log.Info("entity.GetEntityConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
-	// create event & set payload.
-	if ev, err = m.makeItemEvent(&dao.Entity{
-		ID:     en.ID,
-		Type:   en.Type,
-		Owner:  en.Owner,
-		Source: en.Source,
-	}, propertyIDs); nil != err {
-		log.Error("get entity configs", zfield.Eid(en.ID), zfield.Type(en.Type),
-			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-		return nil, errors.Wrap(err, "get entity configs")
+	patches := make([]*v1.PatchData, 0)
+	if len(propertyKeys) > 0 {
+		for _, propKey := range propertyKeys {
+			patches = append(patches,
+				&v1.PatchData{
+					Path:     "scheme." + propKey,
+					Operator: string(runtime.OpCopy),
+				})
+		}
+	} else {
+		patches = append(patches, &v1.PatchData{
+			Path:     "scheme",
+			Operator: string(runtime.OpCopy),
+		})
 	}
 
-	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIGetEntityConfigs.String())
-	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
-		log.Error("get entity configs", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity configs")
+	// dispatch event.
+	if err = m.dispatcher.Dispatch(ctx,
+		&v1.ProtoEvent{
+			Id:        reqID,
+			Timestamp: time.Now().UnixNano(),
+			Callback:  util.ResolveAddr(),
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: patches,
+				},
+			},
+		}); nil != err {
+		log.Error("create entity, dispatch event", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response", zfield.Eid(en.ID), zfield.ReqID(reqID))
@@ -756,113 +770,6 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 	return mps, nil
 }
 
-var eventType = message.MessageTypeAPIRequest.String()
-
-func (m *apiManager) makeEvent(en *dao.Entity) (cloudevents.Event, error) {
-	var err error
-	var bytes []byte
-	ev := cloudevents.NewEvent()
-
-	ev.SetID(util.UUID(evIDPrefix))
-	ev.SetType(eventType)
-	ev.SetSource(en.Source)
-	ev.SetExtension(message.ExtEntityID, en.ID)
-	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtEntityOwner, en.Owner)
-	ev.SetExtension(message.ExtMessageReceiver, en.ID)
-	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtSenderID, eventSender)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
-
-	// encode request & set event payload.
-	if bytes, err = dao.GetEntityCodec().Encode(en); nil != err {
-		log.Error("encode request", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "encode api.request")
-	} else if err = ev.SetData(bytes); nil != err {
-		log.Error("set event payload", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "set event payload")
-	} else if err = ev.Validate(); nil != err {
-		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "validate event")
-	}
-
-	return ev, nil
-}
-
-func (m *apiManager) makeItemEvent(en *dao.Entity, propertyKeys []string) (cloudevents.Event, error) {
-	var err error
-	var bytes []byte
-	ev := cloudevents.NewEvent()
-
-	ev.SetID(util.UUID(evIDPrefix))
-	ev.SetType(eventType)
-	ev.SetSource(en.Source)
-	ev.SetExtension(message.ExtEntityID, en.ID)
-	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtEntityOwner, en.Owner)
-	ev.SetExtension(message.ExtMessageReceiver, en.ID)
-	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtSenderID, eventSender)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
-
-	// construct api request.
-	apiRequest := state.ItemsData{
-		ID:           en.ID,
-		Type:         en.Type,
-		Owner:        en.Owner,
-		Source:       en.Source,
-		PropertyKeys: propertyKeys,
-	}
-
-	// encode request & set event payload.
-	if bytes, err = json.Marshal(apiRequest); nil != err {
-		log.Error("encode request", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "encode api.request")
-	} else if err = ev.SetData(bytes); nil != err {
-		log.Error("set event payload", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "set event payload")
-	} else if err = ev.Validate(); nil != err {
-		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "validate event")
-	}
-
-	return ev, nil
-}
-
-func (m *apiManager) makePatchEvent(en *dao.Entity, pds []state.PatchData) (cloudevents.Event, error) {
-	var err error
-	var bytes []byte
-	ev := cloudevents.NewEvent()
-
-	ev.SetID(util.UUID(evIDPrefix))
-	ev.SetType(eventType)
-	ev.SetSource(en.Source)
-	ev.SetExtension(message.ExtEntityID, en.ID)
-	ev.SetExtension(message.ExtEntityType, en.Type)
-	ev.SetExtension(message.ExtEntityOwner, en.Owner)
-	ev.SetExtension(message.ExtMessageReceiver, en.ID)
-	ev.SetExtension(message.ExtEntitySource, en.Source)
-	ev.SetExtension(message.ExtCallback, m.callbackAddr())
-	ev.SetExtension(message.ExtSenderID, eventSender)
-	ev.SetDataContentType(cloudevents.ApplicationJSON)
-
-	// encode request & set event payload.
-	if bytes, err = state.GetPatchCodec().Encode(pds); nil != err {
-		log.Error("encode request", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "encode api.request")
-	} else if err = ev.SetData(bytes); nil != err {
-		log.Error("set event payload", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "set event payload")
-	} else if err = ev.Validate(); nil != err {
-		log.Error("validate event", zap.Error(err), zfield.Eid(en.ID))
-		return ev, errors.Wrap(err, "validate event")
-	}
-
-	return ev, nil
-}
-
 func (m *apiManager) addMapper(ctx context.Context, base *Base) error {
 	mappers, err := m.entityRepo.ListMapper(ctx,
 		m.entityRepo.GetLastRevision(ctx),
@@ -876,9 +783,9 @@ func (m *apiManager) addMapper(ctx context.Context, base *Base) error {
 
 	for _, mp := range mappers {
 		base.Mappers = append(base.Mappers,
-			state.Mapper{
-				ID:          mp.ID,
-				TQL:         mp.TQL,
+			&v1.Mapper{
+				Id:          mp.ID,
+				Tql:         mp.TQL,
 				Name:        mp.Name,
 				Description: mp.Description,
 			})
@@ -901,7 +808,7 @@ func checkTQLs(en *Base) error {
 	}()
 	for _, mm := range en.Mappers {
 		var tqlInst tdtl.TDTL
-		if tqlInst, err = tdtl.NewTDTL(mm.TQL, nil); nil != err {
+		if tqlInst, err = tdtl.NewTDTL(mm.Tql, nil); nil != err {
 			log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
 			return errors.Wrap(err, "check TQL")
 		} else if tqlInst.Target() != en.ID {

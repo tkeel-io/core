@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
 const CoreAPISender = "core.api"
@@ -51,13 +51,13 @@ type APIManager interface {
 	// SetProperties set entity properties.
 	UpdateEntityProps(context.Context, *Base) (*Base, error)
 	// PatchEntity patch entity properties.
-	PatchEntityProps(context.Context, *Base, []state.PatchData) (*Base, error)
+	PatchEntityProps(context.Context, *Base, []*v1.PatchData) (*Base, error)
 	// GetEntityProps returns entity configs.
 	GetEntityProps(context.Context, *Base, []string) (*Base, error)
 	// SetConfigs set entity configs.
 	UpdateEntityConfigs(context.Context, *Base) (*Base, error)
 	// PatchConfigs patch entity configs.
-	PatchEntityConfigs(context.Context, *Base, []state.PatchData) (*Base, error)
+	PatchEntityConfigs(context.Context, *Base, []*v1.PatchData) (*Base, error)
 	// GetEntityConfigs returns entity configs.
 	GetEntityConfigs(context.Context, *Base, []string) (*Base, error)
 	// AppendMapper append entity mapper.
@@ -68,6 +68,4 @@ type APIManager interface {
 	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
 	// ListMapper returns entity mappers.
 	ListMapper(context.Context, *Base) ([]dao.Mapper, error)
-	// CheckSubscription check subscription.
-	CheckSubscription(context.Context, *Base) error
 }

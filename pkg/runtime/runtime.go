@@ -15,10 +15,10 @@ import (
 )
 
 type Runtime struct {
-	id       string
-	caches   map[string]Entity //存放其他Runtime的实体
-	entities map[string]Entity //存放Runtime的实体
-	dispatch dispatch.Dispatcher
+	id         string
+	caches     map[string]Entity //存放其他Runtime的实体
+	entities   map[string]Entity //存放Runtime的实体
+	dispatcher dispatch.Dispatcher
 	//inbox    Inbox
 
 	lock   sync.RWMutex
@@ -77,17 +77,17 @@ func (e *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 func (r *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) *Result {
 	//2.1 实体必须包含 entityID，创建、删除等消息：由 Runtime 处理
 	//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
-	switch EventType(event.Type()) {
-	case ETSystem:
+	switch event.Type() {
+	case v1.ETSystem:
 		return r.handleSystemEvent(ctx, event)
-	case ETEntity:
+	case v1.ETEntity:
 		EntityID := event.Entity()
 		entity, err := r.LoadEntity(EntityID)
 		if err != nil {
 			return &Result{Err: err}
 		}
 		return entity.Handle(ctx, event)
-	case ETCache:
+	case v1.ETCache:
 		return r.handleCacheEvent(ctx, event)
 	default:
 		return &Result{Err: fmt.Errorf(" unknown RuntimeEvent Type")}
@@ -99,8 +99,8 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action().Action
 	operator := action.Operator
-	switch SystemOp(operator) {
-	case OpCreate:
+	switch v1.SystemOp(operator) {
+	case v1.OpCreate:
 		// check entity exists.
 		if _, exists := r.entities[ev.Entity()]; exists {
 			return &Result{Err: xerrors.ErrEntityAleadyExists}
@@ -118,7 +118,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result
 		// store entity.
 		r.entities[ev.Entity()] = en
 		return &Result{State: en.Raw()}
-	case OpDelete:
+	case v1.OpDelete:
 		// TODO:
 		//		1. 从状态存储中删除（可标记）
 		//		2. 从搜索中删除（可标记）

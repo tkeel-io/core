@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -11,13 +10,15 @@ import (
 )
 
 func main() {
+	stopCh := make(chan struct{}, 0)
 	placement.Initialize()
 	log.InitLogger("core.node", "DEBUG", true)
 	node := runtime.NewNode(context.Background(), mock.NewRepo(), mock.NewDispatcher())
 
 	err := node.Start(runtime.NodeConf{
 		Sources: []string{
-			"kafka://192.168.0.103:9092/core/core",
+			"kafka://139.198.125.147:9092/core0/core",
+			"kafka://139.198.125.147:9092/core1/core",
 		},
 	})
 
@@ -25,5 +26,5 @@ func main() {
 		panic(err)
 	}
 
-	time.Sleep(time.Hour)
+	<-stopCh
 }
