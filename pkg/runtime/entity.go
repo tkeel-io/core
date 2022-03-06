@@ -67,3 +67,9 @@ func (e *entity) Handle(ctx context.Context, event v1.Event) *Result {
 func (e *entity) Raw() []byte {
 	return e.state.Copy().Raw()
 }
+
+func (e *entity) Basic() *tdtl.Collect {
+	basic := e.state.Copy()
+	basic.Del("properties", "scheme")
+	return basic
+}

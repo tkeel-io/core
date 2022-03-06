@@ -24,6 +24,19 @@ type Base struct {
 	ConfigFile []byte                        `json:"-" msgpack:"config_file" mapstructure:"-"`
 }
 
+type BaseRet struct {
+	ID         string                 `json:"id" msgpack:"id" mapstructure:"id"`
+	Type       string                 `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner      string                 `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source     string                 `json:"source" msgpack:"source" mapstructure:"source"`
+	Version    int64                  `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime   int64                  `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers    []*v1.Mapper           `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	TemplateID string                 `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	Properties map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"-"`
+	Configs    map[string]interface{} `json:"configs" msgpack:"-" mapstructure:"-"`
+}
+
 func (b *Base) Basic() Base {
 	cp := Base{
 		ID:         b.ID,
@@ -57,11 +70,9 @@ func (b *Base) JSON() map[string]interface{} {
 	}
 
 	bytes, _ := json.Marshal(b.Configs)
-
 	info["properties"] = props
 	info["configs"] = string(bytes)
 	info["config_file"] = string(b.ConfigFile)
-
 	return info
 }
 

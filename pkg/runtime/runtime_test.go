@@ -16,6 +16,12 @@ limitations under the License.
 
 package runtime
 
+import (
+	"testing"
+
+	"github.com/tkeel-io/tdtl"
+)
+
 // import (
 // 	"context"
 // 	"reflect"
@@ -90,3 +96,11 @@ package runtime
 // 	cc := NewRuntime(context.Background(), "core-1")
 // 	return cc
 // }
+
+func TestTTDL(t *testing.T) {
+	cc := tdtl.New([]byte(`{"a": 20}`))
+	cc.Set("", tdtl.New("{}"))
+	t.Log(cc.Error())
+	t.Log(string(cc.Raw()))
+	t.Log(cc.Get("").String())
+}

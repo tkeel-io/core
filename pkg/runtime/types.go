@@ -23,5 +23,6 @@ type Result struct {
 
 type Entity interface {
 	Handle(context.Context, v1.Event) *Result
+	Basic() *tdtl.Collect
 	Raw() []byte
 }

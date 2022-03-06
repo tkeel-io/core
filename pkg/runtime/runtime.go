@@ -11,6 +11,7 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -169,22 +170,39 @@ func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
 }
 
 func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) *Result {
-	if nil != ret.Err {
-		return ret
+	if event.CallbackAddr() != "" {
+		switch ret.Err {
+		case nil:
+			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
+			ev := &v1.ProtoEvent{
+				Id:        event.ID(),
+				Timestamp: time.Now().UnixNano(),
+				Callback:  event.CallbackAddr(),
+				Metadata:  event.Attributes(),
+				Data: &v1.ProtoEvent_RawData{
+					RawData: ret.State,
+				},
+			}
+			ev.SetType(v1.ETCallback)
+			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
+			r.dispatcher.Dispatch(ctx, ev)
+		default:
+			ev := &v1.ProtoEvent{
+				Id:        event.ID(),
+				Timestamp: time.Now().UnixNano(),
+				Callback:  event.CallbackAddr(),
+				Metadata:  event.Attributes(),
+				Data: &v1.ProtoEvent_RawData{
+					RawData: []byte{},
+				},
+			}
+			ev.SetType(v1.ETCallback)
+			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
+			ev.SetAttr(v1.MetaResponseErrCode, ret.Err.Error())
+			r.dispatcher.Dispatch(ctx, ev)
+		}
 	}
 
-	ev := &v1.ProtoEvent{
-		Id:        event.ID(),
-		Timestamp: time.Now().UnixNano(),
-		Callback:  event.CallbackAddr(),
-		Metadata:  event.Attributes(),
-		Data: &v1.ProtoEvent_RawData{
-			RawData: ret.State,
-		},
-	}
-
-	ev.SetType(v1.ETCallback)
-	r.dispatcher.Dispatch(ctx, ev)
 	return ret
 }
 
