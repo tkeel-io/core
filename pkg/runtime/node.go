@@ -60,7 +60,7 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 	rid := msg.Topic
 	if _, has := n.runtimes[rid]; !has {
 		log.Info("create container", zfield.ID(rid))
-		n.runtimes[rid] = NewRuntime(n.ctx, rid)
+		n.runtimes[rid] = NewRuntime(n.ctx, rid, n.dispatch)
 	}
 
 	// load runtime spec.

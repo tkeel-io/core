@@ -55,6 +55,7 @@ type Event interface {
 	Entity() string
 	SetEntity(entityId string) Event
 	SetTTL(td int) Event
+	Attributes() map[string]string
 
 	RawData() []byte
 	Payload() isProtoEvent_Data
@@ -131,6 +132,11 @@ func (e *ProtoEvent) ForeachAttr(handler func(key, val string)) {
 
 func (e *ProtoEvent) CallbackAddr() string {
 	return e.Callback
+}
+
+func (e *ProtoEvent) Attributes() map[string]string {
+	// copy ?.
+	return e.Metadata
 }
 
 // ----------------------

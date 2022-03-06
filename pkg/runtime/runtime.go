@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -26,15 +27,16 @@ type Runtime struct {
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, id string) *Runtime {
+func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
-		id:       id,
-		caches:   map[string]Entity{},
-		entities: map[string]Entity{},
-		lock:     sync.RWMutex{},
-		cancel:   cancel,
-		ctx:      ctx,
+		id:         id,
+		caches:     map[string]Entity{},
+		entities:   map[string]Entity{},
+		dispatcher: dispatcher,
+		lock:       sync.RWMutex{},
+		cancel:     cancel,
+		ctx:        ctx,
 	}
 }
 
@@ -97,7 +99,7 @@ func (r *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) *Result {
 
 //处理实体生命周期
 func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result {
-	log.Info("handle system event", zfield.ID(event.ID()))
+	log.Info("handle system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator
@@ -162,17 +164,26 @@ func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
 	return ret
 }
 
-func (e *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) *Result {
-	cbAddr := event.CallbackAddr()
-	if cbAddr != "" {
+func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) *Result {
+	ev := &v1.ProtoEvent{
+		Id:        event.ID(),
+		Timestamp: time.Now().UnixNano(),
+		Callback:  event.CallbackAddr(),
+		Metadata:  event.Attributes(),
+		Data: &v1.ProtoEvent_RawData{
+			RawData: ret.State,
+		},
 	}
-	return &Result{Err: ret.Err}
+
+	ev.SetType(v1.ETCallback)
+	r.dispatcher.Dispatch(ctx, ev)
+	return ret
 }
 
-func (e *Runtime) LoadEntity(id string) (Entity, error) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
-	if state, ok := e.entities[id]; ok {
+func (r *Runtime) LoadEntity(id string) (Entity, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if state, ok := r.entities[id]; ok {
 		return state, nil
 	}
 

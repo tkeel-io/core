@@ -57,6 +57,7 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 			PackageID: ev.ID(),
 			Method:    http.MethodPost,
 			Address:   ev.CallbackAddr(),
+			Header:    ev.Attributes(),
 			Payload:   ev.RawData(),
 		})
 	default:
