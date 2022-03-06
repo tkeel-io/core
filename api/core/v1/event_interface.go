@@ -8,14 +8,17 @@ import (
 
 // definition message header field.
 const (
-	META_OP              = "x-msg-op"
-	META_TTL             = "x-msg-ttl"
-	META_TYPE            = "x-msg-type"
-	META_ENTITYID        = "x-msg-enid"
-	META_VERSION         = "x-msg-version"
-	META_REQUESTID       = "x-msg-request-id"
-	META_RESPONSESTATUS  = "x-msg-response-status"
-	META_RESPONSEERRCODE = "x-msg-response-errcode"
+	MetaTTL             = "x-msg-ttl"
+	MetaType            = "x-msg-type"
+	MetaTopic           = "x-msg-topic"
+	MetaEntityID        = "x-msg-en-id"
+	MetaEntityType      = "x-msg-en-type"
+	MetaOwner           = "x-msg-owner"
+	MetaSource          = "x-msg-source"
+	MetaVersion         = "x-msg-version"
+	MetaRequestID       = "x-msg-request-id"
+	MetaResponseStatus  = "x-msg-response-status"
+	MetaResponseErrCode = "x-msg-response-errcode"
 )
 
 type EventType string
@@ -46,6 +49,7 @@ type Event interface {
 	ID() string
 	Copy() Event
 	Type() EventType
+	SetType(t EventType)
 	Version() string
 	Validate() error
 	Entity() string
@@ -67,11 +71,15 @@ func (e *ProtoEvent) Copy() Event {
 }
 
 func (e *ProtoEvent) Type() EventType {
-	return EventType(e.Metadata[META_TYPE])
+	return EventType(e.Metadata[MetaType])
+}
+
+func (e *ProtoEvent) SetType(t EventType) {
+	e.Metadata[MetaType] = string(t)
 }
 
 func (e *ProtoEvent) Version() string {
-	return e.Metadata[META_VERSION]
+	return e.Metadata[MetaVersion]
 }
 
 func (e *ProtoEvent) Validate() error {
@@ -79,16 +87,16 @@ func (e *ProtoEvent) Validate() error {
 }
 
 func (e *ProtoEvent) Entity() string {
-	return e.Metadata[META_ENTITYID]
+	return e.Metadata[MetaEntityID]
 }
 
 func (e *ProtoEvent) SetEntity(entityId string) Event {
-	e.Metadata[META_ENTITYID] = entityId
+	e.Metadata[MetaEntityID] = entityId
 	return e
 }
 
 func (e *ProtoEvent) SetTTL(ttl int) Event {
-	e.Metadata[META_TTL] = fmt.Sprintf("%d", ttl)
+	e.Metadata[MetaTTL] = fmt.Sprintf("%d", ttl)
 	return e
 }
 

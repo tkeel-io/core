@@ -23,9 +23,9 @@ func (p *ProxyService) Init(apiManager apim.APIManager) {
 }
 
 func (p *ProxyService) Respond(ctx context.Context, in *pb.RespondRequest) (*pb.RespondResponse, error) {
-	reqID := in.Metadata[pb.META_REQUESTID]
-	status := in.Metadata[pb.META_RESPONSESTATUS]
-	errCode := in.Metadata[pb.META_RESPONSEERRCODE]
+	reqID := in.Metadata[pb.MetaRequestID]
+	status := in.Metadata[pb.MetaResponseStatus]
+	errCode := in.Metadata[pb.MetaResponseErrCode]
 
 	p.apiManager.OnRespond(ctx, &holder.Response{
 		ID:       reqID,

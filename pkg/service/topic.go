@@ -18,7 +18,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
@@ -68,11 +67,10 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
 		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))
 
-	m := make(map[string]interface{})
-	if err = json.Unmarshal(req.RawData, &m); nil != err {
-		log.Warn("unmarshal data", zap.String("id", req.Meta.Id), zap.Any("event", req), zfield.Reason(err.Error()))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "unmarshal data")
-	}
+	id, _, _ := collectjs.Get(req.RawData, "id")
+	typ, _, _ := collectjs.Get(req.RawData, "type")
+	owner, _, _ := collectjs.Get(req.RawData, "owner")
+	source, _, _ := collectjs.Get(req.RawData, "source")
 
 	var payload []byte
 	// set event payload.
@@ -82,6 +80,12 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 	}
 
 	var ev pb.ProtoEvent
+	ev.SetType(pb.ETEntity)
+	ev.SetAttr(pb.MetaTopic, req.Meta.Topic)
+	ev.SetAttr(pb.MetaEntityID, string(id))
+	ev.SetAttr(pb.MetaOwner, string(owner))
+	ev.SetAttr(pb.MetaSource, string(source))
+	ev.SetAttr(pb.MetaEntityType, string(typ))
 	ev.SetPayload(&pb.ProtoEvent_Patches{
 		Patches: &pb.PatchDatas{
 			Patches: []*pb.PatchData{{
@@ -98,4 +102,13 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 	}
 
 	return res, nil
+}
+
+type RawData struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Mark      string `json:"mark"`
+	Path      string `json:"path"`
+	Values    string `json:"values"`
+	Timestamp int64  `json:"ts"` //nolint
 }

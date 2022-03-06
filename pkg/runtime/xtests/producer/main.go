@@ -29,8 +29,8 @@ func main() {
 					Id:        "ev-123",
 					Timestamp: time.Now().UnixNano(),
 					Metadata: map[string]string{
-						v1.META_TYPE:     string(v1.ETSystem),
-						v1.META_ENTITYID: entityID,
+						v1.MetaType:     string(v1.ETSystem),
+						v1.MetaEntityID: entityID,
 					},
 					Data: &v1.ProtoEvent_SystemData{
 						SystemData: &v1.SystemData{

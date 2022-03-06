@@ -75,6 +75,7 @@ func (e *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 }
 
 func (r *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) *Result {
+	log.Info("handle event", zfield.ID(event.ID()))
 	//2.1 实体必须包含 entityID，创建、删除等消息：由 Runtime 处理
 	//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
 	switch event.Type() {
@@ -96,6 +97,7 @@ func (r *Runtime) UpdateWithEvent(ctx context.Context, event v1.Event) *Result {
 
 //处理实体生命周期
 func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) *Result {
+	log.Info("handle system event", zfield.ID(event.ID()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator

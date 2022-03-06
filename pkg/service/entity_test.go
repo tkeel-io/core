@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 	"github.com/tkeel-io/core/pkg/service/mock"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -44,7 +43,7 @@ func Test_entity2EntityResponse(t *testing.T) {
 		Source:     "dm",
 		Version:    0,
 		LastTime:   util.UnixMilli(),
-		Mappers:    []state.Mapper{{Name: "mapper123", TQL: "insert into device123 select device234.temp as temp"}},
+		Mappers:    []*pb.Mapper{{Name: "mapper123", Tql: "insert into device123 select device234.temp as temp"}},
 		Properties: map[string]tdtl.Node{"temp": tdtl.IntNode(25)},
 		ConfigFile: nil,
 	}

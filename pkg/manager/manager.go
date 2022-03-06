@@ -44,6 +44,10 @@ const evIDPrefix = "ev"
 const reqIDPrefix = "req"
 const eventSender = "Core.APIManager"
 const respondFmt = "http://%s:%d/v1/respond"
+const (
+	sysET = string(v1.ETSystem)
+	enET  = string(v1.ETEntity)
+)
 
 type apiManager struct {
 	holder     holder.Holder
@@ -135,9 +139,14 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*Base, error) 
 
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-		Id:        reqID,
+		Id:        util.UUID(evIDPrefix),
 		Timestamp: time.Now().UnixNano(),
-		Callback:  util.ResolveAddr(),
+		Callback:  m.callbackAddr(),
+		Metadata: map[string]string{
+			v1.MetaType:      sysET,
+			v1.MetaRequestID: reqID,
+			v1.MetaEntityID:  en.ID,
+		},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
 				Operator: string(v1.OpCreate),
@@ -194,9 +203,14 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -248,9 +262,14 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*Base, error) {
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -301,9 +320,14 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-		Id:        reqID,
+		Id:        util.UUID(evIDPrefix),
 		Timestamp: time.Now().UnixNano(),
-		Callback:  util.ResolveAddr(),
+		Callback:  m.callbackAddr(),
+		Metadata: map[string]string{
+			v1.MetaType:      sysET,
+			v1.MetaRequestID: reqID,
+			v1.MetaEntityID:  en.ID,
+		},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
 				Operator: string(v1.OpDelete),
@@ -359,9 +383,14 @@ func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (*Base, er
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -415,9 +444,14 @@ func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.P
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: pds,
@@ -483,9 +517,14 @@ func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys 
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patches,
@@ -542,9 +581,14 @@ func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (*Base, 
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+				v1.MetaType:      enET,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: []*v1.PatchData{{
@@ -599,9 +643,14 @@ func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: pds,
@@ -668,9 +717,14 @@ func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKey
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
-			Id:        reqID,
+			Id:        util.UUID(evIDPrefix),
 			Timestamp: time.Now().UnixNano(),
-			Callback:  util.ResolveAddr(),
+			Callback:  m.callbackAddr(),
+			Metadata: map[string]string{
+				v1.MetaType:      enET,
+				v1.MetaRequestID: reqID,
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patches,
