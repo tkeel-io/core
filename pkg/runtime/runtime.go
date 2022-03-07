@@ -214,5 +214,5 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 		return state, nil
 	}
 
-	return nil, nil
+	return nil, xerrors.ErrEntityNotFound
 }

@@ -347,7 +347,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 
 	// clip copy properties.
 	if props, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
-		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
 	} else {
 		baseRet.Properties = props
 	}
@@ -549,11 +549,12 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	var baseRet *apim.BaseRet
 	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, nil); nil != err {
 		log.Error("query entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		return nil, errors.Wrap(err, "get entity scheme")
 	}
 
 	// clip copy properties.
 	if props, innerErr := CopyFrom2(rawEntity, propertyKeys...); nil != innerErr {
-		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+		log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
 	} else {
 		baseRet.Properties = props
 	}
