@@ -61,6 +61,7 @@ func NewElasticsearchEngine(cfg config.ESConfig) SearchEngine {
 		log.Fatal(err)
 	}
 	log.Info("use ElasticsearchDriver version:", info.Version.Number)
+	client.Index().Index(EntityIndex).Id("core_init").BodyString(`{"id":"core_init"}`).Do(context.Background())
 	return &ESClient{Client: client}
 }
 
