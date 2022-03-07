@@ -1,10 +1,9 @@
-package runtime
+package types
 
 import (
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	"github.com/tkeel-io/core/pkg/types"
 )
 
 type resourceManager struct {
@@ -16,7 +15,7 @@ type resourceManager struct {
 func NewResources(
 	searchClient *search.Service,
 	tseriesClient tseries.TimeSerier,
-	repoClient repository.IRepository) types.ResourceManager {
+	repoClient repository.IRepository) ResourceManager {
 	return &resourceManager{
 		defaultRepo:   repoClient,
 		defaultTSDB:   tseriesClient,

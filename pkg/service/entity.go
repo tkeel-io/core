@@ -26,10 +26,10 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -451,10 +451,10 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 
 		var pds []*pb.PatchData
 		for _, pd := range patchData {
-			var cfg constraint.Config
+			var cfg scheme.Config
 			switch value := pd.Value.(type) {
 			case map[string]interface{}:
-				if cfg, err = constraint.ParseConfigFrom(value); nil != err {
+				if cfg, err = scheme.ParseConfigFrom(value); nil != err {
 					return out, errors.Wrap(err, "parse entity scheme")
 				}
 			}
@@ -604,15 +604,15 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 }
 
 // parseConfigFrom parse config.
-func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*constraint.Config, err error) {
+func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*scheme.Config, err error) {
 	// parse configs from.
-	out = make(map[string]*constraint.Config)
+	out = make(map[string]*scheme.Config)
 	switch configs := data.(type) {
 	case []interface{}:
 		for _, cfg := range configs {
 			if c, ok := cfg.(map[string]interface{}); ok {
-				var cfgRet constraint.Config
-				if cfgRet, err = constraint.ParseConfigFrom(c); nil != err {
+				var cfgRet scheme.Config
+				if cfgRet, err = scheme.ParseConfigFrom(c); nil != err {
 					return out, errors.Wrap(err, "parse entity config failed")
 				}
 				out[cfgRet.ID] = &cfgRet

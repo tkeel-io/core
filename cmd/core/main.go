@@ -316,7 +316,7 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
 
-	return runtime.NewResources(search.GlobalService, tsdbClient, coreRepo)
+	return types.NewResources(search.GlobalService, tsdbClient, coreRepo)
 }
 
 func loadDispatcher(ctx context.Context, repo repository.IRepository) error {

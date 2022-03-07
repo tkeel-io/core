@@ -4,23 +4,23 @@ import (
 	"encoding/json"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/core/pkg/scheme"
 	"github.com/tkeel-io/tdtl"
 )
 
 // EntityBase state basic informatinon.
 type Base struct {
-	ID         string                        `json:"id" msgpack:"id" mapstructure:"id"`
-	Type       string                        `json:"type" msgpack:"type" mapstructure:"type"`
-	Owner      string                        `json:"owner" msgpack:"owner" mapstructure:"owner"`
-	Source     string                        `json:"source" msgpack:"source" mapstructure:"source"`
-	Version    int64                         `json:"version" msgpack:"version" mapstructure:"version"`
-	LastTime   int64                         `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers    []*v1.Mapper                  `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
-	TemplateID string                        `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
-	Properties map[string]tdtl.Node          `json:"properties" msgpack:"properties" mapstructure:"-"`
-	Configs    map[string]*constraint.Config `json:"configs" msgpack:"-" mapstructure:"-"`
-	ConfigFile []byte                        `json:"-" msgpack:"config_file" mapstructure:"-"`
+	ID         string                    `json:"id" msgpack:"id" mapstructure:"id"`
+	Type       string                    `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner      string                    `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source     string                    `json:"source" msgpack:"source" mapstructure:"source"`
+	Version    int64                     `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime   int64                     `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers    []*v1.Mapper              `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	TemplateID string                    `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	Properties map[string]tdtl.Node      `json:"properties" msgpack:"properties" mapstructure:"-"`
+	Configs    map[string]*scheme.Config `json:"configs" msgpack:"-" mapstructure:"-"`
+	ConfigFile []byte                    `json:"-" msgpack:"config_file" mapstructure:"-"`
 }
 
 type BaseRet struct {
@@ -45,7 +45,7 @@ func (b *Base) Basic() Base {
 		Version:    b.Version,
 		LastTime:   b.LastTime,
 		Properties: make(map[string]tdtl.Node),
-		Configs:    make(map[string]*constraint.Config),
+		Configs:    make(map[string]*scheme.Config),
 	}
 
 	cp.Mappers = append(cp.Mappers, b.Mappers...)
