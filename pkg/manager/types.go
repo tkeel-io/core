@@ -36,8 +36,6 @@ var (
 )
 
 type APIManager interface {
-	// Start start Entity manager.
-	Start() error
 	// OnRespond handle message.
 	OnRespond(context.Context, *holder.Response)
 	// CreateEntity create entity.

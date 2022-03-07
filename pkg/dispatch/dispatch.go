@@ -6,27 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
-	"github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/core/pkg/util/transport"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
-/*
-
-	TODO:
-		1. dispatch 模块输入：
-			a. loopback
-			b. dapr pubsubDispatchConf
-
-*/
-
 type DispatchConf struct {
-	Sinks []string
+	Name        string
+	Upstreams   []string
+	Downstreams []string
 }
 
 func New(ctx context.Context) *dispatcher { //nolint
@@ -36,7 +25,7 @@ func New(ctx context.Context) *dispatcher { //nolint
 		ctx:         ctx,
 		cancel:      cancel,
 		transmitter: transport.New(transport.TransTypeHTTP),
-		sinks:       make(map[string]*xkafka.KafkaPubsub),
+		downstreams: make(map[string]*xkafka.KafkaPubsub),
 	}
 }
 
@@ -45,8 +34,7 @@ type dispatcher struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	transmitter transport.Transmitter
-	sinks       map[string]*xkafka.KafkaPubsub
-	loopback    *loopback.Loopback
+	downstreams map[string]*xkafka.KafkaPubsub
 }
 
 func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
@@ -61,41 +49,45 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 			Payload:   ev.RawData(),
 		})
 	default:
-		if err = d.loopback.Send(ctx, ev); nil != err {
-			log.Error("dispatch event", zap.Error(err),
-				zap.Any("event", ev), zfield.DispatcherID(d.id))
-		}
+		return d.dispatch(ctx, ev)
 	}
 
 	return errors.Wrap(err, "dispatch event")
 
 }
 
-func (d *dispatcher) Start(cfg DispatchConf) error {
-	// start loopback.
-	d.loopback = loopback.NewLoopback()
-	d.loopback.Received(d.ctx, func(ctx context.Context, e v1.Event) error {
-		eid := e.Entity()
-		info := placement.Global().Select(eid)
-		return d.sinks[info.ID].Send(ctx, e)
-	})
-	// TODO: start dapr source.
+func (d *dispatcher) Start(ctx context.Context, cfg DispatchConf) error {
+	// initialize dispatch upstreams.
+	if err := d.initUpstream(ctx, cfg.Upstreams); nil != err {
+		return errors.Wrap(err, "init upstream")
+	}
 
-	if err := d.initSinks(context.Background(), cfg.Sinks); nil != err {
-		return errors.Wrap(err, "init sinks")
+	// initialize dispatch downstreams.
+	if err := d.initDownstream(ctx, cfg.Downstreams); nil != err {
+		return errors.Wrap(err, "init downstream")
 	}
 
 	return nil
 }
 
-func (d *dispatcher) initSinks(ctx context.Context, sinks []string) error {
-	for _, sink := range sinks {
-		sinkIns, err := xkafka.NewKafkaPubsub(sink)
+func (d *dispatcher) dispatch(ctx context.Context, ev v1.Event) error {
+	eid := ev.Entity()
+	info := placement.Global().Select(eid)
+	return d.downstreams[info.ID].Send(ctx, ev)
+}
+
+func (d *dispatcher) initUpstream(ctx context.Context, streams []string) error {
+	return nil
+}
+
+func (d *dispatcher) initDownstream(ctx context.Context, streams []string) error {
+	for _, stream := range streams {
+		streamIns, err := xkafka.NewKafkaPubsub(stream)
 		if nil != err {
 			return errors.Wrap(err, "create sink instance")
 		}
-		d.sinks[sinkIns.ID()] = sinkIns
-		placement.Global().Append(placement.Info{ID: sinkIns.ID()})
+		d.downstreams[streamIns.ID()] = streamIns
+		placement.Global().Append(placement.Info{ID: streamIns.ID()})
 	}
 	return nil
 }

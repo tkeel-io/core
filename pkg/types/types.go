@@ -26,3 +26,18 @@ type Manager interface {
 	// shutdown manager.
 	Shutdown() error
 }
+
+type IDGenerator interface {
+	// returns an uuid.
+	ID() string
+	// returns an entity id.
+	EID() string
+	// returns an event id.
+	EvID() string
+	// returns a requesit id.
+	ReqID() string
+	// returns a subscription id.
+	SubID() string
+	// generate id with prefix.
+	With(prefix string)
+}

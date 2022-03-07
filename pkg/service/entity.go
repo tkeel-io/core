@@ -78,33 +78,22 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	entity.Source = req.Source
 	entity.TemplateID = req.From
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]tdtl.Node)
-	switch kv := req.Properties.AsInterface().(type) {
+	properties := req.Properties.AsInterface()
+	switch properties.(type) {
 	case map[string]interface{}:
-		if entity.Properties, err = parseProps(kv); nil != err {
-			log.Error("create entity, but invalid params",
+		if entity.Properties, err = json.Marshal(properties); nil != err {
+			log.Error("create entity, invalid params", zfield.Reason(err.Error()),
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
-		log.Warn("create entity, but empty params", zfield.Eid(req.Id))
+		log.Warn("create entity, empty params", zfield.Eid(req.Id))
 	default:
 		log.Error("create entity, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, xerrors.ErrInvalidEntityParams
 	}
 
-	// check properties.
-	if _, has := entity.Properties[""]; has {
-		log.Error("create entity, but invalid params",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrEntityPropertyIDEmpty))
-		return out, xerrors.ErrEntityPropertyIDEmpty
-	}
-
-	// set template entity id.
-	ctx = context.WithValue(ctx, apim.TemplateEntityID{}, req.From)
-
-	// set properties.
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
 		log.Error("create entity failed", zfield.Eid(req.Id), zap.Error(err))
@@ -126,31 +115,21 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]tdtl.Node)
-	switch kv := req.Properties.AsInterface().(type) {
+	properties := req.Properties.AsInterface()
+	switch properties.(type) {
 	case map[string]interface{}:
-		if entity.Properties, err = parseProps(kv); nil != err {
-			log.Error("create entity, but invalid params",
+		if entity.Properties, err = json.Marshal(properties); nil != err {
+			log.Error("create entity, invalid params", zfield.Reason(err.Error()),
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
-	case nil:
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
-		return nil, xerrors.ErrInvalidRequest
 	default:
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.Error("update entity failed.",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
-	// check properties.
-	if _, has := entity.Properties[""]; has {
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
-		return out, xerrors.ErrInvalidRequest
-	}
-
-	// set properties.
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
@@ -175,7 +154,6 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 	parseHeaderFrom(ctx, entity)
 
 	var baseRet *apim.BaseRet
-	// get entity from entity manager.
 	if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
 		log.Error("get entity", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity")
@@ -191,7 +169,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
 	entity.Owner = req.Owner
@@ -201,13 +179,10 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 	// delete entity.
 	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
 		log.Error("delete entity", zap.Error(err), zfield.ID(req.Id))
-		return
+		return nil, errors.Wrap(err, "delete entity")
 	}
 
-	out = &pb.DeleteEntityResponse{}
-	out.Id = req.Id
-	out.Status = "ok"
-	return
+	return &pb.DeleteEntityResponse{Id: req.Id, Status: "ok"}, nil
 }
 
 func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEntityPropsRequest) (out *pb.EntityResponse, err error) {
@@ -221,31 +196,25 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]tdtl.Node)
-	switch kv := req.Properties.AsInterface().(type) {
+	properties := req.Properties.AsInterface()
+	switch properties.(type) {
 	case map[string]interface{}:
-		if entity.Properties, err = parseProps(kv); nil != err {
+		if entity.Properties, err = json.Marshal(properties); nil != err {
 			log.Error("create entity, but invalid params",
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.Error("update entity failed.",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	default:
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.Error("update entity failed.",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
-	// check properties.
-	if _, has := entity.Properties[""]; has {
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
-		return out, xerrors.ErrInvalidRequest
-	}
-
-	// set properties.
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
 		log.Error("update entity properties.", zfield.Eid(req.Id), zap.Error(err))
@@ -268,13 +237,13 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]tdtl.Node)
 
-	var baseRet *apim.BaseRet
-	switch kv := req.Properties.AsInterface().(type) {
+	pds := []*pb.PatchData{}
+	params := req.Properties.AsInterface()
+	switch params.(type) {
 	case []interface{}:
 		patchData := make([]PatchData, 0)
-		if data, err := json.Marshal(kv); nil != err { //nolint
+		if data, err := json.Marshal(params); nil != err {
 			log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "json marshal patch data")
 		} else if err = json.Unmarshal(data, &patchData); nil != err {
@@ -282,34 +251,30 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 			return nil, errors.Wrap(err, "json unmarshal patch data")
 		}
 
-		pds := []*pb.PatchData{}
 		for index := range patchData {
 			// encode value.
 			bytes, _ := json.Marshal(patchData[index].Value)
 			pd := &pb.PatchData{
-				Path:     patchData[index].Path,
+				Path:     "properties." + patchData[index].Path,
 				Operator: patchData[index].Operator,
 				Value:    bytes,
 			}
 
+			pds = append(pds, pd)
 			if err = checkPatchData(pd); nil != err {
 				log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
 				return nil, errors.Wrap(err, "patch entity properties")
 			}
-
-			pds = append(pds, pd)
 		}
-
-		if baseRet, err = s.apiManager.PatchEntityProps(ctx, entity, pds); nil != err {
-			log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
-			return nil, errors.Wrap(err, "patch entity properties")
-		}
-	case nil:
-		log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
-		return nil, xerrors.ErrInvalidRequest
 	default:
 		log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
+	}
+
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.PatchEntityProps(ctx, entity, pds); nil != err {
+		log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
+		return nil, errors.Wrap(err, "patch entity properties")
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -335,7 +300,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
 	entity.Owner = in.Owner
@@ -364,7 +329,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := new(Entity)
 	entity.ID = in.Id
 	entity.Type = in.Type
 	entity.Owner = in.Owner
@@ -380,7 +345,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 	pds := make([]*pb.PatchData, 0)
 	for index := range pids {
 		pds = append(pds, &pb.PatchData{
-			Path:     pids[index],
+			Path:     "properties." + pids[index],
 			Operator: xjson.OpRemove.String(),
 		})
 	}
@@ -403,16 +368,28 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := &Entity{}
 	entity.ID = in.Id
 	entity.Type = in.Type
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
-
-	if entity.Configs, err = parseConfigFrom(ctx, in.Configs.AsInterface()); nil != err {
-		log.Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
-		return out, err
+	param := in.Configs.AsInterface()
+	switch param.(type) {
+	// TODO: 这里在后面调整 API 的时候换成 map[string]interfae{}.
+	case []interface{}:
+		var configs map[string]*scheme.Config
+		if configs, err = parseConfigFrom(ctx, param); nil != err {
+			log.Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
+			return out, err
+		} else if entity.Scheme, err = json.Marshal(configs); nil != err {
+			log.Error("encode entity scheme", zfield.Eid(in.Id), zap.Error(err))
+			return out, errors.Wrap(err, "encode scheme")
+		}
+	default:
+		log.Error("update entity scheme.",
+			zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
 	}
 
 	// set entity configs.
@@ -437,19 +414,18 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	entity.Owner = in.Owner
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
-	entity.Properties = make(map[string]tdtl.Node)
 
-	var baseRet *apim.BaseRet
-	switch kv := in.Configs.AsInterface().(type) {
+	var pds []*pb.PatchData
+	param := in.Configs.AsInterface()
+	switch patches := param.(type) {
 	case []interface{}:
 		patchData := make([]PatchData, 0)
-		data, _ := json.Marshal(kv)
+		data, _ := json.Marshal(patches)
 		if err = json.Unmarshal(data, &patchData); nil != err {
 			log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "json unmarshal request")
 		}
 
-		var pds []*pb.PatchData
 		for _, pd := range patchData {
 			var cfg scheme.Config
 			switch value := pd.Value.(type) {
@@ -471,16 +447,18 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 			})
 		}
 
-		if baseRet, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
-			log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
-			return nil, errors.Wrap(err, "patch entity scheme")
-		}
 	case nil:
 		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	default:
 		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
+	}
+
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
+		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		return nil, errors.Wrap(err, "patch entity scheme")
 	}
 
 	out, err = s.makeResponse(baseRet)

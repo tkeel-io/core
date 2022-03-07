@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -113,7 +114,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		"pubsub_name": req.Subscription.PubsubName,
 	}
 
-	if entity.Properties, err = parseProps(properties); nil != err {
+	if entity.Properties, err = json.Marshal(properties); nil != err {
 		log.Error("create subscription, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, errors.Wrap(err, "create subscription")
@@ -167,7 +168,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		"pubsub_name": req.Subscription.PubsubName,
 	}
 
-	if entity.Properties, err = parseProps(properties); nil != err {
+	if entity.Properties, err = json.Marshal(properties); nil != err {
 		log.Error("create subscription, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, errors.Wrap(err, "create subscription")

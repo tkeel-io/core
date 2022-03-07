@@ -11,13 +11,21 @@ import (
 )
 
 type holder struct {
+	timeout time.Duration
 	holdeds map[string]chan Response
-	lock    sync.RWMutex
+
+	lock   sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func New() Holder {
+func New(ctx context.Context, timeout time.Duration) Holder {
+	ctx, cancel := context.WithCancel(ctx)
 	return &holder{
+		ctx:     ctx,
+		cancel:  cancel,
 		lock:    sync.RWMutex{},
+		timeout: timeout,
 		holdeds: make(map[string]chan Response),
 	}
 }
@@ -28,11 +36,13 @@ func (h *holder) Wait(ctx context.Context, id string) Response {
 	h.holdeds[id] = waitCh
 	h.lock.Unlock()
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
 
 	var resp Response
 	select {
+	case <-h.ctx.Done():
+		log.Info("close holder.")
 	case <-ctx.Done():
 		log.Warn("request terminated, user cancel or timeout", zfield.ID(id))
 		resp = Response{

@@ -219,7 +219,7 @@ func core(cmd *cobra.Command, args []string) {
 
 	// create message dispatcher.
 	coreRepo := repository.New(coreDao)
-	if err = loadDispatcher(context.Background(), coreRepo); nil != err {
+	if err = loadDispatcher(context.Background()); nil != err {
 		log.Fatal(err)
 	}
 
@@ -228,9 +228,7 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	if err = _apiManager.Start(); nil != err {
-		log.Fatal(err)
-	} else if err = stateManager.Start(config.Get().Server.Sources); nil != err {
+	if err = stateManager.Start(config.Get().Server.Sources); nil != err {
 		log.Fatal(err)
 	}
 
@@ -319,10 +317,11 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	return types.NewResources(search.GlobalService, tsdbClient, coreRepo)
 }
 
-func loadDispatcher(ctx context.Context, repo repository.IRepository) error {
+func loadDispatcher(ctx context.Context) error {
 	log.Info("load local Queues.")
 	dispatcher := dispatch.New(ctx)
-	if err := dispatcher.Start(dispatch.DispatchConf{Sinks: config.Get().Dispatcher.Sinks}); nil != err {
+	if err := dispatcher.Start(ctx, dispatch.DispatchConf{
+		Downstreams: config.Get().Dispatcher.Sinks}); nil != err {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
