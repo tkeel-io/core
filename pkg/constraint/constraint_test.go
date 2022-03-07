@@ -105,3 +105,9 @@ func TestContraint2(t *testing.T) {
 	sort.Sort(ret)
 	assert.Equal(t, []string(ret), []string{"property2", "property2.property2-1", "property2.property2-2"})
 }
+
+func TestFormatPropertyKey(t *testing.T) {
+	pathes := []string{"a.b.c.d"}
+	FormatPropertyKey(pathes)
+	assert.Equal(t, []string{"a.define.fields.b.define.fields.c.define.fields.d"}, pathes)
+}
