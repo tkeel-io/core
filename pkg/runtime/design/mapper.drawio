@@ -1,0 +1,107 @@
+<mxfile host="65bd71144e">
+    <diagram id="3Wndlz2RJvUf2OZ2kvY8" name="Page-1">
+        <mxGraphModel dx="1148" dy="708" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" background="#ffffff" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F0F0F0;strokeWidth=2;strokeColor=#000000;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="234" y="124" width="838" height="360" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="&lt;span style=&quot;text-align: left&quot;&gt;Runtime&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="618.5" y="128" width="69" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="5" target="9">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="310" y="223" width="177" height="101" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="entities" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="321" y="250" width="78" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="cache" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="410" y="250" width="67" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="&lt;span style=&quot;text-align: left&quot;&gt;state&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="370" y="225" width="52" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="9" target="15">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="19" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="9" target="16">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="watchers" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="350.5" y="406" width="96" height="39" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="patches" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="394" y="366" width="69" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="12" target="8">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="event" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="367" y="152" width="58" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="entityID" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="394" y="348" width="77" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="15" target="5">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="390"/>
+                            <mxPoint x="810" y="274"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="15" value="执行" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="583" y="369" width="120" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="16" target="12">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="814" y="453"/>
+                            <mxPoint x="814" y="517"/>
+                            <mxPoint x="175" y="517"/>
+                            <mxPoint x="175" y="104"/>
+                            <mxPoint x="396" y="104"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="16" value="订阅" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#F0F0F0;" vertex="1" parent="1">
+                    <mxGeometry x="583" y="432" width="120" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="22" value="&lt;span style=&quot;text-align: left&quot;&gt;是直接更新还是通过Queue？&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="555" y="252" width="192" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;" edge="1" parent="1" source="23" target="26">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="23" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;strokeWidth=2;opacity=20;strokeColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="551" y="361" width="183" height="118" as="geometry"/>
+                </mxCell>
+                <mxCell id="24" value="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="527" y="366" width="18" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" value="2" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="527" y="430" width="18" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" value="Callback" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;fontSize=14;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#808080;gradientColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="914" y="390" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="28" value="Republish" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="618.5" y="498" width="86" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" value="&lt;h1&gt;关于mapper&lt;/h1&gt;&lt;div&gt;Q1. runtime 需要什么？&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; 按照现有的触发逻辑，runtime 需要 watchers + 执行 + 订阅 的缓存（ecache），event&amp;nbsp; &amp;nbsp; &amp;nbsp; 的主体是entity，所以我们对ecache与entity一对一的形式组织。&lt;/div&gt;&lt;div&gt;Q2. runtime 中的ecache从哪儿来，当mapper发生变更后会有哪些影响？&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; ecache由node设置，node监听etcd中mapper。 当mapper发生变更之后，node同步到&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; mapper的变更，node重新解析mapper，将生成的ecache更新到runtime。&lt;/div&gt;" style="text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;fontFamily=Courier New;fontSize=14;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="297" y="547" width="661" height="295" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="2" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="537" y="440" width="18" height="21" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="3" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontFamily=Courier New;fontColor=#000000;" vertex="1" parent="1">
+                    <mxGeometry x="810" y="396" width="18" height="21" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
