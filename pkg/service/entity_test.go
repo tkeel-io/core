@@ -343,3 +343,23 @@ func Test_PatchEntityConfigs(t *testing.T) {
 	assert.Equal(t, "admin", res.Owner)
 	assert.Equal(t, "DEVICE", res.Type)
 }
+
+func TestCopyFrom(t *testing.T) {
+	raw := []byte(`{
+		"id": "device123",
+		"type": "DEVICE",
+		"owner": "admin",
+		"source": "tomas",
+		"properties": {
+			"temp": 20,
+			"metrics": {
+				"cpu_used": 0.27,
+				"mem_used": 0.8
+			}
+		}}`)
+
+	propKeys := []string{"properties.temp", "properties.metrics", "properties.metrics.cpu_used"}
+	result, err := CopyFrom2(raw, propKeys...)
+	assert.Nil(t, err)
+	t.Log(result)
+}

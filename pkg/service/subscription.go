@@ -29,6 +29,7 @@ import (
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
@@ -174,9 +175,15 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return out, errors.Wrap(err, "create subscription")
 	}
 
+	patches := []*pb.PatchData{{
+		Path:     "properties",
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Properties,
+	}}
+
 	// set properties.
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}

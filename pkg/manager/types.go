@@ -39,25 +39,13 @@ type APIManager interface {
 	// OnRespond handle message.
 	OnRespond(context.Context, *holder.Response)
 	// CreateEntity create entity.
-	UpdateEntity(context.Context, *Base) (*BaseRet, error)
-	// UpdateEntity update entity.
 	CreateEntity(context.Context, *Base) (*BaseRet, error)
+	// UpdateEntity update entity.
+	PatchEntity(context.Context, *Base, []*v1.PatchData) (*BaseRet, []byte, error)
 	// DeleteEntity delete entity.
 	DeleteEntity(context.Context, *Base) error
 	// GetProperties returns entity properties.
 	GetEntity(context.Context, *Base) (*BaseRet, error)
-	// SetProperties set entity properties.
-	UpdateEntityProps(context.Context, *Base) (*BaseRet, error)
-	// PatchEntity patch entity properties.
-	PatchEntityProps(context.Context, *Base, []*v1.PatchData) (*BaseRet, error)
-	// GetEntityProps returns entity configs.
-	GetEntityProps(context.Context, *Base, []string) (*BaseRet, error)
-	// SetConfigs set entity configs.
-	UpdateEntityConfigs(context.Context, *Base) (*BaseRet, error)
-	// PatchConfigs patch entity configs.
-	PatchEntityConfigs(context.Context, *Base, []*v1.PatchData) (*BaseRet, error)
-	// GetEntityConfigs returns entity configs.
-	GetEntityConfigs(context.Context, *Base, []string) (*BaseRet, error)
 	// AppendMapper append entity mapper.
 	AppendMapper(context.Context, *dao.Mapper) error
 	// RemoveMapper remove entity mapper.

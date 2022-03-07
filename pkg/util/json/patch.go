@@ -36,6 +36,7 @@ const (
 	OpTest
 	OpCopy
 	OpMove
+	OpMerge
 	OpRemove
 	OpReplace
 )
@@ -50,12 +51,14 @@ func NewPatchOp(op string) PatchOp {
 		return OpCopy
 	case "test":
 		return OpTest
+	case "merge":
+		return OpMerge
 	case "remove":
 		return OpRemove
 	case "replace":
 		return OpReplace
 	default:
-		return OpReplace
+		return OpUndef
 	}
 }
 
@@ -69,6 +72,8 @@ func (po PatchOp) String() string {
 		return "copy"
 	case OpTest:
 		return "test"
+	case OpMerge:
+		return "merge"
 	case OpRemove:
 		return "remove"
 	case OpReplace:

@@ -67,8 +67,11 @@ func (h *holder) OnRespond(resp *Response) {
 	delete(h.holdeds, resp.ID)
 	h.lock.Unlock()
 
+	log.Debug("received response",
+		zfield.ReqID(resp.ID), zfield.Status(resp.Status.String()))
+
 	if nil == waitCh {
-		log.Warn("request terminated, user cancel or timeout", zfield.ID(resp.ID))
+		log.Warn("request terminated, user cancel or timeout", zfield.ReqID(resp.ID))
 		return
 	}
 

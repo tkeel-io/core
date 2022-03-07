@@ -31,7 +31,6 @@ import (
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -159,64 +158,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	return &baseRet, errors.Wrap(err, "create entity")
 }
 
-func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (ret *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.UpdateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{{
-						Path:     "properties",
-						Value:    en.Properties,
-						Operator: string(runtime.OpMerge),
-					}}}},
-		}); nil != err {
-		log.Error("create entity, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "create entity, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("update entity", zfield.Eid(en.ID),
-			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("create entity, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "create entity, decode response")
-	} else if err = m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "create entity, decode response, list mapper")
-	}
-
-	return &baseRet, errors.Wrap(err, "update entity")
-}
-
-func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchData) (out *BaseRet, err error) {
+func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchData) (out *BaseRet, raw []byte, err error) {
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -238,7 +180,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 		}); nil != err {
 		log.Error("patch entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "patch entity, dispatch event")
+		return out, raw, errors.Wrap(err, "patch entity, dispatch event")
 	}
 
 	log.Debug("holding request, wait response",
@@ -249,14 +191,14 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	if resp.Status != types.StatusOK {
 		log.Error("patch entity", zfield.Eid(en.ID),
 			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
-		return nil, xerrors.New(resp.ErrCode)
+		return out, raw, xerrors.New(resp.ErrCode)
 	}
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
 		log.Error("patch entity, decode response", zfield.ReqID(reqID),
 			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "patch entity, decode response")
+		return out, raw, errors.Wrap(err, "patch entity, decode response")
 	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
 		log.Error("patch entity, decode response, list mapper", zfield.ReqID(reqID),
 			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
@@ -265,7 +207,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	log.Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
-	return &baseRet, errors.Wrap(err, "patch entity")
+	return &baseRet, resp.Data, errors.Wrap(err, "patch entity")
 }
 
 // GetProperties returns Base.
@@ -363,331 +305,6 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	return nil
-}
-
-// SetProperties set properties into entity.
-func (m *apiManager) UpdateEntityProps(ctx context.Context, en *Base) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.UpdateEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{{
-						Path:     "properties",
-						Value:    en.Properties,
-						Operator: string(runtime.OpMerge),
-					}}}},
-		}); nil != err {
-		log.Error("update entity properties, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "update entity properties, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("set entity properties", zap.Error(xerrors.New(resp.ErrCode)),
-			zfield.Eid(en.ID), zfield.ReqID(reqID), zfield.Base(en.JSON()))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("update entity properties, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "update entity properties, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("update entity properties, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	return &baseRet, errors.Wrap(err, "update entity properties")
-}
-
-func (m *apiManager) PatchEntityProps(ctx context.Context, en *Base, pds []*v1.PatchData) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: pds}},
-		}); nil != err {
-		log.Error("patch entity properties, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "patch entity properties, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("patch entity properties", zfield.Eid(en.ID),
-			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("patch entity properties, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "patch entity properties, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("patch entity properties, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &baseRet, errors.Wrap(err, "update entity")
-}
-
-func (m *apiManager) GetEntityProps(ctx context.Context, en *Base, propertyKeys []string) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.GetEntityProps", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{}},
-		}); nil != err {
-		log.Error("get entity properties, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity properties, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("get entity properties", zfield.Eid(en.ID),
-			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("get entity properties, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "get entity properties, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("get entity properties, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &baseRet, errors.Wrap(err, "get entity properties")
-}
-
-// SetProperties set properties into entity.
-func (m *apiManager) UpdateEntityConfigs(ctx context.Context, en *Base) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.UpdateEntityConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID,
-				v1.MetaType:      enET},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{{
-						Path:     "scheme",
-						Value:    en.Scheme,
-						Operator: string(runtime.OpMerge),
-					}}}},
-		}); nil != err {
-		log.Error("update entity scheme, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "update entity scheme, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("update entity scheme", zfield.Eid(en.ID), zfield.ReqID(reqID),
-			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("update entity scheme, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "update entity scheme, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("update entity scheme, decode response, list mapper",
-			zfield.ReqID(reqID), zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &baseRet, errors.Wrap(err, "update entity scheme")
-}
-
-// PatchConfigs patch properties into entity.
-func (m *apiManager) PatchEntityConfigs(ctx context.Context, en *Base, pds []*v1.PatchData) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.PatchConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: pds,
-				}},
-		}); nil != err {
-		log.Error("patch entity scheme, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "patch entity scheme, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("patch entity scheme", zap.Error(xerrors.New(resp.ErrCode)),
-			zfield.Eid(en.ID), zfield.ReqID(reqID), zfield.Base(en.JSON()))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	// decode response.
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("patch entity scheme, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "patch entity scheme, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("patch entity scheme, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &baseRet, errors.Wrap(err, "patch entity scheme")
-}
-
-// QueryConfigs query entity configs.
-func (m *apiManager) GetEntityConfigs(ctx context.Context, en *Base, propertyKeys []string) (out *BaseRet, err error) {
-	reqID := util.IG().ReqID()
-	elapsedTime := util.NewElapsed()
-	log.Info("entity.GetEntityConfigs", zfield.Eid(en.ID), zfield.Type(en.Type),
-		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
-
-	// dispatch event.
-	if err = m.dispatcher.Dispatch(ctx,
-		&v1.ProtoEvent{
-			Id:        util.IG().EvID(),
-			Timestamp: time.Now().UnixNano(),
-			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{}},
-		}); nil != err {
-		log.Error("get entity scheme, dispatch event",
-			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
-		return nil, errors.Wrap(err, "get entity scheme, dispatch event")
-	}
-
-	log.Debug("holding request, wait response",
-		zfield.Eid(en.ID), zfield.ReqID(reqID))
-
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
-	if resp.Status != types.StatusOK {
-		log.Error("get entity configs", zfield.Eid(en.ID),
-			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
-		return nil, xerrors.New(resp.ErrCode)
-	}
-
-	// decode response.
-	var baseRet BaseRet
-	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("get entity scheme, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-		return nil, errors.Wrap(err, "get entity scheme, decode response")
-	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("get entity scheme, decode response, list mapper", zfield.ReqID(reqID),
-			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
-	}
-
-	log.Info("processing completed", zfield.Eid(en.ID),
-		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
-
-	return &baseRet, errors.Wrap(err, "get entity scheme")
 }
 
 // AppendMapper append a mapper into entity.
@@ -800,11 +417,4 @@ func checkTQLs(en *Base) error {
 		}
 	}
 	return errors.Wrap(err, "check TQL")
-}
-
-func getString(node tdtl.Node) string {
-	if nil != node {
-		return node.String()
-	}
-	return ""
 }

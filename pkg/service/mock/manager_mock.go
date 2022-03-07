@@ -3,10 +3,10 @@ package mock
 import (
 	"context"
 
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/runtime/state"
 )
 
 type APIManagerMock struct {
@@ -24,57 +24,23 @@ func (m *APIManagerMock) OnRespond(ctx context.Context, resp *holder.Response) {
 }
 
 // CreateEntity create entity.
-func (m *APIManagerMock) CreateEntity(ctx context.Context, en *apim.Base) (*apim.Base, error) {
-	return en, nil
+func (m *APIManagerMock) CreateEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
+	return nil, nil
 }
 
-// UpdateEntity create entity.
-func (m *APIManagerMock) UpdateEntity(ctx context.Context, en *apim.Base) (*apim.Base, error) {
-	return en, nil
+// UpdateEntity update entity.
+func (m *APIManagerMock) PatchEntity(context.Context, *apim.Base, []*v1.PatchData) (*apim.BaseRet, []byte, error) {
+	return nil, nil, nil
 }
 
 // DeleteEntity delete entity.
-func (m *APIManagerMock) DeleteEntity(ctx context.Context, en *apim.Base) (err error) {
+func (m *APIManagerMock) DeleteEntity(context.Context, *apim.Base) error {
 	return nil
 }
 
 // GetProperties returns entity properties.
-func (m *APIManagerMock) GetEntity(ctx context.Context, en *apim.Base) (base *apim.Base, err error) {
-	return en, nil
-}
-
-// SetProperties set entity properties.
-func (m *APIManagerMock) UpdateEntityProps(ctx context.Context, en *apim.Base) (base *apim.Base, err error) {
-	return en, nil
-}
-
-// PatchEntity patch entity properties.
-func (m *APIManagerMock) PatchEntityProps(ctx context.Context, en *apim.Base, patchData []state.PatchData) (base *apim.Base, err error) {
-	return en, nil
-}
-
-func (m *APIManagerMock) GetEntityProps(ctx context.Context, en *apim.Base, propertyKeys []string) (*apim.Base, error) {
-	return en, nil
-}
-
-// SetConfigs set entity configs.
-func (m *APIManagerMock) UpdateEntityConfigs(ctx context.Context, en *apim.Base) (base *apim.Base, err error) {
-	return en, nil
-}
-
-// PatchConfigs patch entity configs.
-func (m *APIManagerMock) PatchEntityConfigs(ctx context.Context, en *apim.Base, patchData []state.PatchData) (base *apim.Base, err error) {
-	return en, nil
-}
-
-// QueryConfigs returns entity configs.
-func (m *APIManagerMock) GetEntityConfigs(ctx context.Context, en *apim.Base, propertyIDs []string) (base *apim.Base, err error) {
-	return en, nil
-}
-
-// RemoveConfigs remove entity configs.
-func (m *APIManagerMock) RemoveEntityConfigs(ctx context.Context, en *apim.Base, propertyIDs []string) (base *apim.Base, err error) {
-	return en, nil
+func (m *APIManagerMock) GetEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
+	return nil, nil
 }
 
 // AppendMapper append entity mapper.

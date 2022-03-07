@@ -23,8 +23,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/collectjs"
-	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -37,6 +35,11 @@ import (
 	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
+)
+
+const (
+	schemePrefix     = "scheme."
+	propertiesPrefix = "properties"
 )
 
 type EntityService struct {
@@ -130,8 +133,14 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, xerrors.ErrInvalidRequest
 	}
 
+	patches := []*pb.PatchData{{
+		Path:     "properties",
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Properties,
+	}}
+
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
@@ -215,8 +224,14 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 		return nil, xerrors.ErrInvalidRequest
 	}
 
+	patches := []*pb.PatchData{{
+		Path:     "properties",
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Properties,
+	}}
+
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("update entity properties.", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity properties")
 	}
@@ -238,7 +253,7 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 
-	pds := []*pb.PatchData{}
+	patches := []*pb.PatchData{}
 	params := req.Properties.AsInterface()
 	switch params.(type) {
 	case []interface{}:
@@ -252,29 +267,37 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 		}
 
 		for index := range patchData {
-			// encode value.
-			bytes, _ := json.Marshal(patchData[index].Value)
-			pd := &pb.PatchData{
-				Path:     "properties." + patchData[index].Path,
-				Operator: patchData[index].Operator,
-				Value:    bytes,
-			}
-
-			pds = append(pds, pd)
-			if err = checkPatchData(pd); nil != err {
+			var bytes []byte
+			if err = checkPatchData(patchData[index]); nil != err {
 				log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
 				return nil, errors.Wrap(err, "patch entity properties")
+			} else if bytes, err = json.Marshal(patchData[index].Value); nil != err {
+				return nil, errors.Wrap(err, "encode property")
 			}
+			// encode value.
+			patches = append(patches, &pb.PatchData{
+				Path:     propertiesPrefix + patchData[index].Path,
+				Operator: patchData[index].Operator,
+				Value:    bytes,
+			})
 		}
 	default:
 		log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
+	var rawEntity []byte
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.PatchEntityProps(ctx, entity, pds); nil != err {
+	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity properties")
+	}
+
+	// clip copy properties.
+	if properties, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
+		log.Warn("patch entity properties.", zfield.Eid(req.Id), zfield.Reason(err.Error()))
+	} else {
+		baseRet.Properties = properties
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -285,7 +308,7 @@ func (s *EntityService) PatchEntityPropsZ(ctx context.Context, req *pb.PatchEnti
 	return s.PatchEntityProps(ctx, req)
 }
 
-func checkPatchData(patchData *pb.PatchData) error {
+func checkPatchData(patchData PatchData) error {
 	if xjson.IsReversedOp(patchData.Operator) {
 		return xerrors.ErrJSONPatchReservedOp
 	} else if !xjson.IsValidPath(patchData.Path) {
@@ -307,16 +330,26 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
-	var pids []string
-	if pidsStr := strings.TrimSpace(in.PropertyKeys); len(pidsStr) > 0 {
-		pids = strings.Split(pidsStr, ",")
+	var propKeys []string
+	if pidsStr := strings.TrimSpace(in.PropertyKeys); len(propKeys) > 0 {
+		for _, key := range strings.Split(pidsStr, ",") {
+			propKeys = append(propKeys, "properties"+key)
+		}
 	}
 
+	var rawEntity []byte
 	var baseRet *apim.BaseRet
 	// get entity from entity manager.
-	if baseRet, err = s.apiManager.GetEntityProps(ctx, entity, pids); nil != err {
+	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, nil); nil != err {
 		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
 		return out, errors.Wrap(err, "get entity properties")
+	}
+
+	// clip copy properties.
+	if props, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
+		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+	} else {
+		baseRet.Properties = props
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -336,23 +369,23 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
-	var pids []string
-	if pids = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(pids) == 0 {
+	var propertyKeys []string
+	if propertyKeys = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(propertyKeys) == 0 {
 		log.Error("remove entity properties, empty property ids.", zfield.Eid(in.Id))
 		return out, xerrors.ErrInvalidRequest
 	}
 
-	pds := make([]*pb.PatchData, 0)
-	for index := range pids {
-		pds = append(pds, &pb.PatchData{
-			Path:     "properties." + pids[index],
+	patches := make([]*pb.PatchData, 0)
+	for index := range propertyKeys {
+		patches = append(patches, &pb.PatchData{
+			Path:     propertiesPrefix + propertyKeys[index],
 			Operator: xjson.OpRemove.String(),
 		})
 	}
 
 	var baseRet *apim.BaseRet
 	// get entity from entity manager.
-	if baseRet, err = s.apiManager.PatchEntityProps(ctx, entity, pds); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
 		return out, errors.Wrap(err, "remove entity properties")
 	}
@@ -379,7 +412,7 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 	// TODO: 这里在后面调整 API 的时候换成 map[string]interfae{}.
 	case []interface{}:
 		var configs map[string]*scheme.Config
-		if configs, err = parseConfigFrom(ctx, param); nil != err {
+		if configs, err = parseSchemeFrom(param); nil != err {
 			log.Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
 			return out, err
 		} else if entity.Scheme, err = json.Marshal(configs); nil != err {
@@ -392,10 +425,17 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 		return nil, xerrors.ErrInvalidRequest
 	}
 
+	patches := []*pb.PatchData{{
+		Path:     "scheme",
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Scheme,
+	}}
+
 	// set entity configs.
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.UpdateEntityConfigs(ctx, entity); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		return out, errors.Wrap(err, "update entity scheme")
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -415,7 +455,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, entity)
 
-	var pds []*pb.PatchData
+	var patches []*pb.PatchData
 	param := in.Configs.AsInterface()
 	switch patches := param.(type) {
 	case []interface{}:
@@ -426,11 +466,17 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 			return nil, errors.Wrap(err, "json unmarshal request")
 		}
 
-		for _, pd := range patchData {
+		for index := range patchData {
+			if err = checkPatchData(patchData[index]); nil != err {
+				log.Error("check entity scheme.", zfield.Eid(in.Id), zap.Error(err))
+				return nil, errors.Wrap(err, "patch entity scheme")
+			}
+
 			var cfg scheme.Config
-			switch value := pd.Value.(type) {
+			switch value := patchData[index].Value.(type) {
 			case map[string]interface{}:
 				if cfg, err = scheme.ParseConfigFrom(value); nil != err {
+					log.Error("check entity scheme.", zfield.Eid(in.Id), zap.Error(err))
 					return out, errors.Wrap(err, "parse entity scheme")
 				}
 			}
@@ -440,9 +486,9 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				log.Error("json marshal", zap.Error(err), zfield.Eid(in.Id))
 				return nil, errors.Wrap(err, "patch entity scheme")
 			}
-			pds = append(pds, &pb.PatchData{
-				Path:     pd.Path,
-				Operator: pd.Operator,
+			patches = append(patches, &pb.PatchData{
+				Path:     schemePrefix + patchData[index].Path,
+				Operator: patchData[index].Operator,
 				Value:    bytes,
 			})
 		}
@@ -455,10 +501,18 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 		return nil, xerrors.ErrInvalidRequest
 	}
 
+	var rawEntity []byte
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
+	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity scheme")
+	}
+
+	// clip copy scheme.
+	if properties, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
+		log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+	} else {
+		baseRet.Properties = properties
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -484,14 +538,24 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	parseHeaderFrom(ctx, entity)
 
 	// set properties.
-	var propertyIDs []string
+	var propertyKeys []string
 	if in.PropertyKeys != "" {
-		propertyIDs = strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
+		for _, key := range strings.Split(strings.TrimSpace(in.PropertyKeys), ",") {
+			propertyKeys = append(propertyKeys, schemePrefix+key)
+		}
 	}
 
+	var rawEntity []byte
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.GetEntityConfigs(ctx, entity, propertyIDs); nil != err {
+	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, nil); nil != err {
 		log.Error("query entity scheme", zfield.Eid(in.Id), zap.Error(err))
+	}
+
+	// clip copy properties.
+	if props, innerErr := CopyFrom2(rawEntity, propertyKeys...); nil != innerErr {
+		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+	} else {
+		baseRet.Properties = props
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -514,16 +578,16 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 
 	// set properties.
 	propertyIDs := strings.Split(in.PropertyKeys, ",")
-	pds := make([]*pb.PatchData, 0)
+	patches := make([]*pb.PatchData, 0)
 	for index := range propertyIDs {
-		pds = append(pds, &pb.PatchData{
+		patches = append(patches, &pb.PatchData{
 			Path:     propertyIDs[index],
 			Operator: xjson.OpRemove.String(),
 		})
 	}
 
 	var baseRet *apim.BaseRet
-	if baseRet, err = s.apiManager.PatchEntityConfigs(ctx, entity, pds); nil != err {
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
 		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity scheme")
 	}
@@ -581,8 +645,8 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	return out, nil
 }
 
-// parseConfigFrom parse config.
-func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*scheme.Config, err error) {
+// parseSchemeFrom parse config.
+func parseSchemeFrom(data interface{}) (out map[string]*scheme.Config, err error) {
 	// parse configs from.
 	out = make(map[string]*scheme.Config)
 	switch configs := data.(type) {
@@ -628,22 +692,6 @@ func parseHeaderFrom(ctx context.Context, en *apim.Base) {
 	}
 }
 
-func parseProps(props map[string]interface{}) (map[string]tdtl.Node, error) {
-	bytes, err := json.Marshal(props)
-	if nil != err {
-		log.Error("marshal properties", zap.Error(err))
-		return nil, errors.Wrap(err, "marshal properties")
-	}
-
-	var result = make(map[string]tdtl.Node)
-	collectjs.ForEach(bytes, jsonparser.Object,
-		func(key, value []byte, dataType jsonparser.ValueType) {
-			result[string(key)] = xjson.NewNode(dataType, value)
-		})
-
-	return result, errors.Wrap(err, "parse properties")
-}
-
 func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse, err error) {
 	if base == nil {
 		return
@@ -674,4 +722,37 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	out.Owner = base.Owner
 	out.Source = base.Source
 	return out, nil
+}
+
+func CopyFrom(raw []byte, patches ...*pb.PatchData) (map[string]interface{}, error) {
+	cc := tdtl.New(raw)
+	result := make(map[string]interface{})
+	for _, patch := range patches {
+		switch patch.Operator {
+		case xjson.OpCopy.String():
+			var val interface{}
+			if ret := cc.Get(patch.Path); ret.Error() != nil {
+				return nil, errors.Wrap(ret.Error(), "clip result")
+			} else if err := json.Unmarshal(ret.Raw(), &val); nil != err {
+				return nil, errors.Wrap(err, "clip result")
+			}
+
+			index := strings.IndexByte(patch.Path, '.')
+			result[patch.Path[index+1:]] = val
+		default:
+		}
+	}
+	return result, nil
+}
+
+func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, error) {
+	var patches []*pb.PatchData
+	for _, path := range paths {
+		patches = append(patches, &pb.PatchData{
+			Path:     path,
+			Operator: xjson.OpCopy.String(),
+		})
+	}
+	result, err := CopyFrom(raw, patches...)
+	return result, errors.Wrap(err, "copy result")
 }
