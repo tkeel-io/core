@@ -12,12 +12,20 @@ type entity struct {
 	state tdtl.Collect
 }
 
+func DefaultEntity(id string) Entity {
+	return &entity{id: id}
+}
+
 func NewEntity(id string, state []byte) (Entity, error) {
 	s := tdtl.New(state)
 	return &entity{id: id, state: *s}, s.Error()
 }
 
 func (e *entity) Handle(ctx context.Context, in *Result) *Result {
+	if nil != in.Err {
+		return in
+	}
+
 	var changes []Patch
 	cc := e.state.Copy()
 	for _, patch := range in.Patches {

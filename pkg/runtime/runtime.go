@@ -13,6 +13,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -53,27 +54,8 @@ func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 }
 
 func (e *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
-	//1.BeforeProcess
-	//1. 升级执行的环境
-	//1.1 处理 Entity 的创建、删除
-	//1.2 Cache 消息直接更新 Runtime 的 caches
-	//1.3 更新实体，记录下变更    -> Result
 	execer, result := e.PrepareEvent(ctx, event)
 	result = execer.Exec(ctx, result)
-
-	//2.Process
-	//2.1  Mapper处理：首先查找 Mapper，如果没有初始化,且加入map
-	//              mappers[entityID]=Mapper(dispatch,stateBytes)
-	//2.2 触发对应的Mapper（执行-target） -> Patch
-	//2.3 更新实体（target），记录下变更   -> Result(a.p2)
-	//@TODO Process
-	//ret, err = e.Process(ctx, event)
-
-	//3.AfterProcess
-	//3.1 依照订阅发布实体变更  handleSubscribe
-	//ret = e.handleSubscribe(ctx, ret)
-	//4.2 处理 API 回调       handleCallback
-	//ret = e.handleCallback(ctx, event, ret)
 	return result.Err
 }
 
@@ -84,7 +66,9 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		process, state, result := r.handleSystemEvent(ctx, ev)
+		process, state, result :=
+			r.handleSystemEvent(ctx, ev)
+
 		return &Execer{
 			state:     state,
 			preFuncs:  []Handler{},
@@ -92,13 +76,18 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 			postFuncs: []Handler{},
 		}, result
 	case v1.ETEntity:
+		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
 		return &Execer{
-			state:     nil,
-			preFuncs:  []Handler{},
-			execFunc:  state,
-			postFuncs: []Handler{},
-		}, &Result{Err: err}
+				state:     state,
+				preFuncs:  []Handler{},
+				execFunc:  state,
+				postFuncs: []Handler{},
+			}, &Result{
+				Err:     err,
+				event:   ev,
+				State:   state.Raw(),
+				Patches: conv(e.Patches())}
 	case v1.ETCache:
 		return &Execer{
 			state:     nil,
@@ -122,43 +111,64 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (Handle
 	operator := action.Operator
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
-		return &handlerImpl{fn: func(context.Context, *Result) *Result {
-			// check entity exists.
-			if _, exists := r.entities[ev.Entity()]; exists {
-				return &Result{Err: xerrors.ErrEntityAleadyExists}
-			}
+		// create entity.
+		state, err := NewEntity(ev.Entity(), action.GetData())
+		if nil != err {
+			log.Error("create entity", zfield.Eid(ev.Entity()),
+				zfield.Value(string(action.GetData())), zap.Error(err))
+		}
 
-			// create entity.
-			en, err := NewEntity(ev.Entity(), action.GetData())
-			if nil != err {
-				log.Error("create entity", zfield.Eid(ev.Entity()),
-					zfield.Value(string(action.GetData())), zap.Error(err))
-				return &Result{Err: err}
-			}
-
-			// TODO: parse get changes.
-			// store entity.
-			r.entities[ev.Entity()] = en
-			return &Result{State: en.Raw()}
-		}}, nil, nil
-	case v1.OpDelete:
+		// return process state handler.
 		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-			// TODO:
-			//		0. 删除etcd中的mapper.
-			//		1. 从状态存储中删除（可标记）
-			//		2. 从搜索中删除（可标记）
-			// 		3. 从Runtime 中删除.
-			delete(r.entities, ev.Entity())
-			return result
-		}}, nil, nil
-	default:
-		return nil, nil, &Result{Err: xerrors.ErrInternal}
-	}
-}
+				if nil != result.Err {
+					return result
+				}
 
-//处理Cache
-func (e *Runtime) handleCacheEvent(ctx context.Context, event v1.Event) *Result {
-	panic("implement me")
+				log.Info("create entity", zfield.Eid(ev.Entity()),
+					zfield.ID(event.ID()), zfield.Header(event.Attributes()))
+
+				// check entity exists.
+				if _, exists := r.entities[ev.Entity()]; exists {
+					return &Result{Err: xerrors.ErrEntityAleadyExists}
+				}
+
+				// new Entity instance.
+				enIns, innerErr := NewEntity(ev.Entity(), action.GetData())
+				if nil != err {
+					log.Error("create entity", zfield.Eid(ev.Entity()),
+						zfield.Value(string(action.GetData())), zap.Error(innerErr))
+				}
+
+				// TODO: parse get changes.
+
+				// store entity.
+				r.entities[ev.Entity()] = enIns
+				return &Result{State: enIns.Raw(), Err: innerErr}
+			}}, state, &Result{
+				Err:   err,
+				State: action.GetData(),
+				event: ev}
+	case v1.OpDelete:
+		state, err := r.LoadEntity(ev.Entity())
+		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+				// TODO:
+				//		0. 删除etcd中的mapper.
+				//		1. 从状态存储中删除（可标记）
+				//		2. 从搜索中删除（可标记）
+				// 		3. 从Runtime 中删除.
+				delete(r.entities, ev.Entity())
+				return result
+			}}, state, &Result{
+				Err:   err,
+				event: ev,
+				State: state.Raw()}
+	default:
+		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+				// do nothing...
+				return result
+			}}, DefaultEntity(event.Entity()),
+			&Result{Err: xerrors.ErrInternal}
+	}
 }
 
 //Runtime 处理 event
@@ -235,4 +245,16 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	}
 
 	return nil, xerrors.ErrEntityNotFound
+}
+
+func conv(patches []*v1.PatchData) []Patch {
+	var res []Patch
+	for _, patch := range patches {
+		res = append(res, Patch{
+			Op:    PatchOp(patch.Operator),
+			Path:  patch.Path,
+			Value: tdtl.New(patch.Value),
+		})
+	}
+	return res
 }

@@ -16,10 +16,10 @@ func TestNode_Start(t *testing.T) {
 	log.InitLogger("core.node", "DEBUG", true)
 	node := NewNode(context.Background(), nil, mock.NewDispatcher())
 
-	err := node.Start([]string{
-		"kafka://139.198.125.147:9092/core/core",
-	},
-	)
+	err := node.Start(NodeConf{
+		Sources: []string{
+			"kafka://139.198.125.147:9092/core/core",
+		}})
 
 	if nil != err {
 		panic(err)

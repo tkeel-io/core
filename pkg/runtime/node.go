@@ -37,16 +37,15 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 	}
 }
 
-func (n *Node) Start(sources []string) error {
+func (n *Node) Start(cfg NodeConf) error {
 	log.Info("start node...")
 
-	for index := range sources {
-		sourceIns, err := xkafka.NewKafkaPubsub(sources[index])
-		if nil != err {
+	for index := range cfg.Sources {
+		var err error
+		var sourceIns *xkafka.KafkaPubsub
+		if sourceIns, err = xkafka.NewKafkaPubsub(cfg.Sources[index]); nil != err {
 			return errors.Wrap(err, "create source instance")
-		}
-
-		if err = sourceIns.Received(n.ctx, n); nil != err {
+		} else if err = sourceIns.Received(n.ctx, n); nil != err {
 			return errors.Wrap(err, "consume source")
 		}
 
