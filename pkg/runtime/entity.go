@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 
-	v1 "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/tdtl"
 )
@@ -18,15 +17,12 @@ func NewEntity(id string, state []byte) (Entity, error) {
 	return &entity{id: id, state: *s}, s.Error()
 }
 
-func (e *entity) Handle(ctx context.Context, event v1.Event) *Result {
+func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 	var changes []Patch
-	ev, _ := event.(v1.PatchEvent)
-
 	cc := e.state.Copy()
-	for _, patch := range ev.Patches() {
+	for _, patch := range in.Patches {
 		patchVal := tdtl.New(patch.Value)
-		operator := PatchOp(patch.Operator)
-		switch operator {
+		switch patch.Op {
 		case OpAdd:
 			cc.Append(patch.Path, patchVal)
 		case OpCopy:
@@ -45,14 +41,15 @@ func (e *entity) Handle(ctx context.Context, event v1.Event) *Result {
 			break
 		}
 
-		switch operator {
+		switch patch.Op {
 		case OpMerge:
 			patchVal.Foreach(func(key []byte, value *tdtl.Collect) {
-				changes = append(changes, Patch{Op: OpReplace, Path: patch.Path, Value: value})
+				changes = append(changes, Patch{
+					Op: OpReplace, Path: patch.Path, Value: value})
 			})
 		default:
 			changes = append(changes,
-				Patch{Op: operator, Path: patch.Path, Value: patchVal})
+				Patch{Op: patch.Op, Path: patch.Path, Value: patchVal})
 		}
 
 	}

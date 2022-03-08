@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestNewEntity(t *testing.T) {
@@ -34,49 +34,46 @@ func TestEntity_Handle(t *testing.T) {
 	en, err := NewEntity("en-123", []byte(`{"properties": {"temp": 20}}`))
 	assert.Nil(t, err)
 
-	tests := map[string]v1.PatchEvent{
-		"patch1": &v1.ProtoEvent{
-			Id: "ev-1",
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{
-						{
-							Path:     "properties.temp",
-							Value:    []byte("50"),
-							Operator: string(OpReplace),
-						},
-						{
-							Path:     "properties.metrics.cpu_used",
-							Value:    []byte("0.78"),
-							Operator: string(OpReplace),
-						},
-						{
-							Path:     "properties.metrics.mem_used",
-							Value:    []byte("0.28"),
-							Operator: string(OpReplace),
-						},
-						{
-							Path:     "properties.metrics.interfaces",
-							Value:    []byte("0.28"),
-							Operator: string(OpAdd),
-						},
-						{
-							Path:     "properties.temp",
-							Operator: string(OpRemove),
-						},
-						{
-							Path:     "properties.metrics",
-							Value:    []byte(`{"temp": 209}`),
-							Operator: string(OpMerge),
-						},
-					},
+	in := []*Result{
+		{
+			State: en.Raw(),
+			event: nil,
+			Patches: []Patch{
+				{
+					Path:  "properties.temp",
+					Value: tdtl.New("50"),
+					Op:    OpReplace,
+				},
+				{
+					Path:  "properties.metrics.cpu_used",
+					Value: tdtl.New("0.78"),
+					Op:    OpReplace,
+				},
+				{
+					Path:  "properties.metrics.mem_used",
+					Value: tdtl.New("0.28"),
+					Op:    OpReplace,
+				},
+				{
+					Path:  "properties.metrics.interfaces",
+					Value: tdtl.New("0.28"),
+					Op:    OpAdd,
+				},
+				{
+					Path: "properties.temp",
+					Op:   OpRemove,
+				},
+				{
+					Path:  "properties.metrics",
+					Value: tdtl.New(`{"temp": 209}`),
+					Op:    OpMerge,
 				},
 			},
 		},
 	}
 
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, test := range in {
+		t.Run("test", func(t *testing.T) {
 			result := en.Handle(context.TODO(), test)
 			assert.Nil(t, result.Err)
 			t.Log("result", result)
