@@ -37,7 +37,7 @@ func TestEntity_Handle(t *testing.T) {
 	in := []*Result{
 		{
 			State: en.Raw(),
-			event: nil,
+			Event: nil,
 			Patches: []Patch{
 				{
 					Path:  "properties.temp",

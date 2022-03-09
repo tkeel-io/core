@@ -130,6 +130,8 @@ func core(cmd *cobra.Command, args []string) {
 		config.Init(_cfgFile)
 	}
 
+	logger.InfoStatusEvent(os.Stdout, "configuration loaded")
+
 	// init gllbal placement.
 	placement.Initialize()
 	// rewrite search engine config by flags input info.
@@ -228,7 +230,7 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	if err = stateManager.Start(config.Get().Server.Sources); nil != err {
+	if err = stateManager.Start(runtime.NodeConf{Sources: config.Get().Server.Sources}); nil != err {
 		log.Fatal(err)
 	}
 

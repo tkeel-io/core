@@ -18,7 +18,7 @@ type Result struct {
 	// TODO: 将 error 放到这里的原因： 在UpdateWithEvent无论失败还是成功，callback都是可能被执行的.
 	Err     error
 	State   []byte
-	event   v1.Event
+	Event   v1.Event
 	Patches []Patch
 	Changes []Patch
 }
@@ -39,6 +39,9 @@ type handlerImpl struct {
 }
 
 func (h *handlerImpl) Handle(ctx context.Context, result *Result) *Result {
+	if nil != result.Err {
+		return result
+	}
 	return h.fn(ctx, result)
 }
 
@@ -73,5 +76,9 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 		result = handler.Handle(ctx, result)
 	}
 
-	return e.Exec(ctx, result)
+	// 终止递归.
+	if len(result.Patches) > 0 {
+		return e.Exec(ctx, result)
+	}
+	return result
 }

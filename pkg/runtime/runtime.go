@@ -66,15 +66,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		process, state, result :=
-			r.handleSystemEvent(ctx, ev)
-
-		return &Execer{
-			state:     state,
-			preFuncs:  []Handler{},
-			execFunc:  process,
-			postFuncs: []Handler{},
-		}, result
+		return r.handleSystemEvent(ctx, ev)
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
@@ -82,10 +74,10 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 				state:     state,
 				preFuncs:  []Handler{},
 				execFunc:  state,
-				postFuncs: []Handler{},
+				postFuncs: []Handler{&handlerImpl{fn: r.handleCallback}},
 			}, &Result{
 				Err:     err,
-				event:   ev,
+				Event:   ev,
 				State:   state.Raw(),
 				Patches: conv(e.Patches())}
 	case v1.ETCache:
@@ -104,70 +96,89 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 }
 
 //处理实体生命周期
-func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (Handler, Entity, *Result) {
+func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Result) {
 	log.Info("handle system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
-		// create entity.
+		log.Info("create entity", zfield.Eid(ev.Entity()),
+			zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+
+		execer := &Execer{
+			state:    DefaultEntity(ev.Entity()),
+			preFuncs: []Handler{},
+			execFunc: DefaultEntity(ev.Entity()),
+			postFuncs: []Handler{
+				&handlerImpl{fn: r.handleCallback},
+				&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+					log.Info("create entity successed", zfield.Eid(ev.Entity()),
+						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
+					return result
+				}},
+			}}
+
+		// check entity exists.
+		if _, exists := r.entities[ev.Entity()]; exists {
+			return execer, &Result{
+				Err: xerrors.ErrEntityAleadyExists,
+			}
+		}
+
+		// new entity.
 		state, err := NewEntity(ev.Entity(), action.GetData())
 		if nil != err {
 			log.Error("create entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
+			return execer, &Result{Err: err}
 		}
 
-		// return process state handler.
-		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-				if nil != result.Err {
-					return result
-				}
-
-				log.Info("create entity", zfield.Eid(ev.Entity()),
-					zfield.ID(event.ID()), zfield.Header(event.Attributes()))
-
-				// check entity exists.
-				if _, exists := r.entities[ev.Entity()]; exists {
-					return &Result{Err: xerrors.ErrEntityAleadyExists}
-				}
-
-				// new Entity instance.
-				enIns, innerErr := NewEntity(ev.Entity(), action.GetData())
-				if nil != err {
-					log.Error("create entity", zfield.Eid(ev.Entity()),
-						zfield.Value(string(action.GetData())), zap.Error(innerErr))
-				}
-
-				// TODO: parse get changes.
-
-				// store entity.
-				r.entities[ev.Entity()] = enIns
-				return &Result{State: enIns.Raw(), Err: innerErr}
-			}}, state, &Result{
-				Err:   err,
-				State: action.GetData(),
-				event: ev}
+		execer.state = state
+		execer.execFunc = state
+		return execer, &Result{
+			Event: ev,
+			State: action.GetData()}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
-		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-				// TODO:
-				//		0. 删除etcd中的mapper.
-				//		1. 从状态存储中删除（可标记）
-				//		2. 从搜索中删除（可标记）
-				// 		3. 从Runtime 中删除.
-				delete(r.entities, ev.Entity())
-				return result
-			}}, state, &Result{
+		return &Execer{
+				state:    state,
+				execFunc: state,
+				preFuncs: []Handler{
+					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+						// TODO:
+						//		0. 删除etcd中的mapper.
+						//		1. 从状态存储中删除（可标记）
+						//		2. 从搜索中删除（可标记）
+						// 		3. 从Runtime 中删除.
+						delete(r.entities, ev.Entity())
+						return result
+					}}},
+				postFuncs: []Handler{
+					&handlerImpl{fn: r.handleCallback},
+					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+						log.Info("delete entity successed", zfield.Eid(ev.Entity()),
+							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+						return result
+					}}},
+			}, &Result{
 				Err:   err,
-				event: ev,
+				Event: ev,
 				State: state.Raw()}
 	default:
-		return &handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-				// do nothing...
-				return result
-			}}, DefaultEntity(event.Entity()),
-			&Result{Err: xerrors.ErrInternal}
+		return &Execer{
+				state:    DefaultEntity(ev.Entity()),
+				preFuncs: []Handler{},
+				execFunc: DefaultEntity(ev.Entity()),
+				postFuncs: []Handler{
+					&handlerImpl{fn: r.handleCallback},
+					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+						log.Error("event type not support", zfield.Eid(ev.Entity()),
+							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+						return result
+					}}}}, &Result{
+				Event: ev,
+				Err:   xerrors.ErrInternal}
 	}
 }
 
@@ -200,7 +211,11 @@ func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
 	return ret
 }
 
-func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Result) *Result {
+func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
+	event := ret.Event
+	log.Debug("handle event, callback.", zfield.ID(event.ID()),
+		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+
 	if event.CallbackAddr() != "" {
 		switch ret.Err {
 		case nil:
@@ -211,9 +226,7 @@ func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Resul
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: ret.State,
-				},
-			}
+					RawData: ret.State}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			r.dispatcher.Dispatch(ctx, ev)
@@ -224,9 +237,7 @@ func (r *Runtime) handleCallback(ctx context.Context, event v1.Event, ret *Resul
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: []byte{},
-				},
-			}
+					RawData: []byte{}}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
 			ev.SetAttr(v1.MetaResponseErrCode, ret.Err.Error())

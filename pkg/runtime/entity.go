@@ -66,7 +66,12 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 		e.state = *cc
 	}
 
-	return &Result{State: cc.Raw(), Changes: changes, Err: cc.Error()}
+	// in.Patches 处理完毕，丢弃.
+	return &Result{
+		Err:     cc.Error(),
+		State:   cc.Raw(),
+		Event:   in.Event,
+		Changes: changes}
 }
 
 func (e *entity) Raw() []byte {
