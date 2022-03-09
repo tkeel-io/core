@@ -4,8 +4,11 @@ import (
 	"context"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 )
+
+const defaultTTLMax = 5
 
 type Patch struct {
 	Op    PatchOp
@@ -16,6 +19,7 @@ type Patch struct {
 //Feed 包含实体最新状态以及变更
 type Result struct {
 	// TODO: 将 error 放到这里的原因： 在UpdateWithEvent无论失败还是成功，callback都是可能被执行的.
+	TTL     int
 	Err     error
 	State   []byte
 	Event   v1.Event
@@ -24,6 +28,7 @@ type Result struct {
 }
 
 type Entity interface {
+	ID() string
 	Handle(context.Context, *Result) *Result
 	Basic() *tdtl.Collect
 	Raw() []byte
@@ -77,8 +82,13 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 	}
 
 	// 终止递归.
-	if len(result.Patches) > 0 {
+	if result.TTL >= defaultTTLMax {
+		log.Error("ttl overflow", e.state.ID())
+		return result
+	} else if len(result.Patches) > 0 {
 		return e.Exec(ctx, result)
 	}
+
+	result.TTL++
 	return result
 }

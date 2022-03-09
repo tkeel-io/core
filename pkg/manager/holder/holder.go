@@ -52,10 +52,11 @@ func (h *holder) Wait(ctx context.Context, id string) *Waiter {
 				ErrCode: context.Canceled.Error(),
 			}
 		case <-ctx.Done():
-			log.Warn("request terminated, user cancel or timeout", zfield.ID(id))
-			waitCh <- Response{
-				Status:  types.StatusCanceled,
-				ErrCode: context.Canceled.Error(),
+			if nil != ctx.Err() {
+				waitCh <- Response{
+					Status:  types.StatusCanceled,
+					ErrCode: context.Canceled.Error(),
+				}
 			}
 		}
 

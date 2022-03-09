@@ -53,9 +53,12 @@ func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	e.HandleEvent(ctx, &ev)
 }
 
-func (e *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
-	execer, result := e.PrepareEvent(ctx, event)
+func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
+	execer, result := r.PrepareEvent(ctx, event)
 	result = execer.Exec(ctx, result)
+
+	// call callback once.
+	r.handleCallback(ctx, result)
 	return result.Err
 }
 
@@ -70,11 +73,19 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
+		if nil != err {
+			log.Error("load entity", zfield.Eid(ev.Entity()),
+				zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+			state = DefaultEntity(ev.Entity())
+		}
+
 		return &Execer{
-				state:     state,
-				preFuncs:  []Handler{},
-				execFunc:  state,
-				postFuncs: []Handler{&handlerImpl{fn: r.handleCallback}},
+				state:    state,
+				preFuncs: []Handler{},
+				execFunc: state,
+				postFuncs: []Handler{
+					&handlerImpl{fn: r.handleSubscribe},
+				},
 			}, &Result{
 				Err:     err,
 				Event:   ev,
@@ -111,7 +122,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			preFuncs: []Handler{},
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleCallback},
+				&handlerImpl{fn: r.handleSubscribe},
 				&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
 					log.Info("create entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
@@ -155,7 +166,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 						return result
 					}}},
 				postFuncs: []Handler{
-					&handlerImpl{fn: r.handleCallback},
+					&handlerImpl{fn: r.handleSubscribe},
 					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
 						log.Info("delete entity successed", zfield.Eid(ev.Entity()),
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
@@ -171,7 +182,6 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 				preFuncs: []Handler{},
 				execFunc: DefaultEntity(ev.Entity()),
 				postFuncs: []Handler{
-					&handlerImpl{fn: r.handleCallback},
 					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
 						log.Error("event type not support", zfield.Eid(ev.Entity()),
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
@@ -200,10 +210,6 @@ func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) 
 
 //处理订阅
 func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
-	if nil != ret.Err {
-		return ret
-	}
-
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	// 2. 执行对应的订阅，

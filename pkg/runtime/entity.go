@@ -21,6 +21,10 @@ func NewEntity(id string, state []byte) (Entity, error) {
 	return &entity{id: id, state: *s}, s.Error()
 }
 
+func (e *entity) ID() string {
+	return e.id
+}
+
 func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 	if nil != in.Err {
 		return in
@@ -80,6 +84,7 @@ func (e *entity) Raw() []byte {
 
 func (e *entity) Basic() *tdtl.Collect {
 	basic := e.state.Copy()
-	basic.Del("properties", "scheme")
+	basic.Set("scheme", tdtl.New([]byte("{}")))
+	basic.Set("properties", tdtl.New([]byte("{}")))
 	return basic
 }
