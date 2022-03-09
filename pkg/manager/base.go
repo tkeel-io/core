@@ -32,7 +32,7 @@ type BaseRet struct {
 	Mappers    []*v1.Mapper           `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
 	TemplateID string                 `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
 	Properties map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"properties"`
-	Configs    map[string]interface{} `json:"configs" msgpack:"-" mapstructure:"configs"`
+	Scheme     map[string]interface{} `json:"scheme" msgpack:"-" mapstructure:"scheme"`
 }
 
 func (b *Base) Basic() Base {

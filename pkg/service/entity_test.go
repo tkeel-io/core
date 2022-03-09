@@ -359,7 +359,7 @@ func TestCopyFrom(t *testing.T) {
 		}}`)
 
 	propKeys := []string{"properties.temp", "properties.metrics", "properties.metrics.cpu_used"}
-	result, err := CopyFrom2(raw, propKeys...)
+	result, _, err := CopyFrom2(raw, propKeys...)
 	assert.Nil(t, err)
-	t.Log(result)
+	t.Log("\nResult: ", result)
 }

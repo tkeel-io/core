@@ -82,3 +82,9 @@ func TestEntity_Handle(t *testing.T) {
 
 	t.Log(string(en.Raw()))
 }
+
+func TestMerge(t *testing.T) {
+	cc := tdtl.New("{}")
+	cc.Merge(tdtl.New([]byte(`{"sss":{"id":"sss","type":"struct","name":"","weight":0,"enabled":true,"enabled_search":true,"enabled_time_series":false,"description":"","define":{"fields":{"aaa":{"id":"aaa","type":"struct","name":"","weight":0,"enabled":true,"enabled_search":true,"enabled_time_series":false,"description":"","define":{"fields":{}},"last_time":0}}},"last_time":0}}`)))
+	t.Log(cc.String())
+}

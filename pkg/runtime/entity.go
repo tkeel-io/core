@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"strings"
 
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/tdtl"
@@ -18,6 +19,7 @@ func DefaultEntity(id string) Entity {
 
 func NewEntity(id string, state []byte) (Entity, error) {
 	s := tdtl.New(state)
+	s.Set("scheme", tdtl.New([]byte("{}")))
 	return &entity{id: id, state: *s}, s.Error()
 }
 
@@ -33,18 +35,17 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 	var changes []Patch
 	cc := e.state.Copy()
 	for _, patch := range in.Patches {
-		patchVal := tdtl.New(patch.Value)
 		switch patch.Op {
 		case OpAdd:
-			cc.Append(patch.Path, patchVal)
+			cc.Append(patch.Path, patch.Value)
 		case OpCopy:
 		case OpMerge:
-			res := cc.Get(patch.Path).Merge(patchVal)
+			res := cc.Get(patch.Path).Merge(patch.Value)
 			cc.Set(patch.Path, res)
 		case OpRemove:
 			cc.Del(patch.Path)
 		case OpReplace:
-			cc.Set(patch.Path, patchVal)
+			cc.Set(patch.Path, patch.Value)
 		default:
 			return &Result{Err: xerrors.ErrPatchPathInvalid}
 		}
@@ -55,13 +56,14 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 
 		switch patch.Op {
 		case OpMerge:
-			patchVal.Foreach(func(key []byte, value *tdtl.Collect) {
+			patch.Value.Foreach(func(key []byte, value *tdtl.Collect) {
 				changes = append(changes, Patch{
-					Op: OpReplace, Path: patch.Path, Value: value})
+					Op: OpReplace, Value: value,
+					Path: strings.Join([]string{patch.Path, string(key)}, ".")})
 			})
 		default:
 			changes = append(changes,
-				Patch{Op: patch.Op, Path: patch.Path, Value: patchVal})
+				Patch{Op: patch.Op, Path: patch.Path, Value: patch.Value})
 		}
 
 	}

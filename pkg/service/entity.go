@@ -38,9 +38,18 @@ import (
 )
 
 const (
-	schemePrefix     = "scheme."
-	propertiesPrefix = "properties"
+	sep         = "."
+	FieldScheme = "scheme"
+	FieldProps  = "properties"
 )
+
+func schemeKey(key string) string {
+	return strings.Join([]string{FieldScheme, key}, sep)
+}
+
+func propKey(key string) string {
+	return strings.Join([]string{FieldProps, key}, sep)
+}
 
 type EntityService struct {
 	pb.UnimplementedEntityServer
@@ -134,7 +143,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	patches := []*pb.PatchData{{
-		Path:     "properties",
+		Path:     FieldProps,
 		Operator: xjson.OpMerge.String(),
 		Value:    entity.Properties,
 	}}
@@ -225,7 +234,7 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 	}
 
 	patches := []*pb.PatchData{{
-		Path:     "properties",
+		Path:     FieldProps,
 		Operator: xjson.OpMerge.String(),
 		Value:    entity.Properties,
 	}}
@@ -276,7 +285,7 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 			}
 			// encode value.
 			patches = append(patches, &pb.PatchData{
-				Path:     propertiesPrefix + patchData[index].Path,
+				Path:     propKey(patchData[index].Path),
 				Operator: patchData[index].Operator,
 				Value:    bytes,
 			})
@@ -294,9 +303,9 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 	}
 
 	// clip copy properties.
-	if properties, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
+	if properties, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
 		log.Warn("patch entity properties.", zfield.Eid(req.Id), zfield.Reason(err.Error()))
-	} else {
+	} else if cpflag {
 		baseRet.Properties = properties
 	}
 
@@ -346,12 +355,13 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	}
 
 	// clip copy properties.
-	if props, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
+	if props, cpflag, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
 		log.Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
-	} else {
+	} else if cpflag {
 		baseRet.Properties = props
 	}
 
+	baseRet.Scheme = nil
 	out, err = s.makeResponse(baseRet)
 	return out, errors.Wrap(err, "get entity properties")
 }
@@ -378,7 +388,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 	patches := make([]*pb.PatchData, 0)
 	for index := range propertyKeys {
 		patches = append(patches, &pb.PatchData{
-			Path:     propertiesPrefix + propertyKeys[index],
+			Path:     propKey(propertyKeys[index]),
 			Operator: xjson.OpRemove.String(),
 		})
 	}
@@ -426,7 +436,7 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 	}
 
 	patches := []*pb.PatchData{{
-		Path:     "scheme",
+		Path:     FieldScheme,
 		Operator: xjson.OpMerge.String(),
 		Value:    entity.Scheme,
 	}}
@@ -487,7 +497,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				return nil, errors.Wrap(err, "patch entity scheme")
 			}
 			patches = append(patches, &pb.PatchData{
-				Path:     schemePrefix + patchData[index].Path,
+				Path:     schemeKey(patchData[index].Path),
 				Operator: patchData[index].Operator,
 				Value:    bytes,
 			})
@@ -509,10 +519,10 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	}
 
 	// clip copy scheme.
-	if properties, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
+	if scheme, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
 		log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
-	} else {
-		baseRet.Properties = properties
+	} else if cpflag {
+		baseRet.Scheme = scheme
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -538,10 +548,10 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	parseHeaderFrom(ctx, entity)
 
 	// set properties.
-	var propertyKeys []string
+	var propKeys []string
 	if in.PropertyKeys != "" {
 		for _, key := range strings.Split(strings.TrimSpace(in.PropertyKeys), ",") {
-			propertyKeys = append(propertyKeys, schemePrefix+key)
+			propKeys = append(propKeys, schemeKey(key))
 		}
 	}
 
@@ -552,13 +562,16 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 		return nil, errors.Wrap(err, "get entity scheme")
 	}
 
-	// clip copy properties.
-	if props, innerErr := CopyFrom2(rawEntity, propertyKeys...); nil != innerErr {
-		log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
-	} else {
-		baseRet.Properties = props
+	if len(propKeys) > 0 {
+		// clip copy properties.
+		if scheme, cpflag, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
+			log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
+		} else if cpflag {
+			baseRet.Scheme = scheme
+		}
 	}
 
+	baseRet.Properties = nil
 	out, err = s.makeResponse(baseRet)
 	return out, errors.Wrap(err, "get entity scheme")
 }
@@ -582,7 +595,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 	patches := make([]*pb.PatchData, 0)
 	for index := range propertyIDs {
 		patches = append(patches, &pb.PatchData{
-			Path:     propertyIDs[index],
+			Path:     schemeKey(propertyIDs[index]),
 			Operator: xjson.OpRemove.String(),
 		})
 	}
@@ -702,7 +715,7 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	if out.Properties, err = structpb.NewValue(base.Properties); nil != err {
 		log.Error("convert entity properties", zap.Error(err), zfield.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity properties")
-	} else if out.Configs, err = structpb.NewValue(base.Configs); nil != err {
+	} else if out.Configs, err = structpb.NewValue(base.Scheme); nil != err {
 		log.Error("convert entity scheme.", zap.Error(err), zfield.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity scheme")
 	}
@@ -725,17 +738,19 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	return out, nil
 }
 
-func CopyFrom(raw []byte, patches ...*pb.PatchData) (map[string]interface{}, error) {
+func CopyFrom(raw []byte, patches ...*pb.PatchData) (map[string]interface{}, bool, error) {
+	var cpFlag bool
 	cc := tdtl.New(raw)
 	result := make(map[string]interface{})
 	for _, patch := range patches {
 		switch patch.Operator {
 		case xjson.OpCopy.String():
+			cpFlag = true
 			var val interface{}
 			if ret := cc.Get(patch.Path); ret.Error() != nil {
-				return nil, errors.Wrap(ret.Error(), "clip result")
+				return nil, false, errors.Wrap(ret.Error(), "clip result")
 			} else if err := json.Unmarshal(ret.Raw(), &val); nil != err {
-				return nil, errors.Wrap(err, "clip result")
+				return nil, false, errors.Wrap(err, "clip result")
 			}
 
 			index := strings.IndexByte(patch.Path, '.')
@@ -743,10 +758,10 @@ func CopyFrom(raw []byte, patches ...*pb.PatchData) (map[string]interface{}, err
 		default:
 		}
 	}
-	return result, nil
+	return result, cpFlag, nil
 }
 
-func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, error) {
+func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, bool, error) {
 	var patches []*pb.PatchData
 	for _, path := range paths {
 		patches = append(patches, &pb.PatchData{
@@ -754,6 +769,6 @@ func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, error) {
 			Operator: xjson.OpCopy.String(),
 		})
 	}
-	result, err := CopyFrom(raw, patches...)
-	return result, errors.Wrap(err, "copy result")
+	result, flag, err := CopyFrom(raw, patches...)
+	return result, flag, errors.Wrap(err, "copy result")
 }

@@ -145,6 +145,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			return execer, &Result{Err: err}
 		}
 
+		r.entities[ev.Entity()] = state
 		execer.state = state
 		execer.execFunc = state
 		return execer, &Result{
