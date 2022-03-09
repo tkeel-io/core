@@ -110,6 +110,9 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 		return nil, errors.Wrap(err, "create entity")
 	}
 
+	// hold request, wait response.
+	respWaiter := m.holder.Wait(ctx, reqID)
+
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
 		Id:        util.IG().EvID(),
@@ -125,6 +128,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 				Data:     bytes,
 			}},
 	}); nil != err {
+		respWaiter.Cancel()
 		log.Error("create entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "create entity, dispatch event")
@@ -133,8 +137,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	log.Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
+	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.Error("create entity", zfield.Eid(en.ID), zfield.ReqID(reqID),
 			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
@@ -164,6 +167,9 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
+	// hold request.
+	respWaiter := m.holder.Wait(ctx, reqID)
+
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
@@ -178,6 +184,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 				Patches: &v1.PatchDatas{
 					Patches: pds}},
 		}); nil != err {
+		respWaiter.Cancel()
 		log.Error("patch entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return out, raw, errors.Wrap(err, "patch entity, dispatch event")
@@ -186,8 +193,8 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	log.Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
+	// wait response.
+	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.Error("patch entity", zfield.Eid(en.ID),
 			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
@@ -218,6 +225,9 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 	log.Info("entity.GetEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
+	// hold request.
+	respWaiter := m.holder.Wait(ctx, reqID)
+
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
@@ -229,8 +239,9 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 				v1.MetaRequestID: reqID,
 				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{},
-			}}); nil != err {
+				Patches: &v1.PatchDatas{}},
+		}); nil != err {
+		respWaiter.Cancel()
 		log.Error("get entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "get entity, dispatch event")
@@ -239,8 +250,8 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 	log.Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
-	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
+	// wait response.
+	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.Error("get entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
@@ -271,6 +282,9 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
+	// hold request.
+	respWaiter := m.holder.Wait(ctx, reqID)
+
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
 		Id:        util.IG().EvID(),
@@ -282,9 +296,9 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 			v1.MetaEntityID:  en.ID},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
-				Operator: string(v1.OpDelete),
-			}},
-	}); nil != err {
+				Operator: string(v1.OpDelete)},
+		}}); nil != err {
+		respWaiter.Cancel()
 		log.Error("delete entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return errors.Wrap(err, "delete entity, dispatch event")
@@ -294,7 +308,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	// hold request, wait response.
-	resp := m.holder.Wait(ctx, reqID)
+	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.Error("delete entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))

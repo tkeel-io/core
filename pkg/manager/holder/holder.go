@@ -30,35 +30,45 @@ func New(ctx context.Context, timeout time.Duration) Holder {
 	}
 }
 
-func (h *holder) Wait(ctx context.Context, id string) Response {
+func (h *holder) Cancel() {
+
+}
+
+func (h *holder) Wait(ctx context.Context, id string) *Waiter {
 	h.lock.Lock()
-	waitCh := make(chan Response)
+	// chan size 为3 避免response和超时对chan的竞争.
+	waitCh := make(chan Response, 2)
 	h.holdeds[id] = waitCh
 	h.lock.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, h.timeout)
-	defer cancel()
 
-	var resp Response
-	select {
-	case <-h.ctx.Done():
-		log.Info("close holder.")
-	case <-ctx.Done():
-		log.Warn("request terminated, user cancel or timeout", zfield.ID(id))
-		resp = Response{
-			Status:  types.StatusCanceled,
-			ErrCode: context.Canceled.Error(),
+	go func() {
+		select {
+		case <-h.ctx.Done():
+			log.Info("close holder.")
+			waitCh <- Response{
+				Status:  types.StatusCanceled,
+				ErrCode: context.Canceled.Error(),
+			}
+		case <-ctx.Done():
+			log.Warn("request terminated, user cancel or timeout", zfield.ID(id))
+			waitCh <- Response{
+				Status:  types.StatusCanceled,
+				ErrCode: context.Canceled.Error(),
+			}
 		}
-	case resp = <-waitCh:
-		log.Debug("core.API call completed", zfield.ReqID(id))
+
+		// delete wait channel.
+		h.lock.Lock()
+		delete(h.holdeds, id)
+		h.lock.Unlock()
+	}()
+
+	return &Waiter{
+		ch:     waitCh,
+		cancel: cancel,
 	}
-
-	// delete waiter.
-	h.lock.Lock()
-	delete(h.holdeds, id)
-	h.lock.Unlock()
-
-	return resp
 }
 
 func (h *holder) OnRespond(resp *Response) {

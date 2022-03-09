@@ -7,7 +7,8 @@ import (
 )
 
 type Holder interface {
-	Wait(ctx context.Context, id string) Response
+	Cancel()
+	Wait(ctx context.Context, id string) *Waiter
 	OnRespond(*Response)
 }
 
@@ -17,4 +18,18 @@ type Response struct {
 	ErrCode  string
 	Metadata map[string]string
 	Data     []byte
+}
+
+type Waiter struct {
+	ch     chan Response
+	cancel context.CancelFunc
+}
+
+func (w *Waiter) Wait() Response {
+	resp := <-w.ch
+	return resp
+}
+
+func (w *Waiter) Cancel() {
+	w.cancel()
 }
