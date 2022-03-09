@@ -506,13 +506,14 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	var propertyIDs []string
 	if in.PropertyKeys != "" {
 		propertyIDs = strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
+		constraint.FormatPropertyKey(propertyIDs)
 	}
 
 	if entity, err = s.apiManager.GetEntityConfigs(ctx, entity, propertyIDs); nil != err {
 		log.Error("query entity configs", zfield.Eid(in.Id), zap.Error(err))
 	}
 
-	out = s.entity2EntityResponseZ(entity)
+	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "query entity configs")
 }
 
@@ -545,7 +546,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
-	out = s.entity2EntityResponse(entity)
+	out = s.entity2EntityResponseZ(entity)
 	return out, errors.Wrap(err, "remove entity configs")
 }
 
@@ -663,7 +664,6 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 	} else if err = json.Unmarshal(configBytes, &configs); nil != err {
 		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
 	}
-
 	if out.Properties, err = structpb.NewValue(properties); nil != err {
 		log.Error("convert entity failed", zap.Error(err))
 	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
