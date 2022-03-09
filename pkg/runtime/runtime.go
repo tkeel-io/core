@@ -69,7 +69,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		return r.handleSystemEvent(ctx, ev)
+		execer, result := r.handleSystemEvent(ctx, ev)
+		return execer, result
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
