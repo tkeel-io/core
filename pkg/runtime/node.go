@@ -71,7 +71,7 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 	if _, has := n.runtimes[rid]; !has {
 		log.Info("create container", zfield.ID(rid))
 		rt := NewRuntime(n.ctx, rid, n.dispatch)
-		rt.AppendMapper(n.mapperSlice())
+		rt.AppendMapper(MCache{})
 		n.runtimes[rid] = rt
 	}
 
@@ -131,7 +131,7 @@ func (n *Node) watchMetadata() {
 			// cache mapper.
 			n.mappers[mp.ID] = mpIns
 			for _, rt := range n.runtimes {
-				rt.AppendMapper([]mapper.Mapper{mpIns})
+				rt.AppendMapper(MCache{})
 			}
 		})
 }

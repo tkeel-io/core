@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 )
@@ -19,12 +20,13 @@ type Patch struct {
 //Feed 包含实体最新状态以及变更
 type Result struct {
 	// TODO: 将 error 放到这里的原因： 在UpdateWithEvent无论失败还是成功，callback都是可能被执行的.
-	TTL     int
-	Err     error
-	State   []byte
-	Event   v1.Event
-	Patches []Patch
-	Changes []Patch
+	TTL      int
+	Err      error
+	State    []byte
+	Event    v1.Event
+	EntityID string
+	Patches  []Patch
+	Changes  []Patch
 }
 
 type Entity interface {
@@ -91,4 +93,25 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 
 	result.TTL++
 	return result
+}
+
+type Mapper interface {
+	ID() string
+	Entity() string
+	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
+}
+
+type Tentacler interface {
+	ID() string
+	Type() string
+	String() string
+	Mapper() Mapper
+	Target() string
+	Items() []mapper.WatchKey
+}
+
+type MCache struct {
+	ID        string
+	Mapper    Mapper
+	Tentacles []Tentacler
 }

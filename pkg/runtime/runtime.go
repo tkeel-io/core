@@ -21,12 +21,12 @@ import (
 )
 
 type Runtime struct {
-	id         string
-	caches     map[string]Entity //存放其他Runtime的实体
-	entities   map[string]Entity //存放Runtime的实体
-	dispatcher dispatch.Dispatcher
-	pathTree   *path.Tree
-	mappers    map[string]mapper.Mapper
+	id           string
+	pathTree     *path.Tree
+	caches       map[string]Entity //存放其他Runtime的实体
+	entities     map[string]Entity //存放Runtime的实体
+	dispatcher   dispatch.Dispatcher
+	mapperCaches map[string]MCache
 	//inbox    Inbox
 
 	lock   sync.RWMutex
@@ -37,15 +37,15 @@ type Runtime struct {
 func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
-		id:         id,
-		caches:     map[string]Entity{},
-		entities:   map[string]Entity{},
-		mappers:    make(map[string]mapper.Mapper),
-		dispatcher: dispatcher,
-		pathTree:   path.New(),
-		lock:       sync.RWMutex{},
-		cancel:     cancel,
-		ctx:        ctx,
+		id:           id,
+		caches:       map[string]Entity{},
+		entities:     map[string]Entity{},
+		mapperCaches: map[string]MCache{},
+		dispatcher:   dispatcher,
+		pathTree:     path.New(),
+		lock:         sync.RWMutex{},
+		cancel:       cancel,
+		ctx:          ctx,
 	}
 }
 
@@ -96,10 +96,11 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 					&handlerImpl{fn: r.handleComputed},
 				},
 			}, &Result{
-				Err:     err,
-				Event:   ev,
-				State:   state.Raw(),
-				Patches: conv(e.Patches())}
+				Err:      err,
+				Event:    ev,
+				State:    state.Raw(),
+				EntityID: ev.Entity(),
+				Patches:  conv(e.Patches())}
 	case v1.ETCache:
 		return &Execer{
 			state:    nil,
@@ -110,10 +111,13 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 		}, &Result{}
 	default:
 		return &Execer{
-			state:     nil,
-			preFuncs:  []Handler{},
-			postFuncs: []Handler{},
-		}, &Result{Err: fmt.Errorf(" unknown RuntimeEvent Type")}
+				state:     nil,
+				preFuncs:  []Handler{},
+				postFuncs: []Handler{},
+			}, &Result{
+				Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
+				EntityID: ev.Entity(),
+			}
 	}
 }
 
@@ -209,17 +213,20 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	var entityID string
-	mappers := make(map[string]mapper.Mapper)
+	mappers := make(map[string]Mapper)
 	for _, change := range result.Patches {
 		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
-			mp, _ := node.(mapper.Mapper)
-			mappers[mp.ID()] = mp
+			tentacle, _ := node.(Tentacler)
+			if tentacle.Type() == "mapper" {
+				mappers[tentacle.Target()] = tentacle.Mapper()
+			}
 		}
 	}
 
 	patches := make(map[string]Patch)
 	for id, mp := range mappers {
-		log.Debug("compute mapper", zfield.Eid(entityID), zfield.Mid(id))
+		log.Debug("compute mapper",
+			zfield.Eid(entityID), zfield.Mid(id))
 		for path, val := range r.computeMapper(ctx, mp) {
 			patches[path] = Patch{
 				Op:    OpReplace,
@@ -236,14 +243,14 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	return result
 }
 
-func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
+func (r *Runtime) computeMapper(ctx context.Context, mp Mapper) map[string]tdtl.Node {
 	in := make(map[string]tdtl.Node)
 
 	// construct mapper input.
 
 	out, err := mp.Exec(in)
 	if nil != err {
-		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
+		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.Entity()))
 		return map[string]tdtl.Node{}
 	}
 
@@ -254,13 +261,13 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	var entityID string
+	var targets []string
 	var patches = make(map[string][]*v1.PatchData)
 	for _, change := range result.Patches {
-		var targets []string
 		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
-			mp, _ := node.(mapper.Mapper)
-			if entityID != mp.TargetEntity() {
-				targets = append(targets, mp.TargetEntity())
+			mp, _ := node.(mapper.Tentacler)
+			if entityID != mp.TargetID() {
+				targets = append(targets, mp.TargetID())
 			}
 		}
 
@@ -273,6 +280,9 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 					Value:    change.Value.Raw(),
 				})
 		}
+
+		// clean targets.
+		targets = []string{}
 	}
 
 	// 2. dispatch.send()
@@ -293,22 +303,6 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 	}
 
 	return result
-}
-
-//Runtime 处理 event
-func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) {
-	panic("implement me")
-	//2.2  Mapper处理：首先查找 Mapper，如果没有初始化,且加入map
-	//              mappers[entityID]=Mapper(dispatch,stateBytes)
-	//3.3 触发对应的Mapper（执行-target） -> Patch
-	//3.4 更新实体（target），记录下变更   -> Result(a.p2)
-	//EntityID := event.ID
-	//mapper, err := e.Mapper(EntityID)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//ret, err := mapper.Handle(ctx, event)
-	//return nil, nil
 }
 
 func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
@@ -348,32 +342,30 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 	return ret
 }
 
-func (r *Runtime) AppendMapper(mps []mapper.Mapper) {
+func (r *Runtime) AppendMapper(mc MCache) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	for _, mp := range mps {
-		r.mappers[mp.ID()] = mp
-		for eid, pathes := range mp.SourceEntities() {
-			log.Info("watch path", zfield.Eid(eid))
-			for _, path := range pathes {
-				r.pathTree.Add(path, mp)
-			}
+	r.mapperCaches[mc.ID] = mc
+	for _, tantacle := range mc.Tentacles {
+		for _, item := range tantacle.Items() {
+			r.pathTree.Add(item.String(), tantacle)
 		}
 	}
 
 	r.pathTree.Print()
 }
 
-func (r *Runtime) RemoveMapper(mp mapper.Mapper) {
+func (r *Runtime) RemoveMapper(mc MCache) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	delete(r.mappers, mp.ID())
-	for eid, pathes := range mp.SourceEntities() {
-		log.Info("watch path", zfield.Eid(eid))
-		for _, path := range pathes {
-			r.pathTree.Remove(path, mp)
+	delete(r.mapperCaches, mc.ID)
+	for _, tantacle := range mc.Tentacles {
+		for _, item := range tantacle.Items() {
+			r.pathTree.Remove(item.String(), tantacle)
 		}
 	}
+
+	r.pathTree.Print()
 }
 
 func (r *Runtime) LoadEntity(id string) (Entity, error) {
