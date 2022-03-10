@@ -7,7 +7,7 @@ import (
 )
 
 func TestTentacle(t *testing.T) {
-	tentacle := NewTentacle(TentacleTypeEntity, "device123", []WatchKey{{
+	tentacle := NewTentacle(nil, TentacleTypeEntity, "device123", []WatchKey{{
 		EntityID:    "device234",
 		PropertyKey: "temp",
 	}}, 0)

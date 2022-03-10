@@ -97,7 +97,7 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 
 type Mapper interface {
 	ID() string
-	Entity() string
+	TargetEntity() string
 	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
 }
 

@@ -71,8 +71,6 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Result) {
 	log.Info("handle event", zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
-	//2.1 实体必须包含 entityID，创建、删除等消息：由 Runtime 处理
-	//    实体配置重载？Mapper变化了（Mapper包括 订阅-source、执行-target）
 
 	switch ev.Type() {
 	case v1.ETSystem:
@@ -215,7 +213,8 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	var entityID string
 	mappers := make(map[string]Mapper)
 	for _, change := range result.Patches {
-		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
+		for _, node := range r.pathTree.
+			MatchPrefix(entityID + change.Path) {
 			tentacle, _ := node.(Tentacler)
 			if tentacle.Type() == "mapper" {
 				mappers[tentacle.Target()] = tentacle.Mapper()
@@ -250,7 +249,9 @@ func (r *Runtime) computeMapper(ctx context.Context, mp Mapper) map[string]tdtl.
 
 	out, err := mp.Exec(in)
 	if nil != err {
-		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.Entity()))
+		log.Error("exec mapper",
+			zfield.ID(mp.ID()),
+			zfield.Eid(mp.TargetEntity()))
 		return map[string]tdtl.Node{}
 	}
 
@@ -297,8 +298,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patch,
-				},
-			},
+				}},
 		})
 	}
 
@@ -358,6 +358,11 @@ func (r *Runtime) AppendMapper(mc MCache) {
 func (r *Runtime) RemoveMapper(mc MCache) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
+	if _, exists := r.mapperCaches[mc.ID]; !exists {
+		return
+	}
+
+	mc = r.mapperCaches[mc.ID]
 	delete(r.mapperCaches, mc.ID)
 	for _, tantacle := range mc.Tentacles {
 		for _, item := range tantacle.Items() {

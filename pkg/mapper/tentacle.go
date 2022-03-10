@@ -23,14 +23,16 @@ type tentacle struct {
 	tp       TentacleType
 	version  int64
 	targetID string
+	mapper   Mapper
 	items    []WatchKey // key=entityId#propertyKey
 }
 
-func NewTentacle(tp TentacleType, targetID string, items []WatchKey, version int64) Tentacler {
+func NewTentacle(mp Mapper, tp TentacleType, targetID string, items []WatchKey, version int64) Tentacler {
 	return &tentacle{
 		id:       uuid(),
 		tp:       tp,
 		items:    items,
+		mapper:   mp,
 		version:  version,
 		targetID: targetID,
 	}
@@ -57,6 +59,10 @@ func (t *tentacle) Items() []WatchKey {
 
 func (t *tentacle) Version() int64 {
 	return t.version
+}
+
+func (t *tentacle) Mapper() Mapper {
+	return t.mapper
 }
 
 func (t *tentacle) Copy() Tentacler {
@@ -105,5 +111,5 @@ func MergeTentacles(tentacles ...Tentacler) Tentacler {
 		items[index] = item
 	}
 
-	return NewTentacle(tentacle0.tp, tentacle0.targetID, items, version+1)
+	return NewTentacle(tentacle0.mapper, tentacle0.tp, tentacle0.targetID, items, version+1)
 }

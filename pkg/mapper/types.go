@@ -55,6 +55,8 @@ type Tentacler interface {
 	ID() string
 	// Type returns tentacle type.
 	Type() TentacleType
+	// Mapper return mapper.
+	Mapper() Mapper
 	// TargetID returns target id.
 	TargetID() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).
