@@ -80,8 +80,8 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 	}
 
 	// load runtime spec.
-	runtime := n.runtimes[rid]
-	runtime.DeliveredEvent(context.Background(), msg)
+	rt := n.runtimes[rid]
+	rt.DeliveredEvent(context.Background(), msg)
 	return nil
 }
 

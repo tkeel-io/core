@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -150,8 +151,10 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 		// check entity exists.
 		if _, exists := r.entities[ev.Entity()]; exists {
 			return execer, &Result{
-				Err: xerrors.ErrEntityAleadyExists,
-			}
+				Event:    ev,
+				EntityID: ev.Entity(),
+				Err:      xerrors.ErrEntityAleadyExists,
+				State:    DefaultEntity(ev.Entity()).Raw()}
 		}
 
 		// new entity.
@@ -159,15 +162,20 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 		if nil != err {
 			log.Error("create entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
-			return execer, &Result{Err: err}
+			return execer, &Result{
+				Err:      err,
+				Event:    ev,
+				EntityID: ev.Entity(),
+				State:    DefaultEntity(ev.Entity()).Raw()}
 		}
 
 		r.entities[ev.Entity()] = state
 		execer.state = state
 		execer.execFunc = state
 		return execer, &Result{
-			Event: ev,
-			State: action.GetData()}
+			Event:    ev,
+			EntityID: ev.Entity(),
+			State:    action.GetData()}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		return &Execer{
@@ -191,9 +199,10 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 						return result
 					}}},
 			}, &Result{
-				Err:   err,
-				Event: ev,
-				State: state.Raw()}
+				Err:      err,
+				Event:    ev,
+				State:    state.Raw(),
+				EntityID: ev.Entity()}
 	default:
 		return &Execer{
 				state:    DefaultEntity(ev.Entity()),
@@ -205,14 +214,15 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 						return result
 					}}}}, &Result{
-				Event: ev,
-				Err:   xerrors.ErrInternal}
+				Event:    ev,
+				EntityID: ev.Entity(),
+				Err:      xerrors.ErrInternal}
 	}
 }
 
 func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	// 1. 检查 ret.path 和 订阅列表.
-	var entityID string
+	entityID := result.EntityID
 	mappers := make(map[string]mapper.Mapper)
 	for _, change := range result.Patches {
 		for _, node := range r.pathTree.
@@ -261,9 +271,9 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 }
 
 func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
-	// 1. 检查 ret.path 和 订阅列表
-	var entityID string
+	// 1. 检查 ret.path 和 订阅列表.
 	var targets []string
+	entityID := result.EntityID
 	var patches = make(map[string][]*v1.PatchData)
 	for _, change := range result.Patches {
 		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
@@ -306,13 +316,14 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 	return result
 }
 
-func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
-	event := ret.Event
-	//  log.Debug("handle event, callback.", zfield.ID(event.ID()),
-	// 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+func (r *Runtime) handleCallback(ctx context.Context, result *Result) error {
+	var err error
+	event := result.Event
+	log.Debug("handle event, callback.", zfield.ID(event.ID()),
+		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
-		if ret.Err == nil {
+		if result.Err == nil {
 			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
@@ -320,10 +331,10 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: ret.State}}
+					RawData: result.State}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
-			r.dispatcher.Dispatch(ctx, ev)
+			err = r.dispatcher.Dispatch(ctx, ev)
 		} else {
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
@@ -334,12 +345,17 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 					RawData: []byte{}}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
-			ev.SetAttr(v1.MetaResponseErrCode, ret.Err.Error())
-			r.dispatcher.Dispatch(ctx, ev)
+			ev.SetAttr(v1.MetaResponseErrCode, result.Err.Error())
+			err = r.dispatcher.Dispatch(ctx, ev)
 		}
 	}
 
-	return ret
+	if nil != err {
+		log.Error("handle event, callback.", zfield.ID(event.ID()),
+			zap.Error(err), zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+	}
+
+	return errors.Wrap(err, "handle callback")
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {
