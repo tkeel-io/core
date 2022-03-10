@@ -11,7 +11,10 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/types"
+	"github.com/tkeel-io/core/pkg/util"
+	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -22,6 +25,8 @@ type Runtime struct {
 	caches     map[string]Entity //存放其他Runtime的实体
 	entities   map[string]Entity //存放Runtime的实体
 	dispatcher dispatch.Dispatcher
+	pathTree   *path.Tree
+	mappers    map[string]mapper.Mapper
 	//inbox    Inbox
 
 	lock   sync.RWMutex
@@ -35,7 +40,9 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		id:         id,
 		caches:     map[string]Entity{},
 		entities:   map[string]Entity{},
+		mappers:    make(map[string]mapper.Mapper),
 		dispatcher: dispatcher,
+		pathTree:   path.New(),
 		lock:       sync.RWMutex{},
 		cancel:     cancel,
 		ctx:        ctx,
@@ -86,6 +93,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 				execFunc: state,
 				postFuncs: []Handler{
 					&handlerImpl{fn: r.handleSubscribe},
+					&handlerImpl{fn: r.handleComputed},
 				},
 			}, &Result{
 				Err:     err,
@@ -94,9 +102,11 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 				Patches: conv(e.Patches())}
 	case v1.ETCache:
 		return &Execer{
-			state:     nil,
-			preFuncs:  []Handler{},
-			postFuncs: []Handler{},
+			state:    nil,
+			preFuncs: []Handler{},
+			postFuncs: []Handler{
+				&handlerImpl{fn: r.handleComputed},
+			},
 		}, &Result{}
 	default:
 		return &Execer{
@@ -124,6 +134,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
 					log.Info("create entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
@@ -194,6 +205,96 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 	}
 }
 
+func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
+	//@TODO
+	// 1. 检查 ret.path 和 订阅列表
+	var entityID string
+	mappers := make(map[string]mapper.Mapper)
+	for _, change := range result.Patches {
+		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
+			mp, _ := node.(mapper.Mapper)
+			mappers[mp.ID()] = mp
+		}
+	}
+
+	patches := make(map[string]Patch)
+	for id, mp := range mappers {
+		log.Debug("compute mapper", zfield.Eid(entityID), zfield.Mid(id))
+		for path, val := range r.computeMapper(ctx, mp) {
+			patches[path] = Patch{
+				Op:    OpReplace,
+				Path:  path,
+				Value: tdtl.New(val.Raw()),
+			}
+		}
+	}
+
+	for _, patch := range patches {
+		result.Patches = append(result.Patches, patch)
+	}
+
+	return result
+}
+
+func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
+	in := make(map[string]tdtl.Node)
+
+	// construct mapper input.
+
+	out, err := mp.Exec(in)
+	if nil != err {
+		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
+		return map[string]tdtl.Node{}
+	}
+
+	return out
+}
+
+func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
+	//@TODO
+	// 1. 检查 ret.path 和 订阅列表
+	var entityID string
+	var patches = make(map[string][]*v1.PatchData)
+	for _, change := range result.Patches {
+		var targets []string
+		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
+			mp, _ := node.(mapper.Mapper)
+			if entityID != mp.TargetEntity() {
+				targets = append(targets, mp.TargetEntity())
+			}
+		}
+
+		for _, target := range targets {
+			patches[target] = append(
+				patches[target],
+				&v1.PatchData{
+					Path:     change.Path,
+					Operator: string(OpReplace),
+					Value:    change.Value.Raw(),
+				})
+		}
+	}
+
+	// 2. dispatch.send()
+	for target, patch := range patches {
+		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+			Id:        util.IG().EvID(),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaType:     string(v1.ETCache),
+				v1.MetaEntityID: entityID,
+				v1.MetaSender:   target},
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: patch,
+				},
+			},
+		})
+	}
+
+	return result
+}
+
 //Runtime 处理 event
 func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) {
 	panic("implement me")
@@ -208,15 +309,6 @@ func (e *Runtime) Process(ctx context.Context, event v1.Event) (*Result, error) 
 	//}
 	//ret, err := mapper.Handle(ctx, event)
 	//return nil, nil
-}
-
-//处理订阅
-func (e *Runtime) handleSubscribe(ctx context.Context, ret *Result) *Result {
-	//@TODO
-	// 1. 检查 ret.path 和 订阅列表
-	// 2. 执行对应的订阅，
-	// 3. dispatch.send()
-	return ret
 }
 
 func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
@@ -254,6 +346,34 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 	}
 
 	return ret
+}
+
+func (r *Runtime) AppendMapper(mps []mapper.Mapper) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	for _, mp := range mps {
+		r.mappers[mp.ID()] = mp
+		for eid, pathes := range mp.SourceEntities() {
+			log.Info("watch path", zfield.Eid(eid))
+			for _, path := range pathes {
+				r.pathTree.Add(path, mp)
+			}
+		}
+	}
+
+	r.pathTree.Print()
+}
+
+func (r *Runtime) RemoveMapper(mp mapper.Mapper) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	delete(r.mappers, mp.ID())
+	for eid, pathes := range mp.SourceEntities() {
+		log.Info("watch path", zfield.Eid(eid))
+		for _, path := range pathes {
+			r.pathTree.Remove(path, mp)
+		}
+	}
 }
 
 func (r *Runtime) LoadEntity(id string) (Entity, error) {

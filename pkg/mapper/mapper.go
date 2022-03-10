@@ -18,37 +18,36 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
 type mapper struct {
-	id      string
 	version int64
-	tqlText string
+	mapper  dao.Mapper
 	tqlInst tdtl.TDTL
 }
 
-func NewMapper(id, tqlText string, version int64) (Mapper, error) {
-	tqlInst, err := tdtl.NewTDTL(tqlText, nil)
+func NewMapper(mp dao.Mapper, version int64) (Mapper, error) {
+	tqlInst, err := tdtl.NewTDTL(mp.TQL, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "construct mapper")
 	}
 	return &mapper{
-		id:      id,
+		mapper:  mp,
 		version: version,
-		tqlText: tqlText,
 		tqlInst: tqlInst,
 	}, nil
 }
 
 // ID returns mapper id.
 func (m *mapper) ID() string {
-	return m.id
+	return m.mapper.ID
 }
 
 // String returns MQL text.
 func (m *mapper) String() string {
-	return m.tqlText
+	return m.mapper.TQL
 }
 
 // TargetEntity returns target entity.
@@ -80,14 +79,14 @@ func (m *mapper) Tentacles() []Tentacler {
 		tentacles = append(tentacles, NewTentacle(TentacleTypeEntity, tentacleConf.SourceEntity, eItems, m.version))
 	}
 
-	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.id, mItems, m.version))
+	tentacles = append(tentacles, NewTentacle(TentacleTypeMapper, m.mapper.ID, mItems, m.version))
 
 	return tentacles
 }
 
 // Copy duplicate a mapper.
 func (m *mapper) Copy() Mapper {
-	mCopy, _ := NewMapper(m.id, m.tqlText, m.version)
+	mCopy, _ := NewMapper(m.mapper, m.version)
 	return mCopy
 }
 

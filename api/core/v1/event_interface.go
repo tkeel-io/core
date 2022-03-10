@@ -16,6 +16,7 @@ const (
 	MetaOwner           = "x-msg-owner"
 	MetaSource          = "x-msg-source"
 	MetaVersion         = "x-msg-version"
+	MetaSender          = "x-msg-sender"
 	MetaRequestID       = "x-msg-request-id"
 	MetaResponseStatus  = "x-msg-response-status"
 	MetaResponseErrCode = "x-msg-response-errcode"
