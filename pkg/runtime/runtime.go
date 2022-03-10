@@ -228,7 +228,7 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 		for _, node := range r.pathTree.
 			MatchPrefix(entityID + change.Path) {
 			tentacle, _ := node.(mapper.Tentacler)
-			if tentacle.Type() == "mapper" {
+			if tentacle.Type() == mapper.TentacleTypeMapper {
 				mappers[tentacle.TargetID()] = tentacle.Mapper()
 			}
 		}
@@ -255,19 +255,40 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 }
 
 func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
-	in := make(map[string]tdtl.Node)
+	if mc, has := r.mapperCaches[mp.ID()]; has {
+		in := make(map[string]tdtl.Node)
+		// construct mapper input.
+		for _, tentacle := range mc.Tentacles {
+			for _, item := range tentacle.Items() {
+				switch item.EntityID {
+				case mc.EntityID:
+					// get value from entities.
+					if state, ok := r.entities[item.EntityID]; ok {
+						in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
+					}
+				default:
+					// get value from cache.
+					if state, ok := r.caches[item.EntityID]; ok {
+						in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
+					}
+				}
+			}
+		}
 
-	// construct mapper input.
+		out, err := mp.Exec(in)
+		if nil != err {
+			log.Error("exec mapper",
+				zfield.ID(mp.ID()),
+				zfield.Eid(mp.TargetEntity()))
+			return map[string]tdtl.Node{}
+		}
 
-	out, err := mp.Exec(in)
-	if nil != err {
-		log.Error("exec mapper",
-			zfield.ID(mp.ID()),
-			zfield.Eid(mp.TargetEntity()))
-		return map[string]tdtl.Node{}
+		// clean nil result.
+
+		return out
 	}
 
-	return out
+	return map[string]tdtl.Node{}
 }
 
 func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {

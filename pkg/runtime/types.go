@@ -30,6 +30,7 @@ type Result struct {
 
 type Entity interface {
 	ID() string
+	Get(string) tdtl.Node
 	Handle(context.Context, *Result) *Result
 	Basic() *tdtl.Collect
 	Raw() []byte
@@ -98,6 +99,7 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 
 type MCache struct {
 	ID        string
+	EntityID  string
 	Mapper    mapper.Mapper
 	Tentacles []mapper.Tentacler
 }

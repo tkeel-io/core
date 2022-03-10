@@ -28,6 +28,10 @@ func (e *entity) ID() string {
 	return e.id
 }
 
+func (e *entity) Get(path string) tdtl.Node {
+	return e.state.Get(path)
+}
+
 func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 	if nil != in.Err {
 		return in

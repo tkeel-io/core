@@ -157,8 +157,9 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 		info := placement.Global().Select(eid)
 		if _, exists := res[info.ID]; !exists {
 			res[info.ID] = &MCache{
-				ID:     mp.ID(),
-				Mapper: mp}
+				ID:       mp.ID(),
+				Mapper:   mp,
+				EntityID: mp.TargetEntity()}
 		}
 		// append tentacles.
 		res[info.ID].Tentacles =
