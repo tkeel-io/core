@@ -38,9 +38,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const evIDPrefix = "ev"
-const reqIDPrefix = "req"
-const eventSender = "Core.APIManager"
 const respondFmt = "http://%s:%d/v1/respond"
 const (
 	sysET = string(v1.ETSystem)
@@ -308,8 +305,8 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	// hold request, wait response.
-	resp := respWaiter.Wait()
-	if resp.Status != types.StatusOK {
+
+	if resp := respWaiter.Wait(); resp.Status != types.StatusOK {
 		log.Error("delete entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
 		return xerrors.New(resp.ErrCode)
@@ -408,7 +405,7 @@ func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
 	return nil
 }
 
-func checkTQLs(en *Base) error {
+func checkTQLs(en *Base) error { //nolint
 	// check TQL.
 	var err error
 	defer func() {

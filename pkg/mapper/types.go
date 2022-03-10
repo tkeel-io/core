@@ -41,7 +41,7 @@ type Mapper interface {
 	// SourceEntities returns source entities.
 	SourceEntities() map[string][]string
 	// Tentacles returns tentacles.
-	Tentacles() []Tentacler
+	Tentacles() map[string][]Tentacler
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
@@ -55,6 +55,7 @@ type Tentacler interface {
 	ID() string
 	// Type returns tentacle type.
 	Type() TentacleType
+	String() string
 	// Mapper return mapper.
 	Mapper() Mapper
 	// TargetID returns target id.

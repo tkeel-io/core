@@ -55,9 +55,11 @@ func TestMapper(t *testing.T) {
 
 			tentacles := m.Tentacles()
 			t.Logf("parse tentacles, count %d.", len(tentacles))
-			for index, tentacle := range tentacles {
-				t.Logf("tentacle.%d, type: %s, target: %s, items: %s.",
-					index, tentacle.Type(), tentacle.TargetID(), tentacle.Items())
+			for _, tens := range tentacles {
+				for index, tentacle := range tens {
+					t.Logf("tentacle.%d, type: %s, target: %s, items: %s.",
+						index, tentacle.Type(), tentacle.TargetID(), tentacle.Items())
+				}
 			}
 
 			t.Log("parse target entity: ", m.TargetEntity())
@@ -74,7 +76,7 @@ func TestMapper(t *testing.T) {
 }
 
 func TestMapper1233(t *testing.T) {
-	tqlText := "insert into 4c1e33a1-6899-4643-a6b3-46cf37950b7f select 54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
+	tqlText := "insert into x4c1e33a1-6899-4643-a6b3-46cf37950b7f select x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/x4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
 	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
 	assert.Nil(t, err)
 	t.Log("id: ", mapperIns.ID())
@@ -85,7 +87,7 @@ func TestMapper1233(t *testing.T) {
 	}
 
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
-		"54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
+		"x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
 	})
 
 	assert.Nil(t, err)
@@ -93,7 +95,7 @@ func TestMapper1233(t *testing.T) {
 }
 
 func TestMapper123(t *testing.T) {
-	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath, aaa.p1`
+	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath, aaa.p1, b3a22c80-6afe-44a0-91b7-f1e49f3c962e.temp * 2 as temp2 `
 
 	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
 	assert.Nil(t, err)
@@ -103,6 +105,9 @@ func TestMapper123(t *testing.T) {
 	for _, tentacle := range mapperIns.Tentacles() {
 		t.Log("tentacle: ", tentacle)
 	}
+
+	tentacles := mapperIns.Tentacles()
+	t.Log("tentacles: ", tentacles)
 
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
 		"x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.New(`"tom"`),

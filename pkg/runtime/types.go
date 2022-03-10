@@ -95,23 +95,8 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 	return result
 }
 
-type Mapper interface {
-	ID() string
-	TargetEntity() string
-	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
-}
-
-type Tentacler interface {
-	ID() string
-	Type() string
-	String() string
-	Mapper() Mapper
-	Target() string
-	Items() []mapper.WatchKey
-}
-
 type MCache struct {
 	ID        string
-	Mapper    Mapper
-	Tentacles []Tentacler
+	Mapper    mapper.Mapper
+	Tentacles []mapper.Tentacler
 }

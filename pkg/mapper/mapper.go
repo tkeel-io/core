@@ -61,25 +61,28 @@ func (m *mapper) SourceEntities() map[string][]string {
 }
 
 // Tentacles returns tentacles.
-func (m *mapper) Tentacles() []Tentacler {
+func (m *mapper) Tentacles() map[string][]Tentacler {
 	tentacleConfigs := tentacles(m.tqlInst)
-	tentacles := make([]Tentacler, 0, len(tentacleConfigs))
+	tentacles := make(map[string][]Tentacler)
 	mItems := make([]WatchKey, 0)
 
 	for _, tentacleConf := range tentacleConfigs {
+		entityID := tentacleConf.SourceEntity
 		eItems := make([]WatchKey, len(tentacleConf.PropertyKeys))
 		for index, item := range tentacleConf.PropertyKeys {
 			watchKey := WatchKey{
-				EntityID:    tentacleConf.SourceEntity,
-				PropertyKey: item,
-			}
+				EntityID:    entityID,
+				PropertyKey: item}
 			eItems[index] = watchKey
 			mItems = append(mItems, watchKey)
 		}
-		tentacles = append(tentacles, NewTentacle(nil, TentacleTypeEntity, tentacleConf.SourceEntity, eItems, m.version))
+		tentacles[entityID] = append(tentacles[entityID],
+			NewTentacle(nil, TentacleTypeEntity, entityID, eItems, m.version))
 	}
 
-	tentacles = append(tentacles, NewTentacle(m, TentacleTypeMapper, m.mapper.ID, mItems, m.version))
+	targetEid := m.TargetEntity()
+	tentacles[targetEid] = append(tentacles[targetEid],
+		NewTentacle(m, TentacleTypeMapper, m.mapper.ID, mItems, m.version))
 
 	return tentacles
 }

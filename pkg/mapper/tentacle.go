@@ -52,6 +52,10 @@ func (t *tentacle) TargetID() string {
 	return t.targetID
 }
 
+func (t *tentacle) String() string {
+	return t.targetID + t.id
+}
+
 // Items returns watch keys(watchKey=entityId#propertyKey).
 func (t *tentacle) Items() []WatchKey {
 	return t.items

@@ -23,11 +23,10 @@ import (
 type Runtime struct {
 	id           string
 	pathTree     *path.Tree
-	caches       map[string]Entity //存放其他Runtime的实体
-	entities     map[string]Entity //存放Runtime的实体
+	caches       map[string]Entity // 存放其他Runtime的实体.
+	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
-	//inbox    Inbox
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -47,6 +46,10 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		cancel:       cancel,
 		ctx:          ctx,
 	}
+}
+
+func (r *Runtime) ID() string {
+	return r.id
 }
 
 func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessage) {
@@ -211,13 +214,13 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	var entityID string
-	mappers := make(map[string]Mapper)
+	mappers := make(map[string]mapper.Mapper)
 	for _, change := range result.Patches {
 		for _, node := range r.pathTree.
 			MatchPrefix(entityID + change.Path) {
-			tentacle, _ := node.(Tentacler)
+			tentacle, _ := node.(mapper.Tentacler)
 			if tentacle.Type() == "mapper" {
-				mappers[tentacle.Target()] = tentacle.Mapper()
+				mappers[tentacle.TargetID()] = tentacle.Mapper()
 			}
 		}
 	}
@@ -242,7 +245,7 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	return result
 }
 
-func (r *Runtime) computeMapper(ctx context.Context, mp Mapper) map[string]tdtl.Node {
+func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
 	in := make(map[string]tdtl.Node)
 
 	// construct mapper input.
@@ -307,8 +310,8 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 
 func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 	event := ret.Event
-	log.Debug("handle event, callback.", zfield.ID(event.ID()),
-		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+	//  log.Debug("handle event, callback.", zfield.ID(event.ID()),
+	// 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
 		switch ret.Err {

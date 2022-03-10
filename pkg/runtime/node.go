@@ -71,7 +71,11 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 	if _, has := n.runtimes[rid]; !has {
 		log.Info("create container", zfield.ID(rid))
 		rt := NewRuntime(n.ctx, rid, n.dispatch)
-		rt.AppendMapper(MCache{})
+		for _, mp := range n.mapperSlice() {
+			if mc, has := n.mapper(mp)[rt.ID()]; has {
+				rt.AppendMapper(*mc)
+			}
+		}
 		n.runtimes[rid] = rt
 	}
 
@@ -105,7 +109,7 @@ func (n *Node) listMetadata() {
 					zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 				continue
 			}
-			log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+			log.Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 			n.mappers[mp.ID] = mpIns
 		}
 	})
@@ -130,8 +134,10 @@ func (n *Node) watchMetadata() {
 
 			// cache mapper.
 			n.mappers[mp.ID] = mpIns
-			for _, rt := range n.runtimes {
-				rt.AppendMapper(MCache{})
+			for rtID, mc := range n.mapper(mpIns) {
+				if rt, has := n.runtimes[rtID]; has {
+					rt.AppendMapper(*mc)
+				}
 			}
 		})
 }
@@ -142,4 +148,22 @@ func (n *Node) mapperSlice() []mapper.Mapper {
 		mps = append(mps, mp)
 	}
 	return mps
+}
+
+func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
+	res := make(map[string]*MCache)
+	for eid, tentacles := range mp.Tentacles() {
+		// select runtime.
+		info := placement.Global().Select(eid)
+		if _, exists := res[info.ID]; !exists {
+			res[info.ID] = &MCache{
+				ID:     mp.ID(),
+				Mapper: mp}
+		}
+		// append tentacles.
+		res[info.ID].Tentacles =
+			append(res[info.ID].Tentacles, tentacles...)
+	}
+
+	return res
 }
