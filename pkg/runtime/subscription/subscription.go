@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -178,8 +177,8 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 	log.Debug("publish data", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Payload(payload))
 
-	ctOpts := daprSDK.PublishEventWithContentType("application/json")
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
+	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
 		log.Error("invoke realtime subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(payload)))
@@ -223,8 +222,8 @@ func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context)
 		return nil
 	}
 
-	ctOpts := daprSDK.PublishEventWithContentType("application/json")
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
+	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
 		log.Error("invoke period subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
@@ -268,8 +267,8 @@ func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context
 		return nil
 	}
 
-	ctOpts := daprSDK.PublishEventWithContentType("application/json")
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
+	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
 		log.Error("invoke changed subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
