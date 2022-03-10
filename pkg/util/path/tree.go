@@ -32,20 +32,6 @@ func (n *node) clearValues() {
 	n.values = make([]Node, 0)
 }
 
-func (n *node) string(i int) string {
-	str := ""
-	if i != 0 {
-		str = fmt.Sprintf("%d", len(n.values))
-	}
-
-	for key, node := range n.children {
-		str += fmt.Sprintf("\n| %s'%s' => %s",
-			strings.Repeat(" ", i*2), key, node.string(i+1))
-	}
-
-	return str
-}
-
 // A Tree implements a thread-safe path tree.
 type Tree struct {
 	// The separator character. Default: ".".
@@ -463,7 +449,7 @@ func contains(list []Node, value Node) bool {
 func (t *Tree) Print() {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	fmt.Println(t.String())
+	fmt.Println(t.String()) //nolint
 	space := "+"
 	strs := []string{}
 	t.print(strs, t.root, space)
@@ -478,7 +464,7 @@ func (t *Tree) String() string {
 	return strings.Join(strs, "")
 }
 
-func (t *Tree) print(strs []string, n *node, space string) []string {
+func (t *Tree) print(strs []string, n *node, space string) []string { //nolint
 	strs = append(strs, fmt.Sprintln(space, "0"))
 	for _, vv := range n.values {
 		strs = append(strs, fmt.Sprintln(space, "-", vv.ID(), "-", vv.String()))

@@ -23,7 +23,7 @@ type kafkaMetadata struct {
 	Timeout int64    `json:"timeout" mapstructure:"timeout"`
 }
 
-func parseUrl(sink string) (*kafkaMetadata, error) {
+func parseURL(sink string) (*kafkaMetadata, error) {
 	urlIns, err := url.Parse(sink)
 	if nil != err {
 		return nil, errors.Wrap(err, "parse sink")
@@ -41,7 +41,7 @@ func parseUrl(sink string) (*kafkaMetadata, error) {
 	}, nil
 }
 
-func NewKafkaPubsub(urlText string) (*KafkaPubsub, error) {
+func NewKafkaPubsub(urlText string) (*Pubsub, error) {
 	var (
 		err       error
 		client    sarama.Client
@@ -49,7 +49,7 @@ func NewKafkaPubsub(urlText string) (*KafkaPubsub, error) {
 		producer  sarama.SyncProducer
 	)
 
-	if kafkaMeta, err = parseUrl(urlText); nil != err {
+	if kafkaMeta, err = parseURL(urlText); nil != err {
 		return nil, errors.Wrap(err, "decode pubsub.kafka configuration")
 	}
 
@@ -64,14 +64,14 @@ func NewKafkaPubsub(urlText string) (*KafkaPubsub, error) {
 		return nil, errors.Wrap(err, "create kafka producer instance")
 	}
 
-	return &KafkaPubsub{
+	return &Pubsub{
 		kafkaClient:   client,
 		kafkaMetadata: kafkaMeta,
 		kafkaProducer: producer,
 	}, nil
 }
 
-type KafkaPubsub struct {
+type Pubsub struct {
 	id            string
 	kafkaClient   sarama.Client
 	kafkaConsumer sarama.ConsumerGroup
@@ -79,11 +79,11 @@ type KafkaPubsub struct {
 	kafkaMetadata *kafkaMetadata
 }
 
-func (k *KafkaPubsub) ID() string {
+func (k *Pubsub) ID() string {
 	return k.kafkaMetadata.Topic
 }
 
-func (k *KafkaPubsub) Send(ctx context.Context, event v1.Event) error {
+func (k *Pubsub) Send(ctx context.Context, event v1.Event) error {
 	var (
 		err      error
 		bytes    []byte
@@ -108,11 +108,11 @@ func (k *KafkaPubsub) Send(ctx context.Context, event v1.Event) error {
 	return errors.Wrap(err, "kafka client send message")
 }
 
-type KafkaReceiver interface {
+type KafkaReceiver interface { //nolint
 	HandleMessage(context.Context, *sarama.ConsumerMessage) error
 }
 
-func (k *KafkaPubsub) Received(ctx context.Context, receiver KafkaReceiver) error {
+func (k *Pubsub) Received(ctx context.Context, receiver KafkaReceiver) error {
 	c, err := sarama.NewConsumerGroupFromClient(k.kafkaMetadata.Group, k.kafkaClient)
 	if nil != err {
 		log.Error("create group consumer instance", zfield.ID(k.id), zfield.Topic(k.kafkaMetadata.Topic),
@@ -154,11 +154,11 @@ func (k *KafkaPubsub) Received(ctx context.Context, receiver KafkaReceiver) erro
 	return nil
 }
 
-func (k *KafkaPubsub) Commit(v interface{}) error {
+func (k *Pubsub) Commit(v interface{}) error {
 	return nil
 }
 
-func (k *KafkaPubsub) Close() error {
+func (k *Pubsub) Close() error {
 	log.Info("pubsub.noop close", zfield.ID(k.id))
 	return nil
 }

@@ -53,7 +53,7 @@ func (n *Node) Start(cfg NodeConf) error {
 	n.initializeMetadata()
 	for index := range cfg.Sources {
 		var err error
-		var sourceIns *xkafka.KafkaPubsub
+		var sourceIns *xkafka.Pubsub
 		if sourceIns, err = xkafka.NewKafkaPubsub(cfg.Sources[index]); nil != err {
 			return errors.Wrap(err, "create source instance")
 		} else if err = sourceIns.Received(n.ctx, n); nil != err {
@@ -143,7 +143,7 @@ func (n *Node) watchMetadata() {
 }
 
 func (n *Node) mapperSlice() []mapper.Mapper {
-	var mps []mapper.Mapper
+	mps := []mapper.Mapper{}
 	for _, mp := range n.mappers {
 		mps = append(mps, mp)
 	}

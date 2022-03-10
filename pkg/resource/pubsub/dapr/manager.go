@@ -2,7 +2,6 @@ package dapr
 
 import (
 	"context"
-	"sync"
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -31,12 +30,6 @@ const (
 var (
 	clusterConsumer = defaultConsumer
 )
-
-type ConsumerManager struct {
-	lock            sync.RWMutex
-	clusterConsumer *Consumer
-	nodeConsumers   map[string][]*Consumer
-}
 
 func Register(consumer *Consumer) {
 	clusterConsumer = consumer

@@ -266,8 +266,9 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 	params := req.Properties.AsInterface()
 	switch params.(type) {
 	case []interface{}:
+		var data []byte
 		patchData := make([]PatchData, 0)
-		if data, err := json.Marshal(params); nil != err {
+		if data, err = json.Marshal(params); nil != err {
 			log.Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "json marshal patch data")
 		} else if err = json.Unmarshal(data, &patchData); nil != err {
@@ -762,7 +763,7 @@ func CopyFrom(raw []byte, patches ...*pb.PatchData) (map[string]interface{}, boo
 }
 
 func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, bool, error) {
-	var patches []*pb.PatchData
+	patches := []*pb.PatchData{}
 	for _, path := range paths {
 		patches = append(patches, &pb.PatchData{
 			Path:     path,

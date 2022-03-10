@@ -17,7 +17,6 @@ type Patch struct {
 	Value *tdtl.Collect
 }
 
-//Feed 包含实体最新状态以及变更
 type Result struct {
 	// TODO: 将 error 放到这里的原因： 在UpdateWithEvent无论失败还是成功，callback都是可能被执行的.
 	TTL      int
@@ -76,7 +75,9 @@ func (e *Execer) Exec(ctx context.Context, result *Result) *Result {
 	}
 
 	// execute preFuncs.
-	handlers := append(e.preFuncs, e.execFunc)
+	handlers := []Handler{}
+	handlers = append(handlers, e.preFuncs...)
+	handlers = append(handlers, e.execFunc)
 	handlers = append(handlers, e.postFuncs...)
 
 	for _, handler := range handlers {

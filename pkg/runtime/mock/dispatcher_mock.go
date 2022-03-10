@@ -4,9 +4,10 @@ import (
 	"context"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/dispatch"
 )
 
-func NewDispatcher() *dispatcher {
+func NewDispatcher() dispatch.Dispatcher {
 	return &dispatcher{}
 }
 

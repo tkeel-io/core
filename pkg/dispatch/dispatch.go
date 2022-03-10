@@ -12,7 +12,7 @@ import (
 	"github.com/tkeel-io/core/pkg/util/transport"
 )
 
-type DispatchConf struct {
+type DispatchConf struct { //nolint
 	Name        string
 	Upstreams   []string
 	Downstreams []string
@@ -25,7 +25,7 @@ func New(ctx context.Context) *dispatcher { //nolint
 		ctx:         ctx,
 		cancel:      cancel,
 		transmitter: transport.New(transport.TransTypeHTTP),
-		downstreams: make(map[string]*xkafka.KafkaPubsub),
+		downstreams: make(map[string]*xkafka.Pubsub),
 	}
 }
 
@@ -34,7 +34,7 @@ type dispatcher struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	transmitter transport.Transmitter
-	downstreams map[string]*xkafka.KafkaPubsub
+	downstreams map[string]*xkafka.Pubsub
 }
 
 func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
@@ -53,7 +53,6 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 	}
 
 	return errors.Wrap(err, "dispatch event")
-
 }
 
 func (d *dispatcher) Start(ctx context.Context, cfg DispatchConf) error {
@@ -73,7 +72,8 @@ func (d *dispatcher) Start(ctx context.Context, cfg DispatchConf) error {
 func (d *dispatcher) dispatch(ctx context.Context, ev v1.Event) error {
 	eid := ev.Entity()
 	info := placement.Global().Select(eid)
-	return d.downstreams[info.ID].Send(ctx, ev)
+	err := d.downstreams[info.ID].Send(ctx, ev)
+	return errors.Wrap(err, "dispatch event")
 }
 
 func (d *dispatcher) initUpstream(ctx context.Context, streams []string) error {

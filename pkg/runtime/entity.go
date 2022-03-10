@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/tdtl"
 )
@@ -20,7 +21,7 @@ func DefaultEntity(id string) Entity {
 func NewEntity(id string, state []byte) (Entity, error) {
 	s := tdtl.New(state)
 	s.Set("scheme", tdtl.New([]byte("{}")))
-	return &entity{id: id, state: *s}, s.Error()
+	return &entity{id: id, state: *s}, errors.Wrap(s.Error(), "new entity")
 }
 
 func (e *entity) ID() string {
@@ -65,7 +66,6 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 			changes = append(changes,
 				Patch{Op: patch.Op, Path: patch.Path, Value: patch.Value})
 		}
-
 	}
 
 	if cc.Error() == nil {

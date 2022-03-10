@@ -52,7 +52,7 @@ func (r *Runtime) ID() string {
 	return r.id
 }
 
-func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessage) {
+func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessage) {
 	var err error
 	var ev v1.ProtoEvent
 	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
@@ -60,7 +60,7 @@ func (e *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 		return
 	}
 
-	e.HandleEvent(ctx, &ev)
+	r.HandleEvent(ctx, &ev)
 }
 
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
@@ -122,7 +122,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 	}
 }
 
-//处理实体生命周期
+// 处理实体生命周期.
 func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Result) {
 	log.Info("handle system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
@@ -211,8 +211,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 }
 
 func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
-	//@TODO
-	// 1. 检查 ret.path 和 订阅列表
+	// 1. 检查 ret.path 和 订阅列表.
 	var entityID string
 	mappers := make(map[string]mapper.Mapper)
 	for _, change := range result.Patches {
@@ -262,7 +261,6 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 }
 
 func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
-	//@TODO
 	// 1. 检查 ret.path 和 订阅列表
 	var entityID string
 	var targets []string
@@ -314,8 +312,7 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 	// 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
-		switch ret.Err {
-		case nil:
+		if ret.Err == nil {
 			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
@@ -327,7 +324,7 @@ func (r *Runtime) handleCallback(ctx context.Context, ret *Result) *Result {
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			r.dispatcher.Dispatch(ctx, ev)
-		default:
+		} else {
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
 				Timestamp: time.Now().UnixNano(),
@@ -387,7 +384,7 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 }
 
 func conv(patches []*v1.PatchData) []Patch {
-	var res []Patch
+	res := make([]Patch, 0)
 	for _, patch := range patches {
 		res = append(res, Patch{
 			Op:    PatchOp(patch.Operator),
