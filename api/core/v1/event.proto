@@ -1,0 +1,46 @@
+
+syntax = "proto3";
+
+package api.core.v1;
+
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+
+ 
+
+message SystemData {
+    string operator = 1;
+    bytes data      = 2;
+}
+
+message ProtoEvent {
+    string id = 1;
+    int64 timestamp = 2;
+    string callback = 3;
+    map<string, string> metadata = 4;
+    oneof data {
+        bytes raw_data = 8;
+        SystemData system_data = 10;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
