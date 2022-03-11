@@ -32,14 +32,14 @@ func (e *entity) Get(path string) tdtl.Node {
 	return e.state.Get(path)
 }
 
-func (e *entity) Handle(ctx context.Context, in *Result) *Result {
-	if nil != in.Err {
-		return in
+func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
+	if nil != feed.Err {
+		return feed
 	}
 
 	var changes []Patch
 	cc := e.state.Copy()
-	for _, patch := range in.Patches {
+	for _, patch := range feed.Patches {
 		switch patch.Op {
 		case OpAdd:
 			cc.Append(patch.Path, patch.Value)
@@ -52,7 +52,7 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 		case OpReplace:
 			cc.Set(patch.Path, patch.Value)
 		default:
-			return &Result{Err: xerrors.ErrPatchPathInvalid}
+			return &Feed{Err: xerrors.ErrPatchPathInvalid}
 		}
 
 		if nil != cc.Error() {
@@ -77,10 +77,9 @@ func (e *entity) Handle(ctx context.Context, in *Result) *Result {
 	}
 
 	// in.Patches 处理完毕，丢弃.
-	return &Result{
+	return &Feed{
 		Err:     cc.Error(),
-		State:   cc.Raw(),
-		Event:   in.Event,
+		Event:   feed.Event,
 		Changes: changes}
 }
 

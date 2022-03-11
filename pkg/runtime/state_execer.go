@@ -13,28 +13,32 @@ import (
 
 */
 
-type XHandler interface {
+type Handler interface {
 	Handle(context.Context, *Feed) *Feed
 }
 
 type Feed struct {
 	TTL      int
 	Err      error
-	Exec     *Exec
+	Exec     *Execer
 	Event    v1.Event
 	EntityID string
 	Patches  []Patch
 	Changes  []Patch
 }
 
-type Exec struct {
+// The *Funcs functions are executed in the following order:
+//   * preFuncs()
+//   * execFunc()
+//   * postFuncs()
+type Execer struct {
 	state     Entity
-	preFuncs  []XHandler
-	execFunc  XHandler
-	postFuncs []XHandler
+	preFuncs  []Handler
+	execFunc  Handler
+	postFuncs []Handler
 }
 
-func (e *Exec) Exec(ctx context.Context, feed *Feed) *Feed {
+func (e *Execer) Exec(ctx context.Context, feed *Feed) *Feed {
 	if nil != feed.Err {
 		return feed
 	}

@@ -34,9 +34,8 @@ func TestEntity_Handle(t *testing.T) {
 	en, err := NewEntity("en-123", []byte(`{"properties": {"temp": 20}}`))
 	assert.Nil(t, err)
 
-	in := []*Result{
+	in := []*Feed{
 		{
-			State: en.Raw(),
 			Event: nil,
 			Patches: []Patch{
 				{

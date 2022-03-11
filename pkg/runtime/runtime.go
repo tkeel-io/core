@@ -67,21 +67,21 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 }
 
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
-	execer, result := r.PrepareEvent(ctx, event)
-	result = execer.Exec(ctx, result)
+	execer, feed := r.PrepareEvent(ctx, event)
+	feed = execer.Exec(ctx, feed)
 
 	// call callback once.
-	r.handleCallback(ctx, result)
-	return result.Err
+	r.handleCallback(ctx, feed)
+	return feed.Err
 }
 
-func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Result) {
+func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
 	log.Info("handle event", zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		execer, result := r.handleSystemEvent(ctx, ev)
-		return execer, result
+		execer, feed := r.handleSystemEvent(ctx, ev)
+		return execer, feed
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
@@ -91,46 +91,52 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 			state = DefaultEntity(ev.Entity())
 		}
 
-		return &Execer{
-				state:    state,
-				preFuncs: []Handler{},
-				execFunc: state,
-				postFuncs: []Handler{
-					&handlerImpl{fn: r.handleSubscribe},
-					&handlerImpl{fn: r.handleComputed},
-				},
-			}, &Result{
-				Err:      err,
-				Event:    ev,
-				State:    state.Raw(),
-				EntityID: ev.Entity(),
-				Patches:  conv(e.Patches())}
+		execer := &Execer{
+			state:    state,
+			preFuncs: []Handler{},
+			execFunc: state,
+			postFuncs: []Handler{
+				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: r.handleComputed},
+			}}
+
+		return execer, &Feed{
+			Err:      err,
+			Event:    ev,
+			Exec:     execer,
+			EntityID: ev.Entity(),
+			Patches:  conv(e.Patches())}
 	case v1.ETCache:
 		// load cache.
-		state, err := r.LoadEntity(ev.Entity())
+		entityID := ev.Attr(v1.MetaSender)
+		state, err := r.LoadEntity(entityID)
 		if nil != err {
-			log.Error("load cache entity", zfield.Eid(ev.Entity()),
-				zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
-			state = DefaultEntity(ev.Entity())
+			log.Error("load cache entity", zfield.Header(ev.Attributes()),
+				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zap.String("cache_entity", entityID))
+			state = DefaultEntity(entityID)
 		}
 
-		return &Execer{
-				state:    state,
-				preFuncs: []Handler{},
-				postFuncs: []Handler{
-					&handlerImpl{fn: r.handleComputed},
-					&handlerImpl{fn: r.handleSubscribe},
-				}}, &Result{
-				State:    state.Raw(),
-				Event:    ev,
-				EntityID: "",
-			}
+		e, _ := ev.(v1.PatchEvent)
+		execer := &Execer{
+			state:    state,
+			execFunc: state,
+			preFuncs: []Handler{},
+			postFuncs: []Handler{
+				&handlerImpl{fn: r.handleComputed},
+				&handlerImpl{fn: r.handleSubscribe},
+			}}
+
+		return execer, &Feed{
+			Event:    ev,
+			Exec:     execer,
+			EntityID: entityID,
+			Patches:  conv(e.Patches())}
 	default:
 		return &Execer{
 				state:     nil,
 				preFuncs:  []Handler{},
 				postFuncs: []Handler{},
-			}, &Result{
+			}, &Feed{
 				Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
 				EntityID: ev.Entity(),
 			}
@@ -138,7 +144,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 }
 
 // 处理实体生命周期.
-func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Result) {
+func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
 	log.Info("handle system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
@@ -155,20 +161,19 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleSubscribe},
 				&handlerImpl{fn: r.handleComputed},
-				&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					log.Info("create entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
-					return result
+					return feed
 				}},
 			}}
 
 		// check entity exists.
 		if _, exists := r.entities[ev.Entity()]; exists {
-			return execer, &Result{
+			return execer, &Feed{
 				Event:    ev,
 				EntityID: ev.Entity(),
-				Err:      xerrors.ErrEntityAleadyExists,
-				State:    DefaultEntity(ev.Entity()).Raw()}
+				Err:      xerrors.ErrEntityAleadyExists}
 		}
 
 		// new entity.
@@ -176,69 +181,70 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 		if nil != err {
 			log.Error("create entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
-			return execer, &Result{
+			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
-				EntityID: ev.Entity(),
-				State:    DefaultEntity(ev.Entity()).Raw()}
+				EntityID: ev.Entity()}
 		}
 
 		r.entities[ev.Entity()] = state
 		execer.state = state
 		execer.execFunc = state
-		return execer, &Result{
+		return execer, &Feed{
 			Event:    ev,
-			EntityID: ev.Entity(),
-			State:    action.GetData()}
+			Exec:     execer,
+			EntityID: ev.Entity()}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
-		return &Execer{
-				state:    state,
-				execFunc: state,
-				preFuncs: []Handler{
-					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-						// TODO:
-						//		0. 删除etcd中的mapper.
-						//		1. 从状态存储中删除（可标记）
-						//		2. 从搜索中删除（可标记）
-						// 		3. 从Runtime 中删除.
-						delete(r.entities, ev.Entity())
-						return result
-					}}},
-				postFuncs: []Handler{
-					&handlerImpl{fn: r.handleSubscribe},
-					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
-						log.Info("delete entity successed", zfield.Eid(ev.Entity()),
-							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
-						return result
-					}}},
-			}, &Result{
-				Err:      err,
-				Event:    ev,
-				State:    state.Raw(),
-				EntityID: ev.Entity()}
+		execer := &Execer{
+			state:    state,
+			execFunc: state,
+			preFuncs: []Handler{
+				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
+					// TODO:
+					//		0. 删除etcd中的mapper.
+					//		1. 从状态存储中删除（可标记）
+					//		2. 从搜索中删除（可标记）
+					// 		3. 从Runtime 中删除.
+					delete(r.entities, ev.Entity())
+					return feed
+				}}},
+			postFuncs: []Handler{
+				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
+					log.Info("delete entity successed", zfield.Eid(ev.Entity()),
+						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+					return feed
+				}}},
+		}
+
+		return execer, &Feed{
+			Err:      err,
+			Event:    ev,
+			Exec:     execer,
+			EntityID: ev.Entity()}
 	default:
 		return &Execer{
 				state:    DefaultEntity(ev.Entity()),
 				preFuncs: []Handler{},
 				execFunc: DefaultEntity(ev.Entity()),
 				postFuncs: []Handler{
-					&handlerImpl{fn: func(ctx context.Context, result *Result) *Result {
+					&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 						log.Error("event type not support", zfield.Eid(ev.Entity()),
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
-						return result
-					}}}}, &Result{
+						return feed
+					}}}}, &Feed{
 				Event:    ev,
 				EntityID: ev.Entity(),
 				Err:      xerrors.ErrInternal}
 	}
 }
 
-func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
+func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
-	entityID := result.EntityID
+	entityID := feed.EntityID
 	mappers := make(map[string]mapper.Mapper)
-	for _, change := range result.Patches {
+	for _, change := range feed.Patches {
 		for _, node := range r.pathTree.
 			MatchPrefix(entityID + change.Path) {
 			tentacle, _ := node.(mapper.Tentacler)
@@ -262,10 +268,10 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 	}
 
 	for _, patch := range patches {
-		result.Patches = append(result.Patches, patch)
+		feed.Patches = append(feed.Patches, patch)
 	}
 
-	return result
+	return feed
 }
 
 func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
@@ -313,11 +319,11 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 		return map[string]tdtl.Node{}
 	}
 
-	// clean nil result.
+	// clean nil feed.
 	for path, val := range out {
 		if val == nil || val.Type() == tdtl.Null ||
 			val.Type() == tdtl.Undefined || val.Error() != nil {
-			log.Warn("invalid computed result", zap.Any("value", val), zfield.Mid(mp.ID()))
+			log.Warn("invalid computed feed", zap.Any("value", val), zfield.Mid(mp.ID()))
 			delete(out, path)
 		}
 	}
@@ -325,12 +331,12 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	return out
 }
 
-func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
+func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
 	var targets []string
-	entityID := result.EntityID
+	entityID := feed.EntityID
 	var patches = make(map[string][]*v1.PatchData)
-	for _, change := range result.Patches {
+	for _, change := range feed.Patches {
 		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
 			mp, _ := node.(mapper.Tentacler)
 			if entityID != mp.TargetID() {
@@ -368,17 +374,17 @@ func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
 		})
 	}
 
-	return result
+	return feed
 }
 
-func (r *Runtime) handleCallback(ctx context.Context, result *Result) error {
+func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	var err error
-	event := result.Event
+	event := feed.Event
 	log.Debug("handle event, callback.", zfield.ID(event.ID()),
 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
-		if result.Err == nil {
+		if feed.Err == nil {
 			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
@@ -386,7 +392,7 @@ func (r *Runtime) handleCallback(ctx context.Context, result *Result) error {
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: result.State}}
+					RawData: []byte(``)}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			err = r.dispatcher.Dispatch(ctx, ev)
@@ -400,7 +406,7 @@ func (r *Runtime) handleCallback(ctx context.Context, result *Result) error {
 					RawData: []byte{}}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
-			ev.SetAttr(v1.MetaResponseErrCode, result.Err.Error())
+			ev.SetAttr(v1.MetaResponseErrCode, feed.Err.Error())
 			err = r.dispatcher.Dispatch(ctx, ev)
 		}
 	}
