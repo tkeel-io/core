@@ -126,11 +126,11 @@ func (d *Dao) RangeQueue(ctx context.Context, rev int64, handler QueueHandler) {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
 			log.Error("range queue failure", zap.Error(err), zfield.Prefix(prefix),
-				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		} else if len(resp.Kvs) == 0 {
 			log.Info("range queue completed", zfield.Prefix(prefix), zfield.Count(count),
-				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		}
 

@@ -10,6 +10,7 @@ var (
 	ErrEntityNotFound           = errors.New("Core.Entity.NotFound")
 	ErrEntityAleadyExists       = errors.New("Core.Entity.Already.Exists")
 	ErrInvalidEntityParams      = errors.New("Core.Entity.Params.Invalid")
+	ErrRuntimeNotExists         = errors.New("Core.Runtime.NotExists")
 	ErrMapperNotFound           = errors.New("Core.Mapper.NotFound")
 	ErrQueueNotFound            = errors.New("Core.Queue.NotFound")
 	ErrNodeNotExist             = errors.New("Core.Cluster.Node.NotExist")

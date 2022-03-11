@@ -104,11 +104,11 @@ func (d *Dao) ListMapper(ctx context.Context, rev int64, req *ListMapperReq) ([]
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
 			log.Error("list mapper", zap.Error(err), zfield.Prefix(prefix),
-				zfield.Count(count), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return mappers, errors.Wrap(err, "list mapper")
 		} else if len(resp.Kvs) == 0 {
 			log.Info("list mapper", zfield.Prefix(prefix),
-				zfield.Count(count), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return mappers, nil
 		}
 
@@ -151,11 +151,11 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
 			log.Error("range mapper failure", zap.Error(err), zfield.Prefix(prefix),
-				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		} else if len(resp.Kvs) == 0 {
 			log.Info("range mapper completed", zfield.Prefix(prefix), zfield.Count(count),
-				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.Elapsed()))
+				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		}
 

@@ -29,6 +29,7 @@ type Runtime struct {
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
 
+	mlock  sync.RWMutex
 	lock   sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -44,6 +45,7 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		dispatcher:   dispatcher,
 		pathTree:     path.New(),
 		lock:         sync.RWMutex{},
+		mlock:        sync.RWMutex{},
 		cancel:       cancel,
 		ctx:          ctx,
 	}
@@ -104,13 +106,25 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Resu
 				EntityID: ev.Entity(),
 				Patches:  conv(e.Patches())}
 	case v1.ETCache:
+		// load cache.
+		state, err := r.LoadEntity(ev.Entity())
+		if nil != err {
+			log.Error("load cache entity", zfield.Eid(ev.Entity()),
+				zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+			state = DefaultEntity(ev.Entity())
+		}
+
 		return &Execer{
-			state:    nil,
-			preFuncs: []Handler{},
-			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleComputed},
-			},
-		}, &Result{}
+				state:    state,
+				preFuncs: []Handler{},
+				postFuncs: []Handler{
+					&handlerImpl{fn: r.handleComputed},
+					&handlerImpl{fn: r.handleSubscribe},
+				}}, &Result{
+				State:    state.Raw(),
+				Event:    ev,
+				EntityID: "",
+			}
 	default:
 		return &Execer{
 				state:     nil,
@@ -255,40 +269,60 @@ func (r *Runtime) handleComputed(ctx context.Context, result *Result) *Result {
 }
 
 func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
-	if mc, has := r.mapperCaches[mp.ID()]; has {
-		in := make(map[string]tdtl.Node)
-		// construct mapper input.
-		for _, tentacle := range mc.Tentacles {
-			for _, item := range tentacle.Items() {
-				switch item.EntityID {
-				case mc.EntityID:
-					// get value from entities.
-					if state, ok := r.entities[item.EntityID]; ok {
-						in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
-					}
-				default:
-					// get value from cache.
-					if state, ok := r.caches[item.EntityID]; ok {
-						in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
-					}
+	var (
+		has bool
+		err error
+		mc  MCache
+	)
+
+	r.mlock.RLock()
+	if mc, has = r.mapperCaches[mp.ID()]; has {
+		r.mlock.RUnlock()
+		return map[string]tdtl.Node{}
+	}
+	r.mlock.RUnlock()
+
+	// construct mapper input.
+	in := make(map[string]tdtl.Node)
+	for _, tentacle := range mc.Tentacles {
+		for _, item := range tentacle.Items() {
+			switch item.EntityID {
+			case mc.EntityID:
+				// get value from entities.
+				if state, ok := r.entities[item.EntityID]; ok {
+					in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
+				}
+			default:
+				// get value from cache.
+				if state, ok := r.caches[item.EntityID]; ok {
+					in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
 				}
 			}
 		}
-
-		out, err := mp.Exec(in)
-		if nil != err {
-			log.Error("exec mapper",
-				zfield.ID(mp.ID()),
-				zfield.Eid(mp.TargetEntity()))
-			return map[string]tdtl.Node{}
-		}
-
-		// clean nil result.
-
-		return out
 	}
 
-	return map[string]tdtl.Node{}
+	// ignore empty input.
+	if len(in) == 0 {
+		log.Warn("ignore empty input", zfield.Mid(mp.ID()))
+		return map[string]tdtl.Node{}
+	}
+
+	var out map[string]tdtl.Node
+	if out, err = mp.Exec(in); nil != err {
+		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
+		return map[string]tdtl.Node{}
+	}
+
+	// clean nil result.
+	for path, val := range out {
+		if val == nil || val.Type() == tdtl.Null ||
+			val.Type() == tdtl.Undefined || val.Error() != nil {
+			log.Warn("invalid computed result", zap.Any("value", val), zfield.Mid(mp.ID()))
+			delete(out, path)
+		}
+	}
+
+	return out
 }
 
 func (r *Runtime) handleSubscribe(ctx context.Context, result *Result) *Result {
@@ -380,8 +414,8 @@ func (r *Runtime) handleCallback(ctx context.Context, result *Result) error {
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.mlock.Lock()
+	defer r.mlock.Unlock()
 	r.mapperCaches[mc.ID] = mc
 	for _, tantacle := range mc.Tentacles {
 		for _, item := range tantacle.Items() {
@@ -393,8 +427,8 @@ func (r *Runtime) AppendMapper(mc MCache) {
 }
 
 func (r *Runtime) RemoveMapper(mc MCache) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.mlock.Lock()
+	defer r.mlock.Unlock()
 	if _, exists := r.mapperCaches[mc.ID]; !exists {
 		return
 	}
@@ -414,6 +448,16 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 	if state, ok := r.entities[id]; ok {
+		return state, nil
+	}
+
+	return nil, xerrors.ErrEntityNotFound
+}
+
+func (r *Runtime) LoadCacheEntity(id string) (Entity, error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	if state, ok := r.caches[id]; ok {
 		return state, nil
 	}
 

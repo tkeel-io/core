@@ -82,8 +82,8 @@ func Elapsed(duration time.Duration) zap.Field {
 	return zap.Duration("elapsed", duration)
 }
 
-func Elapsedms(duration time.Duration) zap.Field {
-	return zap.Duration("elapsedms", time.Duration(duration.Milliseconds()))
+func Elapsedms(duration int64) zap.Field {
+	return zap.Int64("elapsedms", duration)
 }
 
 func Reason(reason string) zap.Field {

@@ -65,6 +65,7 @@ func NewKafkaPubsub(urlText string) (*Pubsub, error) {
 	}
 
 	return &Pubsub{
+		id:            kafkaMeta.Topic,
 		kafkaClient:   client,
 		kafkaMetadata: kafkaMeta,
 		kafkaProducer: producer,
@@ -80,7 +81,7 @@ type Pubsub struct {
 }
 
 func (k *Pubsub) ID() string {
-	return k.kafkaMetadata.Topic
+	return k.id
 }
 
 func (k *Pubsub) Send(ctx context.Context, event v1.Event) error {

@@ -8,6 +8,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/dispatch"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/placement"
@@ -50,6 +51,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 func (n *Node) Start(cfg NodeConf) error {
 	log.Info("start node...")
 
+	var elapsed util.ElapsedTime
 	n.initializeMetadata()
 	for index := range cfg.Sources {
 		var err error
@@ -60,16 +62,10 @@ func (n *Node) Start(cfg NodeConf) error {
 			return errors.Wrap(err, "consume source")
 		}
 
-		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
-	}
-
-	return nil
-}
-
-func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
-	rid := msg.Topic
-	if _, has := n.runtimes[rid]; !has {
-		log.Info("create container", zfield.ID(rid))
+		rid := sourceIns.ID()
+		// create runtime instance.
+		log.Info("create runtime instance",
+			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
 		rt := NewRuntime(n.ctx, rid, n.dispatch)
 		for _, mp := range n.mapperSlice() {
 			if mc, has := n.mapper(mp)[rt.ID()]; has {
@@ -77,6 +73,21 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 			}
 		}
 		n.runtimes[rid] = rt
+
+		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
+	}
+
+	log.Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
+
+	return nil
+}
+
+func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
+	rid := msg.Topic
+	if _, has := n.runtimes[rid]; !has {
+		log.Error("runtime instance not exists.", zfield.ID(rid),
+			zap.Any("header", msg.Headers), zfield.Message(string(msg.Value)))
+		return xerrors.ErrRuntimeNotExists
 	}
 
 	// load runtime spec.
@@ -114,7 +125,7 @@ func (n *Node) listMetadata() {
 		}
 	})
 
-	log.Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.Elapsed()))
+	log.Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
 // watchResource watch resources.
