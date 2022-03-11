@@ -8,7 +8,7 @@ image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.4.0"
+  tag: "0.4.1"
 
 nameOverride: "core"
 fullnameOverride: "core"
@@ -30,8 +30,9 @@ resources:
   #   memory: 128Mi
 middleware:
   database: mysql://root:a3fks=ixmeb82a@tkeel-middleware-mysql:3306/tkeelauth
-  search: elasticsearch://admin:admin@tkeel-middleware-elasticsearch:9200
+  search: elasticsearch://admin:admin@tkeel-middleware-elasticsearch-master:9200
   service_registry: etcd://tkeel-middleware-etcd:2379
+  queue: kafka://tkeel-middleware-kafka-headless:9092
 
 autoscaling:
   enabled: false
