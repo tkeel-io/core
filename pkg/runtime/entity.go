@@ -15,7 +15,7 @@ type entity struct {
 }
 
 func DefaultEntity(id string) Entity {
-	return &entity{id: id}
+	return &entity{id: id, state: *tdtl.New([]byte(`{}`))}
 }
 
 func NewEntity(id string, state []byte) (Entity, error) {
@@ -77,10 +77,11 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 	}
 
 	// in.Patches 处理完毕，丢弃.
-	return &Feed{
-		Err:     cc.Error(),
-		Event:   feed.Event,
-		Changes: changes}
+	feed.Err = cc.Error()
+	feed.Changes = changes
+	feed.Patches = []Patch{}
+	feed.State = e.Raw()
+	return feed
 }
 
 func (e *entity) Raw() []byte {

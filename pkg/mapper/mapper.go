@@ -77,7 +77,7 @@ func (m *mapper) Tentacles() map[string][]Tentacler {
 			mItems = append(mItems, watchKey)
 		}
 		tentacles[entityID] = append(tentacles[entityID],
-			NewTentacle(nil, TentacleTypeEntity, entityID, eItems, m.version))
+			NewTentacle(nil, TentacleTypeEntity, m.TargetEntity(), eItems, m.version))
 	}
 
 	targetEid := m.TargetEntity()

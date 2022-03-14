@@ -20,8 +20,8 @@ type Handler interface {
 type Feed struct {
 	TTL      int
 	Err      error
-	Exec     *Execer
 	Event    v1.Event
+	State    []byte
 	EntityID string
 	Patches  []Patch
 	Changes  []Patch
@@ -54,9 +54,6 @@ func (e *Execer) Exec(ctx context.Context, feed *Feed) *Feed {
 	// handle postFuncs.
 	for _, handler := range e.postFuncs {
 		feed = handler.Handle(ctx, feed)
-		if len(feed.Patches) > 0 {
-			return feed.Exec.Exec(ctx, feed)
-		}
 	}
 
 	if feed.TTL >= defaultTTLMax {

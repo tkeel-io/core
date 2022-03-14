@@ -1,6 +1,8 @@
 package path
 
-import "strings"
+import (
+	"strings"
+)
 
 type Node interface {
 	ID() string
@@ -19,4 +21,8 @@ func New() *Tree {
 
 func fmtPath(path string) string {
 	return strings.ReplaceAll(path, "[", ".[")
+}
+
+func FmtWatchKey(eid, propertyKey string) string {
+	return eid + "." + propertyKey
 }

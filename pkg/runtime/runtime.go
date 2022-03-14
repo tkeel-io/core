@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/path"
@@ -103,7 +105,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		return execer, &Feed{
 			Err:      err,
 			Event:    ev,
-			Exec:     execer,
+			State:    state.Raw(),
 			EntityID: ev.Entity(),
 			Patches:  conv(e.Patches())}
 	case v1.ETCache:
@@ -123,12 +125,11 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			preFuncs: []Handler{},
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleComputed},
-				&handlerImpl{fn: r.handleSubscribe},
 			}}
 
 		return execer, &Feed{
 			Event:    ev,
-			Exec:     execer,
+			State:    state.Raw(),
 			EntityID: entityID,
 			Patches:  conv(e.Patches())}
 	default:
@@ -137,6 +138,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				preFuncs:  []Handler{},
 				postFuncs: []Handler{},
 			}, &Feed{
+				State:    DefaultEntity("").Raw(),
 				Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
 				EntityID: ev.Entity(),
 			}
@@ -184,16 +186,23 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
+				State:    state.Raw(),
 				EntityID: ev.Entity()}
 		}
 
+		props := state.Get("properties")
 		r.entities[ev.Entity()] = state
 		execer.state = state
 		execer.execFunc = state
 		return execer, &Feed{
+			Err:      props.Error(),
 			Event:    ev,
-			Exec:     execer,
-			EntityID: ev.Entity()}
+			State:    state.Raw(),
+			EntityID: ev.Entity(),
+			Patches: []Patch{{
+				Op:    OpMerge,
+				Path:  "properties",
+				Value: tdtl.New(props.Raw())}}}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		execer := &Execer{
@@ -221,7 +230,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 		return execer, &Feed{
 			Err:      err,
 			Event:    ev,
-			Exec:     execer,
+			State:    state.Raw(),
 			EntityID: ev.Entity()}
 	default:
 		return &Execer{
@@ -244,9 +253,9 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
 	entityID := feed.EntityID
 	mappers := make(map[string]mapper.Mapper)
-	for _, change := range feed.Patches {
+	for _, change := range feed.Changes {
 		for _, node := range r.pathTree.
-			MatchPrefix(entityID + change.Path) {
+			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			tentacle, _ := node.(mapper.Tentacler)
 			if tentacle.Type() == mapper.TentacleTypeMapper {
 				mappers[tentacle.TargetID()] = tentacle.Mapper()
@@ -254,21 +263,36 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 		}
 	}
 
-	patches := make(map[string]Patch)
+	patches := make(map[string][]*v1.PatchData)
 	for id, mp := range mappers {
+		target := mp.TargetEntity()
 		log.Debug("compute mapper",
 			zfield.Eid(entityID), zfield.Mid(id))
-		for path, val := range r.computeMapper(ctx, mp) {
-			patches[path] = Patch{
-				Op:    OpReplace,
-				Path:  path,
-				Value: tdtl.New(val.Raw()),
-			}
+		result := r.computeMapper(ctx, mp)
+		for path, val := range result {
+			patches[target] = append(
+				patches[target],
+				&v1.PatchData{
+					Operator: string(OpReplace),
+					Path:     path,
+					Value:    val.Raw(),
+				})
 		}
 	}
 
-	for _, patch := range patches {
-		feed.Patches = append(feed.Patches, patch)
+	// 2. dispatch.send()
+	for target, patch := range patches {
+		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+			Id:        util.IG().EvID(),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaType:     string(v1.ETEntity),
+				v1.MetaEntityID: target},
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: patch,
+				}},
+		})
 	}
 
 	return feed
@@ -282,7 +306,7 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	)
 
 	r.mlock.RLock()
-	if mc, has = r.mapperCaches[mp.ID()]; has {
+	if mc, has = r.mapperCaches[mp.ID()]; !has {
 		r.mlock.RUnlock()
 		return map[string]tdtl.Node{}
 	}
@@ -292,17 +316,14 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	in := make(map[string]tdtl.Node)
 	for _, tentacle := range mc.Tentacles {
 		for _, item := range tentacle.Items() {
-			switch item.EntityID {
-			case mc.EntityID:
-				// get value from entities.
-				if state, ok := r.entities[item.EntityID]; ok {
-					in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
-				}
-			default:
-				// get value from cache.
-				if state, ok := r.caches[item.EntityID]; ok {
-					in[item.PropertyKey] = state.Get("properties." + item.PropertyKey)
-				}
+			// get value from entities.
+			if state, ok := r.entities[item.EntityID]; ok {
+				in[item.String()] = state.Get(item.PropertyKey)
+				continue
+			}
+			// get value from cache.
+			if state, ok := r.caches[item.EntityID]; ok {
+				in[item.String()] = state.Get(item.PropertyKey)
 			}
 		}
 	}
@@ -333,17 +354,20 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 
 func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
-	var targets []string
+	var targets sort.StringSlice
 	entityID := feed.EntityID
 	var patches = make(map[string][]*v1.PatchData)
-	for _, change := range feed.Patches {
-		for _, node := range r.pathTree.MatchPrefix(entityID + change.Path) {
-			mp, _ := node.(mapper.Tentacler)
-			if entityID != mp.TargetID() {
-				targets = append(targets, mp.TargetID())
+	for _, change := range feed.Changes {
+		for _, node := range r.pathTree.
+			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
+			tentacle, _ := node.(mapper.Tentacler)
+			if entityID != tentacle.TargetID() &&
+				mapper.TentacleTypeEntity == tentacle.Type() {
+				targets = append(targets, tentacle.TargetID())
 			}
 		}
 
+		targets = util.Unique(targets)
 		for _, target := range targets {
 			patches[target] = append(
 				patches[target],
@@ -360,13 +384,22 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 
 	// 2. dispatch.send()
 	for target, patch := range patches {
+		// check target entity placement.
+		info := placement.Global().Select(target)
+		if info.ID == r.id {
+			log.Debug("target entity belong this runtime, ignore dispatch.",
+				zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
+			continue
+		}
+
+		// dispatch cache event.
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
 			Id:        util.IG().EvID(),
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
 				v1.MetaType:     string(v1.ETCache),
-				v1.MetaEntityID: entityID,
-				v1.MetaSender:   target},
+				v1.MetaEntityID: target,
+				v1.MetaSender:   entityID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patch,
@@ -386,13 +419,14 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	if event.CallbackAddr() != "" {
 		if feed.Err == nil {
 			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
+			en, _ := r.LoadEntity(feed.EntityID)
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
 				Timestamp: time.Now().UnixNano(),
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: []byte(``)}}
+					RawData: en.Raw()}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			err = r.dispatcher.Dispatch(ctx, ev)
@@ -403,7 +437,7 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: []byte{}}}
+					RawData: []byte(`{}`)}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
 			ev.SetAttr(v1.MetaResponseErrCode, feed.Err.Error())
@@ -422,6 +456,18 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 func (r *Runtime) AppendMapper(mc MCache) {
 	r.mlock.Lock()
 	defer r.mlock.Unlock()
+
+	// remove if existed.
+	if _, exists := r.mapperCaches[mc.ID]; !exists {
+		mc0 := r.mapperCaches[mc.ID]
+		delete(r.mapperCaches, mc.ID)
+		for _, tantacle := range mc0.Tentacles {
+			for _, item := range tantacle.Items() {
+				r.pathTree.Remove(item.String(), tantacle)
+			}
+		}
+	}
+
 	r.mapperCaches[mc.ID] = mc
 	for _, tantacle := range mc.Tentacles {
 		for _, item := range tantacle.Items() {

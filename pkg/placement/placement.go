@@ -24,6 +24,7 @@ func (p *placement) Append(info Info) {
 	p.queues[info.ID] = info
 	p.hashTable = append(p.hashTable, info.ID)
 	sort.Sort(p.hashTable)
+	p.hashTable = util.Unique(p.hashTable)
 	p.lock.Unlock()
 }
 
