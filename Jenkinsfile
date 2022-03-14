@@ -11,7 +11,7 @@ pipeline {
 
     environment {
         // Docker access token,定义在凭证中 
-        DOCKER_CREDENTIAL_ID = 'dockerhub-id'
+        DOCKER_CREDENTIAL_ID = 'dockerhub-tkeel'
         // GitHub access token,定义在凭证中
         GITHUB_CREDENTIAL_ID = 'github'
         // k8s kubeconfig,定义在凭证中
@@ -19,9 +19,9 @@ pipeline {
         // Docker 仓库
         REGISTRY = 'docker.io'
         // Docker 空间
-        DOCKERHUB_NAMESPACE = 'mx2542'
+        DOCKERHUB_NAMESPACE = 'tkeelio'
         // Github 账号
-        GITHUB_ACCOUNT = 'lunz1207'
+        GITHUB_ACCOUNT = 'tkeel-io'
         // 组件名称
         APP_NAME = 'core'
         // please ignore
