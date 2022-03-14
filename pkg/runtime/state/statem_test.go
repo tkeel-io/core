@@ -18,6 +18,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -49,6 +50,15 @@ func TestNewStatem(t *testing.T) {
 }
 
 func TestGJson(t *testing.T) {
+	bytes1 := []byte(`{
+        "humidity1": 82,
+        "temperature": 43.6
+      }`)
+	tt := make(map[string]float64)
+	err := json.Unmarshal(bytes1, &tt)
+	t.Log(err)
+	t.Log(tt)
+
 	bytes, _ := jsonparser.Set([]byte(``), []byte(`"sss"`), "aa.a")
 	t.Log(string(bytes))
 }

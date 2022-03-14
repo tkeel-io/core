@@ -90,7 +90,7 @@ func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, e
 }
 
 func makeKVString(req map[string]string) string {
-	var ress []string
+	ress := make([]string, 0)
 	for k, v := range req {
 		ress = append(ress, k+"="+v)
 	}
@@ -98,7 +98,7 @@ func makeKVString(req map[string]string) string {
 }
 
 func makeKVSFloat(req map[string]float32) string {
-	var ress []string
+	ress := make([]string, 0)
 	for k, v := range req {
 		ress = append(ress, fmt.Sprintf("%s=%f", k, v))
 	}
