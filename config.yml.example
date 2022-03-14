@@ -22,7 +22,7 @@ components:
     name: influxdb
     properties:
       - key: url
-        value: http://192.168.123.9:32202/
+        value: http://tkeel-core-influxdb:8086
       - key: token
         value: tr2zy29F1Tusl8bkBwOR
       - key: org
