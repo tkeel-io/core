@@ -50,7 +50,7 @@ pipeline {
         stage('build & push chart'){
           steps {
               container ('base') {
-                sh 'helm3 package charts/core --app-version=$APP_VERSION --version=$CHART_VERSION'
+                sh 'helm3 package charts/core --app-version=$APP_NAME:$BRANCH_NAME-$APP_VERSION --version=$CHART_VERSION'
                 // input(id: 'release-image-with-tag', message: 'release image with tag?')
                   withCredentials([usernamePassword(credentialsId: "$GITHUB_CREDENTIAL_ID", passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
                     sh 'git config --global user.email "lunz1207@yunify.com"'
