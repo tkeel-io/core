@@ -8,15 +8,13 @@ image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.2.0"
+  tag: "0.4.1"
 
 nameOverride: "core"
 fullnameOverride: "core"
 
 daprConfig: core
 appPort: 6789
-middleware:
-  name: tkeel-middleware
 
 resources:
   {}
@@ -30,6 +28,11 @@ resources:
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+middleware:
+  database: mysql://root:a3fks=ixmeb82a@tkeel-middleware-mysql:3306/tkeelauth
+  search: elasticsearch://admin:admin@tkeel-middleware-elasticsearch-master:9200
+  service_registry: etcd://tkeel-middleware-etcd:2379
+  queue: kafka://tkeel-middleware-kafka-headless:9092
 
 autoscaling:
   enabled: false
@@ -43,13 +46,12 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-elasticsearch:
-  replicas: 1
-  minimumMasterNodes: 1
-
-etcd:
+# middleware configuration
+influxdb:
+  fullnameOverride: tkeel-core-influxdb
   auth:
-    rbac:
-      enabled: false
-  fullnameOverride: etcd
+    admin:
+      token: tr2zy29F1Tusl8bkBwOR
+    user:
+      org: tkeel
+      bucket: core
