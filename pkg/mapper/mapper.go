@@ -42,7 +42,7 @@ func NewMapper(mp dao.Mapper, version int64) (Mapper, error) {
 
 // ID returns mapper id.
 func (m *mapper) ID() string {
-	return m.mapper.ID
+	return m.mapper.EntityID + "-" + m.mapper.ID
 }
 
 // String returns MQL text.

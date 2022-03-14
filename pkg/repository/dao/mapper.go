@@ -17,9 +17,9 @@ import (
 
 const (
 	// store mapper prefix key.
-	MapperPrefix = "CORE.MAPPER"
+	MapperPrefix = "core/v1/mappers"
 	// CORE.MAPPER.{mapperID}.
-	fmtMapperString = "%s.%s.%s.%s"
+	fmtMapperString = "%s/%s/%s/%s"
 )
 
 type MapperHandler func([]Mapper)
@@ -92,7 +92,7 @@ func (d *Dao) ListMapper(ctx context.Context, rev int64, req *ListMapperReq) ([]
 		arr = append(arr, req.EntityID)
 	}
 
-	prefix := strings.Join(arr, ".")
+	prefix := strings.Join(arr, "/")
 	opts := make([]clientv3.OpOption, 0)
 	opts = append(opts, clientv3.WithRev(rev),
 		clientv3.WithRange(clientv3.GetPrefixRangeEnd(prefix)))
