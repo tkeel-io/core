@@ -47,3 +47,10 @@ tolerations: []
 
 affinity: {}
 # middleware configuration
+influxdb:
+  auth:
+    admin:
+      token: tr2zy29F1Tusl8bkBwOR
+    user:
+      org: tkeel
+      bucket: core
