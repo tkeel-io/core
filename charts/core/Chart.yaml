@@ -4,3 +4,10 @@ description: A Helm chart for Kubernetes
 name: core
 type: application
 version: 0.4.1
+dependencies:
+  - name: influxdb
+    repository: https://charts.bitnami.com/bitnami
+    version: 3.0.2
+maintainers:
+  - email: tkeel@yunify.com
+    name: tkeel
