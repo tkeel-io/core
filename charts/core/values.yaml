@@ -48,6 +48,7 @@ tolerations: []
 affinity: {}
 # middleware configuration
 influxdb:
+  fullnameOverride: tkeel-core-influxdb
   auth:
     admin:
       token: tr2zy29F1Tusl8bkBwOR
