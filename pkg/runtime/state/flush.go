@@ -19,7 +19,6 @@ package state
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -31,7 +30,6 @@ import (
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -150,36 +148,45 @@ func (s *statem) toGolang(vals map[string]tdtl.Node) map[string]interface{} {
 
 func (s *statem) flushTimeSeries(ctx context.Context) error {
 	var err error
-	var flushData []tseries.TSeriesData
-	for _, JSONPath := range s.tseriesConstraints {
-		var val tdtl.Node
-		var stateIns = s.getState(s.ID)
-		var ct *constraint.Constraint
-		if val, err = stateIns.Get(JSONPath); nil != err || val == nil {
-		} else if ct, err = s.getConstraint(JSONPath); nil != err {
-		} else if val, err = constraint.ExecData(val, ct); nil != err || val == nil {
-		} else {
-			point := tseries.TSeriesData{
-				Measurement: "core-default",
-				Tags:        s.generateTags(),
-				Fields:      map[string]string{},
-				Value:       val.String(),
+	sData := s.toGolang(s.Properties)
+	log.Info("sData: ", sData)
+	tsData, ok := sData["telemetry"]
+	if !ok {
+		return nil
+	}
+	var flushData []*tseries.TSeriesData
+	log.Info("tsData: ", tsData)
+	tt, ok := tsData.(map[string]interface{})
+	if ok {
+		for k, v := range tt {
+			switch ttt := v.(type) {
+			case map[string]interface{}:
+				if ts, ok := ttt["ts"]; ok {
+					tsItem := tseries.TSeriesData{
+						Measurement: "keel",
+						Tags:        map[string]string{"id": s.ID},
+						Fields:      map[string]float32{},
+						Timestamp:   0,
+					}
+					tsItem.Fields[k] = float32(ttt["value"].(float64))
+					tsItem.Timestamp = int64(ts.(float64)) * 1e6
+					flushData = append(flushData, &tsItem)
+					continue
+				}
+			default:
+				log.Info(ttt)
 			}
-			flushData = append(flushData, point)
 		}
-		log.Warn("patch.copy entity property failed", zfield.Eid(s.ID), zap.String("property_key", JSONPath), zap.Error(err))
 	}
-
-	if _, err = s.TSeries().Write(ctx, convertPoints(flushData)); nil != err {
-		log.Error("flush timeseries Search.", zap.Any("data", flushData), zap.Error(err))
-	}
-
-	log.Debug("flush timeseries Search.", zap.Any("data", flushData))
+	s.TSeries().Write(ctx, &tseries.TSeriesRequest{
+		Data:     flushData,
+		Metadata: map[string]string{},
+	})
 	return errors.Wrap(err, "timeseries flush failed")
 }
 
 // generateTags generate entity tags.
-func (s *statem) generateTags() map[string]string {
+func (s *statem) generateTags() map[string]string { // no lint
 	return map[string]string{
 		"app":    "core",
 		"id":     s.ID,
@@ -189,7 +196,7 @@ func (s *statem) generateTags() map[string]string {
 	}
 }
 
-func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) {
+func (s *statem) getConstraint(jsonPath string) (*constraint.Constraint, error) { // no lint
 	arr := strings.Split(jsonPath, ".")
 	if len(arr) == 0 {
 		return nil, xerrors.ErrInvalidJSONPath
@@ -234,14 +241,4 @@ func (s *statem) Search() *search.Service {
 
 func (s *statem) Repo() repository.IRepository {
 	return s.resourceManager.Repo()
-}
-
-func convertPoints(points []tseries.TSeriesData) *tseries.TSeriesRequest {
-	lines := make([]string, 0)
-	for _, point := range points {
-		point.Fields["value"] = point.Value
-		lines = append(lines,
-			fmt.Sprintf("%s,%s %s", point.Measurement, util.ExtractMap(point.Tags), util.ExtractMap(point.Fields)))
-	}
-	return &tseries.TSeriesRequest{Data: lines}
 }

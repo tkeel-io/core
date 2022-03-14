@@ -275,6 +275,8 @@ func initialzeService(apiManager apim.APIManager, searchClient corev1.SearchHTTP
 	_searchSrv.Init(searchClient)
 	// initialize proxy service.
 	_proxySrv.Init(apiManager)
+	// initialize proxy service.
+	_tsSrv.Init(apiManager)
 }
 
 var (
@@ -333,7 +335,7 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	log.Info("create core default resources")
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
-
+	tsdbClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries))
 	return runtime.NewResources(search.GlobalService, tsdbClient, coreRepo)
 }
 

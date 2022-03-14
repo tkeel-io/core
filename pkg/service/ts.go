@@ -3,8 +3,12 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -12,16 +16,24 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/tkeel-io/kit/log"
 )
+
+var defalutUser = "admin"
 
 type TSService struct {
 	pb.UnimplementedTSServer
 	tseriesClient tseries.TimeSerier
 	entityCache   map[string][]string
+	apiManager    apim.APIManager
 	lock          *sync.RWMutex
 }
 
@@ -38,6 +50,9 @@ func NewTSService() (*TSService, error) {
 	}, nil
 }
 
+func (s *TSService) Init(apiManager apim.APIManager) {
+	s.apiManager = apiManager
+}
 func (s *TSService) AddEntity(user, entityID string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -69,12 +84,28 @@ func (s *TSService) AddEntity(user, entityID string) {
 }
 
 func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
+	if req.StartTime < (time.Now().Unix() - 3600*24*3) {
+		req.StartTime = time.Now().Unix() - 3600*24*3
+	}
 	if err := checkParams(req.StartTime, req.EndTime, req.Identifiers); err != nil {
 		return nil, err
 	}
 
-	// TODO: ...
-	user := "testuser" //nolint
+	user := defalutUser
+	h := ctx.Value(contextHTTPHeaderKey)
+	header, ok := h.(http.Header)
+	if ok {
+		auth := header.Get("X-Tkeel-Auth")
+		log.Info("user: ", auth)
+		if bytes, err := base64.StdEncoding.DecodeString(auth); err == nil {
+			urlquery, err1 := url.ParseQuery(string(bytes))
+			if err1 == nil {
+				user = urlquery.Get("user")
+			}
+		} else {
+			log.Error(err)
+		}
+	}
 	resp := &pb.GetTSDataResponse{}
 	if req.PageNum <= 0 {
 		req.PageNum = 1
@@ -96,7 +127,7 @@ func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*p
 }
 
 func checkParams(startTime, endTime int64, identifiers string) error {
-	if startTime < (time.Now().Unix() - 3600*24*3) {
+	if startTime < (time.Now().Unix() - 3600*24*3 - 3600) {
 		return errors.New("time error")
 	} else if startTime > endTime {
 		return errors.New("time error")
@@ -108,6 +139,9 @@ func checkParams(startTime, endTime int64, identifiers string) error {
 
 func (s *TSService) DownloadTSData(ctx context.Context, req *pb.DownloadTSDataRequest) (*pb.DownloadTSDataResponse, error) {
 	resp := &pb.DownloadTSDataResponse{}
+	if req.StartTime < (time.Now().Unix() - 3600*24*3) {
+		req.StartTime = time.Now().Unix() - 3600*24*3
+	}
 
 	if err := checkParams(req.StartTime, req.EndTime, req.Identifiers); err != nil {
 		resp.Data = []byte("error")
@@ -166,9 +200,70 @@ func (s *TSService) DownloadTSData(ctx context.Context, req *pb.DownloadTSDataRe
 
 	return resp, nil
 }
+
+var contextHTTPHeaderKey = struct{}{}
+
+func Entity2EntityResponse(entity *Entity) (out *pb.EntityResponse) {
+	if entity == nil {
+		return
+	}
+
+	var err error
+	var bytes []byte
+	out = &pb.EntityResponse{}
+	properties := make(map[string]interface{})
+	if bytes, err = xjson.EncodeJSONZ(entity.Properties); nil != err {
+		log.Error("marshal entity properties", zap.Error(err), zfield.Eid(entity.ID))
+	} else if err = json.Unmarshal(bytes, &properties); nil != err {
+		log.Error("unmarshal entity properties", zap.Error(err), zfield.Eid(entity.ID), zfield.Value(string(bytes)))
+	}
+
+	configs := make(map[string]interface{})
+	if err = json.Unmarshal(entity.ConfigFile, &configs); nil != err {
+		log.Error("unmarshal entity configs", zap.Error(err), zfield.Eid(entity.ID))
+	}
+
+	if out.Properties, err = structpb.NewValue(properties); nil != err {
+		log.Error("convert entity failed", zap.Error(err))
+	} else if out.Configs, err = structpb.NewValue(configs); nil != err {
+		log.Error("convert entity failed.", zap.Error(err))
+	}
+
+	out.Mappers = make([]*pb.Mapper, 0)
+	for _, mDesc := range entity.Mappers {
+		out.Mappers = append(out.Mappers,
+			&pb.Mapper{
+				Id:          mDesc.ID,
+				Name:        mDesc.Name,
+				Tql:         mDesc.TQL,
+				Description: mDesc.Description,
+			})
+	}
+
+	out.Id = entity.ID
+	out.Type = entity.Type
+	out.Owner = entity.Owner
+	out.Source = entity.Source
+
+	return out
+}
 func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEntitiesRequest) (*pb.GetLatestEntitiesResponse, error) {
 	resp := &pb.GetLatestEntitiesResponse{}
-	user := "testuser"
+	user := defalutUser
+	h := ctx.Value(contextHTTPHeaderKey)
+	header, ok := h.(http.Header)
+	if ok {
+		auth := header.Get("X-Tkeel-Auth")
+		log.Info("user: ", auth)
+		if bytes, err := base64.StdEncoding.DecodeString(auth); err == nil {
+			urlquery, err1 := url.ParseQuery(string(bytes))
+			if err1 == nil {
+				user = urlquery.Get("user")
+			}
+		} else {
+			log.Error(err)
+		}
+	}
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	if cache, ok := s.entityCache[user]; !ok {
@@ -178,9 +273,16 @@ func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 	} else { //nolint
 		resp.Total = int64(len(cache))
 		for _, v := range cache {
-			resp.Items = append(resp.Items, &pb.EntityResponse{
-				Id: v,
-			})
+			var entityBase = new(Entity)
+			entityBase.ID = v
+			entityBase.Source = "source"
+			// get entity from entity manager.
+			pids := []string{"basicInfo", "sysField", "connectInfo"}
+			if entity, err := s.apiManager.GetEntityProps(ctx, entityBase, pids); nil != err {
+				log.Error("patch entity failed.", zfield.Eid(v), zap.Error(err))
+			} else {
+				resp.Items = append(resp.Items, Entity2EntityResponse(entity))
+			}
 		}
 	}
 	return resp, nil
