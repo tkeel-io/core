@@ -25,7 +25,6 @@ import (
 	"reflect"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 
 	"github.com/olivere/elastic/v7"
@@ -37,11 +36,17 @@ const ElasticsearchDriver Type = "elasticsearch"
 
 const EntityIndex = "entity"
 
+type ESConfig struct {
+	Username  string
+	Password  string
+	Endpoints []string
+}
+
 type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(cfg config.ESConfig) SearchEngine {
+func NewElasticsearchEngine(cfg ESConfig) SearchEngine {
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(
 		elastic.SetURL(cfg.Endpoints...),

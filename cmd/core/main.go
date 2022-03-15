@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,7 +41,6 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
-	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -55,6 +56,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/kit/transport"
@@ -97,13 +99,23 @@ func main() {
 		Run:     core,
 	}
 
-	cmd.PersistentFlags().StringVarP(&_cfgFile, "conf", "c", "config.yml", "config file path.")
-	cmd.PersistentFlags().StringVar(&_httpAddr, "http_addr", ":6789", "http listen address.")
-	cmd.PersistentFlags().StringVar(&_grpcAddr, "grpc_addr", ":31234", "grpc listen address.")
-	cmd.PersistentFlags().StringSliceVar(&_etcdBrokers, "etcd", nil, "etcd brokers address.")
-	cmd.PersistentFlags().StringVar(&_searchEngine, "search-engine", "", "your search engine SDN.")
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
+	cmd.Flags().StringP("conf", "c", "config.yml", "config file path.")
+	cmd.Flags().String("http_addr", ":6789", "core http server listen address.")
+	cmd.Flags().String("grpc_addr", ":31234", "core http server listen address.")
+	cmd.Flags().String("proxy_http_addr", ":20000", "core proxy http listen address.")
+	cmd.Flags().String("proxy_grpc_addr", ":20001", "core proxy http listen address.")
+	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, egg: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
+	cmd.Flags().String("search-engine", "", "your search engine SDN.")
+
+	// bind commandline arguments.
+	viper.BindPFlag("component.etcd.endpoints", cmd.Flags().Lookup("etcd"))
+	viper.BindPFlag("component.search_engine", cmd.Flags().Lookup("search_engine"))
+	viper.BindPFlag("server.http_addr", cmd.Flags().Lookup("http_addr"))
+	viper.BindPFlag("server.grpc_addr", cmd.Flags().Lookup("grpc_addr"))
+	viper.BindPFlag("proxy.http_addr", cmd.Flags().Lookup("proxy_http_addr"))
+	viper.BindPFlag("proxy.grpc_addr", cmd.Flags().Lookup("proxy_grpc_addr"))
 
 	{
 		// Subcommand register here.
@@ -124,38 +136,11 @@ func main() {
 func core(cmd *cobra.Command, args []string) {
 	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
 
-	{
-		// set default configurations.
-		config.SetDefaultEtcd(_etcdBrokers)
-		config.Init(_cfgFile)
-	}
-
+	config.Init(_cfgFile)
 	logger.InfoStatusEvent(os.Stdout, "configuration loaded")
 
 	// init gllbal placement.
 	placement.Initialize()
-	// rewrite search engine config by flags input info.
-	if _searchEngine != "" {
-		drive, username, password, urls, err := util.ParseSearchEngine(_searchEngine)
-		if err != nil {
-			logger.FailureStatusEvent(os.Stdout, "please check your --search-engine configuration(driver://username:password@url1,url2)")
-			return
-		}
-		switch drive {
-		case driver.ElasticsearchDriver:
-			config.SetSearchEngineElasticsearchConfig(username, password, urls)
-			// add use flag when more drive flags are available.
-			config.SetSearchEngineUseDrive(string(drive))
-		}
-	}
-
-	// Start Search Service.
-	search.GlobalService = search.Init()
-	// logger started Info.
-	switch config.Get().Components.SearchEngine.Use {
-	case string(driver.ElasticsearchDriver):
-		logger.InfoStatusEvent(os.Stdout, "Success init Elasticsearch Service for Search Engine")
-	}
 
 	// new servers.
 	httpSrv := http.NewServer(_httpAddr)
@@ -205,12 +190,22 @@ func core(cmd *cobra.Command, args []string) {
 	if err = discoveryEnd.Register(
 		context.Background(),
 		discovery.Service{
-			Name:     config.Get().Server.Name,
-			AppID:    config.Get().Server.AppID,
-			Port:     config.Get().Server.AppPort,
-			Host:     util.ResolveAddr(),
-			Metadata: map[string]string{},
+			Name:  config.Get().Server.Name,
+			AppID: config.Get().Server.AppID,
+			Port:  getPort(config.Get().Server.GrpcAddr),
+			Host:  util.ResolveAddr(),
+			Metadata: map[string]interface{}{
+				"http_port":       getPort(config.Get().Server.HttpAddr),
+				"grpc_port":       getPort(config.Get().Server.GrpcAddr),
+				"proxy_http_port": config.Get().Proxy.HTTPPort,
+				"proxy_grpc_port": config.Get().Proxy.GRPCPort,
+			},
 		}); nil != err {
+		log.Fatal(err)
+	}
+
+	// create message dispatcher.
+	if err = loadDispatcher(context.Background()); nil != err {
 		log.Fatal(err)
 	}
 
@@ -219,12 +214,7 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	// create message dispatcher.
 	coreRepo := repository.New(coreDao)
-	if err = loadDispatcher(context.Background()); nil != err {
-		log.Fatal(err)
-	}
-
 	stateManager := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
 	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
 		log.Fatal(err)
@@ -322,12 +312,17 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 func loadDispatcher(ctx context.Context) error {
 	log.Info("load local Queues.")
 	dispatcher := dispatch.New(ctx)
-	if err := dispatcher.Start(ctx, dispatch.DispatchConf{
-		Downstreams: config.Get().Dispatcher.Sinks}); nil != err {
+	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 
 	_dispatcher = dispatcher
 	return nil
+}
+
+func getPort(addr string) int {
+	segs := strings.Split(addr, ":")
+	p, _ := strconv.Atoi(segs[1])
+	return p
 }

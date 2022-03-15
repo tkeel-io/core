@@ -6,17 +6,12 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/core/pkg/util/transport"
 )
-
-type DispatchConf struct { //nolint
-	Name        string
-	Upstreams   []string
-	Downstreams []string
-}
 
 func New(ctx context.Context) *dispatcher { //nolint
 	ctx, cancel := context.WithCancel(ctx)
@@ -55,10 +50,13 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 	return errors.Wrap(err, "dispatch event")
 }
 
-func (d *dispatcher) Start(ctx context.Context, cfg DispatchConf) error {
+func (d *dispatcher) Start(ctx context.Context, cfg config.DispatchConfig) error {
 	// initialize dispatch upstreams.
-	if err := d.initUpstream(ctx, cfg.Upstreams); nil != err {
-		return errors.Wrap(err, "init upstream")
+	if cfg.Enabled {
+		// initialize dispatcher upstream.
+		if err := d.initUpstream(ctx, cfg.Upstreams); nil != err {
+			return errors.Wrap(err, "init upstream")
+		}
 	}
 
 	// initialize dispatch downstreams.

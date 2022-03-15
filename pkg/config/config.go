@@ -14,12 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+core 服务配置优先级：
+	1. 配置文件.
+	2. 命令行参数.
+	3. 环境变量.
+	4. 默认设置.
+*/
+
 package config
 
 import (
 	"errors"
 	"io/fs"
-	"net/url"
 	"os"
 	"strings"
 
@@ -40,6 +47,14 @@ type Configuration struct {
 	Dispatcher DispatchConfig `yaml:"dispatcher" mapstructure:"dispatcher"`
 }
 
+type Server struct {
+	Name     string   `yaml:"name" mapstructure:"name"`
+	AppID    string   `yaml:"app_id" mapstructure:"app_id"`
+	HttpAddr string   `yaml:"http_addr" mapstructure:"http_addr"`
+	GrpcAddr string   `yaml:"grpc_addr" mapstructure:"grpc_addr"`
+	Sources  []string `yaml:"sources" mapstructure:"sources"`
+}
+
 type Proxy struct {
 	Name     string `yaml:"name" mapstructure:"name"`
 	HTTPPort int    `yaml:"http_port" mapstructure:"http_port"`
@@ -47,10 +62,10 @@ type Proxy struct {
 }
 
 type Components struct {
-	Etcd         EtcdConfig   `yaml:"etcd" mapstructure:"etcd"`
-	Store        Metadata     `yaml:"store" mapstructure:"store"`
-	TimeSeries   Metadata     `yaml:"time_series" mapstructure:"time_series"`
-	SearchEngine SearchEngine `yaml:"search_engine" mapstructure:"search_engine"`
+	Etcd         EtcdConfig `yaml:"etcd" mapstructure:"etcd"`
+	Store        Metadata   `yaml:"store" mapstructure:"store"`
+	TimeSeries   Metadata   `yaml:"time_series" mapstructure:"time_series"`
+	SearchEngine string     `yaml:"search_engine" mapstructure:"search_engine"`
 }
 
 type Pair struct {
@@ -66,17 +81,6 @@ type Metadata struct {
 type EtcdConfig struct {
 	Endpoints   []string `yaml:"endpoints"`
 	DialTimeout int64    `yaml:"dial_timeout"`
-}
-
-type SearchEngine struct {
-	Use string   `mapstructure:"use" yaml:"use"`
-	ES  ESConfig `mapstructure:"elasticsearch" yaml:"elasticsearch"` //nolint
-}
-
-type ESConfig struct {
-	Endpoints []string `yaml:"endpoints"`
-	Username  string   `yaml:"username"`
-	Password  string   `yaml:"password"`
 }
 
 type LogConfig struct {
@@ -111,30 +115,6 @@ func Init(cfgFile string) {
 		viper.AddConfigPath("/etc/core")
 	}
 
-	viper.SetEnvPrefix(_corePrefix)
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
-	// default.
-	viper.SetDefault("proxy.name", _defaultProxy.Name)
-	viper.SetDefault("proxy.http_port", _defaultProxy.HTTPPort)
-	viper.SetDefault("proxy.grpc_port", _defaultProxy.GRPCPort)
-	viper.SetDefault("server.name", _defaultAppServer.Name)
-	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
-	viper.SetDefault("server.app_port", _defaultAppServer.AppPort)
-	viper.SetDefault("logger.level", _defaultLogConfig.Level)
-	viper.SetDefault("logger.output", _defaultLogConfig.Output)
-	viper.SetDefault("logger.encoding", _defaultLogConfig.Encoding)
-	viper.SetDefault("discovery.endpoints", _defaultDiscovery.Endpoints)
-	viper.SetDefault("discovery.heart_time", _defaultDiscovery.HeartTime)
-	viper.SetDefault("discovery.dial_timeout", _defaultDiscovery.DialTimeout)
-	viper.SetDefault("components.etcd.endpoints", _defaultEtcdConfig.Endpoints)
-	viper.SetDefault("components.etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
-	viper.SetDefault("components.search_engine.use", _defaultUseSearchEngine)
-	viper.SetDefault("components.search_engine.elasticsearch.endpoints", _defaultESConfig.Endpoints)
-	viper.SetDefault("components.search_engine.elasticsearch.username", _defaultESConfig.Username)
-	viper.SetDefault("components.search_engine.elasticsearch.password", _defaultESConfig.Password)
-
 	if err := viper.ReadInConfig(); nil != err {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.As(err, &fs.ErrNotExist) { //nolint
 			// Config file not found.
@@ -151,45 +131,8 @@ func Init(cfgFile string) {
 	viper.WatchConfig()
 }
 
-func SetEtcdBrokers(brokers []string) {
-	for i := 0; i < len(brokers); i++ {
-		brokers[i] = addHTTPScheme(brokers[i])
-	}
-	_config.Components.Etcd.Endpoints = brokers
-}
-
-func SetSearchEngineElasticsearchConfig(username, password string, urls []string) {
-	for i := 0; i < len(urls); i++ {
-		urls[i] = addHTTPScheme(urls[i])
-	}
-
-	_config.Components.SearchEngine.ES.Endpoints = urls
-	_config.Components.SearchEngine.ES.Username = username
-	_config.Components.SearchEngine.ES.Password = password
-}
-
-func SetSearchEngineUseDrive(drive string) {
-	_config.Components.SearchEngine.Use = drive
-}
-
 func onConfigChanged(in fsnotify.Event) {
 	_ = viper.Unmarshal(&_config)
-	formatEtcdConfigAddr()
-	formatESAddress()
-}
-
-func formatEtcdConfigAddr() {
-	for i := 0; i < len(_config.Components.Etcd.Endpoints); i++ {
-		_config.Components.Etcd.Endpoints[i] =
-			addHTTPScheme(_config.Components.Etcd.Endpoints[i])
-	}
-}
-
-func formatESAddress() {
-	for i := 0; i < len(_config.Components.SearchEngine.ES.Endpoints); i++ {
-		_config.Components.SearchEngine.ES.Endpoints[i] =
-			addHTTPScheme(_config.Components.SearchEngine.ES.Endpoints[i])
-	}
 }
 
 func writeDefault(cfgFile string) {
@@ -203,16 +146,25 @@ func writeDefault(cfgFile string) {
 	}
 }
 
-func addHTTPScheme(path string) string {
-	if strings.Index(path, _schemeSpliterator) > 0 {
-		u, err := url.Parse(path)
-		if err != nil {
-			return path
-		}
-		if u.Scheme == "" {
-			u.Scheme = _httpScheme
-		}
-		return u.String()
-	}
-	return _httpScheme + _schemeSpliterator + path
+func init() {
+	// default.
+	viper.SetDefault("proxy.name", _defaultProxy.Name)
+	viper.SetDefault("proxy.http_port", _defaultProxy.HTTPPort)
+	viper.SetDefault("proxy.grpc_port", _defaultProxy.GRPCPort)
+	viper.SetDefault("server.name", _defaultAppServer.Name)
+	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
+	viper.SetDefault("server.http_addr", _defaultAppServer.HttpAddr)
+	viper.SetDefault("server.grpc_addr", _defaultAppServer.GrpcAddr)
+	viper.SetDefault("logger.level", _defaultLogConfig.Level)
+	viper.SetDefault("logger.output", _defaultLogConfig.Output)
+	viper.SetDefault("logger.encoding", _defaultLogConfig.Encoding)
+	viper.SetDefault("discovery.endpoints", _defaultDiscovery.Endpoints)
+	viper.SetDefault("discovery.heart_time", _defaultDiscovery.HeartTime)
+	viper.SetDefault("discovery.dial_timeout", _defaultDiscovery.DialTimeout)
+	viper.SetDefault("components.etcd.endpoints", _defaultEtcdConfig.Endpoints)
+	viper.SetDefault("components.etcd.dial_timeout", _defaultEtcdConfig.DialTimeout)
+
+	viper.SetEnvPrefix(_corePrefix)
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 }

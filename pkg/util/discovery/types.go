@@ -25,11 +25,11 @@ type Config struct {
 }
 
 type Service struct {
-	AppID    string            `json:"app_id"`
-	Name     string            `json:"name"`
-	Host     string            `json:"host"`
-	Port     int               `json:"port"`
-	Metadata map[string]string `json:"metadata"`
+	AppID    string                 `json:"app_id"`
+	Name     string                 `json:"name"`
+	Host     string                 `json:"host"`
+	Port     int                    `json:"port"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 func (s Service) Key() string {

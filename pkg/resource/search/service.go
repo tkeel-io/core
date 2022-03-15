@@ -4,7 +4,6 @@ import (
 	"context"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 
 	"github.com/pkg/errors"
@@ -13,13 +12,13 @@ import (
 
 var GlobalService *Service
 
-func Init() *Service {
-	defaultRegistered := map[driver.Type]driver.SearchEngine{
-		// Add other drivers to SearchService here.
-		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().Components.SearchEngine.ES),
-	}
-	return NewService(defaultRegistered).Use(driver.Parse(config.Get().Components.SearchEngine.Use))
-}
+// func Init() *Service {
+// 	defaultRegistered := map[driver.Type]driver.SearchEngine{
+// 		// Add other drivers to SearchService here.
+// 		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().Components.SearchEngine.ES),
+// 	}
+// 	return NewService(defaultRegistered).Use(driver.Parse(config.Get().Components.SearchEngine.Use))
+// }
 
 var _ pb.SearchHTTPServer = &Service{}
 
