@@ -11,7 +11,7 @@ const (
 )
 
 var (
-	_defaultProxy = Proxy{
+	_defaultProxyConfig = Proxy{
 		Name:     "core.proxy",
 		HTTPPort: 20000,
 		GRPCPort: 20001,
@@ -19,8 +19,8 @@ var (
 	_defaultAppServer = Server{
 		Name:     DefaultName,
 		AppID:    DefaultAppID,
-		HttpAddr: ":6789",
-		GrpcAddr: ":31234",
+		HTTPAddr: ":6789",
+		GRPCAddr: ":31234",
 	}
 	_defaultLogConfig = LogConfig{
 		Level:    "INFO",

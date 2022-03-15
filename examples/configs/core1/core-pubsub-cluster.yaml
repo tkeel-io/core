@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
-  name: core-pubsub-cluster1
+  name: cluster-pubsub
 spec:
   type: pubsub.redis
   version: v1
@@ -11,6 +11,4 @@ spec:
   - name: redisPassword
     value: ""
   - name: redisDB
-    value: 4
-scopes:
-  - core
+    value: 1

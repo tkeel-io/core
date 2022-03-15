@@ -81,15 +81,10 @@ core --search-engine drive://username:password@url0,url1
 `
 
 var (
-	_cfgFile      string
-	_httpAddr     string
-	_grpcAddr     string
-	_etcdBrokers  []string
-	_searchEngine string
+	_cfgFile    string
+	_apiManager apim.APIManager
+	_dispatcher dispatch.Dispatcher
 )
-
-var _apiManager apim.APIManager
-var _dispatcher dispatch.Dispatcher
 
 func main() {
 	cmd := cobra.Command{
@@ -101,11 +96,11 @@ func main() {
 
 	cmd.Version = version.Version
 	cmd.SetVersionTemplate(version.Template())
-	cmd.Flags().StringP("conf", "c", "config.yml", "config file path.")
+	cmd.PersistentFlags().StringVarP(&_cfgFile, "conf", "c", "config.yml", "config file path.")
 	cmd.Flags().String("http_addr", ":6789", "core http server listen address.")
 	cmd.Flags().String("grpc_addr", ":31234", "core http server listen address.")
-	cmd.Flags().String("proxy_http_addr", ":20000", "core proxy http listen address.")
-	cmd.Flags().String("proxy_grpc_addr", ":20001", "core proxy http listen address.")
+	cmd.Flags().Int("proxy_http_port", 20000, "core proxy http listen address port.")
+	cmd.Flags().Int("proxy_grpc_port", 20001, "core proxy http listen address port.")
 	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, egg: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
 	cmd.Flags().String("search-engine", "", "your search engine SDN.")
 
@@ -114,8 +109,8 @@ func main() {
 	viper.BindPFlag("component.search_engine", cmd.Flags().Lookup("search_engine"))
 	viper.BindPFlag("server.http_addr", cmd.Flags().Lookup("http_addr"))
 	viper.BindPFlag("server.grpc_addr", cmd.Flags().Lookup("grpc_addr"))
-	viper.BindPFlag("proxy.http_addr", cmd.Flags().Lookup("proxy_http_addr"))
-	viper.BindPFlag("proxy.grpc_addr", cmd.Flags().Lookup("proxy_grpc_addr"))
+	viper.BindPFlag("proxy.http_port", cmd.Flags().Lookup("proxy_http_port"))
+	viper.BindPFlag("proxy.grpc_port", cmd.Flags().Lookup("proxy_grpc_port"))
 
 	{
 		// Subcommand register here.
@@ -143,8 +138,8 @@ func core(cmd *cobra.Command, args []string) {
 	placement.Initialize()
 
 	// new servers.
-	httpSrv := http.NewServer(_httpAddr)
-	grpcSrv := grpc.NewServer(_grpcAddr)
+	httpSrv := http.NewServer(config.Get().Server.HTTPAddr)
+	grpcSrv := grpc.NewServer(config.Get().Server.GRPCAddr)
 	serverList := []transport.Server{httpSrv, grpcSrv}
 
 	// new proxy.
@@ -192,11 +187,11 @@ func core(cmd *cobra.Command, args []string) {
 		discovery.Service{
 			Name:  config.Get().Server.Name,
 			AppID: config.Get().Server.AppID,
-			Port:  getPort(config.Get().Server.GrpcAddr),
+			Port:  getPort(config.Get().Server.GRPCAddr),
 			Host:  util.ResolveAddr(),
 			Metadata: map[string]interface{}{
-				"http_port":       getPort(config.Get().Server.HttpAddr),
-				"grpc_port":       getPort(config.Get().Server.GrpcAddr),
+				"http_port":       getPort(config.Get().Server.HTTPAddr),
+				"grpc_port":       getPort(config.Get().Server.GRPCAddr),
 				"proxy_http_port": config.Get().Proxy.HTTPPort,
 				"proxy_grpc_port": config.Get().Proxy.GRPCPort,
 			},

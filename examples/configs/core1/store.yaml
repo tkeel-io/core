@@ -13,4 +13,4 @@ spec:
     - name: redisType
       value: node
     - name: redisDB
-      value: 5
+      value: 15

@@ -50,8 +50,8 @@ type Configuration struct {
 type Server struct {
 	Name     string   `yaml:"name" mapstructure:"name"`
 	AppID    string   `yaml:"app_id" mapstructure:"app_id"`
-	HttpAddr string   `yaml:"http_addr" mapstructure:"http_addr"`
-	GrpcAddr string   `yaml:"grpc_addr" mapstructure:"grpc_addr"`
+	HTTPAddr string   `yaml:"http_addr" mapstructure:"http_addr"`
+	GRPCAddr string   `yaml:"grpc_addr" mapstructure:"grpc_addr"`
 	Sources  []string `yaml:"sources" mapstructure:"sources"`
 }
 
@@ -148,13 +148,13 @@ func writeDefault(cfgFile string) {
 
 func init() {
 	// default.
-	viper.SetDefault("proxy.name", _defaultProxy.Name)
-	viper.SetDefault("proxy.http_port", _defaultProxy.HTTPPort)
-	viper.SetDefault("proxy.grpc_port", _defaultProxy.GRPCPort)
 	viper.SetDefault("server.name", _defaultAppServer.Name)
 	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
-	viper.SetDefault("server.http_addr", _defaultAppServer.HttpAddr)
-	viper.SetDefault("server.grpc_addr", _defaultAppServer.GrpcAddr)
+	viper.SetDefault("server.http_addr", _defaultAppServer.HTTPAddr)
+	viper.SetDefault("server.grpc_addr", _defaultAppServer.GRPCAddr)
+	viper.SetDefault("proxy.name", _defaultProxyConfig.Name)
+	viper.SetDefault("proxy.http_port", _defaultProxyConfig.HTTPPort)
+	viper.SetDefault("proxy.grpc_port", _defaultProxyConfig.GRPCPort)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)
 	viper.SetDefault("logger.output", _defaultLogConfig.Output)
 	viper.SetDefault("logger.encoding", _defaultLogConfig.Encoding)
