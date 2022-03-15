@@ -54,6 +54,10 @@ func (m *mapper) String() string {
 	return m.mapper.TQL
 }
 
+func (m *mapper) Version() int64 {
+	return m.version
+}
+
 // TargetEntity returns target entity.
 func (m *mapper) TargetEntity() string {
 	return m.tqlInst.Target()

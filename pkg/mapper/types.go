@@ -28,6 +28,8 @@ const (
 	TentacleTypeEntity    = "entity"
 	TentacleTypeMapper    = "mapper"
 
+	VersionInited = 0
+
 	WatchKeyDelimiter = "."
 )
 
@@ -36,6 +38,8 @@ type Mapper interface {
 	ID() string
 	// String returns MQL text.
 	String() string
+	// Version returns mapper version.
+	Version() int64
 	// TargetEntity returns target entity.
 	TargetEntity() string
 	// SourceEntities returns source entities.

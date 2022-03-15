@@ -40,3 +40,5 @@ type MCache struct {
 	Mapper    mapper.Mapper
 	Tentacles []mapper.Tentacler
 }
+
+type Task func()

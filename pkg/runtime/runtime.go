@@ -30,6 +30,7 @@ type Runtime struct {
 	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
+	blockTasks   chan Task
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -44,6 +45,7 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		caches:       map[string]Entity{},
 		entities:     map[string]Entity{},
 		mapperCaches: map[string]MCache{},
+		blockTasks:   make(chan Task, 200),
 		dispatcher:   dispatcher,
 		pathTree:     path.New(),
 		lock:         sync.RWMutex{},
@@ -68,13 +70,25 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	r.HandleEvent(ctx, &ev)
 }
 
+func (r *Runtime) processTasks() {
+	for {
+		select {
+		case task := <-r.blockTasks:
+			task()
+		default:
+			return
+		}
+	}
+}
+
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 	execer, feed := r.PrepareEvent(ctx, event)
 	feed = execer.Exec(ctx, feed)
 
 	// call callback once.
 	r.handleCallback(ctx, feed)
-	return feed.Err
+	r.processTasks()
+	return nil
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
@@ -111,7 +125,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	case v1.ETCache:
 		// load cache.
 		entityID := ev.Attr(v1.MetaSender)
-		state, err := r.LoadEntity(entityID)
+		state, err := r.LoadCacheEntity(entityID)
 		if nil != err {
 			log.Error("load cache entity", zfield.Header(ev.Attributes()),
 				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zap.String("cache_entity", entityID))
@@ -455,8 +469,6 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 
 func (r *Runtime) AppendMapper(mc MCache) {
 	r.mlock.Lock()
-	defer r.mlock.Unlock()
-
 	// remove if existed.
 	if _, exists := r.mapperCaches[mc.ID]; exists {
 		mc0 := r.mapperCaches[mc.ID]
@@ -474,8 +486,62 @@ func (r *Runtime) AppendMapper(mc MCache) {
 			r.pathTree.Add(item.String(), tentacle)
 		}
 	}
+	r.mlock.Unlock()
+
+	// initialize mapper, exec mapper once.
+	r.initializeMapper(context.TODO(), mc)
 
 	r.pathTree.Print()
+}
+
+func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
+	if mapper.VersionInited != mc.Mapper.Version() {
+		return
+	}
+
+	var items []mapper.WatchKey
+	for _, tentacle := range mc.Tentacles {
+		switch tentacle.Type() {
+		case mapper.TentacleTypeEntity:
+			items = append(items, tentacle.Items()...)
+		default:
+		}
+	}
+
+	feeds := make(map[string]*Feed)
+	for _, item := range items {
+		state, err := r.LoadEntity(item.EntityID)
+		if nil != err {
+			log.Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
+			continue
+		}
+
+		val := state.Get(item.PropertyKey)
+		if nil != val.Error() {
+			log.Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
+			continue
+		}
+
+		if _, has := feeds[item.EntityID]; !has {
+			feeds[item.EntityID] = &Feed{
+				EntityID: item.EntityID,
+			}
+		}
+
+		feeds[item.EntityID].Changes =
+			append(feeds[item.EntityID].Changes,
+				Patch{
+					Op:    OpReplace,
+					Path:  item.PropertyKey,
+					Value: tdtl.New(val.Raw())})
+	}
+
+	r.blockTasks <- func() {
+		// handle subscribe.
+		for _, feed := range feeds {
+			r.handleSubscribe(ctx, feed)
+		}
+	}
 }
 
 func (r *Runtime) RemoveMapper(mc MCache) {
@@ -513,7 +579,14 @@ func (r *Runtime) LoadCacheEntity(id string) (Entity, error) {
 		return state, nil
 	}
 
-	return nil, xerrors.ErrEntityNotFound
+	cc := tdtl.New([]byte(`{"properties":{}}`))
+	cc.Set("id", tdtl.New(id))
+	en, err := NewEntity(id, cc.Raw())
+	if nil == err {
+		// cache entity.
+		r.caches[id] = en
+	}
+	return en, errors.Wrap(err, "load cache entity")
 }
 
 func conv(patches []*v1.PatchData) []Patch {
