@@ -40,9 +40,13 @@ func NewMapper(mp dao.Mapper, version int64) (Mapper, error) {
 	}, nil
 }
 
+func fmtMapperID(entityID, mapperID string) string {
+	return entityID + "-" + mapperID
+}
+
 // ID returns mapper id.
 func (m *mapper) ID() string {
-	return m.mapper.EntityID + "-" + m.mapper.ID
+	return fmtMapperID(m.mapper.EntityID, m.mapper.ID)
 }
 
 // String returns MQL text.
@@ -82,7 +86,7 @@ func (m *mapper) Tentacles() map[string][]Tentacler {
 
 	targetEid := m.TargetEntity()
 	tentacles[targetEid] = append(tentacles[targetEid],
-		NewTentacle(m, TentacleTypeMapper, m.mapper.ID, mItems, m.version))
+		NewTentacle(m, TentacleTypeMapper, fmtMapperID(m.TargetEntity(), m.mapper.ID), mItems, m.version))
 
 	return tentacles
 }

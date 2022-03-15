@@ -138,7 +138,7 @@ func (n *Node) watchMetadata() {
 			var err error
 			var mpIns mapper.Mapper
 			log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-			if mpIns, err = mapper.NewMapper(mp, 1); nil != err {
+			if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
 				log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 				return
 			}

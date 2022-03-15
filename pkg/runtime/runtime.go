@@ -458,20 +458,20 @@ func (r *Runtime) AppendMapper(mc MCache) {
 	defer r.mlock.Unlock()
 
 	// remove if existed.
-	if _, exists := r.mapperCaches[mc.ID]; !exists {
+	if _, exists := r.mapperCaches[mc.ID]; exists {
 		mc0 := r.mapperCaches[mc.ID]
 		delete(r.mapperCaches, mc.ID)
-		for _, tantacle := range mc0.Tentacles {
-			for _, item := range tantacle.Items() {
-				r.pathTree.Remove(item.String(), tantacle)
+		for _, tentacle := range mc0.Tentacles {
+			for _, item := range tentacle.Items() {
+				r.pathTree.Remove(item.String(), tentacle)
 			}
 		}
 	}
 
 	r.mapperCaches[mc.ID] = mc
-	for _, tantacle := range mc.Tentacles {
-		for _, item := range tantacle.Items() {
-			r.pathTree.Add(item.String(), tantacle)
+	for _, tentacle := range mc.Tentacles {
+		for _, item := range tentacle.Items() {
+			r.pathTree.Add(item.String(), tentacle)
 		}
 	}
 
@@ -487,9 +487,9 @@ func (r *Runtime) RemoveMapper(mc MCache) {
 
 	mc = r.mapperCaches[mc.ID]
 	delete(r.mapperCaches, mc.ID)
-	for _, tantacle := range mc.Tentacles {
-		for _, item := range tantacle.Items() {
-			r.pathTree.Remove(item.String(), tantacle)
+	for _, tentacle := range mc.Tentacles {
+		for _, item := range tentacle.Items() {
+			r.pathTree.Remove(item.String(), tentacle)
 		}
 	}
 
