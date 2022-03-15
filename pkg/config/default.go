@@ -12,7 +12,6 @@ const (
 
 var (
 	_defaultProxyConfig = Proxy{
-		Name:     "core.proxy",
 		HTTPPort: 20000,
 		GRPCPort: 20001,
 	}

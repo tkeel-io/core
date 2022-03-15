@@ -56,9 +56,8 @@ type Server struct {
 }
 
 type Proxy struct {
-	Name     string `yaml:"name" mapstructure:"name"`
-	HTTPPort int    `yaml:"http_port" mapstructure:"http_port"`
-	GRPCPort int    `yaml:"grpc_port" mapstructure:"grpc_port"`
+	HTTPPort int `yaml:"http_port" mapstructure:"http_port"`
+	GRPCPort int `yaml:"grpc_port" mapstructure:"grpc_port"`
 }
 
 type Components struct {
@@ -152,7 +151,6 @@ func init() {
 	viper.SetDefault("server.app_id", _defaultAppServer.AppID)
 	viper.SetDefault("server.http_addr", _defaultAppServer.HTTPAddr)
 	viper.SetDefault("server.grpc_addr", _defaultAppServer.GRPCAddr)
-	viper.SetDefault("proxy.name", _defaultProxyConfig.Name)
 	viper.SetDefault("proxy.http_port", _defaultProxyConfig.HTTPPort)
 	viper.SetDefault("proxy.grpc_port", _defaultProxyConfig.GRPCPort)
 	viper.SetDefault("logger.level", _defaultLogConfig.Level)

@@ -102,7 +102,7 @@ func main() {
 	cmd.Flags().Int("proxy_http_port", 20000, "core proxy http listen address port.")
 	cmd.Flags().Int("proxy_grpc_port", 20001, "core proxy http listen address port.")
 	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, egg: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
-	cmd.Flags().String("search-engine", "", "your search engine SDN.")
+	cmd.Flags().String("search_engine", "", "your search engine SDN.")
 
 	// bind commandline arguments.
 	viper.BindPFlag("component.etcd.endpoints", cmd.Flags().Lookup("etcd"))
