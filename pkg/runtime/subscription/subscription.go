@@ -20,11 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
-	"time"
 
+	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
-	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -146,6 +145,7 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 		return nil
 	}
 
+	msgCtx.Set("subscribe_id", s.GetID())
 	if payload, err = s.makePayload(msgCtx); nil != err {
 		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
@@ -156,29 +156,30 @@ func (s *subscription) invokeRealtime(ctx context.Context, msgCtx message.Contex
 		return nil
 	}
 
-	// construct event.
-	ev := &v1.ProtoEvent{
-		Id:        util.UUID("ev"),
-		Timestamp: time.Now().UnixNano(),
-		Metadata: map[string]string{
-			v1.MetaSubscriber: s.GetID()},
-		Data: &v1.ProtoEvent_RawData{
-			RawData: payload,
-		},
-	}
+	/*
+		// construct event.
+		ev := &v1.ProtoEvent{
+			Id:        util.UUID("ev"),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaSubscriber: s.GetID()},
+			Data: &v1.ProtoEvent_RawData{
+				RawData: payload,
+			},
+		}
 
-	// encode event.
-	if payload, err = v1.Marshal(ev); nil != err {
-		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
-		return nil
-	}
-
+		// encode event.
+		if payload, err = v1.Marshal(ev); nil != err {
+			log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
+			return nil
+		}
+	*/
 	log.Debug("publish data", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zfield.Payload(payload))
 
-	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke realtime subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(payload)))
@@ -198,32 +199,34 @@ func (s *subscription) invokePeriod(ctx context.Context, msgCtx message.Context)
 		return nil
 	}
 
+	msgCtx.Set("subscribe_id", s.GetID())
 	if payload, err = s.makePayload(msgCtx); nil != err {
 		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 		return nil
 	}
 
-	// construct event.
-	ev := &v1.ProtoEvent{
-		Id:        util.UUID("ev"),
-		Timestamp: time.Now().UnixNano(),
-		Metadata: map[string]string{
-			v1.MetaSubscriber: s.GetID()},
-		Data: &v1.ProtoEvent_RawData{
-			RawData: payload,
-		},
-	}
+	/*
+		// construct event.
+		ev := &v1.ProtoEvent{
+			Id:        util.UUID("ev"),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaSubscriber: s.GetID()},
+			Data: &v1.ProtoEvent_RawData{
+				RawData: payload,
+			},
+		}
 
-	// encode event.
-	if payload, err = v1.Marshal(ev); nil != err {
-		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
-		return nil
-	}
-
-	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+		// encode event.
+		if payload, err = v1.Marshal(ev); nil != err {
+			log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
+			return nil
+		}
+	*/
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke period subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
@@ -243,32 +246,33 @@ func (s *subscription) invokeChanged(ctx context.Context, msgCtx message.Context
 		return nil
 	}
 
+	msgCtx.Set("subscribe_id", s.GetID())
 	if payload, err = s.makePayload(msgCtx); nil != err {
 		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 		return nil
 	}
+	/*
+		// construct event.
+		ev := &v1.ProtoEvent{
+			Id:        util.UUID("ev"),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaSubscriber: s.GetID()},
+			Data: &v1.ProtoEvent_RawData{
+				RawData: payload,
+			},
+		}
 
-	// construct event.
-	ev := &v1.ProtoEvent{
-		Id:        util.UUID("ev"),
-		Timestamp: time.Now().UnixNano(),
-		Metadata: map[string]string{
-			v1.MetaSubscriber: s.GetID()},
-		Data: &v1.ProtoEvent_RawData{
-			RawData: payload,
-		},
-	}
-
-	// encode event.
-	if payload, err = v1.Marshal(ev); nil != err {
-		log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
-			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
-		return nil
-	}
-
-	// ctOpts := daprSDK.PublishEventWithContentType("application/json").
-	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload); nil != err {
+		// encode event.
+		if payload, err = v1.Marshal(ev); nil != err {
+			log.Error("make event payload", zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
+				zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())), zap.Error(err))
+			return nil
+		}
+	*/
+	ctOpts := daprSDK.PublishEventWithContentType("application/json")
+	if err = conn.PublishEvent(ctx, s.PubsubName(), s.Topic(), payload, ctOpts); nil != err {
 		log.Error("invoke changed subscription", zap.Error(err),
 			zfield.Topic(s.Topic()), zfield.Pubsub(s.PubsubName()),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(msgCtx.Message()))
@@ -303,10 +307,11 @@ func (s *subscription) PubsubName() string {
 
 func (s *subscription) makePayload(msgCtx message.Context) ([]byte, error) {
 	basics := map[string]string{
-		"id":     msgCtx.Get(message.ExtSenderID),
-		"type":   msgCtx.Get(message.ExtSenderType),
-		"owner":  msgCtx.Get(message.ExtSenderOwner),
-		"source": msgCtx.Get(message.ExtSenderSource),
+		"id":           msgCtx.Get(message.ExtSenderID),
+		"subscribe_id": msgCtx.Get("subscribe_id"),
+		"type":         msgCtx.Get(message.ExtSenderType),
+		"owner":        msgCtx.Get(message.ExtSenderOwner),
+		"source":       msgCtx.Get(message.ExtSenderSource),
 	}
 
 	var err error
