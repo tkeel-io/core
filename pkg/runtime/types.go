@@ -18,6 +18,7 @@ type Patch struct {
 type Entity interface {
 	ID() string
 	Get(string) tdtl.Node
+	Copy() Entity
 	Handle(context.Context, *Feed) *Feed
 	Basic() *tdtl.Collect
 	Raw() []byte

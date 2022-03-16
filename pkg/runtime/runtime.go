@@ -30,7 +30,6 @@ type Runtime struct {
 	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
-	blockTasks   chan Task
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -45,7 +44,6 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		caches:       map[string]Entity{},
 		entities:     map[string]Entity{},
 		mapperCaches: map[string]MCache{},
-		blockTasks:   make(chan Task, 200),
 		dispatcher:   dispatcher,
 		pathTree:     path.New(),
 		lock:         sync.RWMutex{},
@@ -70,25 +68,13 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	r.HandleEvent(ctx, &ev)
 }
 
-func (r *Runtime) processTasks() {
-	for {
-		select {
-		case task := <-r.blockTasks:
-			task()
-		default:
-			return
-		}
-	}
-}
-
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 	execer, feed := r.PrepareEvent(ctx, event)
 	feed = execer.Exec(ctx, feed)
 
 	// call callback once.
 	r.handleCallback(ctx, feed)
-	r.processTasks()
-	return nil
+	return feed.Err
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
@@ -510,14 +496,13 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 
 	feeds := make(map[string]*Feed)
 	for _, item := range items {
-		state, err := r.LoadEntity(item.EntityID)
-		if nil != err {
+		var err error
+		var val tdtl.Node
+		var state Entity
+		if state, err = r.LoadEntity(item.EntityID); nil != err {
 			log.Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
 			continue
-		}
-
-		val := state.Get(item.PropertyKey)
-		if nil != val.Error() {
+		} else if val = state.Get(item.PropertyKey); nil != val.Error() {
 			log.Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
 			continue
 		}
@@ -536,11 +521,9 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 					Value: tdtl.New(val.Raw())})
 	}
 
-	r.blockTasks <- func() {
-		// handle subscribe.
-		for _, feed := range feeds {
-			r.handleSubscribe(ctx, feed)
-		}
+	// handle subscribe.
+	for _, feed := range feeds {
+		r.handleSubscribe(ctx, feed)
 	}
 }
 

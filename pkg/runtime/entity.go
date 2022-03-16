@@ -88,6 +88,14 @@ func (e *entity) Raw() []byte {
 	return e.state.Copy().Raw()
 }
 
+func (e *entity) Copy() Entity {
+	cp := e.state.Copy()
+	return &entity{
+		id:    e.id,
+		state: *cp,
+	}
+}
+
 func (e *entity) Basic() *tdtl.Collect {
 	basic := e.state.Copy()
 	basic.Set("scheme", tdtl.New([]byte("{}")))
