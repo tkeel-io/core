@@ -29,7 +29,7 @@ type Runtime struct {
 	id           string
 	pathTree     *path.Tree
 	tentacleTree *path.Tree
-	caches       map[string]Entity // 存放其他Runtime的实体.
+	enCache      EntityCache
 	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
@@ -45,7 +45,7 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher, 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
 		id:           id,
-		caches:       map[string]Entity{},
+		enCache:      NewCache(),
 		entities:     map[string]Entity{},
 		mapperCaches: map[string]MCache{},
 		dispatcher:   dispatcher,
@@ -117,7 +117,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	case v1.ETCache:
 		sender := ev.Attr(v1.MetaSender)
 		// load cache.
-		state, err := r.LoadCacheEntity(sender)
+		state, err := r.enCache.Load(sender)
 		if nil != err {
 			log.Error("load cache entity", zfield.Header(ev.Attributes()),
 				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
@@ -332,13 +332,14 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	in := make(map[string]tdtl.Node)
 	for _, tentacle := range mc.Tentacles {
 		for _, item := range tentacle.Items() {
+			var state Entity
 			// get value from entities.
-			if state, ok := r.entities[item.EntityID]; ok {
+			if state, has = r.entities[item.EntityID]; has {
 				in[item.String()] = state.Get(item.PropertyKey)
 				continue
 			}
 			// get value from cache.
-			if state, ok := r.caches[item.EntityID]; ok {
+			if state, err = r.enCache.Load(item.EntityID); nil == err {
 				in[item.String()] = state.Get(item.PropertyKey)
 			}
 		}
@@ -569,23 +570,6 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	}
 
 	return nil, xerrors.ErrEntityNotFound
-}
-
-func (r *Runtime) LoadCacheEntity(id string) (Entity, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-	if state, ok := r.caches[id]; ok {
-		return state, nil
-	}
-
-	cc := tdtl.New([]byte(`{"properties":{}}`))
-	cc.Set("id", tdtl.New(id))
-	en, err := NewEntity(id, cc.Raw())
-	if nil == err {
-		// cache entity.
-		r.caches[id] = en
-	}
-	return en, errors.Wrap(err, "load cache entity")
 }
 
 func conv(patches []*v1.PatchData) []Patch {
