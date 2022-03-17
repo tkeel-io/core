@@ -132,3 +132,6 @@ func (e *entity) Properties() tdtl.Node {
 func (e *entity) Scheme() tdtl.Node {
 	return e.state.Get("scheme")
 }
+func (e *entity) GetProp(key string) tdtl.Node {
+	return e.state.Get("properties." + key)
+}

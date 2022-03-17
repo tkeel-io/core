@@ -9,6 +9,9 @@ import (
 const EntityStorePrefix = "core.entity."
 
 var (
+	EntityTypeBasic        = "BASIC"
+	EntityTypeSubscription = "SUBSCRIPTION"
+
 	PUT    EnventType = EnventType(mvccpb.PUT)
 	DELETE EnventType = EnventType(mvccpb.DELETE)
 )

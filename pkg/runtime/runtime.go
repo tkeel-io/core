@@ -28,6 +28,7 @@ import (
 type Runtime struct {
 	id           string
 	pathTree     *path.Tree
+	tentacleTree *path.Tree
 	caches       map[string]Entity // 存放其他Runtime的实体.
 	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
@@ -49,6 +50,7 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher, 
 		mapperCaches: map[string]MCache{},
 		dispatcher:   dispatcher,
 		repository:   repository,
+		tentacleTree: path.New(),
 		pathTree:     path.New(),
 		lock:         sync.RWMutex{},
 		mlock:        sync.RWMutex{},
@@ -78,7 +80,7 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 
 	// call callback once.
 	r.handleCallback(ctx, feed)
-	return feed.Err
+	return nil
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
@@ -86,7 +88,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		execer, feed := r.handleSystemEvent(ctx, ev)
+		execer, feed := r.prepareSystemEvent(ctx, ev)
 		return execer, feed
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
@@ -114,7 +116,6 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			Patches:  conv(e.Patches())}
 	case v1.ETCache:
 		sender := ev.Attr(v1.MetaSender)
-
 		// load cache.
 		state, err := r.LoadCacheEntity(sender)
 		if nil != err {
@@ -127,13 +128,10 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		execer := &Execer{
 			state:    state,
 			execFunc: state,
-			preFuncs: []Handler{},
+			preFuncs: []Handler{
+				&handlerImpl{fn: r.handleSubscribe}},
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleComputed},
-			}}
-
-		//
-
+				&handlerImpl{fn: r.handleComputed}}}
 		return execer, &Feed{
 			Event:    ev,
 			State:    state.Raw(),
@@ -153,8 +151,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 }
 
 // 处理实体生命周期.
-func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
-	log.Info("handle system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
+func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
+	log.Info("prepare system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator
@@ -170,7 +168,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
-				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
+				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.Info("create entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
 					return feed
@@ -193,7 +191,6 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
-				State:    state.Raw(),
 				EntityID: ev.Entity()}
 		}
 
@@ -212,6 +209,11 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 				Value: tdtl.New(props.Raw())}}}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
+		if nil != err {
+			log.Error("delete entity", zfield.Eid(ev.Entity()),
+				zfield.Value(string(action.GetData())), zap.Error(err))
+			state = DefaultEntity(ev.Entity())
+		}
 		execer := &Execer{
 			state:    state,
 			execFunc: state,
@@ -234,7 +236,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 				}}},
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
-				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
+				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.Info("delete entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 					return feed
@@ -252,7 +254,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 				preFuncs: []Handler{},
 				execFunc: DefaultEntity(ev.Entity()),
 				postFuncs: []Handler{
-					&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
+					&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 						log.Error("event type not support", zfield.Eid(ev.Entity()),
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 						return feed

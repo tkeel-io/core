@@ -24,6 +24,7 @@ type EntityAttr interface {
 	TemplateID() string
 	Properties() tdtl.Node
 	Scheme() tdtl.Node
+	GetProp(key string) tdtl.Node
 }
 
 type Entity interface {
