@@ -216,9 +216,9 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 	})
 
 	resp.Total = int32(len(resp.Items))
-	if resp.Total == 0 {
-		i.WriteData(req)
-	}
+	//	if resp.Total == 0 {
+	//		i.WriteData(req)
+	//	}
 
 	return resp, nil
 }
