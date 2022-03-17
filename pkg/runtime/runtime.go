@@ -15,6 +15,8 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/placement"
+	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/path"
@@ -30,6 +32,7 @@ type Runtime struct {
 	entities     map[string]Entity // 存放Runtime的实体.
 	dispatcher   dispatch.Dispatcher
 	mapperCaches map[string]MCache
+	repository   repository.IRepository
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -37,7 +40,7 @@ type Runtime struct {
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) *Runtime {
+func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
 		id:           id,
@@ -45,6 +48,7 @@ func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher) 
 		entities:     map[string]Entity{},
 		mapperCaches: map[string]MCache{},
 		dispatcher:   dispatcher,
+		repository:   repository,
 		pathTree:     path.New(),
 		lock:         sync.RWMutex{},
 		mlock:        sync.RWMutex{},
@@ -98,7 +102,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			preFuncs: []Handler{},
 			execFunc: state,
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 			}}
 
@@ -109,13 +113,14 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			EntityID: ev.Entity(),
 			Patches:  conv(e.Patches())}
 	case v1.ETCache:
+		sender := ev.Attr(v1.MetaSender)
+
 		// load cache.
-		entityID := ev.Attr(v1.MetaSender)
-		state, err := r.LoadCacheEntity(entityID)
+		state, err := r.LoadCacheEntity(sender)
 		if nil != err {
 			log.Error("load cache entity", zfield.Header(ev.Attributes()),
-				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zap.String("cache_entity", entityID))
-			state = DefaultEntity(entityID)
+				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
+			state = DefaultEntity(sender)
 		}
 
 		e, _ := ev.(v1.PatchEvent)
@@ -127,10 +132,12 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				&handlerImpl{fn: r.handleComputed},
 			}}
 
+		//
+
 		return execer, &Feed{
 			Event:    ev,
 			State:    state.Raw(),
-			EntityID: entityID,
+			EntityID: sender,
 			Patches:  conv(e.Patches())}
 	default:
 		return &Execer{
@@ -161,7 +168,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 			preFuncs: []Handler{},
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					log.Info("create entity successed", zfield.Eid(ev.Entity()),
@@ -212,6 +219,13 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					// TODO:
 					//		0. 删除etcd中的mapper.
+					if err = r.repository.DelMapperByEntity(ctx, &dao.Mapper{
+						Owner:    state.Owner(),
+						EntityID: state.ID(),
+					}); nil != err {
+						feed.Err = err
+						return feed
+					}
 					//		1. 从状态存储中删除（可标记）
 					//		2. 从搜索中删除（可标记）
 					// 		3. 从Runtime 中删除.
@@ -219,7 +233,7 @@ func (r *Runtime) handleSystemEvent(ctx context.Context, event v1.Event) (*Exece
 					return feed
 				}}},
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleSubscribe},
+				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					log.Info("delete entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
@@ -352,7 +366,7 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	return out
 }
 
-func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
+func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
 	var targets sort.StringSlice
 	entityID := feed.EntityID
@@ -523,7 +537,7 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 
 	// handle subscribe.
 	for _, feed := range feeds {
-		r.handleSubscribe(ctx, feed)
+		r.handleTentacle(ctx, feed)
 	}
 }
 

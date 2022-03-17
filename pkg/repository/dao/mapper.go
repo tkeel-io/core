@@ -19,7 +19,8 @@ const (
 	// store mapper prefix key.
 	MapperPrefix = "core/v1/mappers"
 	// CORE.MAPPER.{mapperID}.
-	fmtMapperString = "%s/%s/%s/%s"
+	fmtMapperString  = "%s/%s/%s/%s"
+	fmtMapperString2 = "%s/%s/%s"
 )
 
 type MapperHandler func([]Mapper)
@@ -47,6 +48,10 @@ func (m *Mapper) Key() string {
 	return fmt.Sprintf(fmtMapperString, MapperPrefix, m.Owner, m.EntityID, m.ID)
 }
 
+func (m *Mapper) EKey() string {
+	return fmt.Sprintf(fmtMapperString2, MapperPrefix, m.Owner, m.EntityID)
+}
+
 func (d *Dao) PutMapper(ctx context.Context, m *Mapper) error {
 	var err error
 	var bytes []byte
@@ -70,6 +75,11 @@ func (d *Dao) GetMapper(ctx context.Context, m *Mapper) (*Mapper, error) {
 func (d *Dao) DelMapper(ctx context.Context, m *Mapper) error {
 	_, err := d.etcdEndpoint.Delete(ctx, m.Key())
 	return errors.Wrap(err, "delete mapper")
+}
+
+func (d *Dao) DelMapperByEntity(ctx context.Context, m *Mapper) error {
+	_, err := d.etcdEndpoint.Delete(ctx, m.Key(), clientv3.WithPrefix())
+	return errors.Wrap(err, "delete mapper by entity")
 }
 
 func (d *Dao) HasMapper(ctx context.Context, m *Mapper) (bool, error) {

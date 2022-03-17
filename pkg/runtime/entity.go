@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -101,4 +102,33 @@ func (e *entity) Basic() *tdtl.Collect {
 	basic.Set("scheme", tdtl.New([]byte("{}")))
 	basic.Set("properties", tdtl.New([]byte("{}")))
 	return basic
+}
+
+func (e *entity) Type() string {
+	return e.state.Get("type").String()
+}
+func (e *entity) Owner() string {
+	return e.state.Get("owner").String()
+}
+func (e *entity) Source() string {
+	return e.state.Get("source").String()
+}
+func (e *entity) Version() int64 {
+	version := e.state.Get("version").String()
+	i, _ := strconv.ParseInt(version, 10, 64)
+	return i
+}
+func (e *entity) LastTime() int64 {
+	lastTime := e.state.Get("last_time").String()
+	i, _ := strconv.ParseInt(lastTime, 10, 64)
+	return i
+}
+func (e *entity) TemplateID() string {
+	return e.state.Get("template_id").String()
+}
+func (e *entity) Properties() tdtl.Node {
+	return e.state.Get("properties")
+}
+func (e *entity) Scheme() tdtl.Node {
+	return e.state.Get("scheme")
 }

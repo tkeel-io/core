@@ -17,7 +17,11 @@ func (r *repo) GetMapper(ctx context.Context, m *dao.Mapper) (*dao.Mapper, error
 }
 
 func (r *repo) DelMapper(ctx context.Context, m *dao.Mapper) error {
-	return errors.Wrap(r.dao.DelMapper(ctx, m), "put mapper repository")
+	return errors.Wrap(r.dao.DelMapper(ctx, m), "del mapper repository")
+}
+
+func (r *repo) DelMapperByEntity(ctx context.Context, m *dao.Mapper) error {
+	return errors.Wrap(r.dao.DelMapperByEntity(ctx, m), "del mapper repository")
 }
 
 func (r *repo) HasMapper(ctx context.Context, m *dao.Mapper) (bool, error) {

@@ -15,7 +15,20 @@ type Patch struct {
 	Value *tdtl.Collect
 }
 
+type EntityAttr interface {
+	Type() string
+	Owner() string
+	Source() string
+	Version() int64
+	LastTime() int64
+	TemplateID() string
+	Properties() tdtl.Node
+	Scheme() tdtl.Node
+}
+
 type Entity interface {
+	EntityAttr
+
 	ID() string
 	Get(string) tdtl.Node
 	Copy() Entity

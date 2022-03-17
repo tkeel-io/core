@@ -15,6 +15,7 @@ type IRepository interface {
 	PutMapper(context.Context, *dao.Mapper) error
 	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
 	DelMapper(context.Context, *dao.Mapper) error
+	DelMapperByEntity(context.Context, *dao.Mapper) error
 	HasMapper(context.Context, *dao.Mapper) (bool, error)
 	ListMapper(context.Context, int64, *dao.ListMapperReq) ([]dao.Mapper, error)
 	RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler)

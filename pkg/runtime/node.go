@@ -66,14 +66,13 @@ func (n *Node) Start(cfg NodeConf) error {
 		// create runtime instance.
 		log.Info("create runtime instance",
 			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
-		rt := NewRuntime(n.ctx, rid, n.dispatch)
+		rt := NewRuntime(n.ctx, rid, n.dispatch, n.resourceManager.Repo())
 		for _, mp := range n.mapperSlice() {
 			if mc, has := n.mapper(mp)[rt.ID()]; has {
 				rt.AppendMapper(*mc)
 			}
 		}
 		n.runtimes[rid] = rt
-
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
 	}
 

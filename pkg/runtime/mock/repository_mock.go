@@ -22,6 +22,7 @@ func (r *repo) HasEntity(context.Context, *dao.Entity) (bool, error)        { re
 func (r *repo) PutMapper(context.Context, *dao.Mapper) error                { return nil }
 func (r *repo) GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error) { return nil, nil }
 func (r *repo) DelMapper(context.Context, *dao.Mapper) error                { return nil }
+func (r *repo) DelMapperByEntity(context.Context, *dao.Mapper) error        { return nil }
 func (r *repo) HasMapper(context.Context, *dao.Mapper) (bool, error)        { return false, nil }
 func (r *repo) ListMapper(context.Context, int64, *dao.ListMapperReq) ([]dao.Mapper, error) {
 	return nil, nil
