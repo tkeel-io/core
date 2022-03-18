@@ -168,9 +168,16 @@ func (s *statem) flushTimeSeries(ctx context.Context) error {
 						Fields:      map[string]float32{},
 						Timestamp:   0,
 					}
-					tsItem.Fields[k] = float32(ttt["value"].(float64))
-					tsItem.Timestamp = int64(ts.(float64)) * 1e6
-					flushData = append(flushData, &tsItem)
+					switch tttV := ttt["value"].(type) {
+					case float64:
+						tsItem.Fields[k] = float32(tttV)
+						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						flushData = append(flushData, &tsItem)
+					case float32:
+						tsItem.Fields[k] = tttV
+						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						flushData = append(flushData, &tsItem)
+					}
 					continue
 				}
 			default:
