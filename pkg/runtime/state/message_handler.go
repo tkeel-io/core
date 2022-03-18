@@ -124,10 +124,9 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		return nil
 	}
 
-	var dataMerged []byte
 	if rawData.Type == "telemetry" {
 		dataAdjust := adjustTSData(bytes)
-		dataMerged = dataAdjust
+		bytes = dataAdjust
 
 		/*
 			oldTelemetry, err := stateIns.Get("telemetry")
@@ -141,10 +140,6 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 				}
 			}
 		*/
-	}
-
-	if len(dataMerged) != 0 {
-		bytes = dataMerged
 	}
 
 	collect := collectjs.ByteNew(bytes)
