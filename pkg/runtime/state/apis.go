@@ -228,7 +228,74 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) ([]
 }
 
 func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
-	panic("implement me")
+	var (
+		err   error
+		reqEn dao.Entity
+	)
+
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
+	// decode request.
+	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "decode core api request")
+	}
+
+	// sync template.
+	if reqEn.TemplateID != "" {
+		var tempEn = &dao.Entity{ID: reqEn.TemplateID}
+		if tempEn, err = s.Repo().GetEntity(ctx, tempEn); nil != err {
+			log.Error("pull template entity", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "pull template entity")
+		}
+
+		s.TemplateID = reqEn.TemplateID
+		s.ConfigBytes = tempEn.ConfigBytes
+	}
+
+	// update configs.
+	if reqEn.ConfigBytes != nil {
+		s.ConfigBytes = reqEn.ConfigBytes
+	}
+
+	// parse configs.
+	s.reparseConfig()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "set response event payload")
+	}
+
+	s.Version++
+	s.LastTime = util.UnixMilli()
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	s.flush(ctx)
+
+	return nil, nil
 }
 
 func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {

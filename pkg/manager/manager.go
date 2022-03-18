@@ -188,6 +188,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 		Type:        en.Type,
 		Owner:       en.Owner,
 		Source:      en.Source,
+		TemplateID:  en.TemplateID,
 		Properties:  en.Properties,
 		ConfigBytes: en.ConfigFile,
 	}); nil != err {
@@ -197,7 +198,7 @@ func (m *apiManager) UpdateEntity(ctx context.Context, en *Base) (*Base, error) 
 	}
 
 	ev.SetExtension(message.ExtAPIRequestID, reqID)
-	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdataEntityProps.String())
+	ev.SetExtension(message.ExtAPIIdentify, state.APIUpdateEntity.String())
 	if err = m.dispatcher.Dispatch(ctx, ev); nil != err {
 		log.Error("update entity", zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "update entity")
