@@ -89,31 +89,40 @@ func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, e
 	return &iMetadata, nil
 }
 
+func makeKVString(req map[string]string) string {
+	ress := make([]string, 0)
+	for k, v := range req {
+		ress = append(ress, k+"="+v)
+	}
+	return strings.Join(ress, ",")
+}
+
+func makeKVSFloat(req map[string]float32) string {
+	ress := make([]string, 0)
+	for k, v := range req {
+		ress = append(ress, fmt.Sprintf("%s=%f", k, v))
+	}
+	return strings.Join(ress, ",")
+}
+
 // Invoke called on supported operations.
 func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
-	points := make([]string, 4)
-	points[0] = "keel,id=temperature avg=10.3,max=100.9"
-	points[1] = "keel,id=temperature2 avg1=70.3,max=10.9"
-	points[2] = "keel,id=abcd123 avg1=10.3,max1=800.9"
-
-	switch val := req.Data.(type) {
-	case []string:
-		//		points[3] = val[0]
-		log.Info(val)
-	default:
-		return nil, ErrInfluxInvalidParams
+	points := make([]string, 0)
+	for _, item := range req.Data {
+		ss := fmt.Sprintf("%s,%s %s %d", item.Measurement, makeKVString(item.Tags), makeKVSFloat(item.Fields), item.Timestamp)
+		points = append(points, ss)
 	}
-
 	// TODO: 时序 Client 有问题.
 	if nil == i.writeAPI {
+		log.Error("ts init client error")
 		return &tseries.TSeriesResponse{Metadata: req.Metadata}, nil
 	}
 
 	// write the point.
+	log.Info(points)
 	if err := i.writeAPI.WriteRecord(ctx, points...); err != nil {
 		return nil, errors.Wrap(err, "write influxdb")
 	}
-	i.client.Close()
 	return &tseries.TSeriesResponse{Metadata: req.Metadata}, nil
 }
 
@@ -207,9 +216,9 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 	})
 
 	resp.Total = int32(len(resp.Items))
-	if resp.Total == 0 {
-		i.WriteData(req)
-	}
+	//	if resp.Total == 0 {
+	//		i.WriteData(req)
+	//	}
 
 	return resp, nil
 }

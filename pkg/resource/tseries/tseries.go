@@ -13,13 +13,12 @@ var registeredTS = make(map[string]TSGenerator)
 type TSeriesData struct { //nolint
 	Measurement string
 	Tags        map[string]string
-	Fields      map[string]string
-	Value       string
+	Fields      map[string]float32
 	Timestamp   int64
 }
 
 type TSeriesRequest struct { //nolint
-	Data     interface{}       `json:"data"`
+	Data     []*TSeriesData    `json:"data"`
 	Metadata map[string]string `json:"metadata"`
 }
 

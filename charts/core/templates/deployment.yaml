@@ -32,15 +32,17 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: TKEEL_DATABASE
+              value: {{ .Values.middleware.database }}
+            - name: TKEEL_SEARCH
+              value: {{ .Values.middleware.search }}
+            - name: TKEEL_REGISTRY
+              value: {{ .Values.middleware.service_registry }}
           ports:
             - name: http
               containerPort: {{.Values.appPort}}
               protocol: TCP
-          env:
-            - name: KEEL_PRIVATE_STORE
-              value: {{ printf "%s-redis-private-store" .Values.middleware.name }}
-            - name: KEEL_PUBLIC_STORE
-              value: {{ printf "%s-redis-public-store" .Values.middleware.name }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
