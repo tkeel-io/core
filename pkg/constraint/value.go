@@ -18,6 +18,7 @@ package constraint
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -186,6 +187,8 @@ func parseField(in Config) (out Config, err error) {
 		if err = mapstructure.Decode(in.Define, &jsonDefine); nil != err {
 			return out, errors.Wrap(err, "parse property config failed")
 		}
+
+		fmt.Println("====================", jsonDefine)
 
 		for _, field := range jsonDefine.Fields {
 			var cfg Config
