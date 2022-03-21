@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
@@ -636,7 +638,7 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	// update configs.
 	var configBytes = []byte("{}")
 	collectjs.ForEach(reqEn.ConfigBytes, jsonparser.Object,
-		func(key, value []byte, dataType jsonparser.ValueType) {
+		func(key, value []byte, _ jsonparser.ValueType) {
 			propertyKey := string(key)
 			if configBytes, err = collectjs.Set(configBytes, propertyKey, value); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
@@ -720,7 +722,11 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		switch op {
 		case xjson.OpAdd:
 		default:
-			if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
+			// make sub path.
+			if bytesSrc, err = makeSubPath(destNode.Raw(), bytesSrc, pd.Path); nil != err {
+				log.Error("call core.APIs.PatchConfigs, make sub path", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "patch entity configs")
+			} else if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
 			}
@@ -853,4 +859,65 @@ func (s *statem) reparseConfig() {
 			}
 		}
 	}
+}
+
+func makeSubPath(dest, src []byte, path string) ([]byte, error) {
+	var index int
+	segs := strings.Split(path, ".")
+	for index = range segs {
+		if _, _, _, err := jsonparser.Get(dest, segs[:index+1]...); nil != err {
+			if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+				break
+			}
+			return nil, errors.Wrap(err, "make sub path")
+		}
+	}
+
+	missSegs := segs[index:]
+	if len(missSegs) > 1 {
+		return makeConfig(missSegs, src), nil
+	}
+
+	return src, nil
+}
+
+func makeConfig(segs []string, data []byte) []byte {
+	cfg := &constraint.Config{
+		ID:                segs[0],
+		Type:              "struct",
+		Name:              segs[0],
+		Enabled:           true,
+		EnabledSearch:     true,
+		EnabledTimeSeries: true,
+		Define:            map[string]interface{}{},
+		LastTime:          time.Now().UnixNano() / 1e6,
+	}
+
+	head := cfg
+	for _, seg := range segs[1 : len(segs)-1] {
+		curCfg := &constraint.Config{
+			ID:                seg,
+			Type:              "struct",
+			Name:              seg,
+			Enabled:           true,
+			EnabledSearch:     true,
+			EnabledTimeSeries: true,
+			Define:            map[string]interface{}{},
+			LastTime:          time.Now().UnixNano() / 1e6,
+		}
+
+		head.Define["fields"] = map[string]interface{}{seg: curCfg}
+		head = curCfg
+	}
+
+	// set last seg.
+	var v interface{}
+	json.Unmarshal(data, &v)
+	head.Define["fields"] =
+		map[string]interface{}{
+			segs[len(segs)-1]: v}
+
+	bytes, _ := json.Marshal(cfg)
+
+	return bytes
 }

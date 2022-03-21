@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -154,6 +155,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 
 	// decode configs.
 	if nil != req.Configs {
+		fmt.Println("==================x", req.Configs.AsInterface())
 		if entity.Configs, err = parseConfigFrom2(ctx, req.Configs.AsInterface()); nil != err {
 			log.Error("set entity configs", zfield.Eid(req.Id), zap.Error(err))
 			return out, errors.Wrap(err, "update entity failed")
@@ -474,7 +476,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
 			pds = append(pds, state.PatchData{
-				Path:     pd.Path,
+				Path:     constraint.ExtracPath(pd.Path),
 				Operator: pd.Operator,
 				Value:    bytes,
 			})
@@ -518,7 +520,7 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	var propertyIDs []string
 	if in.PropertyKeys != "" {
 		propertyIDs = strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
-		constraint.FormatPropertyKey(propertyIDs)
+		constraint.FormatPropertyKeys(propertyIDs)
 	}
 
 	if entity, err = s.apiManager.GetEntityConfigs(ctx, entity, propertyIDs); nil != err {

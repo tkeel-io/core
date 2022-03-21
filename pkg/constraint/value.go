@@ -18,7 +18,7 @@ package constraint
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -178,6 +178,7 @@ func parseField(in Config) (out Config, err error) {
 		if err = mapstructure.Decode(in.Define, &arrDefine); nil != err {
 			return out, errors.Wrap(err, "parse property config failed")
 		} else if arrDefine.Length <= 0 {
+			log.Error("scheme type not support", zap.Error(xerrors.ErrEntityConfigInvalid))
 			return out, xerrors.ErrEntityConfigInvalid
 		}
 		arrDefine.ElemType, err = parseField(arrDefine.ElemType)
@@ -188,11 +189,10 @@ func parseField(in Config) (out Config, err error) {
 			return out, errors.Wrap(err, "parse property config failed")
 		}
 
-		fmt.Println("====================", jsonDefine)
-
 		for _, field := range jsonDefine.Fields {
 			var cfg Config
 			if cfg, err = parseField(field); nil != err {
+				log.Error("scheme type not support", zap.Error(err))
 				return out, errors.Wrap(err, "parse property config failed")
 			}
 			jsonDefine2.Fields[cfg.ID] = cfg
@@ -200,8 +200,26 @@ func parseField(in Config) (out Config, err error) {
 
 		in.Define["fields"] = jsonDefine2.Fields
 	default:
+		log.Error("scheme type not support", zap.Error(xerrors.ErrEntityConfigInvalid))
 		return out, xerrors.ErrEntityConfigInvalid
 	}
 
 	return in, errors.Wrap(err, "parse property config failed")
+}
+
+func ExtracPath(path string) string {
+	return strings.ReplaceAll(path, ".", ".define.fields.")
+}
+
+func FormatPropertyKeys(propertyKeys []string) []string {
+	for index := range propertyKeys {
+		propertyKeys[index] =
+			ExtracPath(propertyKeys[index])
+	}
+	return propertyKeys
+}
+
+func format(propertyKey string) string { //nolint
+	path := strings.ReplaceAll(propertyKey, ".", ".define.fields.")
+	return path
 }
