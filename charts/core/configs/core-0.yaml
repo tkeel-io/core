@@ -1,20 +1,16 @@
 etcd:
   address:
-  - http://localhost:2379
+  - http://tkeel-middleware-etcd-0:2379
 logger:
   level: debug
 server:
   name: core
   app_id: core 
   sources:
-    - kafka://139.198.125.147:9092/core4/core
-    - kafka://139.198.125.147:9092/core5/core
-    - kafka://139.198.125.147:9092/core6/core
-    - kafka://139.198.125.147:9092/core7/core
-proxy:
-  name: core1
-  http_port: 20029
-  grpc_port: 20030
+    - kafka://tkeel-middleware-kafka:9092/core4/core
+    - kafka://tkeel-middleware-kafka:9092/core5/core
+    - kafka://tkeel-middleware-kafka:9092/core6/core
+    - kafka://tkeel-middleware-kafka:9092/core7/core
 components:
   store:
     name: noop
@@ -23,15 +19,15 @@ components:
         value: core-state
 
 dispatcher:
-  id: dispatcher1
+  id: dispatcher
   enabled: true
   name: dispatcher
   downstreams:
-    - kafka://139.198.125.147:9092/core0/core
-    - kafka://139.198.125.147:9092/core1/core
-    - kafka://139.198.125.147:9092/core2/core
-    - kafka://139.198.125.147:9092/core3/core
-    - kafka://139.198.125.147:9092/core4/core
-    - kafka://139.198.125.147:9092/core5/core
-    - kafka://139.198.125.147:9092/core6/core
-    - kafka://139.198.125.147:9092/core7/core
+    - kafka://tkeel-middleware-kafka:9092/core0/core
+    - kafka://tkeel-middleware-kafka:9092/core1/core
+    - kafka://tkeel-middleware-kafka:9092/core2/core
+    - kafka://tkeel-middleware-kafka:9092/core3/core
+    - kafka://tkeel-middleware-kafka:9092/core4/core
+    - kafka://tkeel-middleware-kafka:9092/core5/core
+    - kafka://tkeel-middleware-kafka:9092/core6/core
+    - kafka://tkeel-middleware-kafka:9092/core7/core
