@@ -1007,6 +1007,11 @@ func (h *EntityHTTPHandler) RemoveMapper(req *go_restful.Request, resp *go_restf
 
 func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := UpdateEntityRequest{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
 	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
