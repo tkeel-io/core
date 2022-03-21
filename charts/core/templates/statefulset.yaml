@@ -1,10 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "core.name" . }}
   labels:
     app: {{ include "core.name" . }}
 spec:
+  serviceName: {{ .Values.serviceName }}
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
@@ -26,6 +27,16 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: core-init
+          image: busybox:1.32
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "cp /var/conf/`hostname`.yaml /var/config/config.yaml"]
+          volumeMounts:
+            - mountPath: /var/conf
+              name: conf
+            - mountPath: /var/config
+              name: config
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -41,6 +52,11 @@ spec:
               value: {{ printf "%s-redis-private-store" .Values.middleware.name }}
             - name: KEEL_PUBLIC_STORE
               value: {{ printf "%s-redis-public-store" .Values.middleware.name }}
+          volumeMounts:
+            - mountPath: /var/conf
+              name: conf
+            - mountPath: /var/config
+              name: config
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
@@ -55,3 +71,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
+      volumes:
+        - name: conf
+          configMap:
+            name: core-cm
+        - name: config
+          emptyDir: {}
