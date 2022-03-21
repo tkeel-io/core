@@ -55,7 +55,7 @@ spec:
           volumeMounts:
             - mountPath: /var/conf
               name: conf
-            - mountPath: /var/config
+            - mountPath: /keel
               name: config
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
