@@ -33,6 +33,66 @@ func (s *statem) getState(stateID string) State {
 	return State{ID: stateID, Props: s.cacheProps[stateID]}
 }
 
+type tsDevice struct {
+	TS     int64              `json:"ts,omitempty"`
+	Values map[string]float64 `json:"values,omitempty"`
+}
+
+type tsData struct {
+	TS    int64   `json:"ts,omitempty"`
+	Value float64 `json:"value,omitempty"`
+}
+
+func adjustTSData(bytes []byte) (dataAdjust []byte) {
+	// tsDevice1 no ts
+	tsDevice1 := make(map[string]float64)
+	err := json.Unmarshal(bytes, &tsDevice1)
+	if err == nil && len(tsDevice1) > 0 {
+		tsDeviceAdjustData := make(map[string]*tsData)
+		for k, v := range tsDevice1 {
+			tsDeviceAdjustData[k] = &tsData{TS: time.Now().UnixMilli(), Value: v}
+		}
+		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+		log.Info(string(dataAdjust))
+		return
+	}
+
+	// tsDevice2 has ts
+	tsDevice2 := tsDevice{}
+	err = json.Unmarshal(bytes, &tsDevice2)
+	log.Info(tsDevice2)
+	if err == nil && tsDevice2.TS != 0 {
+		tsDeviceAdjustData := make(map[string]*tsData)
+		for k, v := range tsDevice2.Values {
+			tsDeviceAdjustData[k] = &tsData{TS: tsDevice2.TS, Value: v}
+		}
+		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+		log.Info(string(dataAdjust))
+		return
+	}
+
+	tsGatewayData := make(map[string]*tsDevice)
+	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
+	tsGatewayAdjustData := make(map[string]interface{})
+
+	err = json.Unmarshal(bytes, &tsGatewayData)
+	if err == nil {
+		for k, v := range tsGatewayData {
+			tsGatewayAdjustDataK := map[string]*tsData{}
+			for kk, vv := range v.Values {
+				tsGatewayAdjustDataK[kk] = &tsData{TS: v.TS, Value: vv}
+				//		tsGatewayAdjustData[strings.Join([]string{k, kk}, ".")] = &tsData{TS: v.TS, Value: vv}
+			}
+			tsGatewayAdjustData[k] = tsGatewayAdjustDataK
+		}
+		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
+		log.Info(string(dataAdjust))
+		return
+	}
+	log.Error("ts data adjust error", zap.Error(err))
+	return dataAdjust
+}
+
 func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) []WatchKey {
 	log.Debug("invoke raw message", zfield.Eid(s.ID), zfield.Type(s.Type),
 		zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
@@ -62,6 +122,24 @@ func (s *statem) invokeRawMessage(ctx context.Context, msgCtx message.Context) [
 		log.Error("decode raw data", zfield.Eid(s.ID), zfield.Type(s.Type), zap.Error(err),
 			zfield.Header(msgCtx.Attributes()), zfield.Message(string(msgCtx.Message())))
 		return nil
+	}
+
+	if rawData.Type == "telemetry" {
+		dataAdjust := adjustTSData(bytes)
+		bytes = dataAdjust
+
+		/*
+			oldTelemetry, err := stateIns.Get("telemetry")
+			if err == nil {
+				dataMerged, err = collectjs.Merge(oldTelemetry.Raw(), dataAdjust)
+				if err != nil {
+					log.Error("ts data merge error", zap.Error(err))
+
+				} else {
+					dataMerged = dataAdjust
+				}
+			}
+		*/
 	}
 
 	collect := collectjs.ByteNew(bytes)

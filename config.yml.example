@@ -18,6 +18,17 @@ components:
     properties:
       - key: store_name
         value: core-state
+  time_series:
+    name: influxdb
+    properties:
+      - key: url
+        value: http://tkeel-core-influxdb:8086
+      - key: token
+        value: tr2zy29F1Tusl8bkBwOR
+      - key: org
+        value: tkeel
+      - key: bucket
+        value: core   
 
 dispatcher:
   id: dispatcher0
