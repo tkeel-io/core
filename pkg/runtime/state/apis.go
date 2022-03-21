@@ -721,15 +721,17 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		op := xjson.NewPatchOp(pd.Operator)
 		switch op {
 		case xjson.OpAdd:
-		default:
+		case xjson.OpReplace:
 			// make sub path.
-			if bytesSrc, err = makeSubPath(destNode.Raw(), bytesSrc, pd.Path); nil != err {
+			var path string
+			if bytesSrc, path, err = makeSubPath(destNode.Raw(), bytesSrc, pd.Path); nil != err {
 				log.Error("call core.APIs.PatchConfigs, make sub path", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
-			} else if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
+			} else if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), path, op); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
 			}
+		default:
 		}
 	}
 
@@ -861,24 +863,29 @@ func (s *statem) reparseConfig() {
 	}
 }
 
-func makeSubPath(dest, src []byte, path string) ([]byte, error) {
+func makeSubPath(dest, src []byte, path string) ([]byte, string, error) {
 	var index int
 	segs := strings.Split(path, ".")
-	for index = range segs {
+	for ; index < len(segs); index += 3 {
 		if _, _, _, err := jsonparser.Get(dest, segs[:index+1]...); nil != err {
 			if errors.Is(err, jsonparser.KeyPathNotFoundError) {
 				break
 			}
-			return nil, errors.Wrap(err, "make sub path")
+			return nil, path, errors.Wrap(err, "make sub path")
 		}
 	}
 
-	missSegs := segs[index:]
-	if len(missSegs) > 1 {
-		return makeConfig(missSegs, src), nil
+	if index >= len(segs) {
+		return src, path, nil
 	}
 
-	return src, nil
+	missSegs := segs[index:]
+	if len(missSegs) > 3 {
+		path = strings.Join(segs[:index+1], ".")
+		return makeConfig(missSegs, src), path, nil
+	}
+
+	return src, path, nil
 }
 
 func makeConfig(segs []string, data []byte) []byte {
@@ -894,11 +901,12 @@ func makeConfig(segs []string, data []byte) []byte {
 	}
 
 	head := cfg
-	for _, seg := range segs[1 : len(segs)-1] {
+	mids := segs[3 : len(segs)-1]
+	for index := 0; index < len(mids); index += 3 {
 		curCfg := &constraint.Config{
-			ID:                seg,
+			ID:                mids[index],
 			Type:              "struct",
-			Name:              seg,
+			Name:              mids[index],
 			Enabled:           true,
 			EnabledSearch:     true,
 			EnabledTimeSeries: true,
@@ -906,7 +914,7 @@ func makeConfig(segs []string, data []byte) []byte {
 			LastTime:          time.Now().UnixNano() / 1e6,
 		}
 
-		head.Define["fields"] = map[string]interface{}{seg: curCfg}
+		head.Define["fields"] = map[string]interface{}{mids[index]: curCfg}
 		head = curCfg
 	}
 
@@ -916,7 +924,6 @@ func makeConfig(segs []string, data []byte) []byte {
 	head.Define["fields"] =
 		map[string]interface{}{
 			segs[len(segs)-1]: v}
-
 	bytes, _ := json.Marshal(cfg)
 
 	return bytes

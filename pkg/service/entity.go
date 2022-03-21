@@ -19,7 +19,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -155,7 +154,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 
 	// decode configs.
 	if nil != req.Configs {
-		fmt.Println("==================x", req.Configs.AsInterface())
 		if entity.Configs, err = parseConfigFrom2(ctx, req.Configs.AsInterface()); nil != err {
 			log.Error("set entity configs", zfield.Eid(req.Id), zap.Error(err))
 			return out, errors.Wrap(err, "update entity failed")
