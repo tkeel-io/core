@@ -7,10 +7,10 @@ server:
   name: core
   app_id: core 
   sources:
-    - kafka://tkeel-middleware-kafka:9092/core0/core
-    - kafka://tkeel-middleware-kafka:9092/core1/core
-    - kafka://tkeel-middleware-kafka:9092/core2/core
-    - kafka://tkeel-middleware-kafka:9092/core3/core
+    - kafka://tkeel-middleware-kafka:9092/core4/core
+    - kafka://tkeel-middleware-kafka:9092/core5/core
+    - kafka://tkeel-middleware-kafka:9092/core6/core
+    - kafka://tkeel-middleware-kafka:9092/core7/core
 components:
   store:
     name: noop
