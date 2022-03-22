@@ -1,8 +1,6 @@
-etcd:
-  address:
-  - http://tkeel-middleware-etcd-0:2379
 logger:
   level: debug
+
 server:
   name: core
   app_id: core 
@@ -11,12 +9,20 @@ server:
     - kafka://tkeel-middleware-kafka:9092/core5/core
     - kafka://tkeel-middleware-kafka:9092/core6/core
     - kafka://tkeel-middleware-kafka:9092/core7/core
+
+discovery:
+  endpoints:
+    - http://tkeel-middleware-etcd:2379
+
 components:
   store:
     name: noop
     properties:
       - key: store_name
         value: core-state
+  etcd:
+    address:
+      - http://tkeel-middleware-etcd:2379
 
 dispatcher:
   id: dispatcher

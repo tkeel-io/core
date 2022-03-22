@@ -52,6 +52,7 @@ func (d *Dao) GetLastRevision(ctx context.Context) int64 {
 
 	if res, err = d.etcdEndpoint.MemberList(ctx); err != nil {
 		log.Error("query etcd cluster member", zap.Error(err))
+		return 0
 	}
 
 	rev := int64(0)

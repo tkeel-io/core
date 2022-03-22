@@ -130,7 +130,7 @@ func Init(cfgFile string) {
 	viper.WatchConfig()
 }
 
-func onConfigChanged(in fsnotify.Event) {
+func onConfigChanged(_ fsnotify.Event) {
 	_ = viper.Unmarshal(&_config)
 }
 
