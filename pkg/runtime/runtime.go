@@ -138,15 +138,12 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			EntityID: sender,
 			Patches:  conv(e.Patches())}
 	default:
-		return &Execer{
-				state:     nil,
-				preFuncs:  []Handler{},
-				postFuncs: []Handler{},
-			}, &Feed{
-				State:    DefaultEntity("").Raw(),
-				Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
-				EntityID: ev.Entity(),
-			}
+		return &Execer{}, &Feed{
+			Event:    ev,
+			State:    DefaultEntity("").Raw(),
+			Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
+			EntityID: ev.Entity(),
+		}
 	}
 }
 
@@ -436,14 +433,13 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	if event.CallbackAddr() != "" {
 		if feed.Err == nil {
 			// 需要注意的是：为了精炼逻辑，runtime内部只是对api返回变更后实体的最新状态，而不做API结果的组装.
-			en, _ := r.LoadEntity(feed.EntityID)
 			ev := &v1.ProtoEvent{
 				Id:        event.ID(),
 				Timestamp: time.Now().UnixNano(),
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: en.Raw()}}
+					RawData: feed.State}}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			err = r.dispatcher.Dispatch(ctx, ev)
