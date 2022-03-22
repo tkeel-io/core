@@ -548,7 +548,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 	pds := make([]state.PatchData, 0)
 	for index := range propertyIDs {
 		pds = append(pds, state.PatchData{
-			Path:     propertyIDs[index],
+			Path:     constraint.ExtracPath(propertyIDs[index]),
 			Operator: xjson.OpRemove.String(),
 		})
 	}
