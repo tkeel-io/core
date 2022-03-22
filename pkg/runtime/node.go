@@ -133,20 +133,37 @@ func (n *Node) watchMetadata() {
 	repo.WatchMapper(context.Background(),
 		repo.GetLastRevision(context.Background()),
 		func(et dao.EnventType, mp dao.Mapper) {
-			// parse mapper.
-			var err error
-			var mpIns mapper.Mapper
-			log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-			if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
-				log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-				return
-			}
+			switch et {
+			case dao.DELETE:
+				// parse mapper.
+				var err error
+				var mpIns mapper.Mapper
+				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
+					log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+					return
+				}
 
-			// cache mapper.
-			n.mappers[mp.ID] = mpIns
-			for rtID, mc := range n.mapper(mpIns) {
-				if rt, has := n.runtimes[rtID]; has {
-					rt.AppendMapper(*mc)
+				// remove mapper from all runtime.
+				for _, rt := range n.runtimes {
+					rt.RemoveMapper(MCache{ID: mpIns.ID()})
+				}
+			case dao.PUT:
+				// parse mapper.
+				var err error
+				var mpIns mapper.Mapper
+				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
+					log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+					return
+				}
+
+				// cache mapper.
+				n.mappers[mp.ID] = mpIns
+				for rtID, mc := range n.mapper(mpIns) {
+					if rt, has := n.runtimes[rtID]; has {
+						rt.AppendMapper(*mc)
+					}
 				}
 			}
 		})
