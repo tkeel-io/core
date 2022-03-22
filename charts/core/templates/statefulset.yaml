@@ -31,11 +31,11 @@ spec:
         - name: core-init
           image: busybox:1.32
           imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-c", "cp /var/conf/`hostname`.yaml /keel/config.yml"]
+          command: ["/bin/sh", "-c", "cp /var/conf/`hostname`.yaml /config/config.yml"]
           volumeMounts:
             - mountPath: /var/conf
               name: conf
-            - mountPath: /keel
+            - mountPath: /config
               name: config
       containers:
         - name: {{ .Chart.Name }}
@@ -55,7 +55,7 @@ spec:
           volumeMounts:
             - mountPath: /var/conf
               name: conf
-            - mountPath: /keel
+            - mountPath: /config
               name: config
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
