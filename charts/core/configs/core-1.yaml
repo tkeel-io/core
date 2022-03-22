@@ -21,7 +21,7 @@ components:
       - key: store_name
         value: core-state
   etcd:
-    address:
+    endpoints:
       - http://tkeel-middleware-etcd:2379
 
 dispatcher:
