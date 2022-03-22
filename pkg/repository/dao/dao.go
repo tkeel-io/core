@@ -16,6 +16,8 @@ import (
 )
 
 type Dao struct {
+	ctx          context.Context
+	cancel       context.CancelFunc
 	storeCfg     config.Metadata
 	etcdCfg      config.EtcdConfig
 	stateClient  store.Store
@@ -35,7 +37,11 @@ func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfi
 		return nil, errors.Wrap(err, "dial etcd")
 	}
 
+	// create Dao instance.
+	ctx, cancel := context.WithCancel(ctx)
 	return &Dao{
+		ctx:          ctx,
+		cancel:       cancel,
 		etcdCfg:      etcdCfg,
 		storeCfg:     storeCfg,
 		etcdEndpoint: etcdEndpoint,
@@ -75,4 +81,8 @@ func (d *Dao) GetLastRevision(ctx context.Context) int64 {
 		}
 	}
 	return rev
+}
+
+func (d *Dao) Close() {
+	d.cancel()
 }

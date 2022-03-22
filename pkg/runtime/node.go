@@ -66,7 +66,7 @@ func (n *Node) Start(cfg NodeConf) error {
 		// create runtime instance.
 		log.Info("create runtime instance",
 			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
-		rt := NewRuntime(n.ctx, rid, n.dispatch, n.resourceManager.Repo())
+		rt := NewRuntime(n.ctx, n, rid, n.dispatch, n.resourceManager.Repo())
 		for _, mp := range n.mapperSlice() {
 			if mc, has := n.mapper(mp)[rt.ID()]; has {
 				rt.AppendMapper(*mc)
@@ -194,4 +194,22 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 	}
 
 	return res
+}
+
+func (n *Node) FlushEntity(ctx context.Context, en Entity) {
+	// 1. flush state.
+	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
+		log.Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
+		return
+	}
+
+	// 2. flush search engine data.
+	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), en.Raw()); nil != err {
+		log.Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
+	}
+
+	// 3. flush timeseries data.
+	// if _, err := n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{}); nil != err {
+	// 	log.Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
+	// }
 }

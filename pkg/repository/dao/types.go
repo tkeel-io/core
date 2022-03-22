@@ -6,7 +6,7 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 )
 
-const EntityStorePrefix = "core.entity."
+const EntityStorePrefix = "CORE.ENTITY"
 
 var (
 	EntityTypeBasic        = "BASIC"

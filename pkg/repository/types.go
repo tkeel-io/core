@@ -7,23 +7,17 @@ import (
 )
 
 type IRepository interface {
-	GetLastRevision(context.Context) int64
-	PutEntity(context.Context, *dao.Entity) error
-	GetEntity(context.Context, *dao.Entity) (*dao.Entity, error)
-	DelEntity(context.Context, *dao.Entity) error
-	HasEntity(context.Context, *dao.Entity) (bool, error)
-	PutMapper(context.Context, *dao.Mapper) error
-	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
-	DelMapper(context.Context, *dao.Mapper) error
-	DelMapperByEntity(context.Context, *dao.Mapper) error
-	HasMapper(context.Context, *dao.Mapper) (bool, error)
-	ListMapper(context.Context, int64, *dao.ListMapperReq) ([]dao.Mapper, error)
+	GetLastRevision(ctx context.Context) int64
+	PutEntity(ctx context.Context, eid string, data []byte) error
+	GetEntity(ctx context.Context, eid string) ([]byte, error)
+	DelEntity(ctx context.Context, eid string) error
+	HasEntity(ctx context.Context, eid string) (bool, error)
+	PutMapper(ctx context.Context, mp *dao.Mapper) error
+	GetMapper(ctx context.Context, mp *dao.Mapper) (*dao.Mapper, error)
+	DelMapper(ctx context.Context, mp *dao.Mapper) error
+	DelMapperByEntity(ctx context.Context, mp *dao.Mapper) error
+	HasMapper(ctx context.Context, mp *dao.Mapper) (bool, error)
+	ListMapper(ctx context.Context, rev int64, req *dao.ListMapperReq) ([]dao.Mapper, error)
 	RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler)
 	WatchMapper(ctx context.Context, rev int64, handler dao.WatchMapperHandler)
-	PutQueue(context.Context, *dao.Queue) error
-	GetQueue(context.Context, *dao.Queue) (*dao.Queue, error)
-	DelQueue(context.Context, *dao.Queue) error
-	HasQueue(context.Context, *dao.Queue) (bool, error)
-	RangeQueue(ctx context.Context, rev int64, handler dao.QueueHandler)
-	WatchQueue(ctx context.Context, rev int64, handler dao.WatchQueueHandler)
 }

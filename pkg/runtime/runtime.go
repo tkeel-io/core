@@ -27,6 +27,7 @@ import (
 
 type Runtime struct {
 	id           string
+	node         *Node
 	pathTree     *path.Tree
 	tentacleTree *path.Tree
 	enCache      EntityCache
@@ -41,10 +42,11 @@ type Runtime struct {
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
+func NewRuntime(ctx context.Context, n *Node, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
 		id:           id,
+		node:         n,
 		enCache:      NewCache(),
 		entities:     map[string]Entity{},
 		mapperCaches: map[string]MCache{},
@@ -89,6 +91,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	switch ev.Type() {
 	case v1.ETSystem:
 		execer, feed := r.prepareSystemEvent(ctx, ev)
+		execer.postFuncs = append(execer.postFuncs,
+			&handlerImpl{fn: r.handlePersistent})
 		return execer, feed
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
@@ -106,7 +110,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
-			}}
+				&handlerImpl{fn: r.handlePersistent}}}
 
 		return execer, &Feed{
 			Err:      err,
@@ -126,12 +130,10 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 
 		e, _ := ev.(v1.PatchEvent)
 		execer := &Execer{
-			state:    state,
-			execFunc: state,
-			preFuncs: []Handler{
-				&handlerImpl{fn: r.handleSubscribe}},
-			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleComputed}}}
+			state:     state,
+			execFunc:  state,
+			preFuncs:  []Handler{&handlerImpl{fn: r.handleSubscribe}},
+			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}}}
 		return execer, &Feed{
 			Event:    ev,
 			State:    state.Raw(),
@@ -466,6 +468,16 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	return errors.Wrap(err, "handle callback")
 }
 
+func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
+	en, ok := r.entities[feed.EntityID]
+	if !ok {
+		// entity has been deleted.
+		return feed
+	}
+	r.node.FlushEntity(ctx, en)
+	return feed
+}
+
 func (r *Runtime) AppendMapper(mc MCache) {
 	r.mlock.Lock()
 	// remove if existed.
@@ -565,7 +577,23 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 		return state, nil
 	}
 
-	return nil, xerrors.ErrEntityNotFound
+	// load from state storage.
+	jsonData, err := r.repository.GetEntity(context.TODO(), id)
+	if nil != err {
+		log.Warn("load entity from state storage",
+			zfield.Eid(id), zfield.Reason(err.Error()))
+		return nil, errors.Wrap(err, "load entity")
+	}
+
+	// create entity instance.
+	en, err := NewEntity(id, jsonData)
+	if nil != err {
+		log.Warn("create entity instance",
+			zfield.Eid(id), zfield.Reason(err.Error()))
+		return nil, errors.Wrap(err, "create entity instance")
+	}
+
+	return en, nil
 }
 
 func conv(patches []*v1.PatchData) []Patch {

@@ -107,33 +107,30 @@ func (e *Entity) JSON() string {
 	return string(bytes)
 }
 
-// dao interfaces.
-func (d *Dao) PutEntity(ctx context.Context, en *Entity) error {
-	var err error
-	var bytes []byte
-	if bytes, err = d.entityCodec.Encode(en); nil == err {
-		err = d.stateClient.Set(ctx, d.entityCodec.Key(en.ID), bytes)
-	}
+// PutEntity upsert Entity.
+func (d *Dao) PutEntity(ctx context.Context, eid string, data []byte) error {
+	err := d.stateClient.Set(ctx, d.entityCodec.Key(eid), data)
 	return errors.Wrap(err, "repo put entity")
 }
 
-func (d *Dao) GetEntity(ctx context.Context, id string) (en *Entity, err error) {
+// GetEntity returns Entity.
+func (d *Dao) GetEntity(ctx context.Context, id string) (_ []byte, err error) {
 	var item *store.StateItem
 	item, err = d.stateClient.Get(ctx, d.entityCodec.Key(id))
 	if nil == err {
 		if len(item.Value) == 0 {
 			return nil, xerrors.ErrEntityNotFound
 		}
-		en = new(Entity)
-		err = d.entityCodec.Decode(item.Value, en)
 	}
-	return en, errors.Wrap(err, "repo get entity")
+	return item.Value, errors.Wrap(err, "repo get entity")
 }
 
+// DelEntity delete Entity by entity id.
 func (d *Dao) DelEntity(ctx context.Context, id string) error {
 	return errors.Wrap(d.stateClient.Del(ctx, d.entityCodec.Key(id)), "repo del entity")
 }
 
+// HasEntity return true if entity exists, otherwise return false.
 func (d *Dao) HasEntity(ctx context.Context, id string) (bool, error) {
 	_, err := d.stateClient.Get(ctx, d.entityCodec.Key(id))
 	if nil != err {

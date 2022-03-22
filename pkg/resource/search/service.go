@@ -117,6 +117,19 @@ func (s *Service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexRespo
 	return out, nil
 }
 
+func (s *Service) IndexBytes(ctx context.Context, id string, jsonData []byte) (out *pb.IndexResponse, err error) {
+	out = &pb.IndexResponse{}
+	engine, ok := s.drivers[s.selectOpt()]
+	if !ok {
+		return out, errors.New("no specified engine:" + string(s.selectOpt()))
+	}
+	if err = engine.BuildIndex(ctx, id, string(jsonData)); err != nil {
+		return out, errors.Wrap(err, "build index error")
+	}
+	out.Status = "SUCCESS"
+	return out, nil
+}
+
 // Use SelectDriveOption and set the option to this service.
 func (s *Service) Use(opt driver.SelectDriveOption) *Service {
 	s.selectOpt = opt
