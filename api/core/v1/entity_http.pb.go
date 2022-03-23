@@ -1007,12 +1007,7 @@ func (h *EntityHTTPHandler) RemoveMapper(req *go_restful.Request, resp *go_restf
 
 func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := UpdateEntityRequest{}
-	if err := transportHTTP.GetBody(req, &in.Properties); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
-		return
-	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
+	if err := transportHTTP.GetBody(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
 		return
@@ -1218,7 +1213,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.GetEntity))
 	ws.Route(ws.DELETE("/entities/{id}").
 		To(handler.DeleteEntity))
-	ws.Route(ws.PUT("/entities/{id}").
+	ws.Route(ws.PUT("/entities/{id}/properties").
 		To(handler.UpdateEntityProps))
 	ws.Route(ws.PATCH("/entities/{id}").
 		To(handler.PatchEntityProps))

@@ -471,8 +471,8 @@
         ]
       },
       "put": {
-        "summary": "Update entity properties",
-        "operationId": "UpdateEntityProps",
+        "summary": "Update Entity",
+        "operationId": "UpdateEntity",
         "responses": {
           "200": {
             "description": "OK",
@@ -497,34 +497,38 @@
           },
           {
             "name": "body",
-            "description": "entity properties",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties"
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "entity type"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "source id"
+                },
+                "owner": {
+                  "type": "string",
+                  "description": "owner id"
+                },
+                "template_id": {
+                  "type": "string",
+                  "description": "template id"
+                },
+                "properties": {
+                  "type": "object",
+                  "description": "entity properties"
+                },
+                "configs": {
+                  "type": "object",
+                  "description": "entity configs"
+                }
+              },
+              "description": "Update Entity Request."
             }
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -1067,6 +1071,67 @@
           {
             "name": "property_keys",
             "description": "entity property ids",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity"
+        ]
+      },
+      "put": {
+        "summary": "Update entity properties",
+        "operationId": "UpdateEntityProps",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1EntityResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "entity properties",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "description": "entity properties"
+            }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1694,6 +1759,20 @@
         "type": {
           "type": "string",
           "description": "entity type"
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "entity version"
+        },
+        "last_time": {
+          "type": "string",
+          "format": "int64",
+          "description": "entity last modify timestamp"
+        },
+        "template_id": {
+          "type": "string",
+          "description": "entity template"
         },
         "mappers": {
           "type": "array",
