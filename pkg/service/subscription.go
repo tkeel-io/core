@@ -223,18 +223,6 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 		return
 	}
 
-	// TODO： 不能保证一致性.
-	mp := dao.Mapper{
-		ID:       "Subscription",
-		Owner:    entity.Owner,
-		EntityID: entity.ID,
-	}
-
-	if err = s.apiManager.RemoveMapper(ctx, &mp); nil != err {
-		log.Error("delete subscription, remove mapper", zap.Error(err), zfield.Eid(req.Id))
-		return
-	}
-
 	out = &pb.DeleteSubscriptionResponse{Id: req.Id, Status: "ok"}
 	return out, nil
 }
