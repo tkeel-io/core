@@ -146,6 +146,10 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		Path:     FieldProps,
 		Operator: xjson.OpMerge.String(),
 		Value:    entity.Properties,
+	}, {
+		Path:     FieldScheme,
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Properties,
 	}}
 
 	var baseRet *apim.BaseRet

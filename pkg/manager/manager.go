@@ -200,8 +200,9 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("patch entity, decode response", zfield.ReqID(reqID),
-			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
+		log.Error("patch entity, decode response",
+			zfield.ReqID(reqID), zap.Error(err), zfield.Eid(en.ID),
+			zfield.Base(en.JSON()), zfield.Entity(string(resp.Data)))
 		return out, raw, errors.Wrap(err, "patch entity, decode response")
 	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
 		log.Error("patch entity, decode response, list mapper", zfield.ReqID(reqID),

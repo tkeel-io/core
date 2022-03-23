@@ -7,7 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
+	"go.uber.org/zap"
 )
 
 type entity struct {
@@ -43,7 +46,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 	for _, patch := range feed.Patches {
 		switch patch.Op {
 		case OpAdd:
-			cc.Append(patch.Path, patch.Value)
+			cc.Append(patch.Path, tdtl.New(patch.Value.String()))
 		case OpCopy:
 		case OpMerge:
 			res := cc.Get(patch.Path).Merge(patch.Value)
@@ -57,6 +60,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 		}
 
 		if nil != cc.Error() {
+			log.Error("update entity", zfield.Eid(e.id), zap.Error(cc.Error()),
+				zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
 			break
 		}
 

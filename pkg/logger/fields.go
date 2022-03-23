@@ -1,9 +1,10 @@
 package logger
 
 import (
+	"encoding/json"
 	"time"
 
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	"go.uber.org/zap"
 )
 
@@ -64,6 +65,10 @@ func Status(status string) zap.Field {
 
 func Base(base map[string]interface{}) zap.Field {
 	return zap.Any("base", base)
+}
+
+func Entity(entityJSON string) zap.Field {
+	return zap.Any("entity", entityJSON)
 }
 
 func ID(id string) zap.Field {
@@ -190,8 +195,9 @@ func Pubsub(pubsub string) zap.Field {
 	return zap.String("pubsub", pubsub)
 }
 
-func Event(ev cloudevents.Event) zap.Field {
-	return zap.Any("event", ev)
+func Event(ev v1.Event) zap.Field {
+	bytes, _ := json.Marshal(ev)
+	return zap.Any("event", string(bytes))
 }
 
 func Spec(spec string) zap.Field {

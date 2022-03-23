@@ -18,6 +18,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,4 +87,12 @@ func TestMerge(t *testing.T) {
 	cc := tdtl.New("{}")
 	cc.Merge(tdtl.New([]byte(`{"sss":{"id":"sss","type":"struct","name":"","weight":0,"enabled":true,"enabled_search":true,"enabled_time_series":false,"description":"","define":{"fields":{"aaa":{"id":"aaa","type":"struct","name":"","weight":0,"enabled":true,"enabled_search":true,"enabled_time_series":false,"description":"","define":{"fields":{}},"last_time":0}}},"last_time":0}}`)))
 	t.Log(cc.String())
+}
+
+func TestAdd(t *testing.T) {
+	cc := tdtl.New(`{"id":"device123","type":"DEVICE","owner":"admin","source":"CORE","version":0,"last_time":0,"mappers":null,"template_id":"","properties":{"sysField":{"_spacePath":"tomas"},"temp":300},"scheme":{}}`)
+	cc.Append("properties.mems", tdtl.New(`0.4`))
+
+	var v interface{}
+	json.Unmarshal(cc.Raw(), &v)
 }
