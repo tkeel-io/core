@@ -791,7 +791,7 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 
 	var val tdtl.Node
 	var enRes = s.Entity.Basic()
-	var destNodel tdtl.Node = tdtl.New(`{}`)
+	var copyRes = make(map[string]tdtl.Node)
 	if len(apiRequest.PropertyKeys) > 0 {
 		for _, path := range apiRequest.PropertyKeys {
 			if val, err = xjson.Patch(tdtl.New(s.ConfigBytes), nil, path, xjson.OpCopy); nil != err {
@@ -803,15 +803,19 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 				continue
 			}
 
-			if destNodel, err = xjson.Patch(destNodel, val, path, xjson.OpReplace); nil != err {
-				log.Error("get entity configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-				return nil, errors.Wrap(err, "get entity configs")
-			}
+			rawPath := strings.ReplaceAll(path, ".define.fields.", ".")
+			copyRes[rawPath] = val
 		}
 
 		// set entity configs.
-		if nil != destNodel {
-			enRes.ConfigBytes = destNodel.Raw()
+		if len(copyRes) > 0 {
+			var bytes []byte
+			if bytes, err = xjson.EncodeJSONZ(copyRes); nil != err {
+				log.Error("get entity configs",
+					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "get entity configs")
+			}
+			enRes.ConfigBytes = bytes
 		}
 	} else {
 		enRes.ConfigBytes = make([]byte, len(s.ConfigBytes))
