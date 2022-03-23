@@ -44,4 +44,3 @@ require (
 )
 
 replace github.com/antlr/antlr4 => github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211221011931-643d94fcab96
-

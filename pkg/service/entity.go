@@ -41,10 +41,16 @@ const (
 	sep         = "."
 	FieldScheme = "scheme"
 	FieldProps  = "properties"
+	InternalSep = ".define.fields."
 )
 
 func schemeKey(key string) string {
+	key = strings.ReplaceAll(key, sep, InternalSep)
 	return strings.Join([]string{FieldScheme, key}, sep)
+}
+
+func rawSchemeKey(key string) string {
+	return strings.ReplaceAll(key, InternalSep, sep)
 }
 
 func propKey(key string) string {
@@ -472,10 +478,10 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 
 	var patches []*pb.PatchData
 	param := in.Configs.AsInterface()
-	switch patches := param.(type) {
+	switch patchDatas := param.(type) {
 	case []interface{}:
 		patchData := make([]PatchData, 0)
-		data, _ := json.Marshal(patches)
+		data, _ := json.Marshal(patchDatas)
 		if err = json.Unmarshal(data, &patchData); nil != err {
 			log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
 			return nil, errors.Wrap(err, "json unmarshal request")
@@ -518,7 +524,8 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 
 	var rawEntity []byte
 	var baseRet *apim.BaseRet
-	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
+	opts := []apim.Option{apim.NewPathConstructorOption(pb.PCScheme)}
+	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches, opts...); nil != err {
 		log.Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
 		return nil, errors.Wrap(err, "patch entity scheme")
 	}
@@ -527,7 +534,11 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	if scheme, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
 		log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
 	} else if cpflag {
-		baseRet.Scheme = scheme
+		baseRet.Scheme = make(map[string]interface{})
+		for path, schemeValue := range scheme {
+			rawPath := rawSchemeKey(path)
+			baseRet.Scheme[rawPath] = schemeValue
+		}
 	}
 
 	out, err = s.makeResponse(baseRet)
@@ -572,7 +583,11 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 		if scheme, cpflag, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
 			log.Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
 		} else if cpflag {
-			baseRet.Scheme = scheme
+			baseRet.Scheme = make(map[string]interface{})
+			for path, schemeValue := range scheme {
+				rawPath := rawSchemeKey(path)
+				baseRet.Scheme[rawPath] = schemeValue
+			}
 		}
 	}
 

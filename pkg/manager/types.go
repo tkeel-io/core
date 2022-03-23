@@ -41,7 +41,7 @@ type APIManager interface {
 	// CreateEntity create entity.
 	CreateEntity(context.Context, *Base) (*BaseRet, error)
 	// UpdateEntity update entity.
-	PatchEntity(context.Context, *Base, []*v1.PatchData) (*BaseRet, []byte, error)
+	PatchEntity(context.Context, *Base, []*v1.PatchData, ...Option) (*BaseRet, []byte, error)
 	// DeleteEntity delete entity.
 	DeleteEntity(context.Context, *Base) error
 	// GetProperties returns entity properties.
@@ -54,4 +54,14 @@ type APIManager interface {
 	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
 	// ListMapper returns entity mappers.
 	ListMapper(context.Context, *Base) ([]dao.Mapper, error)
+}
+
+type Metadata map[string]string
+
+type Option func(meta Metadata)
+
+func NewPathConstructorOption(pc v1.PathConstructor) Option {
+	return func(meta Metadata) {
+		meta[v1.MetaPathConstructor] = string(pc)
+	}
 }

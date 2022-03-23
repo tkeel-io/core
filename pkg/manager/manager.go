@@ -158,7 +158,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	return &baseRet, errors.Wrap(err, "create entity")
 }
 
-func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchData) (out *BaseRet, raw []byte, err error) {
+func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchData, opts ...Option) (out *BaseRet, raw []byte, err error) {
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
 	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
@@ -167,19 +167,25 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	// hold request.
 	respWaiter := m.holder.Wait(ctx, reqID)
 
+	// setup metadata.
+	metadata := Metadata{
+		v1.MetaType:      enET,
+		v1.MetaEntityID:  en.ID,
+		v1.MetaRequestID: reqID}
+	// use patch options.
+	for _, option := range opts {
+		option(metadata)
+	}
+
 	// dispatch event.
 	if err = m.dispatcher.Dispatch(ctx,
 		&v1.ProtoEvent{
 			Id:        util.IG().EvID(),
+			Metadata:  metadata,
 			Timestamp: time.Now().UnixNano(),
 			Callback:  m.callbackAddr(),
-			Metadata: map[string]string{
-				v1.MetaType:      enET,
-				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
 			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: pds}},
+				Patches: &v1.PatchDatas{Patches: pds}},
 		}); nil != err {
 		respWaiter.Cancel()
 		log.Error("patch entity, dispatch event",

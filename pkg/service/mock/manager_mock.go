@@ -29,7 +29,7 @@ func (m *APIManagerMock) CreateEntity(context.Context, *apim.Base) (*apim.BaseRe
 }
 
 // UpdateEntity update entity.
-func (m *APIManagerMock) PatchEntity(context.Context, *apim.Base, []*v1.PatchData) (*apim.BaseRet, []byte, error) {
+func (m *APIManagerMock) PatchEntity(context.Context, *apim.Base, []*v1.PatchData, ...apim.Option) (*apim.BaseRet, []byte, error) {
 	return nil, nil, nil
 }
 

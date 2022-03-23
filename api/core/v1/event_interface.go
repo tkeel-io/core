@@ -26,7 +26,17 @@ const (
 	MetaRequestID       = "x-msg-request-id"
 	MetaResponseStatus  = "x-msg-response-status"
 	MetaResponseErrCode = "x-msg-response-errcode"
+	MetaPathConstructor = "x-msg-path-constructor"
 )
+
+type PathConstructor string 
+
+const (
+	PCDefault PathConstructor = "default"
+	PCScheme PathConstructor = "scheme"
+)
+
+
 
 type EventType string
 
