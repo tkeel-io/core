@@ -731,6 +731,11 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
 			}
+		case xjson.OpRemove:
+			if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
+				log.Error("call core.APIs.PatchConfigs patch remove configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "patch entity configs")
+			}
 		default:
 		}
 	}

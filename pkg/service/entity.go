@@ -558,7 +558,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
-	out = s.entity2EntityResponseZ(entity)
+	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "remove entity configs")
 }
 
