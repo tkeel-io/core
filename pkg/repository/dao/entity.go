@@ -121,8 +121,9 @@ func (d *Dao) GetEntity(ctx context.Context, id string) (_ []byte, err error) {
 		if len(item.Value) == 0 {
 			return nil, xerrors.ErrEntityNotFound
 		}
+		return item.Value, nil
 	}
-	return item.Value, errors.Wrap(err, "repo get entity")
+	return nil, errors.Wrap(err, "repo get entity")
 }
 
 // DelEntity delete Entity by entity id.

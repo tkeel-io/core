@@ -209,6 +209,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
+			// TODO: if entity not exists.
 			log.Error("delete entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
 			state = DefaultEntity(ev.Entity())
