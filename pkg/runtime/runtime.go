@@ -228,9 +228,13 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 						feed.Err = err
 						return feed
 					}
-					//		1. 从状态存储中删除（可标记）
-					//		2. 从搜索中删除（可标记）
-					// 		3. 从Runtime 中删除.
+					// 1. 从状态存储中删除（可标记）
+					if err = r.repository.DelEntity(ctx, state.ID()); nil != err {
+						feed.Err = err
+						return feed
+					}
+					// 2. 从搜索中删除（可标记）
+					// 3. 从Runtime 中删除.
 					delete(r.entities, ev.Entity())
 					return feed
 				}}},

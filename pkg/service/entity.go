@@ -341,9 +341,9 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	parseHeaderFrom(ctx, entity)
 
 	var propKeys []string
-	if pidsStr := strings.TrimSpace(in.PropertyKeys); len(propKeys) > 0 {
+	if pidsStr := strings.TrimSpace(in.PropertyKeys); len(pidsStr) > 0 {
 		for _, key := range strings.Split(pidsStr, ",") {
-			propKeys = append(propKeys, "properties"+key)
+			propKeys = append(propKeys, propKey(key))
 		}
 	}
 
@@ -550,8 +550,8 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 
 	// set properties.
 	var propKeys []string
-	if in.PropertyKeys != "" {
-		for _, key := range strings.Split(strings.TrimSpace(in.PropertyKeys), ",") {
+	if pidStr := strings.TrimSpace(in.PropertyKeys); len(pidStr) > 0 {
+		for _, key := range strings.Split(pidStr, ",") {
 			propKeys = append(propKeys, schemeKey(key))
 		}
 	}
