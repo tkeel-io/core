@@ -22,31 +22,42 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
 
+	"github.com/goinggo/mapstructure"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"go.uber.org/zap"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 )
 
-const ElasticsearchDriver Type = "elasticsearch"
+const DriverTypeElasticsearch Type = "elasticsearch"
 
 const EntityIndex = "entity"
 
 type ESConfig struct {
-	Username  string
-	Password  string
-	Endpoints []string
+	Username  string   `json:"username" mapstructure:"username"`
+	Password  string   `json:"password" mapstructure:"password"`
+	Endpoints []string `json:"endpoints" mapstructure:"endpoints"`
 }
 
 type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(cfg ESConfig) SearchEngine {
+func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error) {
+	var cfg ESConfig
+	if err := mapstructure.Decode(cfgJSON, &cfg); nil != err {
+		log.Error("decode elasticsearch configuration", zap.Error(err), zfield.Value(cfgJSON))
+		return nil, errors.Wrap(err, "decode elasticsearch configuration")
+	}
+
+	addHTTPScheme(cfg.Endpoints)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(
 		elastic.SetURL(cfg.Endpoints...),
@@ -59,14 +70,18 @@ func NewElasticsearchEngine(cfg ESConfig) SearchEngine {
 
 	// ping connection.
 	if len(cfg.Endpoints) == 0 {
-		log.Fatal("please check your configuration with elasticsearch")
+		log.Error("please check your configuration with elasticsearch")
+		return nil, errors.Wrap(xerrors.ErrEmptyParam, "elasticsearch broker endpoints empty")
 	}
+
 	info, _, err := client.Ping(cfg.Endpoints[0]).Do(context.Background())
 	if nil != err {
-		log.Fatal(err)
+		log.Error("ping elasticsearch cluster", zap.Error(err))
+		return nil, errors.Wrap(err, "ping elasticsearch cluster")
 	}
+
 	log.Info("use ElasticsearchDriver version:", info.Version.Number)
-	return &ESClient{Client: client}
+	return &ESClient{Client: client}, nil
 }
 
 func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
@@ -178,5 +193,21 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 }
 
 func Elasticsearch() Type {
-	return ElasticsearchDriver
+	return DriverTypeElasticsearch
+}
+
+func init() {
+	registerDrivers[DriverTypeElasticsearch] = NewElasticsearchEngine
+}
+
+func addHTTPScheme(endpoints []string) []string {
+	for index := range endpoints {
+		urlIns := url.URL{}
+		urlIns.Scheme = "http"
+		urlIns.Host = endpoints[index]
+
+		// set endpoint.
+		endpoints[index] = urlIns.String()
+	}
+	return endpoints
 }

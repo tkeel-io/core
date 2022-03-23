@@ -16,7 +16,7 @@ discovery:
 
 components:
   store:
-    name: noop
+    name: dapr
     properties:
       - key: store_name
         value: core-state

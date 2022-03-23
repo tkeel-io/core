@@ -11,8 +11,8 @@ import (
 const _splitter = ","
 
 var _searchDriverMap = map[string]driver.Type{
-	"es":            driver.ElasticsearchDriver,
-	"elasticsearch": driver.ElasticsearchDriver,
+	"es":            driver.DriverTypeElasticsearch,
+	"elasticsearch": driver.DriverTypeElasticsearch,
 }
 
 func ParseSearchEngine(dsn string) (drive driver.Type, username, password string, urls []string, err error) {

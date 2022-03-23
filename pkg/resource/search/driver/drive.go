@@ -17,10 +17,6 @@ type SearchEngine interface {
 
 type SelectDriveOption func() Type
 
-func NoopDriver() Type {
-	return ""
-}
-
 func Parse(drive string) SelectDriveOption {
 	switch strings.ToLower(drive) {
 	case "elasticsearch", "es":
@@ -44,4 +40,14 @@ type SearchResponse struct {
 	Raw    []byte                   `json:"raw,omitempty"`
 	Limit  int32                    `json:"limit"`
 	Offset int32                    `json:"offset"`
+}
+
+type Generator func(map[string]interface{}) (SearchEngine, error)
+
+// search engine register table.
+var registerDrivers = map[Type]Generator{}
+
+func GetDriver(driverType Type) (Generator, bool) {
+	driverIns, has := registerDrivers[driverType]
+	return driverIns, has
 }

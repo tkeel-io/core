@@ -16,8 +16,8 @@ limitations under the License.
 
 /*
 core 服务配置优先级：
-	1. 配置文件.
-	2. 命令行参数.
+	1. 命令行参数.
+	2. 配置文件.
 	3. 环境变量.
 	4. 默认设置.
 */
@@ -36,6 +36,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+var _cmdViper *viper.Viper
 var _config = defaultConfig()
 
 type Configuration struct {
@@ -78,21 +79,21 @@ type Metadata struct {
 }
 
 type EtcdConfig struct {
-	Endpoints   []string `yaml:"endpoints"`
-	DialTimeout int64    `yaml:"dial_timeout"`
+	Endpoints   []string `yaml:"endpoints" mapstructure:"endpoints"`
+	DialTimeout int64    `yaml:"dial_timeout" mapstructure:"dial_timeout"`
 }
 
 type LogConfig struct {
-	Dev      bool     `yaml:"dev"`
-	Level    string   `yaml:"level"`
-	Output   []string `yaml:"output"`
-	Encoding string   `yaml:"encoding"`
+	Dev      bool     `yaml:"dev" mapstructure:"dev"`
+	Level    string   `yaml:"level" mapstructure:"level"`
+	Output   []string `yaml:"output" mapstructure:"output"`
+	Encoding string   `yaml:"encoding" mapstructure:"encoding"`
 }
 
 type Discovery struct {
-	Endpoints   []string `yaml:"endpoints"`
-	HeartTime   int64    `yaml:"heart_time"`
-	DialTimeout int64    `yaml:"dial_timeout"`
+	Endpoints   []string `yaml:"endpoints" mapstructure:"endpoints"`
+	HeartTime   int64    `yaml:"heart_time" mapstructure:"heart_time"`
+	DialTimeout int64    `yaml:"dial_timeout" mapstructure:"dial_timeout"`
 }
 
 func defaultConfig() Configuration {
@@ -101,6 +102,10 @@ func defaultConfig() Configuration {
 
 func Get() Configuration {
 	return _config
+}
+
+func GetCmdV() *viper.Viper {
+	return _cmdViper
 }
 
 func Init(cfgFile string) {
@@ -124,9 +129,9 @@ func Init(cfgFile string) {
 	}
 
 	onConfigChanged(fsnotify.Event{Name: "init", Op: fsnotify.Chmod})
+	// set command line configuration.
+	_cmdViper.Unmarshal(&_config)
 
-	// set callback.
-	viper.OnConfigChange(onConfigChanged)
 	viper.WatchConfig()
 }
 
@@ -165,4 +170,7 @@ func init() {
 	viper.SetEnvPrefix(_corePrefix)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
+
+	// initialize command  viper.
+	_cmdViper = viper.New()
 }

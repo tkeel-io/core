@@ -56,7 +56,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/kit/transport"
@@ -101,16 +100,17 @@ func main() {
 	cmd.Flags().String("grpc_addr", ":31234", "core http server listen address.")
 	cmd.Flags().Int("proxy_http_port", 20000, "core proxy http listen address port.")
 	cmd.Flags().Int("proxy_grpc_port", 20001, "core proxy http listen address port.")
-	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, egg: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
+	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, example: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
 	cmd.Flags().String("search_engine", "", "your search engine SDN.")
 
 	// bind commandline arguments.
-	viper.BindPFlag("component.etcd.endpoints", cmd.Flags().Lookup("etcd"))
-	viper.BindPFlag("component.search_engine", cmd.Flags().Lookup("search_engine"))
-	viper.BindPFlag("server.http_addr", cmd.Flags().Lookup("http_addr"))
-	viper.BindPFlag("server.grpc_addr", cmd.Flags().Lookup("grpc_addr"))
-	viper.BindPFlag("proxy.http_port", cmd.Flags().Lookup("proxy_http_port"))
-	viper.BindPFlag("proxy.grpc_port", cmd.Flags().Lookup("proxy_grpc_port"))
+	cmdViper := config.GetCmdV()
+	cmdViper.BindPFlag("components.etcd.endpoints", cmd.Flags().Lookup("etcd"))
+	cmdViper.BindPFlag("components.search_engine", cmd.Flags().Lookup("search_engine"))
+	cmdViper.BindPFlag("server.http_addr", cmd.Flags().Lookup("http_addr"))
+	cmdViper.BindPFlag("server.grpc_addr", cmd.Flags().Lookup("grpc_addr"))
+	cmdViper.BindPFlag("proxy.http_port", cmd.Flags().Lookup("proxy_http_port"))
+	cmdViper.BindPFlag("proxy.grpc_port", cmd.Flags().Lookup("proxy_grpc_port"))
 
 	{
 		// Subcommand register here.
@@ -201,6 +201,11 @@ func core(cmd *cobra.Command, args []string) {
 
 	// create message dispatcher.
 	if err = loadDispatcher(context.Background()); nil != err {
+		log.Fatal(err)
+	}
+
+	// initialize search engine.
+	if err = search.Init(config.Get().Components.SearchEngine); nil != err {
 		log.Fatal(err)
 	}
 
@@ -305,13 +310,14 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 }
 
 func loadDispatcher(ctx context.Context) error {
-	log.Info("load local Queues.")
+	log.Info("load dispatcher...")
 	dispatcher := dispatch.New(ctx)
 	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
 		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 
+	log.Info("dispatcher loaded")
 	_dispatcher = dispatcher
 	return nil
 }
