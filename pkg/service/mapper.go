@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -24,10 +26,35 @@ func checkMapper(m *dao.Mapper) error {
 	}
 
 	// check tql parse.
-	_, err := tdtl.NewTDTL(m.TQL, nil)
+	tdtlIns, err := tdtl.NewTDTL(m.TQL, nil)
 	if nil != err {
 		log.Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
 		return errors.Wrap(err, "parse TQL")
+	}
+
+	propKeys := make(map[string]string)
+	for key := range tdtlIns.Fields() {
+		propKeys[" "+key] = " " + strings.Join([]string{FieldProps, key}, sep)
+	}
+
+	for _, keys := range tdtlIns.Entities() {
+		for _, key := range keys {
+			segs := strings.SplitN(key, sep, 2)
+			segs = append(segs[:1], append([]string{FieldProps}, segs[1:]...)...)
+			propKeys[key] = strings.Join(segs, sep)
+		}
+	}
+
+	// sort.
+	keys := sort.StringSlice{}
+	for key := range propKeys {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	for index := range keys {
+		key := keys[keys.Len()-index-1]
+		m.TQL = strings.ReplaceAll(m.TQL, key, propKeys[key])
 	}
 
 	return nil
