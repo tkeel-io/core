@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -84,8 +83,14 @@ func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (o
 	out.Id = base.ID
 	out.Owner = base.Owner
 	out.Source = base.Source
-	out.Subscription = &pb.SubscriptionObject{}
-	mapstructure.Decode(base.Properties, &out.Subscription)
+	out.Subscription = &pb.SubscriptionObject{
+		Mode:       interface2string(base.Properties["mode"]),
+		Source:     interface2string(base.Properties["source"]),
+		Filter:     interface2string(base.Properties["filter"]),
+		Target:     interface2string(base.Properties["target"]),
+		Topic:      interface2string(base.Properties["topic"]),
+		PubsubName: interface2string(base.Properties["pubsub_name"]),
+	}
 	return out
 }
 

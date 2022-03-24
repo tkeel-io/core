@@ -15,7 +15,7 @@ type eCache struct {
 }
 
 func NewCache() EntityCache {
-	return &eCache{}
+	return &eCache{entities: make(map[string]Entity)}
 }
 
 func (ec *eCache) Load(id string) (Entity, error) {
