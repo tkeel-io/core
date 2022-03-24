@@ -10,16 +10,24 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
-func (s *EntityService) checkMapper(m *dao.Mapper) error {
+func checkMapper(m *dao.Mapper) error {
 	if m.ID == "" {
 		m.ID = util.UUID("mapper")
 	}
 
 	if m.TQL == "" {
 		return xerrors.ErrInvalidRequest
+	}
+
+	// check tql parse.
+	_, err := tdtl.NewTDTL(m.TQL, nil)
+	if nil != err {
+		log.Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		return errors.Wrap(err, "parse TQL")
 	}
 
 	return nil
@@ -53,7 +61,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 	}
 
 	// check mapper.
-	if err = s.checkMapper(&mp); nil != err {
+	if err = checkMapper(&mp); nil != err {
 		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
 		return
 	}
