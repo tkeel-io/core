@@ -16,7 +16,6 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/path"
@@ -25,16 +24,23 @@ import (
 	"go.uber.org/zap"
 )
 
+type EntityResourceFunc func(context.Context, Entity) error
+
+type EntityResource struct {
+	FlushHandler  EntityResourceFunc
+	RemoveHandler EntityResourceFunc
+}
+
 type Runtime struct {
-	id           string
-	node         *Node
-	pathTree     *path.Tree
-	tentacleTree *path.Tree
-	enCache      EntityCache
-	entities     map[string]Entity // 存放Runtime的实体.
-	dispatcher   dispatch.Dispatcher
-	mapperCaches map[string]MCache
-	repository   repository.IRepository
+	id              string
+	pathTree        *path.Tree
+	tentacleTree    *path.Tree
+	enCache         EntityCache
+	entities        map[string]Entity // 存放Runtime的实体.
+	dispatcher      dispatch.Dispatcher
+	mapperCaches    map[string]MCache
+	repository      repository.IRepository
+	entityResourcer EntityResource
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -42,22 +48,22 @@ type Runtime struct {
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, n *Node, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
+func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
-		id:           id,
-		node:         n,
-		enCache:      NewCache(),
-		entities:     map[string]Entity{},
-		mapperCaches: map[string]MCache{},
-		dispatcher:   dispatcher,
-		repository:   repository,
-		tentacleTree: path.New(),
-		pathTree:     path.New(),
-		lock:         sync.RWMutex{},
-		mlock:        sync.RWMutex{},
-		cancel:       cancel,
-		ctx:          ctx,
+		id:              id,
+		enCache:         NewCache(),
+		entities:        map[string]Entity{},
+		mapperCaches:    map[string]MCache{},
+		entityResourcer: ercFuncs,
+		dispatcher:      dispatcher,
+		repository:      repository,
+		tentacleTree:    path.New(),
+		pathTree:        path.New(),
+		lock:            sync.RWMutex{},
+		mlock:           sync.RWMutex{},
+		cancel:          cancel,
+		ctx:             ctx,
 	}
 }
 
@@ -209,33 +215,36 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
-			// TODO: if entity not exists.
+			state = DefaultEntity(ev.Entity())
+			if errors.Is(err, xerrors.ErrEntityNotFound) {
+				// TODO: if entity not exists.
+				return &Execer{
+						state:    state,
+						execFunc: state,
+					}, &Feed{
+						Event:    ev,
+						State:    state.Raw(),
+						EntityID: ev.Entity()}
+			}
 			log.Error("delete entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
-			state = DefaultEntity(ev.Entity())
 		}
+
 		execer := &Execer{
 			state:    state,
 			execFunc: state,
 			preFuncs: []Handler{
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
-					// TODO:
-					//		0. 删除etcd中的mapper.
-					if err = r.repository.DelMapperByEntity(ctx, &dao.Mapper{
-						Owner:    state.Owner(),
-						EntityID: state.ID(),
-					}); nil != err {
-						feed.Err = err
+					if innerErr := r.entityResourcer.RemoveHandler(ctx, state); nil != innerErr {
+						log.Error("delete entity failure", zfield.Eid(ev.Entity()),
+							zap.Error(innerErr), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+						feed.Err = innerErr
 						return feed
 					}
-					// 1. 从状态存储中删除（可标记）
-					if err = r.repository.DelEntity(ctx, state.ID()); nil != err {
-						feed.Err = err
-						return feed
-					}
-					// 2. 从搜索中删除（可标记）
-					// 3. 从Runtime 中删除.
-					delete(r.entities, ev.Entity())
+
+					// remove entity from runtime.
+					delete(r.entities, state.ID())
+
 					return feed
 				}}},
 			postFuncs: []Handler{
@@ -479,7 +488,7 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 		// entity has been deleted.
 		return feed
 	}
-	r.node.FlushEntity(ctx, en)
+	r.entityResourcer.FlushHandler(ctx, en)
 	return feed
 }
 

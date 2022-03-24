@@ -7,6 +7,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -66,7 +67,9 @@ func (n *Node) Start(cfg NodeConf) error {
 		// create runtime instance.
 		log.Info("create runtime instance",
 			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
-		rt := NewRuntime(n.ctx, n, rid, n.dispatch, n.resourceManager.Repo())
+
+		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
+		rt := NewRuntime(n.ctx, entityResouce, rid, n.dispatch, n.resourceManager.Repo())
 		for _, mp := range n.mapperSlice() {
 			if mc, has := n.mapper(mp)[rt.ID()]; has {
 				rt.AppendMapper(*mc)
@@ -196,20 +199,68 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 	return res
 }
 
-func (n *Node) FlushEntity(ctx context.Context, en Entity) {
+func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// 1. flush state.
 	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
 		log.Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
-		return
+		return errors.Wrap(err, "flush entity into state storage")
 	}
 
 	// 2. flush search engine data.
 	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), en.Raw()); nil != err {
 		log.Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
+		return errors.Wrap(err, "flush entity into search engine")
 	}
 
 	// 3. flush timeseries data.
 	// if _, err := n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{}); nil != err {
 	// 	log.Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
 	// }
+
+	return nil
+}
+
+func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
+	var err error
+
+	// recover entity state.
+	defer func() {
+		if nil != err {
+			if innerErr := n.FlushEntity(ctx, en); nil != innerErr {
+				log.Error("remove entity failed, recover entity state failed", zfield.Eid(en.ID()),
+					zfield.Reason(err.Error()), zap.Error(innerErr), zfield.Value(string(en.Raw())))
+			}
+		}
+	}()
+
+	// 1. 从状态存储中删除（可标记）
+	if err := n.resourceManager.Repo().
+		DelEntity(ctx, en.ID()); nil != err {
+		log.Error("remove entity from state storage",
+			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+		return errors.Wrap(err, "remove entity from state storage")
+	}
+	// 2. 从搜索中删除（可标记）
+	if _, err := n.resourceManager.Search().
+		DeleteByID(ctx, &v1.DeleteByIDRequest{
+			Id:     en.ID(),
+			Owner:  en.Owner(),
+			Source: en.Source(),
+		}); nil != err {
+		log.Error("remove entity from state search engine",
+			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+		return errors.Wrap(err, "remove entity from state search engine")
+	}
+
+	// 3. 删除etcd中的mapper.
+	if err := n.resourceManager.Repo().
+		DelMapperByEntity(ctx, &dao.Mapper{
+			Owner:    en.Owner(),
+			EntityID: en.ID(),
+		}); nil != err {
+		log.Error("remove entity, remove mapper by entity",
+			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+		return errors.Wrap(err, "remove mapper by entity")
+	}
+	return nil
 }
