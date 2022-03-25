@@ -207,7 +207,13 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	}
 
 	// 2. flush search engine data.
-	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), en.Raw()); nil != err {
+	indexData := en.Tiled()
+	if nil != indexData.Error() {
+		log.Error("flush entity search engine, build index data",
+			zap.Error(indexData.Error()), zfield.Eid(en.ID()))
+		return errors.Wrap(indexData.Error(), "flush entity into search engine, build index data")
+	}
+	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), indexData.Raw()); nil != err {
 		log.Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into search engine")
 	}
@@ -240,6 +246,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove entity from state storage")
 	}
+
 	// 2. 从搜索中删除（可标记）
 	if _, err := n.resourceManager.Search().
 		DeleteByID(ctx, &v1.DeleteByIDRequest{

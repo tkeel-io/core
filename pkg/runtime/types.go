@@ -33,6 +33,7 @@ type Entity interface {
 	ID() string
 	Get(string) tdtl.Node
 	Copy() Entity
+	Tiled() tdtl.Node
 	Handle(context.Context, *Feed) *Feed
 	Basic() *tdtl.Collect
 	Raw() []byte

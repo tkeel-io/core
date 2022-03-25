@@ -20,14 +20,15 @@ import (
 
 // some persistent field enumerate.
 const (
-	FieldID       string = "id"
-	FieldType     string = "type"
-	FieldOwner    string = "owner"
-	FieldSource   string = "source"
-	FieldVersion  string = "version"
-	FieldLastTime string = "last_time"
-	FieldTemplate string = "template_id"
-	FieldScheme   string = "scheme"
+	FieldID         string = "id"
+	FieldType       string = "type"
+	FieldOwner      string = "owner"
+	FieldSource     string = "source"
+	FieldVersion    string = "version"
+	FieldLastTime   string = "last_time"
+	FieldTemplate   string = "template_id"
+	FieldScheme     string = "scheme"
+	FieldProperties string = "properties"
 )
 
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
@@ -142,6 +143,14 @@ func (e *entity) Basic() *tdtl.Collect {
 	basic.Set("scheme", tdtl.New([]byte("{}")))
 	basic.Set("properties", tdtl.New([]byte("{}")))
 	return basic
+}
+
+func (e *entity) Tiled() tdtl.Node {
+	basic := e.state.Copy()
+	basic.Del(FieldScheme)
+	basic.Del(FieldProperties)
+	result := basic.Merge(tdtl.New(e.Properties().Raw()))
+	return result
 }
 
 func (e *entity) Type() string {
