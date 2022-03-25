@@ -52,7 +52,7 @@ func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatc
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
 		id:              id,
-		enCache:         NewCache(),
+		enCache:         NewCache(repository),
 		entities:        map[string]Entity{},
 		mapperCaches:    map[string]MCache{},
 		entityResourcer: ercFuncs,
@@ -105,7 +105,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
 			log.Error("load entity", zfield.Eid(ev.Entity()),
-				zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+				zap.Error(err), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 			state = DefaultEntity(ev.Entity())
 		}
 
@@ -127,7 +127,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	case v1.ETCache:
 		sender := ev.Attr(v1.MetaSender)
 		// load cache.
-		state, err := r.enCache.Load(sender)
+		state, err := r.enCache.Load(ctx, sender)
 		if nil != err {
 			log.Error("load cache entity", zfield.Header(ev.Attributes()),
 				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
@@ -352,7 +352,7 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 				continue
 			}
 			// get value from cache.
-			if state, err = r.enCache.Load(item.EntityID); nil == err {
+			if state, err = r.enCache.Load(ctx, item.EntityID); nil == err {
 				in[item.String()] = state.Get(item.PropertyKey)
 			}
 		}
@@ -421,6 +421,9 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
 			continue
 		}
+
+		log.Debug("republish event", zfield.ID(r.id),
+			zfield.Target(target), zfield.Value(info))
 
 		// dispatch cache event.
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
@@ -493,6 +496,9 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {
+	log.Info("append mapper into runtime", zfield.ID(r.id),
+		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
+
 	r.mlock.Lock()
 	// remove if existed.
 	if _, exists := r.mapperCaches[mc.ID]; exists {
@@ -523,6 +529,9 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 	if mapper.VersionInited != mc.Mapper.Version() {
 		return
 	}
+
+	log.Info("initialize mapper", zfield.ID(r.id),
+		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
 
 	var items []mapper.WatchKey
 	for _, tentacle := range mc.Tentacles {

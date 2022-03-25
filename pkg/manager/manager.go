@@ -34,7 +34,6 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -422,29 +421,4 @@ func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
 	}
 
 	return nil
-}
-
-func checkTQLs(en *Base) error { //nolint
-	// check TQL.
-	var err error
-	defer func() {
-		defer func() {
-			switch recover() {
-			case nil:
-			default:
-				err = ErrMapperTQLInvalid
-			}
-		}()
-	}()
-	for _, mm := range en.Mappers {
-		var tqlInst tdtl.TDTL
-		if tqlInst, err = tdtl.NewTDTL(mm.Tql, nil); nil != err {
-			log.Error("append mapper", zap.Error(err), zfield.Eid(en.ID))
-			return errors.Wrap(err, "check TQL")
-		} else if tqlInst.Target() != en.ID {
-			log.Error("mismatched subscription id & mapper target id.", zfield.Eid(en.ID), zap.Any("mapper", mm))
-			return errors.Wrap(err, "subscription ID mismatched")
-		}
-	}
-	return errors.Wrap(err, "check TQL")
 }

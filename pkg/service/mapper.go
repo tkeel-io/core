@@ -57,6 +57,13 @@ func checkMapper(m *dao.Mapper) error {
 		m.TQL = strings.ReplaceAll(m.TQL, key, propKeys[key])
 	}
 
+	// check tql parse.
+	_, err = tdtl.NewTDTL(m.TQL, nil)
+	if nil != err {
+		log.Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		return errors.Wrap(xerrors.ErrInternal, "parse TQL")
+	}
+
 	return nil
 }
 

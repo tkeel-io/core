@@ -1,24 +1,29 @@
 package runtime
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/tdtl"
 )
 
 type EntityCache interface {
-	Load(id string) (Entity, error)
+	Load(ctx context.Context, id string) (Entity, error)
 	Snapshot() error
 }
 
 type eCache struct {
-	entities map[string]Entity
+	entities   map[string]Entity
+	repository repository.IRepository
 }
 
-func NewCache() EntityCache {
-	return &eCache{entities: make(map[string]Entity)}
+func NewCache(repo repository.IRepository) EntityCache {
+	return &eCache{repository: repo,
+		entities: make(map[string]Entity)}
 }
 
-func (ec *eCache) Load(id string) (Entity, error) {
+func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {
 	if state, ok := ec.entities[id]; ok {
 		return state, nil
 	}

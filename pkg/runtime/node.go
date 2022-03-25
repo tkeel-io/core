@@ -119,7 +119,7 @@ func (n *Node) listMetadata() {
 			mpIns, err := mapper.NewMapper(mp, 1)
 			if nil != err {
 				log.Error("parse mapper", zap.Error(err),
-					zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+					zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
 				continue
 			}
 			log.Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
@@ -155,7 +155,7 @@ func (n *Node) watchMetadata() {
 				// parse mapper.
 				var err error
 				var mpIns mapper.Mapper
-				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
 				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
 					log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 					return
