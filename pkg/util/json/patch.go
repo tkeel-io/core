@@ -23,6 +23,8 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -150,6 +152,11 @@ func check(raw []byte, path string) ([]byte, []string, []string, error) {
 
 	for index := range segs {
 		if _, valueT, _, err = jsonparser.Get(raw, segs[:index+1]...); nil != err {
+			if len(segs[index]) == 0 {
+				log.Error("path invalid", zfield.Path(path))
+				return raw, nil, nil, xerrors.ErrInvalidJSONPath
+			}
+
 			if segs[index][0] == byte('[') {
 				if prevalueT != jsonparser.Array {
 					return raw, nil, nil, xerrors.ErrInvalidJSONPath
