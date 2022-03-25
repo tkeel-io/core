@@ -57,18 +57,18 @@ func (d *Dao) GetLastRevision(ctx context.Context) int64 {
 	defer cancel()
 
 	if res, err = d.etcdEndpoint.MemberList(ctx); err != nil {
-		log.Error("query etcd cluster member", zap.Error(err))
+		log.L().Error("query etcd cluster member", zap.Error(err))
 		return 0
 	}
 
 	rev := int64(0)
 	for _, node := range res.Members {
-		log.Info("etcd node information", zfield.Name(node.Name),
+		log.L().Info("etcd node information", zfield.Name(node.Name),
 			zfield.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", node.ClientURLs))
 		for _, url := range node.ClientURLs {
 			resp, err := d.etcdEndpoint.Status(ctx, url)
 			if err != nil {
-				log.Warn("query etcd node status", zfield.Name(node.Name),
+				log.L().Warn("query etcd node status", zfield.Name(node.Name),
 					zap.Error(err), zfield.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", url))
 				continue
 			}

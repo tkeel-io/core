@@ -46,7 +46,7 @@ func (h *holder) Wait(ctx context.Context, id string) *Waiter {
 	go func() {
 		select {
 		case <-h.ctx.Done():
-			log.Info("close holder.")
+			log.L().Info("close holder.")
 			waitCh <- Response{
 				Status:  types.StatusCanceled,
 				ErrCode: context.Canceled.Error(),
@@ -78,11 +78,11 @@ func (h *holder) OnRespond(resp *Response) {
 	delete(h.holdeds, resp.ID)
 	h.lock.Unlock()
 
-	log.Debug("received response",
+	log.L().Debug("received response",
 		zfield.ReqID(resp.ID), zfield.Status(resp.Status.String()))
 
 	if nil == waitCh {
-		log.Warn("request terminated, user cancel or timeout", zfield.ReqID(resp.ID))
+		log.L().Warn("request terminated, user cancel or timeout", zfield.ReqID(resp.ID))
 		return
 	}
 

@@ -96,7 +96,7 @@ func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (o
 
 func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.CreateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -121,7 +121,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	if entity.Properties, err = json.Marshal(properties); nil != err {
-		log.Error("create subscription, but invalid params",
+		log.L().Error("create subscription, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, errors.Wrap(err, "create subscription")
 	}
@@ -129,7 +129,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	// set properties.
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -143,9 +143,9 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	}
 
 	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
-		log.Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		if innerErr := s.apiManager.DeleteEntity(ctx, entity); nil != innerErr {
-			log.Error("destroy subscription", zap.Error(innerErr), zfield.Eid(req.Id))
+			log.L().Error("destroy subscription", zap.Error(innerErr), zfield.Eid(req.Id))
 		}
 		return
 	}
@@ -156,7 +156,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -175,7 +175,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	if entity.Properties, err = json.Marshal(properties); nil != err {
-		log.Error("create subscription, but invalid params",
+		log.L().Error("create subscription, but invalid params",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 		return out, errors.Wrap(err, "create subscription")
 	}
@@ -189,7 +189,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	// set properties.
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -203,7 +203,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	}
 
 	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
-		log.Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -213,7 +213,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -224,7 +224,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
-		log.Error("delete subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("delete subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
@@ -234,7 +234,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 
 func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -247,7 +247,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-		log.Error("get subscription", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("get subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 	out = s.entity2SubscriptionResponse(baseRet)
@@ -256,7 +256,7 @@ func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSu
 
 func (s *SubscriptionService) ListSubscription(ctx context.Context, req *pb.ListSubscriptionRequest) (out *pb.ListSubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready")
+		log.L().Warn("service not ready")
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 

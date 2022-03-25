@@ -75,7 +75,7 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	var err error
 	var ev v1.ProtoEvent
 	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
-		log.Error("decode Event", zap.Error(err))
+		log.L().Error("decode Event", zap.Error(err))
 		return
 	}
 
@@ -92,7 +92,7 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
-	log.Info("handle event", zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
+	log.L().Info("handle event", zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
 
 	switch ev.Type() {
 	case v1.ETSystem:
@@ -104,7 +104,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
-			log.Error("load entity", zfield.Eid(ev.Entity()),
+			log.L().Error("load entity", zfield.Eid(ev.Entity()),
 				zap.Error(err), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 			state = DefaultEntity(ev.Entity())
 		}
@@ -130,7 +130,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		// load cache.
 		state, err := r.enCache.Load(ctx, sender)
 		if nil != err {
-			log.Error("load cache entity", zfield.Header(ev.Attributes()),
+			log.L().Error("load cache entity", zfield.Header(ev.Attributes()),
 				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
 			state = DefaultEntity(sender)
 		}
@@ -158,13 +158,13 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 
 // 处理实体生命周期.
 func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
-	log.Info("prepare system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
+	log.L().Info("prepare system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
-		log.Info("create entity", zfield.Eid(ev.Entity()),
+		log.L().Info("create entity", zfield.Eid(ev.Entity()),
 			zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 
 		execer := &Execer{
@@ -175,7 +175,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-					log.Info("create entity successed", zfield.Eid(ev.Entity()),
+					log.L().Info("create entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
 					return feed
 				}},
@@ -192,7 +192,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 		// new entity.
 		state, err := NewEntity(ev.Entity(), action.GetData())
 		if nil != err {
-			log.Error("create entity", zfield.Eid(ev.Entity()),
+			log.L().Error("create entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
 			return execer, &Feed{
 				Err:      err,
@@ -227,7 +227,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 						State:    state.Raw(),
 						EntityID: ev.Entity()}
 			}
-			log.Error("delete entity", zfield.Eid(ev.Entity()),
+			log.L().Error("delete entity", zfield.Eid(ev.Entity()),
 				zfield.Value(string(action.GetData())), zap.Error(err))
 		}
 
@@ -237,7 +237,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			preFuncs: []Handler{
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					if innerErr := r.entityResourcer.RemoveHandler(ctx, state); nil != innerErr {
-						log.Error("delete entity failure", zfield.Eid(ev.Entity()),
+						log.L().Error("delete entity failure", zfield.Eid(ev.Entity()),
 							zap.Error(innerErr), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 						feed.Err = innerErr
 						return feed
@@ -251,7 +251,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-					log.Info("delete entity successed", zfield.Eid(ev.Entity()),
+					log.L().Info("delete entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 					return feed
 				}}},
@@ -269,7 +269,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 				execFunc: DefaultEntity(ev.Entity()),
 				postFuncs: []Handler{
 					&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-						log.Error("event type not support", zfield.Eid(ev.Entity()),
+						log.L().Error("event type not support", zfield.Eid(ev.Entity()),
 							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
 						return feed
 					}}}}, &Feed{
@@ -296,7 +296,7 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	patches := make(map[string][]*v1.PatchData)
 	for id, mp := range mappers {
 		target := mp.TargetEntity()
-		log.Debug("compute mapper",
+		log.L().Debug("compute mapper",
 			zfield.Eid(entityID), zfield.Mid(id))
 		result := r.computeMapper(ctx, mp)
 		for path, val := range result {
@@ -361,13 +361,13 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 
 	// ignore empty input.
 	if len(in) == 0 {
-		log.Warn("ignore empty input", zfield.Mid(mp.ID()))
+		log.L().Warn("ignore empty input", zfield.Mid(mp.ID()))
 		return map[string]tdtl.Node{}
 	}
 
 	var out map[string]tdtl.Node
 	if out, err = mp.Exec(in); nil != err {
-		log.Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
+		log.L().Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
 		return map[string]tdtl.Node{}
 	}
 
@@ -375,7 +375,7 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 	for path, val := range out {
 		if val == nil || val.Type() == tdtl.Null ||
 			val.Type() == tdtl.Undefined || val.Error() != nil {
-			log.Warn("invalid computed feed", zap.Any("value", val), zfield.Mid(mp.ID()))
+			log.L().Warn("invalid computed feed", zap.Any("value", val), zfield.Mid(mp.ID()))
 			delete(out, path)
 		}
 	}
@@ -418,12 +418,12 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 		// check target entity placement.
 		info := placement.Global().Select(target)
 		if info.ID == r.id {
-			log.Debug("target entity belong this runtime, ignore dispatch.",
+			log.L().Debug("target entity belong this runtime, ignore dispatch.",
 				zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
 			continue
 		}
 
-		log.Debug("republish event", zfield.ID(r.id),
+		log.L().Debug("republish event", zfield.ID(r.id),
 			zfield.Target(target), zfield.Value(info))
 
 		// dispatch cache event.
@@ -447,7 +447,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	var err error
 	event := feed.Event
-	log.Debug("handle event, callback.", zfield.ID(event.ID()),
+	log.L().Debug("handle event, callback.", zfield.ID(event.ID()),
 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
@@ -479,7 +479,7 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	}
 
 	if nil != err {
-		log.Error("handle event, callback.", zfield.ID(event.ID()),
+		log.L().Error("handle event, callback.", zfield.ID(event.ID()),
 			zap.Error(err), zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 	}
 
@@ -508,11 +508,11 @@ func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID string) error {
-	log.Info("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
+	log.L().Info("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
 	// load template entity.
 	templateIns, err := r.LoadEntity(templateID)
 	if nil != err {
-		log.Error("onTemplateChanged", zap.Error(err),
+		log.L().Error("onTemplateChanged", zap.Error(err),
 			zfield.Eid(entityID), zfield.Template(templateID))
 		return errors.Wrap(err, "On Template Changed")
 	}
@@ -540,7 +540,7 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {
-	log.Info("append mapper into runtime", zfield.ID(r.id),
+	log.L().Info("append mapper into runtime", zfield.ID(r.id),
 		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
 
 	r.mlock.Lock()
@@ -574,7 +574,7 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		return
 	}
 
-	log.Info("initialize mapper", zfield.ID(r.id),
+	log.L().Info("initialize mapper", zfield.ID(r.id),
 		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
 
 	var items []mapper.WatchKey
@@ -592,10 +592,10 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		var val tdtl.Node
 		var state Entity
 		if state, err = r.LoadEntity(item.EntityID); nil != err {
-			log.Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
+			log.L().Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
 			continue
 		} else if val = state.Get(item.PropertyKey); nil != val.Error() {
-			log.Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
+			log.L().Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
 			continue
 		}
 
@@ -647,7 +647,7 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	// load from state storage.
 	jsonData, err := r.repository.GetEntity(context.TODO(), id)
 	if nil != err {
-		log.Warn("load entity from state storage",
+		log.L().Warn("load entity from state storage",
 			zfield.Eid(id), zfield.Reason(err.Error()))
 		return nil, errors.Wrap(err, "load entity")
 	}
@@ -655,7 +655,7 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	// create entity instance.
 	en, err := NewEntity(id, jsonData)
 	if nil != err {
-		log.Warn("create entity instance",
+		log.L().Warn("create entity instance",
 			zfield.Eid(id), zfield.Reason(err.Error()))
 		return nil, errors.Wrap(err, "create entity instance")
 	}

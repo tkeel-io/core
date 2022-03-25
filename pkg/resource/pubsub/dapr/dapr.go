@@ -34,7 +34,7 @@ func (d *daprPubsub) Send(ctx context.Context, event v1.Event) error {
 }
 
 func (d *daprPubsub) Received(ctx context.Context, handler pubsub.EventHandler) error {
-	log.Debug("pubsub.dapr start receive message", zfield.ID(d.id))
+	log.L().Debug("pubsub.dapr start receive message", zfield.ID(d.id))
 	Register(&Consumer{id: d.id, handler: handler})
 	return errors.Wrap(nil, "register message handler")
 }
@@ -44,7 +44,7 @@ func (d *daprPubsub) Commit(v interface{}) error {
 }
 
 func (d *daprPubsub) Close() error {
-	log.Debug("pubsub.dapr close", zfield.ID(d.id))
+	log.L().Debug("pubsub.dapr close", zfield.ID(d.id))
 	Unregister(&Consumer{id: d.id})
 	return errors.Wrap(nil, "unregister message handler")
 }
@@ -57,7 +57,7 @@ func init() {
 			return nil, errors.Wrap(err, "decode pubsub.dapr configuration")
 		}
 
-		log.Info("create pubsub.dapr instance", zfield.ID(id))
+		log.L().Info("create pubsub.dapr instance", zfield.ID(id))
 
 		return &daprPubsub{
 			id:           id,

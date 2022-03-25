@@ -25,13 +25,13 @@ func (d *Loopback) ID() string {
 }
 
 func (d *Loopback) Send(ctx context.Context, event v1.Event) error {
-	log.Debug("pubsub.loopback send", zfield.Message(event), zfield.ID(d.id))
+	log.L().Debug("pubsub.loopback send", zfield.Message(event), zfield.ID(d.id))
 	err := d.eventHandler(ctx, event)
 	return errors.Wrap(err, "send event")
 }
 
 func (d *Loopback) Received(ctx context.Context, handler EventFunc) error {
-	log.Info("pubsub.loopback start receive message", zfield.ID(d.id))
+	log.L().Info("pubsub.loopback start receive message", zfield.ID(d.id))
 	d.eventHandler = handler
 	return nil
 }
@@ -41,6 +41,6 @@ func (d *Loopback) Commit(v interface{}) error {
 }
 
 func (d *Loopback) Close() error {
-	log.Info("pubsub.loopback close", zfield.ID(d.id))
+	log.L().Info("pubsub.loopback close", zfield.ID(d.id))
 	return nil
 }

@@ -71,7 +71,7 @@ func (w *watcher) Watch(key string, prefix bool, handler func(*clientv3.Event)) 
 			select {
 			case wresp, ok := <-rch:
 				if !ok {
-					log.Info("channel closed, watcher exit.")
+					log.L().Info("channel closed, watcher exit.")
 					return
 				}
 
@@ -79,7 +79,7 @@ func (w *watcher) Watch(key string, prefix bool, handler func(*clientv3.Event)) 
 					handler(ev)
 				}
 			case <-w.ctx.Done():
-				log.Info("watcher exot")
+				log.L().Info("watcher exot")
 				return
 			}
 		}

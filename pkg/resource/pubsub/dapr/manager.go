@@ -51,6 +51,6 @@ type Consumer struct {
 }
 
 var defaultConsumer = &Consumer{id: "defaultConsumer", handler: func(ctx context.Context, e v1.Event) error {
-	log.Warn("empty cluster consumer", zfield.ID(e.ID()), zap.Any("event", e))
+	log.L().Warn("empty cluster consumer", zfield.ID(e.ID()), zap.Any("event", e))
 	return nil
 }}

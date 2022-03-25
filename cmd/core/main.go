@@ -302,7 +302,7 @@ func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv
 }
 
 func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
-	log.Info("create core default resources")
+	log.L().Info("create core default resources")
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
 
@@ -310,14 +310,14 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 }
 
 func loadDispatcher(ctx context.Context) error {
-	log.Info("load dispatcher...")
+	log.L().Info("load dispatcher...")
 	dispatcher := dispatch.New(ctx)
 	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
-		log.Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
+		log.L().Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 
-	log.Info("dispatcher loaded")
+	log.L().Info("dispatcher loaded")
 	_dispatcher = dispatcher
 	return nil
 }

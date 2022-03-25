@@ -113,11 +113,11 @@ func (d *Dao) ListMapper(ctx context.Context, rev int64, req *ListMapperReq) ([]
 	for {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
-			log.Error("list mapper", zap.Error(err), zfield.Prefix(prefix),
+			log.L().Error("list mapper", zap.Error(err), zfield.Prefix(prefix),
 				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return mappers, errors.Wrap(err, "list mapper")
 		} else if len(resp.Kvs) == 0 {
-			log.Info("list mapper", zfield.Prefix(prefix),
+			log.L().Info("list mapper", zfield.Prefix(prefix),
 				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return mappers, nil
 		}
@@ -125,7 +125,7 @@ func (d *Dao) ListMapper(ctx context.Context, rev int64, req *ListMapperReq) ([]
 		for _, kv := range resp.Kvs {
 			var mapper Mapper
 			if err = json.Unmarshal(kv.Value, &mapper); nil != err {
-				log.Error("unmarshal mapper", zap.Error(err),
+				log.L().Error("unmarshal mapper", zap.Error(err),
 					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
 				return mappers, errors.Wrap(err, "unmarshal mapper")
 			}
@@ -160,11 +160,11 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 	for {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
-			log.Error("range mapper failure", zap.Error(err), zfield.Prefix(prefix),
+			log.L().Error("range mapper failure", zap.Error(err), zfield.Prefix(prefix),
 				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		} else if len(resp.Kvs) == 0 {
-			log.Info("range mapper completed", zfield.Prefix(prefix), zfield.Count(count),
+			log.L().Info("range mapper completed", zfield.Prefix(prefix), zfield.Count(count),
 				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		}
@@ -174,7 +174,7 @@ func (d *Dao) RangeMapper(ctx context.Context, rev int64, handler MapperHandler)
 			var mapper Mapper
 			if err := json.Unmarshal(kv.Value, &mapper); nil != err {
 				countFailure++
-				log.Error("unmarshal mapper", zap.Error(err),
+				log.L().Error("unmarshal mapper", zap.Error(err),
 					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
 				continue
 			}
@@ -214,7 +214,7 @@ func (d *Dao) WatchMapper(ctx context.Context, rev int64, handler WatchMapperHan
 			for _, ev := range wr.Events {
 				var mapper Mapper
 				if err := json.Unmarshal(ev.Kv.Value, &mapper); nil != err {
-					log.Error("unmarshal mapper", zap.Error(err),
+					log.L().Error("unmarshal mapper", zap.Error(err),
 						zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
 					continue
 				}

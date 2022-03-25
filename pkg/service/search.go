@@ -53,7 +53,7 @@ func (s *SearchService) Index(ctx context.Context, req *pb.IndexObject) (*pb.Ind
 }
 func (s *SearchService) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready")
+		log.L().Warn("service not ready")
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 

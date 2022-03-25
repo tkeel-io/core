@@ -82,7 +82,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 			pcIns := v1.PathConstructor(pc)
 			patchVal, patchPath, err := e.pathConstructor(pcIns, e.state.Raw(), patch.Value.Raw(), patch.Path)
 			if nil != err {
-				log.Error("update entity", zfield.Eid(e.id), zap.Error(err),
+				log.L().Error("update entity", zfield.Eid(e.id), zap.Error(err),
 					zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
 				// in.Patches 处理完毕，丢弃.
 				feed.Err = cc.Error()
@@ -96,7 +96,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 		}
 
 		if nil != cc.Error() {
-			log.Error("update entity", zfield.Eid(e.id), zap.Error(cc.Error()),
+			log.L().Error("update entity", zfield.Eid(e.id), zap.Error(cc.Error()),
 				zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
 			break
 		}

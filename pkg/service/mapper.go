@@ -28,7 +28,7 @@ func checkMapper(m *dao.Mapper) error {
 	// check tql parse.
 	tdtlIns, err := tdtl.NewTDTL(m.TQL, nil)
 	if nil != err {
-		log.Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
 		return errors.Wrap(err, "parse TQL")
 	}
 
@@ -60,7 +60,7 @@ func checkMapper(m *dao.Mapper) error {
 	// check tql parse.
 	_, err = tdtl.NewTDTL(m.TQL, nil)
 	if nil != err {
-		log.Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
 		return errors.Wrap(xerrors.ErrInternal, "parse TQL")
 	}
 
@@ -69,7 +69,7 @@ func checkMapper(m *dao.Mapper) error {
 
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.EntityId))
+		log.L().Warn("service not ready", zfield.Eid(req.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -96,13 +96,13 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 	// check mapper.
 	if err = checkMapper(&mp); nil != err {
-		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
+		log.L().Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
 		return
 	}
 
 	// append mapper.
 	if err = s.apiManager.AppendMapper(ctx, &mp); nil != err {
-		log.Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
+		log.L().Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
 		return
 	}
 
@@ -122,7 +122,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRequest) (out *pb.RemoveMapperResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(req.EntityId))
+		log.L().Warn("service not ready", zfield.Eid(req.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -140,7 +140,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 	}
 
 	if err = s.apiManager.RemoveMapper(ctx, &mp); nil != err {
-		log.Error("remove mapper", zfield.Eid(req.EntityId), zap.Error(err))
+		log.L().Error("remove mapper", zfield.Eid(req.EntityId), zap.Error(err))
 		return
 	}
 
@@ -155,7 +155,7 @@ func (s *EntityService) RemoveMapper(ctx context.Context, req *pb.RemoveMapperRe
 
 func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) (out *pb.GetMapperResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(in.EntityId))
+		log.L().Warn("service not ready", zfield.Eid(in.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -173,7 +173,7 @@ func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) 
 	}
 
 	if mp, err = s.apiManager.GetMapper(ctx, mp); nil != err {
-		log.Error("get mapper", zfield.Eid(in.EntityId), zap.Error(err))
+		log.L().Error("get mapper", zfield.Eid(in.EntityId), zap.Error(err))
 		return
 	}
 
@@ -193,7 +193,7 @@ func (s *EntityService) GetMapper(ctx context.Context, in *pb.GetMapperRequest) 
 
 func (s *EntityService) ListMapper(ctx context.Context, in *pb.ListMapperRequest) (out *pb.ListMapperResponse, err error) {
 	if !s.inited.Load() {
-		log.Warn("service not ready", zfield.Eid(in.EntityId))
+		log.L().Warn("service not ready", zfield.Eid(in.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -206,7 +206,7 @@ func (s *EntityService) ListMapper(ctx context.Context, in *pb.ListMapperRequest
 
 	var mps []dao.Mapper
 	if mps, err = s.apiManager.ListMapper(ctx, &entity); nil != err {
-		log.Error("list mapper", zfield.Eid(in.EntityId), zap.Error(err))
+		log.L().Error("list mapper", zfield.Eid(in.EntityId), zap.Error(err))
 		return
 	}
 

@@ -29,7 +29,7 @@ type daprStore struct {
 func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, error) {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.Error("nil connection", zfield.Key(key),
+		log.L().Error("nil connection", zfield.Key(key),
 			zap.String("store_name", d.storeName), zfield.ID(d.id))
 		return nil, errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
@@ -55,7 +55,7 @@ func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, erro
 func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.Error("nil connection", zfield.Key(key),
+		log.L().Error("nil connection", zfield.Key(key),
 			zap.String("store_name", d.storeName),
 			zfield.ID(d.id), zap.String("data", string(data)))
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
@@ -66,7 +66,7 @@ func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 func (d *daprStore) Del(ctx context.Context, key string) error {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.Error("nil connection", zfield.Key(key),
+		log.L().Error("nil connection", zfield.Key(key),
 			zap.String("store_name", d.storeName), zfield.ID(d.id))
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
@@ -82,7 +82,7 @@ func init() {
 		}
 
 		id := util.UUID("sdapr")
-		log.Info("create store.dapr instance", zfield.ID(id))
+		log.L().Info("create store.dapr instance", zfield.ID(id))
 
 		return &daprStore{
 			id:        id,

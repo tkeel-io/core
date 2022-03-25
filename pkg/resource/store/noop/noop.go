@@ -32,7 +32,7 @@ func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.noop> successful")
 	store.Register("noop", func(properties map[string]interface{}) (store.Store, error) {
 		id := util.UUID("snoop")
-		log.Info("create store.noop instance", zfield.ID(id))
+		log.L().Info("create store.noop instance", zfield.ID(id))
 		return &noopStore{id: id}, nil
 	})
 }

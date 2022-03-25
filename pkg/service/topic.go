@@ -63,7 +63,7 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 }
 
 func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	log.Debug("received event", zfield.ReqID(req.Meta.Id),
+	log.L().Debug("received event", zfield.ReqID(req.Meta.Id),
 		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
 		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))
 
@@ -75,7 +75,7 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 	var payload []byte
 	// set event payload.
 	if payload, _, err = collectjs.Get(req.RawData, "data.rawData"); nil != err {
-		log.Warn("get event payload", zap.String("id", req.Meta.Id), zap.Any("event", req), zfield.Reason(err.Error()))
+		log.L().Warn("get event payload", zap.String("id", req.Meta.Id), zap.Any("event", req), zfield.Reason(err.Error()))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "get event payload")
 	}
 

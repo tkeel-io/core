@@ -32,7 +32,7 @@ func (p *daprClientPool) setup() {
 	// TODO: !!! daprSDK.NewClient() 可能返回 (nil, nil).
 	var err error
 	if p.client, err = daprSDK.NewClient(); nil != err {
-		log.Error("setup client pool", zap.Error(err))
+		log.L().Error("setup client pool", zap.Error(err))
 	}
 }
 

@@ -259,7 +259,7 @@ func (p *batchSink) internalClose(req *closeRequest) {
 }
 
 func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
-	log.Debug("Response receipt", zap.Uint64("sequence_id", item.sequenceID))
+	log.L().Debug("Response receipt", zap.Uint64("sequence_id", item.sequenceID))
 	item.status = processIdle
 	item.err = err
 	p.sendCnt -= int64(len(item.batchData))
@@ -271,7 +271,7 @@ func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
 			break
 		}
 		if pi.status == processInProgress {
-			log.Debug("Response receipt unexpected",
+			log.L().Debug("Response receipt unexpected",
 				zap.Any("pendingSequenceId", pi.sequenceID),
 				zap.Any("responseSequenceId", item.sequenceID))
 			break

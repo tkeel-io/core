@@ -63,13 +63,12 @@ func (i *Influx) Init(metadata resource.Metadata) error {
 		return ErrInfluxRequiredBucket
 	}
 
-	log.Info("initialize timeseries.Influxdb", zap.String("url", i.cfg.URL))
+	log.L().Info("initialize timeseries.Influxdb", zap.String("url", i.cfg.URL))
 
 	client := influxdb2.NewClient(i.cfg.URL, i.cfg.Token)
 	i.client = client
 	i.writeAPI = i.client.WriteAPIBlocking(i.cfg.Org, i.cfg.Bucket)
 	i.queryAPI = i.client.QueryAPI(i.cfg.Org)
-	log.Error("query API: ", i.queryAPI)
 
 	return nil
 }
@@ -91,15 +90,14 @@ func (i *Influx) getInfluxMetadata(metadata resource.Metadata) (*InfluxConfig, e
 
 // Invoke called on supported operations.
 func (i *Influx) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
-	points := make([]string, 4)
+	points := make([]string, 0)
 	points[0] = "keel,id=temperature avg=10.3,max=100.9"
 	points[1] = "keel,id=temperature2 avg1=70.3,max=10.9"
 	points[2] = "keel,id=abcd123 avg1=10.3,max1=800.9"
 
 	switch val := req.Data.(type) {
 	case []string:
-		//		points[3] = val[0]
-		log.Info(val)
+		points = append(points, val...)
 	default:
 		return nil, ErrInfluxInvalidParams
 	}
@@ -135,7 +133,7 @@ func (i *Influx) WriteData(req *pb.GetTSDataRequest) {
 	}
 	err := i.writeAPI.WriteRecord(context.Background(), points...)
 	if err != nil {
-		log.Error(err)
+		log.L().Error("write record", zap.Error(err))
 	}
 }
 
@@ -177,7 +175,8 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 		for result.Next() {
 			// Notice when group key has changed
 			if result.TableChanged() {
-				log.Infof("table: %s\n", result.TableMetadata().String())
+				log.L().Info("Notice when group key has changed ",
+					zap.String("table", result.TableMetadata().String()))
 			}
 			_, ok := resultPoints[result.Record().Time()]
 			if !ok {
@@ -189,10 +188,10 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 		}
 		// check for an error
 		if result.Err() != nil {
-			log.Error(result.Err())
+			log.L().Error("quer influx database", zap.Error(err))
 		}
 	} else {
-		log.Error(err)
+		log.L().Error("quer influx database", zap.Error(err))
 	}
 
 	for k, v := range resultPoints {

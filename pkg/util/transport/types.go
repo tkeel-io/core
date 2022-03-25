@@ -47,7 +47,7 @@ func New(typ TransType) Transmitter {
 		if trans, err = generator(); nil == err {
 			return trans
 		}
-		log.Error("new Transmitter instance", zap.Error(err), zap.String("type", typ.String()))
+		log.L().Error("new Transmitter instance", zap.Error(err), zap.String("type", typ.String()))
 	}
 	trans, _ = factory["noop"]()
 	return trans

@@ -97,11 +97,11 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	m.checkParams(en)
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
-	log.Info("entity.CreateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
+	log.L().Info("entity.CreateEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
 	if bytes, err = en.EncodeJSON(); nil != err {
-		log.Error("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
+		log.L().Error("create entity", zfield.Eid(en.ID), zfield.Type(en.Type),
 			zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity")
 	}
@@ -125,31 +125,31 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 			}},
 	}); nil != err {
 		respWaiter.Cancel()
-		log.Error("create entity, dispatch event",
+		log.L().Error("create entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "create entity, dispatch event")
 	}
 
-	log.Debug("holding request, wait response",
+	log.L().Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
-		log.Error("create entity", zfield.Eid(en.ID), zfield.ReqID(reqID),
+		log.L().Error("create entity", zfield.Eid(en.ID), zfield.ReqID(reqID),
 			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	log.Info("processing completed", zfield.Eid(en.ID),
+	log.L().Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("create entity, decode response", zfield.ReqID(reqID),
+		log.L().Error("create entity, decode response", zfield.ReqID(reqID),
 			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity, decode response")
 	} else if err = m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
+		log.L().Error("create entity, decode response, list mapper", zfield.ReqID(reqID),
 			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity, decode response, list mapper")
 	}
@@ -160,7 +160,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchData, opts ...Option) (out *BaseRet, raw []byte, err error) {
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
-	log.Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
+	log.L().Info("entity.PatchEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
 	// hold request.
@@ -187,34 +187,34 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 				Patches: &v1.PatchDatas{Patches: pds}},
 		}); nil != err {
 		respWaiter.Cancel()
-		log.Error("patch entity, dispatch event",
+		log.L().Error("patch entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return out, raw, errors.Wrap(err, "patch entity, dispatch event")
 	}
 
-	log.Debug("holding request, wait response",
+	log.L().Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	// wait response.
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
-		log.Error("patch entity", zfield.Eid(en.ID),
+		log.L().Error("patch entity", zfield.Eid(en.ID),
 			zap.Error(xerrors.New(resp.ErrCode)), zfield.Base(en.JSON()))
 		return out, raw, xerrors.New(resp.ErrCode)
 	}
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("patch entity, decode response",
+		log.L().Error("patch entity, decode response",
 			zfield.ReqID(reqID), zap.Error(err), zfield.Eid(en.ID),
 			zfield.Base(en.JSON()), zfield.Entity(string(resp.Data)))
 		return out, raw, errors.Wrap(err, "patch entity, decode response")
 	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("patch entity, decode response, list mapper", zfield.ReqID(reqID),
+		log.L().Error("patch entity, decode response, list mapper", zfield.ReqID(reqID),
 			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
-	log.Info("processing completed", zfield.Eid(en.ID),
+	log.L().Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	return &baseRet, resp.Data, errors.Wrap(err, "patch entity")
@@ -225,7 +225,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 	var err error
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
-	log.Info("entity.GetEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
+	log.L().Info("entity.GetEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source))
 
 	// hold request.
@@ -245,32 +245,32 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 				Patches: &v1.PatchDatas{}},
 		}); nil != err {
 		respWaiter.Cancel()
-		log.Error("get entity, dispatch event",
+		log.L().Error("get entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return nil, errors.Wrap(err, "get entity, dispatch event")
 	}
 
-	log.Debug("holding request, wait response",
+	log.L().Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	// wait response.
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
-		log.Error("get entity", zfield.Eid(en.ID),
+		log.L().Error("get entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
-	log.Info("processing completed", zfield.Eid(en.ID),
+	log.L().Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
-		log.Error("get entity, decode response", zfield.ReqID(reqID),
+		log.L().Error("get entity, decode response", zfield.ReqID(reqID),
 			zap.Error(err), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity, decode response")
 	} else if innerErr := m.addMapper(ctx, &baseRet); nil != err {
-		log.Error("get entity, decode response, list mapper", zfield.ReqID(reqID),
+		log.L().Error("get entity, decode response, list mapper", zfield.ReqID(reqID),
 			zap.Error(innerErr), zfield.Eid(en.ID), zfield.Base(en.JSON()))
 	}
 
@@ -282,7 +282,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 	var err error
 	reqID := util.IG().ReqID()
 	elapsedTime := util.NewElapsed()
-	log.Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
+	log.L().Info("entity.DeleteEntity", zfield.Eid(en.ID), zfield.Type(en.Type),
 		zfield.ReqID(reqID), zfield.Owner(en.Owner), zfield.Source(en.Source), zfield.Base(en.JSON()))
 
 	// hold request.
@@ -302,23 +302,23 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 				Operator: string(v1.OpDelete)},
 		}}); nil != err {
 		respWaiter.Cancel()
-		log.Error("delete entity, dispatch event",
+		log.L().Error("delete entity, dispatch event",
 			zap.Error(err), zfield.Eid(en.ID), zfield.ReqID(reqID))
 		return errors.Wrap(err, "delete entity, dispatch event")
 	}
 
-	log.Debug("holding request, wait response",
+	log.L().Debug("holding request, wait response",
 		zfield.Eid(en.ID), zfield.ReqID(reqID))
 
 	// hold request, wait response.
 
 	if resp := respWaiter.Wait(); resp.Status != types.StatusOK {
-		log.Error("delete entity", zfield.Eid(en.ID),
+		log.L().Error("delete entity", zfield.Eid(en.ID),
 			zfield.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
 		return xerrors.New(resp.ErrCode)
 	}
 
-	log.Info("processing completed", zfield.Eid(en.ID),
+	log.L().Info("processing completed", zfield.Eid(en.ID),
 		zfield.ReqID(reqID), zfield.Elapsed(elapsedTime.Elapsed()))
 
 	return nil
@@ -326,25 +326,25 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 
 // AppendMapper append a mapper into entity.
 func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
-	log.Info("entity.AppendMapper",
+	log.L().Info("entity.AppendMapper",
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	var err error
 	var mo *dao.Mapper
 	if mo, err = m.entityRepo.GetMapper(ctx, mp); nil != err {
 		if !errors.Is(err, xerrors.ErrMapperNotFound) {
-			log.Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+			log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 			return errors.Wrap(err, "append mapper")
 		}
 	} else {
 		if mo.Owner != mp.Owner || mo.EntityID != mp.EntityID {
-			log.Error("append mapper, exists.", zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+			log.L().Error("append mapper, exists.", zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 			return errors.Wrap(err, "append mapper")
 		}
 	}
 
 	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
-		log.Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+		log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return errors.Wrap(err, "append mapper")
 	}
 
@@ -353,13 +353,13 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 
 // DeleteMapper delete mapper from entity.
 func (m *apiManager) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
-	log.Info("entity.RemoveMapper",
+	log.L().Info("entity.RemoveMapper",
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	// delete mapper.
 	var err error
 	if err = m.entityRepo.DelMapper(ctx, mp); nil != err {
-		log.Error("remove mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+		log.L().Error("remove mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return errors.Wrap(err, "remove mapper")
 	}
 
@@ -367,13 +367,13 @@ func (m *apiManager) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
 }
 
 func (m *apiManager) GetMapper(ctx context.Context, mp *dao.Mapper) (*dao.Mapper, error) {
-	log.Info("entity.GetMapper",
+	log.L().Info("entity.GetMapper",
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	// delete mapper.
 	var err error
 	if mp, err = m.entityRepo.GetMapper(ctx, mp); nil != err {
-		log.Error("get mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+		log.L().Error("get mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 		return mp, errors.Wrap(err, "get mapper")
 	}
 
@@ -381,7 +381,7 @@ func (m *apiManager) GetMapper(ctx context.Context, mp *dao.Mapper) (*dao.Mapper
 }
 
 func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, error) {
-	log.Info("entity.GetMapper", zfield.Eid(en.ID), zfield.Owner(en.Owner))
+	log.L().Info("entity.GetMapper", zfield.Eid(en.ID), zfield.Owner(en.Owner))
 
 	// delete mapper.
 	var err error
@@ -392,7 +392,7 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 			Owner:    en.Owner,
 			EntityID: en.ID,
 		}); nil != err {
-		log.Error("list mapper", zap.Error(err), zfield.Eid(en.ID), zfield.Owner(en.Owner))
+		log.L().Error("list mapper", zap.Error(err), zfield.Eid(en.ID), zfield.Owner(en.Owner))
 		return mps, errors.Wrap(err, "list mapper")
 	}
 

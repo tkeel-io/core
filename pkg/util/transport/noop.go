@@ -11,7 +11,7 @@ import (
 type noopTransmitter struct{}
 
 func (t *noopTransmitter) Do(ctx context.Context, in *Request) error {
-	log.Debug("delive message through noop.Transport",
+	log.L().Debug("delive message through noop.Transport",
 		zfield.ID(in.PackageID), zfield.Method(in.Method),
 		zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
 	return nil

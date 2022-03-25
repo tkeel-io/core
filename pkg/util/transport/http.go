@@ -51,7 +51,7 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 	if !tm.inited {
 		p, err := ants.NewPool(4000)
 		if err != nil {
-			log.Error("Init httpTransmitter Error", zap.Error(err))
+			log.L().Error("Init httpTransmitter Error", zap.Error(err))
 			return xerrors.ErrInvalidHTTPInited
 		}
 		tm.coroutines = p
@@ -60,7 +60,7 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 
 	// check request.
 	if req.Address == "" {
-		log.Error("empty target address",
+		log.L().Error("empty target address",
 			zfield.ID(req.PackageID), zfield.Method(req.Method),
 			zfield.Header(req.Header), zfield.Addr(req.Address), zfield.Payload(req.Payload))
 		return xerrors.ErrInvalidHTTPRequest
@@ -72,7 +72,7 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 }
 
 func (tm *httpTransmitter) process(in *Request) {
-	log.Debug("delive message through http.Transport",
+	log.L().Debug("delive message through http.Transport",
 		zfield.ID(in.PackageID), zfield.Method(in.Method),
 		zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
 
@@ -88,13 +88,13 @@ func (tm *httpTransmitter) process(in *Request) {
 	httpCli := clients[httpIndex%maxConnect]
 	rsp, err := httpCli.Do(httpReq)
 	if nil != err {
-		log.Error("do http request", zap.Error(err),
+		log.L().Error("do http request", zap.Error(err),
 			zfield.ID(in.PackageID), zfield.Method(in.Method),
 			zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
 		return
 	}
 
-	log.Debug("process request completed", zfield.ID(in.PackageID),
+	log.L().Debug("process request completed", zfield.ID(in.PackageID),
 		zfield.Status(rsp.Status), zap.Int("status_code", rsp.StatusCode))
 
 	defer rsp.Body.Close()

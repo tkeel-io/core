@@ -125,11 +125,11 @@ func (d *Dao) RangeQueue(ctx context.Context, rev int64, handler QueueHandler) {
 	for {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
-			log.Error("range queue failure", zap.Error(err), zfield.Prefix(prefix),
+			log.L().Error("range queue failure", zap.Error(err), zfield.Prefix(prefix),
 				zfield.Count(count), zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		} else if len(resp.Kvs) == 0 {
-			log.Info("range queue completed", zfield.Prefix(prefix), zfield.Count(count),
+			log.L().Info("range queue completed", zfield.Prefix(prefix), zfield.Count(count),
 				zap.Int64("failure", countFailure), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		}
@@ -139,7 +139,7 @@ func (d *Dao) RangeQueue(ctx context.Context, rev int64, handler QueueHandler) {
 			var queue Queue
 			if err := json.Unmarshal(kv.Value, &queue); nil != err {
 				countFailure++
-				log.Error("unmarshal queue", zap.Error(err),
+				log.L().Error("unmarshal queue", zap.Error(err),
 					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
 				continue
 			}
@@ -179,7 +179,7 @@ func (d *Dao) WatchQueue(ctx context.Context, rev int64, handler WatchQueueHandl
 			for _, ev := range wr.Events {
 				var queue Queue
 				if err := json.Unmarshal(ev.Kv.Value, &queue); nil != err {
-					log.Error("unmarshal queue", zap.Error(err),
+					log.L().Error("unmarshal queue", zap.Error(err),
 						zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
 					continue
 				}

@@ -30,7 +30,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 
 	state, err := r.LoadEntity(entityID)
 	if nil != err {
-		log.Error("load entity", zap.Error(err), zfield.Eid(entityID))
+		log.L().Error("load entity", zap.Error(err), zfield.Eid(entityID))
 		feed.Err = err
 		return feed
 	}

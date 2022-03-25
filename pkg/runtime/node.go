@@ -50,7 +50,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 }
 
 func (n *Node) Start(cfg NodeConf) error {
-	log.Info("start node...")
+	log.L().Info("start node...")
 
 	var elapsed util.ElapsedTime
 	n.initializeMetadata()
@@ -65,7 +65,7 @@ func (n *Node) Start(cfg NodeConf) error {
 
 		rid := sourceIns.ID()
 		// create runtime instance.
-		log.Info("create runtime instance",
+		log.L().Info("create runtime instance",
 			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
 
 		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
@@ -79,7 +79,7 @@ func (n *Node) Start(cfg NodeConf) error {
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
 	}
 
-	log.Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
+	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
 
 	return nil
 }
@@ -87,7 +87,7 @@ func (n *Node) Start(cfg NodeConf) error {
 func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
 	rid := msg.Topic
 	if _, has := n.runtimes[rid]; !has {
-		log.Error("runtime instance not exists.", zfield.ID(rid),
+		log.L().Error("runtime instance not exists.", zfield.ID(rid),
 			zap.Any("header", msg.Headers), zfield.Message(string(msg.Value)))
 		return xerrors.ErrRuntimeNotExists
 	}
@@ -111,23 +111,23 @@ func (n *Node) listMetadata() {
 
 	repo := n.resourceManager.Repo()
 	revision := repo.GetLastRevision(context.Background())
-	log.Info("initialize actor manager, mapper loadding...")
+	log.L().Info("initialize actor manager, mapper loadding...")
 	repo.RangeMapper(ctx, revision, func(mappers []dao.Mapper) {
 		// 将mapper加入每一个 runtime.
 		for _, mp := range mappers {
 			// parse mapper.
 			mpIns, err := mapper.NewMapper(mp, 1)
 			if nil != err {
-				log.Error("parse mapper", zap.Error(err),
+				log.L().Error("parse mapper", zap.Error(err),
 					zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
 				continue
 			}
-			log.Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+			log.L().Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 			n.mappers[mp.ID] = mpIns
 		}
 	})
 
-	log.Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.ElapsedMilli()))
+	log.L().Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
 // watchResource watch resources.
@@ -141,9 +141,9 @@ func (n *Node) watchMetadata() {
 				// parse mapper.
 				var err error
 				var mpIns mapper.Mapper
-				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				log.L().Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
-					log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+					log.L().Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 					return
 				}
 
@@ -155,9 +155,9 @@ func (n *Node) watchMetadata() {
 				// parse mapper.
 				var err error
 				var mpIns mapper.Mapper
-				log.Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
+				log.L().Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
 				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
-					log.Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+					log.L().Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
 					return
 				}
 
@@ -202,25 +202,25 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// 1. flush state.
 	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
-		log.Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into state storage")
 	}
 
 	// 2. flush search engine data.
 	indexData := en.Tiled()
 	if nil != indexData.Error() {
-		log.Error("flush entity search engine, build index data",
+		log.L().Error("flush entity search engine, build index data",
 			zap.Error(indexData.Error()), zfield.Eid(en.ID()))
 		return errors.Wrap(indexData.Error(), "flush entity into search engine, build index data")
 	}
 	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), indexData.Raw()); nil != err {
-		log.Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into search engine")
 	}
 
 	// 3. flush timeseries data.
 	// if _, err := n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{}); nil != err {
-	// 	log.Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
+	// 	log.L().Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
 	// }
 
 	return nil
@@ -233,7 +233,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 	defer func() {
 		if nil != err {
 			if innerErr := n.FlushEntity(ctx, en); nil != innerErr {
-				log.Error("remove entity failed, recover entity state failed", zfield.Eid(en.ID()),
+				log.L().Error("remove entity failed, recover entity state failed", zfield.Eid(en.ID()),
 					zfield.Reason(err.Error()), zap.Error(innerErr), zfield.Value(string(en.Raw())))
 			}
 		}
@@ -242,7 +242,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 	// 1. 从状态存储中删除（可标记）
 	if err := n.resourceManager.Repo().
 		DelEntity(ctx, en.ID()); nil != err {
-		log.Error("remove entity from state storage",
+		log.L().Error("remove entity from state storage",
 			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove entity from state storage")
 	}
@@ -254,7 +254,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 			Owner:  en.Owner(),
 			Source: en.Source(),
 		}); nil != err {
-		log.Error("remove entity from state search engine",
+		log.L().Error("remove entity from state search engine",
 			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove entity from state search engine")
 	}
@@ -265,7 +265,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 			Owner:    en.Owner(),
 			EntityID: en.ID(),
 		}); nil != err {
-		log.Error("remove entity, remove mapper by entity",
+		log.L().Error("remove entity, remove mapper by entity",
 			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove mapper by entity")
 	}

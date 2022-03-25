@@ -4,6 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -57,7 +58,7 @@ func (e *Execer) Exec(ctx context.Context, feed *Feed) *Feed {
 	}
 
 	if feed.TTL >= defaultTTLMax {
-		log.Error("ttl overflow", e.state.ID())
+		log.L().Error("ttl overflow", zfield.Eid(e.state.ID()))
 		return feed
 	}
 

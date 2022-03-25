@@ -54,7 +54,7 @@ func NewPubsub(id string, metadata resource.Metadata) Pubsub {
 		if pubsubClient, err = generator(id, metadata.Properties); nil == err {
 			return pubsubClient
 		}
-		log.Error("new Pubsub instance", zap.Error(err),
+		log.L().Error("new Pubsub instance", zap.Error(err),
 			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
 	pubsubClient, _ = registeredPubsubs["noop"](id, metadata.Properties)

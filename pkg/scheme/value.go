@@ -125,7 +125,7 @@ func Parse(bytes []byte) (map[string]*Config, error) {
 	// parse state config again.
 	configs := make(map[string]interface{})
 	if err := json.Unmarshal(bytes, &configs); nil != err {
-		log.Error("json unmarshal", zap.Error(err), zap.String("configs", string(bytes)))
+		log.L().Error("json unmarshal", zap.Error(err), zap.String("configs", string(bytes)))
 		return nil, errors.Wrap(err, "json unmarshal")
 	}
 
@@ -135,7 +135,7 @@ func Parse(bytes []byte) (map[string]*Config, error) {
 	for key, val := range configs {
 		if cfg, err = ParseConfigFrom(val); nil != err {
 			// TODO: dispose error.
-			log.Error("parse configs", zap.Error(err))
+			log.L().Error("parse configs", zap.Error(err))
 			continue
 		}
 		cfgs[key] = &cfg
@@ -147,7 +147,7 @@ func Parse(bytes []byte) (map[string]*Config, error) {
 func ParseFrom(bytes []byte) (*Config, error) {
 	v := make(map[string]interface{})
 	if err := json.Unmarshal(bytes, &v); nil != err {
-		log.Error("unmarshal Config", zap.Error(err))
+		log.L().Error("unmarshal Config", zap.Error(err))
 		return nil, errors.Wrap(err, "unmarshal Config")
 	}
 

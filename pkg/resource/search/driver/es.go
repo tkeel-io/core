@@ -53,7 +53,7 @@ type ESClient struct {
 func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error) {
 	var cfg ESConfig
 	if err := mapstructure.Decode(cfgJSON, &cfg); nil != err {
-		log.Error("decode elasticsearch configuration", zap.Error(err), zfield.Value(cfgJSON))
+		log.L().Error("decode elasticsearch configuration", zap.Error(err), zfield.Value(cfgJSON))
 		return nil, errors.Wrap(err, "decode elasticsearch configuration")
 	}
 
@@ -70,22 +70,23 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 
 	// ping connection.
 	if len(cfg.Endpoints) == 0 {
-		log.Error("please check your configuration with elasticsearch")
+		log.L().Error("please check your configuration with elasticsearch")
 		return nil, errors.Wrap(xerrors.ErrEmptyParam, "elasticsearch broker endpoints empty")
 	}
 
 	info, _, err := client.Ping(cfg.Endpoints[0]).Do(context.Background())
 	if nil != err {
-		log.Error("ping elasticsearch cluster", zap.Error(err))
+		log.L().Error("ping elasticsearch cluster", zap.Error(err))
 		return nil, errors.Wrap(err, "ping elasticsearch cluster")
 	}
 
-	log.Info("use ElasticsearchDriver version:", info.Version.Number)
+	log.L().Info("use ElasticsearchDriver version:", zfield.Value(info.Version.Number))
 	return &ESClient{Client: client}, nil
 }
 
 func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
-	if _, err := es.Client.Index().Index(EntityIndex).Id(index).BodyString(body).Do(ctx); err != nil {
+	if _, err := es.Client.Index().Index(EntityIndex).
+		Id(index).BodyString(body).Do(ctx); err != nil {
 		return errors.Wrap(err, "set index in es error")
 	}
 	return nil

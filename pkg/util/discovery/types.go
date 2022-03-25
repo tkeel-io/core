@@ -69,7 +69,7 @@ type Discovery struct {
 }
 
 func New(cfg Config) (*Discovery, error) {
-	log.Info("connect on discovery cluster",
+	log.L().Info("connect on discovery cluster",
 		zfield.Endpoints(cfg.Endpoints), zap.Int64("dial_timeout", cfg.DialTimeout))
 	discoveryEnd, err := clientv3.New(clientv3.Config{
 		Endpoints:   cfg.Endpoints,
@@ -77,7 +77,7 @@ func New(cfg Config) (*Discovery, error) {
 	})
 
 	if nil != err {
-		log.Error("connect on discovery cluster", zap.Error(err),
+		log.L().Error("connect on discovery cluster", zap.Error(err),
 			zfield.Endpoints(cfg.Endpoints), zap.Int64("dial_timeout", cfg.DialTimeout))
 		return nil, errors.Wrap(err, "connect Discovery Endpoint")
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	"go.uber.org/zap"
 
 	"github.com/tkeel-io/kit/log"
 )
@@ -28,9 +29,10 @@ type TSService struct {
 func NewTSService() (*TSService, error) {
 	tseriesClient := tseries.NewTimeSerier(config.Get().Components.TimeSeries.Name)
 	if err := tseriesClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries)); nil != err {
-		log.Error(err)
+		log.L().Error("initialize time series", zap.Error(err))
 		return nil, errors.Wrap(err, "init ts service")
 	}
+
 	return &TSService{
 		tseriesClient: tseriesClient,
 		entityCache:   make(map[string][]string),

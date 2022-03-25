@@ -70,7 +70,7 @@ func (k *kafkaPubsub) ID() string {
 }
 
 func (k *kafkaPubsub) Send(ctx context.Context, event v1.Event) error {
-	log.Debug("pubsub.kafka send", zfield.Message(event), zfield.Topic(k.kafkaMetadata.Topic),
+	log.L().Debug("pubsub.kafka send", zfield.Message(event), zfield.Topic(k.kafkaMetadata.Topic),
 		zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 
 	var (
@@ -97,30 +97,30 @@ func (k *kafkaPubsub) Send(ctx context.Context, event v1.Event) error {
 }
 
 func (k *kafkaPubsub) Received(ctx context.Context, receiver pubsub.EventHandler) error {
-	log.Debug("start receive", zfield.ID(k.id), zfield.Topic(k.kafkaMetadata.Topic),
+	log.L().Debug("start receive", zfield.ID(k.id), zfield.Topic(k.kafkaMetadata.Topic),
 		zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 	go func() {
 		defer func() {
-			log.Debug("Closing ConsumerGroup for topics", zfield.Topic(k.kafkaMetadata.Topic),
+			log.L().Debug("Closing ConsumerGroup for topics", zfield.Topic(k.kafkaMetadata.Topic),
 				zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 			if err := k.kafkaConsumer.Close(); err != nil {
-				log.Error("Error closing consumer group", zap.Error(err), zfield.Topic(k.kafkaMetadata.Topic),
+				log.L().Error("Error closing consumer group", zap.Error(err), zfield.Topic(k.kafkaMetadata.Topic),
 					zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 			}
 		}()
 
-		log.Debug("Subscribed and listening to topics", zfield.Topic(k.kafkaMetadata.Topic),
+		log.L().Debug("Subscribed and listening to topics", zfield.Topic(k.kafkaMetadata.Topic),
 			zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 
 		for {
 			// Consume the requested topic.
 			if innerError := k.kafkaConsumer.Consume(ctx, []string{k.kafkaMetadata.Topic}, &kafkaConsumer{receiverHandler: receiver}); innerError != nil {
-				log.Error("Error closing consumer group", zap.Error(innerError), zfield.Topic(k.kafkaMetadata.Topic),
+				log.L().Error("Error closing consumer group", zap.Error(innerError), zfield.Topic(k.kafkaMetadata.Topic),
 					zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 			}
 
 			if ctx.Err() != nil {
-				log.Error("Context error, stopping consumer", zap.Error(ctx.Err()), zfield.Topic(k.kafkaMetadata.Topic),
+				log.L().Error("Context error, stopping consumer", zap.Error(ctx.Err()), zfield.Topic(k.kafkaMetadata.Topic),
 					zfield.ID(k.id), zfield.Endpoints(k.kafkaMetadata.Brokers), zfield.Group(k.kafkaMetadata.Group))
 				return
 			}
@@ -134,7 +134,7 @@ func (k *kafkaPubsub) Commit(v interface{}) error {
 }
 
 func (k *kafkaPubsub) Close() error {
-	log.Info("pubsub.noop close", zfield.ID(k.id))
+	log.L().Info("pubsub.noop close", zfield.ID(k.id))
 	return nil
 }
 
@@ -152,28 +152,28 @@ func (consumer *kafkaConsumer) ConsumeClaim(session sarama.ConsumerGroupSession,
 	for msg := range claim.Messages() {
 		if err := retry.NotifyRecover(func() error {
 			var innerErr error
-			log.Debug("processing kafka message", zfield.Topic(msg.Topic),
+			log.L().Debug("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 
 			var ev v1.ProtoEvent
 			if innerErr = v1.Unmarshal(msg.Value, &ev); nil != innerErr {
-				log.Error("processing kafka message", zfield.Topic(msg.Topic),
+				log.L().Error("processing kafka message", zfield.Topic(msg.Topic),
 					zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 				return errors.Wrap(innerErr, "decode event")
 			} else if innerErr = consumer.receiverHandler(session.Context(), &ev); innerErr == nil {
 				session.MarkMessage(msg, "")
 			}
-			log.Error("processing kafka message", zfield.Topic(msg.Topic),
+			log.L().Error("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 			return errors.Wrap(innerErr, "handle message")
 		}, b, func(err error, d time.Duration) {
-			log.Debug("processing kafka message", zfield.Topic(msg.Topic),
+			log.L().Debug("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 		}, func() {
-			log.Debug("processing kafka message", zfield.Topic(msg.Topic),
+			log.L().Debug("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 		}); err != nil {
-			log.Error("processing kafka message", zfield.Topic(msg.Topic),
+			log.L().Error("processing kafka message", zfield.Topic(msg.Topic),
 				zfield.Partition(msg.Partition), zfield.Offset(msg.Offset), zfield.Key(string(msg.Key)))
 			return errors.Wrap(err, "handle message")
 		}
@@ -193,7 +193,7 @@ func (consumer *kafkaConsumer) Setup(sarama.ConsumerGroupSession) error {
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.kafka> successful")
 	pubsub.Register("kafka", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
-		log.Info("create pubsub.kafka instance", zfield.ID(id))
+		log.L().Info("create pubsub.kafka instance", zfield.ID(id))
 		pubsubIns, err := newKafkaPubsub(id, properties)
 		return pubsubIns, errors.Wrap(err, "new kafka instance")
 	})

@@ -21,7 +21,7 @@ func Init(urlText string) error {
 	// pasre configuration.
 	meta, err := parseConfig(urlText)
 	if nil != err {
-		log.Error("parse default search engine configuration",
+		log.L().Error("parse default search engine configuration",
 			zap.Error(err), zap.String("url", urlText))
 		return errors.Wrap(err, "initialize SearchEngine")
 	}
@@ -31,7 +31,7 @@ func Init(urlText string) error {
 	if driverIns, has := driver.GetDriver(driverType); has {
 		searchIns, err := driverIns(meta.Properties)
 		if nil != err {
-			log.Error("new search engine instance",
+			log.L().Error("new search engine instance",
 				zap.Error(err), zap.String("url", urlText))
 			return errors.Wrap(err, "new search engine instances")
 		}

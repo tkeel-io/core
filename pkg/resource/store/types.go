@@ -40,7 +40,7 @@ func NewStore(metadata resource.Metadata) Store {
 		if storeClient, err = generator(metadata.Properties); nil == err {
 			return storeClient
 		}
-		log.Error("new Store instance", zap.Error(err),
+		log.L().Error("new Store instance", zap.Error(err),
 			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
 	storeClient, _ = registeredStores["noop"](metadata.Properties)
