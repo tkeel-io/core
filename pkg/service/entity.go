@@ -127,8 +127,10 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Type = req.Type
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-
+	entity.TemplateID = req.TemplateId
 	parseHeaderFrom(ctx, entity)
+
+	// decode properties.
 	entity.Properties = make(map[string]tdtl.Node)
 	switch kv := req.Properties.AsInterface().(type) {
 	case map[string]interface{}:
@@ -138,8 +140,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
-		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
-		return nil, xerrors.ErrInvalidRequest
+		// do nothing.
 	default:
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
@@ -151,8 +152,19 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return out, xerrors.ErrInvalidRequest
 	}
 
+	// decode configs.
+	if nil != req.Configs {
+		if entity.Configs, err = parseConfigFrom2(ctx, req.Configs.AsInterface()); nil != err {
+			log.Error("set entity configs", zfield.Eid(req.Id), zap.Error(err))
+			return out, errors.Wrap(err, "update entity failed")
+		} else if entity.ConfigFile, err = json.Marshal(entity.Configs); nil != err {
+			log.Error("set entity configs", zfield.Eid(req.Id), zap.Error(err))
+			return out, errors.Wrap(err, "update entity failed")
+		}
+	}
+
 	// set properties.
-	if entity, err = s.apiManager.UpdateEntityProps(ctx, entity); nil != err {
+	if entity, err = s.apiManager.UpdateEntity(ctx, entity); nil != err {
 		log.Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
@@ -462,7 +474,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 				return nil, errors.Wrap(err, "patch entity failed")
 			}
 			pds = append(pds, state.PatchData{
-				Path:     pd.Path,
+				Path:     constraint.ExtracPath(pd.Path),
 				Operator: pd.Operator,
 				Value:    bytes,
 			})
@@ -506,7 +518,7 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	var propertyIDs []string
 	if in.PropertyKeys != "" {
 		propertyIDs = strings.Split(strings.TrimSpace(in.PropertyKeys), ",")
-		constraint.FormatPropertyKey(propertyIDs)
+		constraint.FormatPropertyKeys(propertyIDs)
 	}
 
 	if entity, err = s.apiManager.GetEntityConfigs(ctx, entity, propertyIDs); nil != err {
@@ -536,7 +548,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 	pds := make([]state.PatchData, 0)
 	for index := range propertyIDs {
 		pds = append(pds, state.PatchData{
-			Path:     propertyIDs[index],
+			Path:     constraint.ExtracPath(propertyIDs[index]),
 			Operator: xjson.OpRemove.String(),
 		})
 	}
@@ -546,7 +558,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 		return nil, errors.Wrap(err, "patch entity configs")
 	}
 
-	out = s.entity2EntityResponseZ(entity)
+	out = s.entity2EntityResponse(entity)
 	return out, errors.Wrap(err, "remove entity configs")
 }
 
@@ -606,6 +618,33 @@ func parseConfigFrom(ctx context.Context, data interface{}) (out map[string]*con
 	case []interface{}:
 		for _, cfg := range configs {
 			if c, ok := cfg.(map[string]interface{}); ok {
+				var cfgRet constraint.Config
+				if cfgRet, err = constraint.ParseConfigFrom(c); nil != err {
+					return out, errors.Wrap(err, "parse entity config failed")
+				}
+				out[cfgRet.ID] = &cfgRet
+				continue
+			}
+			return out, xerrors.ErrInvalidRequest
+		}
+	case nil:
+		log.Error("set entity configs.", zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
+	default:
+		log.Error("set entity configs.", zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
+	}
+	return out, errors.Wrap(err, "parse entity config")
+}
+
+func parseConfigFrom2(ctx context.Context, data interface{}) (out map[string]*constraint.Config, err error) {
+	// parse configs from.
+	out = make(map[string]*constraint.Config)
+	switch configs := data.(type) {
+	case map[string]interface{}:
+		for id, cfg := range configs {
+			if c, ok := cfg.(map[string]interface{}); ok {
+				c["id"] = id
 				var cfgRet constraint.Config
 				if cfgRet, err = constraint.ParseConfigFrom(c); nil != err {
 					return out, errors.Wrap(err, "parse entity config failed")
@@ -685,6 +724,9 @@ func (s *EntityService) entity2EntityResponseZ(entity *Entity) (out *pb.EntityRe
 	out.Type = entity.Type
 	out.Owner = entity.Owner
 	out.Source = entity.Source
+	out.Version = entity.Version
+	out.LastTime = entity.LastTime
+	out.TemplateId = entity.TemplateID
 
 	return out
 }
@@ -730,6 +772,9 @@ func (s *EntityService) entity2EntityResponse(entity *Entity) (out *pb.EntityRes
 	out.Type = entity.Type
 	out.Owner = entity.Owner
 	out.Source = entity.Source
+	out.Version = entity.Version
+	out.LastTime = entity.LastTime
+	out.TemplateId = entity.TemplateID
 
 	return out
 }

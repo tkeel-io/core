@@ -13,6 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/goinggo/mapstructure v0.0.0-20140717182941-194205d9b4a9
 	github.com/golang/protobuf v1.5.2
+	github.com/gookit/goutil v0.4.4
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0
 	github.com/influxdata/influxdb-client-go/v2 v2.8.0
 	github.com/mitchellh/mapstructure v1.4.2

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/pkg/errors"
@@ -228,7 +230,74 @@ func (s *statem) cbCreateEntity(ctx context.Context, msgCtx message.Context) ([]
 }
 
 func (s *statem) cbUpdateEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
-	panic("implement me")
+	var (
+		err   error
+		reqEn dao.Entity
+	)
+
+	// create event.
+	ev := s.makeEvent()
+	reqID := msgCtx.Get(message.ExtAPIRequestID)
+	ev.SetExtension(message.ExtAPIRequestID, reqID)
+	ev.SetExtension(message.ExtCallback, msgCtx.Get(message.ExtCallback))
+
+	defer func() {
+		if nil != err {
+			ev.SetExtension(message.ExtAPIRespStatus, types.StatusError.String())
+			ev.SetExtension(message.ExtAPIRespErrCode, err.Error())
+		}
+		if innerErr := s.dispatcher.Dispatch(ctx, ev); nil != err {
+			log.Error("diispatch event", zap.Error(innerErr),
+				zfield.Eid(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+		}
+	}()
+
+	// check version.
+	if s.Version == 0 {
+		err = xerrors.ErrEntityNotFound
+		log.Error("state machine not exists", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "state machine not exists")
+	}
+
+	// decode request.
+	if err = dao.GetEntityCodec().Decode(msgCtx.Message(), &reqEn); nil != err {
+		log.Error("decode core api request", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "decode core api request")
+	}
+
+	// sync template.
+	if reqEn.TemplateID != "" {
+		var tempEn = &dao.Entity{ID: reqEn.TemplateID}
+		if tempEn, err = s.Repo().GetEntity(ctx, tempEn); nil != err {
+			log.Error("pull template entity", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+			return nil, errors.Wrap(err, "pull template entity")
+		}
+
+		s.TemplateID = reqEn.TemplateID
+		s.ConfigBytes = tempEn.ConfigBytes
+	}
+
+	// update configs.
+	if reqEn.ConfigBytes != nil {
+		s.ConfigBytes = reqEn.ConfigBytes
+	}
+
+	// parse configs.
+	s.reparseConfig()
+
+	// set response.
+	if err = s.setEventPayload(&ev, reqID, &s.Entity); nil != err {
+		log.Error("set event payload", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+		return nil, errors.Wrap(err, "set response event payload")
+	}
+
+	s.Version++
+	s.LastTime = util.UnixMilli()
+	log.Debug("core.APIS callback", zfield.ID(s.ID), zfield.ReqID(msgCtx.Get(message.ExtAPIRequestID)))
+
+	s.flush(ctx)
+
+	return nil, nil
 }
 
 func (s *statem) cbGetEntity(ctx context.Context, msgCtx message.Context) ([]WatchKey, error) {
@@ -569,7 +638,7 @@ func (s *statem) cbUpdateEntityConfigs(ctx context.Context, msgCtx message.Conte
 	// update configs.
 	var configBytes = []byte("{}")
 	collectjs.ForEach(reqEn.ConfigBytes, jsonparser.Object,
-		func(key, value []byte, dataType jsonparser.ValueType) {
+		func(key, value []byte, _ jsonparser.ValueType) {
 			propertyKey := string(key)
 			if configBytes, err = collectjs.Set(configBytes, propertyKey, value); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch add", zap.Error(err))
@@ -652,11 +721,22 @@ func (s *statem) cbPatchEntityConfigs(ctx context.Context, msgCtx message.Contex
 		op := xjson.NewPatchOp(pd.Operator)
 		switch op {
 		case xjson.OpAdd:
-		default:
-			if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
+		case xjson.OpReplace:
+			// make sub path.
+			var path string
+			if bytesSrc, path, err = makeSubPath(destNode.Raw(), bytesSrc, pd.Path); nil != err {
+				log.Error("call core.APIs.PatchConfigs, make sub path", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "patch entity configs")
+			} else if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), path, op); nil != err {
 				log.Error("call core.APIs.PatchConfigs patch configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
 				return nil, errors.Wrap(err, "patch entity configs")
 			}
+		case xjson.OpRemove:
+			if destNode, err = xjson.Patch(destNode, tdtl.New(bytesSrc), pd.Path, op); nil != err {
+				log.Error("call core.APIs.PatchConfigs patch remove configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "patch entity configs")
+			}
+		default:
 		}
 	}
 
@@ -711,7 +791,7 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 
 	var val tdtl.Node
 	var enRes = s.Entity.Basic()
-	var destNodel tdtl.Node = tdtl.New(`{}`)
+	var copyRes = make(map[string]tdtl.Node)
 	if len(apiRequest.PropertyKeys) > 0 {
 		for _, path := range apiRequest.PropertyKeys {
 			if val, err = xjson.Patch(tdtl.New(s.ConfigBytes), nil, path, xjson.OpCopy); nil != err {
@@ -723,15 +803,19 @@ func (s *statem) cbGetEntityConfigs(ctx context.Context, msgCtx message.Context)
 				continue
 			}
 
-			if destNodel, err = xjson.Patch(destNodel, val, path, xjson.OpReplace); nil != err {
-				log.Error("get entity configs", zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
-				return nil, errors.Wrap(err, "get entity configs")
-			}
+			rawPath := strings.ReplaceAll(path, ".define.fields.", ".")
+			copyRes[rawPath] = val
 		}
 
 		// set entity configs.
-		if nil != destNodel {
-			enRes.ConfigBytes = destNodel.Raw()
+		if len(copyRes) > 0 {
+			var bytes []byte
+			if bytes, err = xjson.EncodeJSONZ(copyRes); nil != err {
+				log.Error("get entity configs",
+					zap.Error(err), zfield.Eid(s.ID), zfield.ReqID(reqID))
+				return nil, errors.Wrap(err, "get entity configs")
+			}
+			enRes.ConfigBytes = bytes
 		}
 	} else {
 		enRes.ConfigBytes = make([]byte, len(s.ConfigBytes))
@@ -786,4 +870,70 @@ func (s *statem) reparseConfig() {
 			}
 		}
 	}
+}
+
+func makeSubPath(dest, src []byte, path string) ([]byte, string, error) {
+	var index int
+	segs := strings.Split(path, ".")
+	for ; index < len(segs); index += 3 {
+		if _, _, _, err := jsonparser.Get(dest, segs[:index+1]...); nil != err {
+			if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+				break
+			}
+			return nil, path, errors.Wrap(err, "make sub path")
+		}
+	}
+
+	if index >= len(segs) {
+		return src, path, nil
+	}
+
+	missSegs := segs[index:]
+	if len(missSegs) > 3 {
+		path = strings.Join(segs[:index+1], ".")
+		return makeConfig(missSegs, src), path, nil
+	}
+
+	return src, path, nil
+}
+
+func makeConfig(segs []string, data []byte) []byte {
+	cfg := &constraint.Config{
+		ID:                segs[0],
+		Type:              "struct",
+		Name:              segs[0],
+		Enabled:           true,
+		EnabledSearch:     true,
+		EnabledTimeSeries: true,
+		Define:            map[string]interface{}{},
+		LastTime:          time.Now().UnixNano() / 1e6,
+	}
+
+	head := cfg
+	mids := segs[3 : len(segs)-1]
+	for index := 0; index < len(mids); index += 3 {
+		curCfg := &constraint.Config{
+			ID:                mids[index],
+			Type:              "struct",
+			Name:              mids[index],
+			Enabled:           true,
+			EnabledSearch:     true,
+			EnabledTimeSeries: true,
+			Define:            map[string]interface{}{},
+			LastTime:          time.Now().UnixNano() / 1e6,
+		}
+
+		head.Define["fields"] = map[string]interface{}{mids[index]: curCfg}
+		head = curCfg
+	}
+
+	// set last seg.
+	var v interface{}
+	json.Unmarshal(data, &v)
+	head.Define["fields"] =
+		map[string]interface{}{
+			segs[len(segs)-1]: v}
+	bytes, _ := json.Marshal(cfg)
+
+	return bytes
 }

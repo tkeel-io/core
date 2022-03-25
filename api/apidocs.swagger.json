@@ -1695,6 +1695,20 @@
           "type": "string",
           "description": "entity type"
         },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "entity version"
+        },
+        "last_time": {
+          "type": "string",
+          "format": "int64",
+          "description": "entity last modify timestamp"
+        },
+        "template_id": {
+          "type": "string",
+          "description": "entity template"
+        },
         "mappers": {
           "type": "array",
           "items": {

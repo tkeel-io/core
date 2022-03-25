@@ -17,8 +17,6 @@ limitations under the License.
 package constraint
 
 import (
-	"strings"
-
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -143,17 +141,4 @@ func keyContains(key string) bool {
 
 func ExecData(val tdtl.Node, ct *Constraint) (tdtl.Node, error) {
 	return val, nil
-}
-
-func FormatPropertyKey(propertyKeys []string) []string {
-	for index := range propertyKeys {
-		propertyKeys[index] =
-			format(propertyKeys[index])
-	}
-	return propertyKeys
-}
-
-func format(propertyKey string) string {
-	path := strings.ReplaceAll(propertyKey, ".", ".define.fields.")
-	return path
 }
