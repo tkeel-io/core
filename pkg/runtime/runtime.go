@@ -116,7 +116,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
-				&handlerImpl{fn: r.handlePersistent}}}
+				&handlerImpl{fn: r.handlePersistent},
+				&handlerImpl{fn: r.handleTemplate}}}
 
 		return execer, &Feed{
 			Err:      err,
@@ -493,6 +494,49 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 	}
 	r.entityResourcer.FlushHandler(ctx, en)
 	return feed
+}
+
+func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
+	for index := range feed.Changes {
+		if FieldTemplate == feed.Changes[index].Path {
+			feed.Err = r.onTemplateChanged(ctx,
+				feed.EntityID, feed.Changes[index].Value.String())
+			break
+		}
+	}
+	return feed
+}
+
+func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID string) error {
+	log.Info("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
+	// load template entity.
+	templateIns, err := r.LoadEntity(templateID)
+	if nil != err {
+		log.Error("onTemplateChanged", zap.Error(err),
+			zfield.Eid(entityID), zfield.Template(templateID))
+		return errors.Wrap(err, "On Template Changed")
+	}
+
+	// 为什么使用dispatch 异步更新scheme， 而不是直接更新？
+	// 1. 将 templateID 更新 scheme 更新分离，降低 api调用时延.
+	// 2.
+
+	ev := &v1.ProtoEvent{
+		Id:        entityID,
+		Timestamp: time.Now().UnixNano(),
+		Metadata: map[string]string{
+			v1.MetaType:     string(v1.ETEntity),
+			v1.MetaEntityID: entityID,
+			v1.MetaSender:   entityID},
+		Data: &v1.ProtoEvent_Patches{
+			Patches: &v1.PatchDatas{
+				Patches: []*v1.PatchData{{
+					Path:     FieldScheme,
+					Value:    templateIns.Scheme().Raw(),
+					Operator: string(OpReplace)},
+				}}}}
+	err = r.dispatcher.Dispatch(ctx, ev)
+	return errors.Wrap(err, "On Template Changed")
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {

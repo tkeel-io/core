@@ -38,10 +38,11 @@ import (
 )
 
 const (
-	sep         = "."
-	FieldScheme = "scheme"
-	FieldProps  = "properties"
-	InternalSep = ".define.fields."
+	sep           = "."
+	FieldScheme   = "scheme"
+	FieldProps    = "properties"
+	FieldTemplate = "template_id"
+	InternalSep   = ".define.fields."
 )
 
 func schemeKey(key string) string {
@@ -134,6 +135,16 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
+	patches := []*pb.PatchData{}
+
+	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
+		patches = append(patches, &pb.PatchData{
+			Path:     FieldTemplate,
+			Value:    tdtl.New(template).Raw(),
+			Operator: xjson.OpReplace.String(),
+		})
+	}
+
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
 	case map[string]interface{}:
@@ -142,21 +153,41 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
+
+		// patch merge properties.
+		if len(entity.Properties) > 0 {
+			patches = append(patches, &pb.PatchData{
+				Path:     FieldProps,
+				Value:    entity.Properties,
+				Operator: xjson.OpMerge.String()})
+		}
 	default:
 		log.Error("update entity failed.",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
-	patches := []*pb.PatchData{{
-		Path:     FieldProps,
-		Operator: xjson.OpMerge.String(),
-		Value:    entity.Properties,
-	}, {
-		Path:     FieldScheme,
-		Operator: xjson.OpMerge.String(),
-		Value:    entity.Properties,
-	}}
+	schemeVal := req.Configs.AsInterface()
+	switch properties.(type) {
+	case map[string]interface{}:
+		if entity.Scheme, err = json.Marshal(schemeVal); nil != err {
+			log.Error("update entity, invalid params", zfield.Reason(err.Error()),
+				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			return out, errors.Wrap(err, "update entity")
+		}
+
+		// patch replace configs.
+		if len(entity.Scheme) > 0 {
+			patches = append(patches, &pb.PatchData{
+				Path:     FieldProps,
+				Value:    entity.Scheme,
+				Operator: xjson.OpReplace.String()})
+		}
+	default:
+		log.Error("update entity failed.",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		return nil, xerrors.ErrInvalidRequest
+	}
 
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {

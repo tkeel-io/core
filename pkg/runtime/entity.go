@@ -18,6 +18,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// some persistent field enumerate.
+const (
+	FieldID       string = "id"
+	FieldType     string = "type"
+	FieldOwner    string = "owner"
+	FieldSource   string = "source"
+	FieldVersion  string = "version"
+	FieldLastTime string = "last_time"
+	FieldTemplate string = "template_id"
+	FieldScheme   string = "scheme"
+)
+
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
 
 type entity struct {
@@ -133,26 +145,26 @@ func (e *entity) Basic() *tdtl.Collect {
 }
 
 func (e *entity) Type() string {
-	return e.state.Get("type").String()
+	return e.state.Get(FieldType).String()
 }
 func (e *entity) Owner() string {
-	return e.state.Get("owner").String()
+	return e.state.Get(FieldOwner).String()
 }
 func (e *entity) Source() string {
-	return e.state.Get("source").String()
+	return e.state.Get(FieldSource).String()
 }
 func (e *entity) Version() int64 {
-	version := e.state.Get("version").String()
+	version := e.state.Get(FieldVersion).String()
 	i, _ := strconv.ParseInt(version, 10, 64)
 	return i
 }
 func (e *entity) LastTime() int64 {
-	lastTime := e.state.Get("last_time").String()
+	lastTime := e.state.Get(FieldLastTime).String()
 	i, _ := strconv.ParseInt(lastTime, 10, 64)
 	return i
 }
 func (e *entity) TemplateID() string {
-	return e.state.Get("template_id").String()
+	return e.state.Get(FieldTemplate).String()
 }
 func (e *entity) Properties() tdtl.Node {
 	return e.state.Get("properties")
