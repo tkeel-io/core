@@ -235,3 +235,11 @@ func Group(group string) zap.Field {
 func Queue(v interface{}) zap.Field {
 	return zap.Any("queue", v)
 }
+
+func Input(v interface{}) zap.Field {
+	return zap.Any("input", v)
+}
+
+func Output(v interface{}) zap.Field {
+	return zap.Any("output", v)
+}

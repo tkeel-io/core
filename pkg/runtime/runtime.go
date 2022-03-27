@@ -371,6 +371,9 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 		return map[string]tdtl.Node{}
 	}
 
+	log.L().Debug("exec mapper", zfield.ID(mp.ID()),
+		zfield.Eid(mp.TargetEntity()), zfield.Input(in), zfield.Output(out))
+
 	// clean nil feed.
 	for path, val := range out {
 		if val == nil || val.Type() == tdtl.Null ||
@@ -420,7 +423,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 		if info.ID == r.id {
 			log.L().Debug("target entity belong this runtime, ignore dispatch.",
 				zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
-			continue
+			// continue.
 		}
 
 		log.L().Debug("republish event", zfield.ID(r.id),
@@ -583,10 +586,39 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		case mapper.TentacleTypeEntity:
 			items = append(items, tentacle.Items()...)
 		default:
+			// TODO: 解决 Cache 消息 先于 mapper 初始化, 需要深入思考原因.
+			mp := tentacle.Mapper()
+			patches := []*v1.PatchData{}
+			target := mp.TargetEntity()
+			log.L().Debug("compute mapper",
+				zfield.Eid(mc.EntityID), zfield.Mid(mc.ID))
+			result := r.computeMapper(ctx, mp)
+			for path, val := range result {
+				patches = append(
+					patches,
+					&v1.PatchData{
+						Operator: string(OpReplace),
+						Path:     path,
+						Value:    val.Raw(),
+					})
+			}
+
+			// 2. dispatch.send() .
+			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+				Id:        util.IG().EvID(),
+				Timestamp: time.Now().UnixNano(),
+				Metadata: map[string]string{
+					v1.MetaType:     string(v1.ETEntity),
+					v1.MetaEntityID: target},
+				Data: &v1.ProtoEvent_Patches{
+					Patches: &v1.PatchDatas{
+						Patches: patches,
+					}},
+			})
 		}
 	}
 
-	feeds := make(map[string]*Feed)
+	patches := map[string][]*v1.PatchData{}
 	for _, item := range items {
 		var err error
 		var val tdtl.Node
@@ -599,23 +631,28 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 			continue
 		}
 
-		if _, has := feeds[item.EntityID]; !has {
-			feeds[item.EntityID] = &Feed{
-				EntityID: item.EntityID,
-			}
-		}
-
-		feeds[item.EntityID].Changes =
-			append(feeds[item.EntityID].Changes,
-				Patch{
-					Op:    OpReplace,
-					Path:  item.PropertyKey,
-					Value: tdtl.New(val.Raw())})
+		patches[item.EntityID] =
+			append(patches[item.EntityID],
+				&v1.PatchData{
+					Operator: string(OpReplace),
+					Path:     item.PropertyKey,
+					Value:    val.Raw()})
 	}
 
-	// handle subscribe.
-	for _, feed := range feeds {
-		r.handleTentacle(ctx, feed)
+	// handle subscribe, dispatch entity state.
+	for entityID, patch := range patches {
+		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+			Id:        util.IG().EvID(),
+			Timestamp: time.Now().UnixNano(),
+			Metadata: map[string]string{
+				v1.MetaType:     string(v1.ETCache),
+				v1.MetaEntityID: mc.EntityID,
+				v1.MetaSender:   entityID},
+			Data: &v1.ProtoEvent_Patches{
+				Patches: &v1.PatchDatas{
+					Patches: patch,
+				}},
+		})
 	}
 }
 

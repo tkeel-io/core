@@ -116,6 +116,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 
 	if cc.Error() == nil {
 		e.state = *cc
+		e.Update()
+
 	}
 
 	// in.Patches 处理完毕，丢弃.
@@ -167,6 +169,7 @@ func (e *entity) Version() int64 {
 	i, _ := strconv.ParseInt(version, 10, 64)
 	return i
 }
+
 func (e *entity) LastTime() int64 {
 	lastTime := e.state.Get(FieldLastTime).String()
 	i, _ := strconv.ParseInt(lastTime, 10, 64)
@@ -183,6 +186,13 @@ func (e *entity) Scheme() tdtl.Node {
 }
 func (e *entity) GetProp(key string) tdtl.Node {
 	return e.state.Get("properties." + key)
+}
+func (e *entity) Update() {
+	// update entity version.
+	lastTime := time.Now().UnixNano() / 1e6
+	e.state.Set(FieldVersion, tdtl.NewInt64(e.Version()+1))
+	// update entity last_time.
+	e.state.Set(FieldLastTime, tdtl.NewInt64(lastTime))
 }
 
 func pathConstructor(pc v1.PathConstructor, destVal, setVal []byte, path string) (_ []byte, _ string, err error) {

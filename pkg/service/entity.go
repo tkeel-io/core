@@ -786,6 +786,8 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	out.Type = base.Type
 	out.Owner = base.Owner
 	out.Source = base.Source
+	out.Version = base.Version
+	out.LastTime = base.LastTime
 	return out, nil
 }
 
