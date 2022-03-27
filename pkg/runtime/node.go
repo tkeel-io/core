@@ -30,6 +30,7 @@ type Node struct {
 	dispatch        dispatch.Dispatcher
 	resourceManager types.ResourceManager
 	mappers         map[string]mapper.Mapper
+	revision        int64
 
 	lock   sync.RWMutex
 	ctx    context.Context
@@ -110,9 +111,9 @@ func (n *Node) listMetadata() {
 	defer cancel()
 
 	repo := n.resourceManager.Repo()
-	revision := repo.GetLastRevision(context.Background())
+	n.revision = repo.GetLastRevision(context.Background())
 	log.L().Info("initialize actor manager, mapper loadding...")
-	repo.RangeMapper(ctx, revision, func(mappers []dao.Mapper) {
+	repo.RangeMapper(ctx, n.revision, func(mappers []dao.Mapper) {
 		// 将mapper加入每一个 runtime.
 		for _, mp := range mappers {
 			// parse mapper.
@@ -133,8 +134,7 @@ func (n *Node) listMetadata() {
 // watchResource watch resources.
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
-	repo.WatchMapper(context.Background(),
-		repo.GetLastRevision(context.Background()),
+	repo.WatchMapper(context.Background(), n.revision,
 		func(et dao.EnventType, mp dao.Mapper) {
 			switch et {
 			case dao.DELETE:
