@@ -30,6 +30,7 @@ const (
 	FieldTemplate   string = "template_id"
 	FieldScheme     string = "scheme"
 	FieldProperties string = "properties"
+	FieldRawData    string = "properties.rawData"
 )
 
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
@@ -65,8 +66,9 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 		return feed
 	}
 
+	changes := []Patch{}
 	pc := feed.Event.Attr(v1.MetaPathConstructor)
-	var changes []Patch
+
 	cc := e.state.Copy()
 	for _, patch := range feed.Patches {
 		switch patch.Op {
@@ -86,7 +88,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 				log.L().Error("update entity", zfield.Eid(e.id), zap.Error(err),
 					zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
 				// in.Patches 处理完毕，丢弃.
-				feed.Err = cc.Error()
+				feed.Err = err
 				feed.Patches = []Patch{}
 				feed.State = e.Raw()
 				return feed

@@ -2,8 +2,10 @@ package runtime
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -123,7 +125,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: r.handlePersistent},
-				&handlerImpl{fn: r.handleTemplate}}}
+				&handlerImpl{fn: r.handleTemplate},
+				&handlerImpl{fn: r.handleRawData}}}
 
 		return execer, &Feed{
 			Err:      err,
@@ -286,6 +289,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 }
 
 func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle computed", zfield.Eid(feed.EntityID))
 	// 1. 检查 ret.path 和 订阅列表.
 	entityID := feed.EntityID
 	mappers := make(map[string]mapper.Mapper)
@@ -393,6 +397,8 @@ func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[strin
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle tentacle", zfield.Eid(feed.EntityID), zfield.Event(feed.Event))
+
 	// 1. 检查 ret.path 和 订阅列表.
 	var targets sort.StringSlice
 	entityID := feed.EntityID
@@ -433,7 +439,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 		}
 
 		log.L().Debug("republish event", zfield.ID(r.id),
-			zfield.Target(target), zfield.Value(info))
+			zfield.Target(target), zfield.Value(info), zfield.Value(patch))
 
 		// dispatch cache event.
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
@@ -496,6 +502,7 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 }
 
 func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle persistent", zfield.Eid(feed.EntityID))
 	en, ok := r.entities[feed.EntityID]
 	if !ok {
 		// entity has been deleted.
@@ -517,7 +524,7 @@ func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID string) error {
-	log.L().Info("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
+	log.L().Debug("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
 	// load template entity.
 	templateIns, err := r.LoadEntity(templateID)
 	if nil != err {
@@ -548,7 +555,44 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 	return errors.Wrap(err, "On Template Changed")
 }
 
-func handleRawData(ctx context.Context, feed *Feed) *Feed {
+func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
+
+	// match properties.rawData.
+	for _, patch := range feed.Changes {
+		if FieldRawData == patch.Path {
+			// attempt extract rawData.
+			prefix := patch.Value.Get("type").String()
+			values := patch.Value.Get("values").String()
+			bytes, err := base64.StdEncoding.DecodeString(values)
+			if nil != err {
+				log.L().Warn("attempt extract RawData", zfield.Eid(feed.EntityID),
+					zfield.Reason(err.Error()), zfield.Value(patch.Value.String()))
+				return feed
+			}
+
+			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
+				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+
+			path := strings.Join([]string{FieldProperties, prefix}, ".")
+			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+				Id:        util.IG().EvID(),
+				Timestamp: time.Now().UnixNano(),
+				Metadata: map[string]string{
+					v1.MetaType:     string(v1.ETEntity),
+					v1.MetaEntityID: feed.EntityID},
+				Data: &v1.ProtoEvent_Patches{
+					Patches: &v1.PatchDatas{
+						Patches: []*v1.PatchData{{
+							Path:     path,
+							Value:    bytes,
+							Operator: xjson.OpMerge.String(),
+						}},
+					}},
+			})
+		}
+	}
+
 	return feed
 }
 
@@ -686,10 +730,11 @@ func (r *Runtime) RemoveMapper(mc MCache) {
 
 func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	r.lock.Lock()
-	defer r.lock.Unlock()
 	if state, ok := r.entities[id]; ok {
+		r.lock.Unlock()
 		return state, nil
 	}
+	r.lock.Unlock()
 
 	// load from state storage.
 	jsonData, err := r.repository.GetEntity(context.TODO(), id)
@@ -706,6 +751,10 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 			zfield.Eid(id), zfield.Reason(err.Error()))
 		return nil, errors.Wrap(err, "create entity instance")
 	}
+
+	r.lock.Lock()
+	r.entities[id] = en
+	r.lock.Unlock()
 
 	return en, nil
 }
