@@ -12,6 +12,7 @@ import (
 	"github.com/dapr/kit/retry"
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/kit/log"
@@ -204,15 +205,21 @@ func init() {
 	})
 }
 
+// kafka://localhost:9092/topic/group
 func parseURL(urlText string) (*kafkaMetadata, error) {
 	urlIns, err := url.Parse(urlText)
 	if nil != err {
 		return nil, errors.Wrap(err, "parse configuration from url")
 	}
 
+	segs := strings.Split(urlIns.Path, "/")
+	if len(segs) != 3 {
+		return nil, xerrors.ErrInvalidParam
+	}
+
 	return &kafkaMetadata{
-		Topic:   urlIns.Query().Get("topic"),
-		Group:   urlIns.Query().Get("group"),
+		Topic:   segs[1],
+		Group:   segs[2],
 		Brokers: strings.Split(urlIns.Host, ","),
 		Timeout: 30,
 	}, nil
