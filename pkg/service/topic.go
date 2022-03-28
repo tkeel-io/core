@@ -60,7 +60,7 @@ func (s *TopicService) Init(apiManager apim.APIManager) {
 	s.apiManager = apiManager
 }
 
-func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
+func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
 	log.L().Debug("received event", zfield.ReqID(req.Meta.Id),
 		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
 		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))

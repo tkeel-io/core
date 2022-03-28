@@ -25,20 +25,6 @@ service Topic {
       }
     };
   }
-
-  rpc TopicClusterEventHandler(TopicEventRequest) returns(TopicEventResponse) {
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "TopicEvent handler";
-      operation_id: "TopicClusterEventHandler";
-      tags: "TopicEvent";
-      responses: {
-        key: "200"
-        value: {
-          description: "OK";
-        }
-      }
-    };
-  }
 }
 
 
