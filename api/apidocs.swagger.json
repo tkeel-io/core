@@ -1918,8 +1918,8 @@
       "type": "object",
       "properties": {
         "total": {
-          "type": "integer",
-          "format": "int32",
+          "type": "string",
+          "format": "int64",
           "description": "total count of the entities"
         },
         "page_num": {
@@ -2127,8 +2127,8 @@
       "type": "object",
       "properties": {
         "total": {
-          "type": "integer",
-          "format": "int32",
+          "type": "string",
+          "format": "int64",
           "description": "count of the results"
         },
         "page_num": {

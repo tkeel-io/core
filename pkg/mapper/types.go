@@ -36,6 +36,7 @@ const (
 type Mapper interface {
 	// ID returns mapper id.
 	ID() string
+	Name() string
 	// String returns MQL text.
 	String() string
 	// Version returns mapper version.

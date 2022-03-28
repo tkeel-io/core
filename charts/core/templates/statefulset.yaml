@@ -48,10 +48,14 @@ spec:
               containerPort: {{.Values.appPort}}
               protocol: TCP
           env:
-            - name: KEEL_PRIVATE_STORE
-              value: {{ printf "%s-redis-private-store" .Values.middleware.name }}
-            - name: KEEL_PUBLIC_STORE
-              value: {{ printf "%s-redis-public-store" .Values.middleware.name }}
+            - name: TKEEL_DATABASE
+              value: {{ .Values.middleware.database }}
+            - name: TKEEL_SEARCH
+              value: {{ .Values.middleware.search }}
+            - name: TKEEL_REGISTRY
+              value: {{ .Values.middleware.service_registry }}
+            - name: TKEEL_QUEUE
+              value: {{ .Values.middleware.queue }}
           volumeMounts:
             - mountPath: /var/conf
               name: conf

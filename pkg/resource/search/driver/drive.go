@@ -35,7 +35,7 @@ type SearchRequest struct {
 }
 
 type SearchResponse struct {
-	Total  int32                    `json:"total,omitempty"`
+	Total  int64                    `json:"total,omitempty"`
 	Data   []map[string]interface{} `json:"data,omitempty"`
 	Raw    []byte                   `json:"raw,omitempty"`
 	Limit  int32                    `json:"limit"`

@@ -49,6 +49,10 @@ func (m *mapper) ID() string {
 	return fmtMapperID(m.mapper.EntityID, m.mapper.ID)
 }
 
+func (m *mapper) Name() string {
+	return m.mapper.Name
+}
+
 // String returns MQL text.
 func (m *mapper) String() string {
 	return m.mapper.TQL

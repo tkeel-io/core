@@ -1,7 +1,7 @@
 apiVersion: dapr.io/v1alpha1
 kind: Subscription
 metadata:
-  name: core-sub
+  name: core-subscriber
 spec:
   topic: core-pub
   route: /v1/topic

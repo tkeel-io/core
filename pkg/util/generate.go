@@ -3,7 +3,7 @@ package util
 import "fmt"
 
 const (
-	EtcdMapperPrefix = "core.mapper."
+	EtcdMapperPrefix = "core.mapper"
 	// core.mapper.{type}.{entityID}.{name}.
 	fmtMapperString = "core.mapper.%s.%s.%s"
 )
