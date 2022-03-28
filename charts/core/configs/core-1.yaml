@@ -28,6 +28,8 @@ dispatcher:
   id: dispatcher
   enabled: true
   name: dispatcher
+  upstreams:
+    - dapr://localhost/core-pubsub/core-sub
   downstreams:
     - kafka://tkeel-middleware-kafka:9092/core0/core
     - kafka://tkeel-middleware-kafka:9092/core1/core
