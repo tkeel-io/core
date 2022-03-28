@@ -12,6 +12,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/scheme"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"github.com/tkeel-io/tdtl/pkg/json/jsonparser"
@@ -69,15 +70,15 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 	cc := e.state.Copy()
 	for _, patch := range feed.Patches {
 		switch patch.Op {
-		case OpAdd:
+		case xjson.OpAdd:
 			cc.Append(patch.Path, patch.Value)
-		case OpCopy:
-		case OpMerge:
+		case xjson.OpCopy:
+		case xjson.OpMerge:
 			res := cc.Get(patch.Path).Merge(patch.Value)
 			cc.Set(patch.Path, res)
-		case OpRemove:
+		case xjson.OpRemove:
 			cc.Del(patch.Path)
-		case OpReplace:
+		case xjson.OpReplace:
 			// construct sub path if not exists.
 			pcIns := v1.PathConstructor(pc)
 			patchVal, patchPath, err := e.pathConstructor(pcIns, e.state.Raw(), patch.Value.Raw(), patch.Path)
@@ -102,10 +103,10 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 		}
 
 		switch patch.Op {
-		case OpMerge:
+		case xjson.OpMerge:
 			patch.Value.Foreach(func(key []byte, value *tdtl.Collect) {
 				changes = append(changes, Patch{
-					Op: OpReplace, Value: value,
+					Op: xjson.OpReplace, Value: value,
 					Path: strings.Join([]string{patch.Path, string(key)}, ".")})
 			})
 		default:
@@ -117,7 +118,6 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 	if cc.Error() == nil {
 		e.state = *cc
 		e.Update()
-
 	}
 
 	// in.Patches 处理完毕，丢弃.

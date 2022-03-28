@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -42,31 +43,31 @@ func TestEntity_Handle(t *testing.T) {
 				{
 					Path:  "properties.temp",
 					Value: tdtl.New("50"),
-					Op:    OpReplace,
+					Op:    xjson.OpReplace,
 				},
 				{
 					Path:  "properties.metrics.cpu_used",
 					Value: tdtl.New("0.78"),
-					Op:    OpReplace,
+					Op:    xjson.OpReplace,
 				},
 				{
 					Path:  "properties.metrics.mem_used",
 					Value: tdtl.New("0.28"),
-					Op:    OpReplace,
+					Op:    xjson.OpReplace,
 				},
 				{
 					Path:  "properties.metrics.interfaces",
 					Value: tdtl.New("0.28"),
-					Op:    OpAdd,
+					Op:    xjson.OpAdd,
 				},
 				{
 					Path: "properties.temp",
-					Op:   OpRemove,
+					Op:   xjson.OpRemove,
 				},
 				{
 					Path:  "properties.metrics",
 					Value: tdtl.New(`{"temp": 209}`),
-					Op:    OpMerge,
+					Op:    xjson.OpMerge,
 				},
 			},
 		},

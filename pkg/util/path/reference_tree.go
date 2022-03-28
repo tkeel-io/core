@@ -33,7 +33,6 @@ type RefTree struct {
 }
 
 func (rt *RefTree) Add(path string, value Node) bool {
-
 	rt.mutex.Lock()
 	if _, exists := rt.nodes[value.ID()]; !exists {
 		rt.nodes[value.ID()] = &RefNode{node: value}

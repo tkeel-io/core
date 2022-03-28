@@ -4,13 +4,12 @@ import (
 	"context"
 
 	"github.com/tkeel-io/core/pkg/mapper"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
 
-const defaultTTLMax = 5
-
 type Patch struct {
-	Op    PatchOp
+	Op    xjson.PatchOp
 	Path  string
 	Value *tdtl.Collect
 }

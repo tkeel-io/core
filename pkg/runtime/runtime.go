@@ -18,6 +18,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
@@ -210,7 +211,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			State:    state.Raw(),
 			EntityID: ev.Entity(),
 			Patches: []Patch{{
-				Op:    OpMerge,
+				Op:    xjson.OpMerge,
 				Path:  "properties",
 				Value: tdtl.New(props.Raw())}}}
 	case v1.OpDelete:
@@ -303,7 +304,7 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 			patches[target] = append(
 				patches[target],
 				&v1.PatchData{
-					Operator: string(OpReplace),
+					Operator: xjson.OpReplace.String(),
 					Path:     path,
 					Value:    val.Raw(),
 				})
@@ -407,7 +408,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				patches[target],
 				&v1.PatchData{
 					Path:     change.Path,
-					Operator: string(OpReplace),
+					Operator: xjson.OpReplace.String(),
 					Value:    change.Value.Raw(),
 				})
 		}
@@ -536,7 +537,7 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 				Patches: []*v1.PatchData{{
 					Path:     FieldScheme,
 					Value:    templateIns.Scheme().Raw(),
-					Operator: string(OpReplace)},
+					Operator: xjson.OpReplace.String()},
 				}}}}
 	err = r.dispatcher.Dispatch(ctx, ev)
 	return errors.Wrap(err, "On Template Changed")
@@ -597,7 +598,7 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 				patches = append(
 					patches,
 					&v1.PatchData{
-						Operator: string(OpReplace),
+						Operator: xjson.OpReplace.String(),
 						Path:     path,
 						Value:    val.Raw(),
 					})
@@ -634,7 +635,7 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		patches[item.EntityID] =
 			append(patches[item.EntityID],
 				&v1.PatchData{
-					Operator: string(OpReplace),
+					Operator: xjson.OpReplace.String(),
 					Path:     item.PropertyKey,
 					Value:    val.Raw()})
 	}
@@ -704,7 +705,7 @@ func conv(patches []*v1.PatchData) []Patch {
 	res := make([]Patch, 0)
 	for _, patch := range patches {
 		res = append(res, Patch{
-			Op:    PatchOp(patch.Operator),
+			Op:    xjson.NewPatchOp(patch.Operator),
 			Path:  patch.Path,
 			Value: tdtl.New(patch.Value),
 		})
