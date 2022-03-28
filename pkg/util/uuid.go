@@ -63,7 +63,7 @@ func UUID(prefix string) string {
 	uid := fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 
 	prefixLen := len(prefix)
-	if prefixLen > 0 && prefixLen < 10 {
+	if prefixLen > 0 && prefixLen < 15 {
 		uid = prefix + uid[prefixLen:]
 	}
 	return uid

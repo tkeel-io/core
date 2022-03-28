@@ -7,10 +7,13 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/placement"
+	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/core/pkg/util/transport"
+	"github.com/tkeel-io/kit/log"
 )
 
 func New(ctx context.Context) *dispatcher { //nolint
@@ -20,6 +23,7 @@ func New(ctx context.Context) *dispatcher { //nolint
 		ctx:         ctx,
 		cancel:      cancel,
 		transmitter: transport.New(transport.TransTypeHTTP),
+		upstreams:   make(map[string]pubsub.Pubsub),
 		downstreams: make(map[string]*xkafka.Pubsub),
 	}
 }
@@ -29,6 +33,7 @@ type dispatcher struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 	transmitter transport.Transmitter
+	upstreams   map[string]pubsub.Pubsub
 	downstreams map[string]*xkafka.Pubsub
 }
 
@@ -51,17 +56,17 @@ func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
 }
 
 func (d *dispatcher) Start(ctx context.Context, cfg config.DispatchConfig) error {
+	// initialize dispatch downstreams.
+	if err := d.initDownstream(ctx, cfg.Downstreams); nil != err {
+		return errors.Wrap(err, "init downstream")
+	}
+
 	// initialize dispatch upstreams.
 	if cfg.Enabled {
 		// initialize dispatcher upstream.
 		if err := d.initUpstream(ctx, cfg.Upstreams); nil != err {
 			return errors.Wrap(err, "init upstream")
 		}
-	}
-
-	// initialize dispatch downstreams.
-	if err := d.initDownstream(ctx, cfg.Downstreams); nil != err {
-		return errors.Wrap(err, "init downstream")
 	}
 
 	return nil
@@ -75,6 +80,18 @@ func (d *dispatcher) dispatch(ctx context.Context, ev v1.Event) error {
 }
 
 func (d *dispatcher) initUpstream(ctx context.Context, streams []string) error {
+	// initialize upstreams.
+	for _, urlText := range streams {
+		pubsubIns := pubsub.NewPubsub("", urlText)
+		d.upstreams[pubsubIns.ID()] = pubsubIns
+	}
+
+	// start received.
+	for id, stream := range d.upstreams {
+		log.L().Info("start pubsub", zfield.Eid(id))
+		stream.Received(d.ctx, d.dispatch)
+	}
+
 	return nil
 }
 

@@ -2,9 +2,11 @@ package pubsub
 
 import (
 	"context"
+	"net/url"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/resource"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -41,22 +43,36 @@ type Commiter interface {
 
 var registeredPubsubs = make(map[string]Generator)
 
-type Generator func(string, map[string]interface{}) (Pubsub, error) //
+type Generator func(string, string) (Pubsub, error)
 
 func Register(name string, handler Generator) {
 	registeredPubsubs[name] = handler
 }
 
-func NewPubsub(id string, metadata resource.Metadata) Pubsub {
+func NewPubsub(id string, urlText string) Pubsub {
 	var err error
 	var pubsubClient Pubsub
-	if generator, has := registeredPubsubs[metadata.Name]; has {
-		if pubsubClient, err = generator(id, metadata.Properties); nil == err {
-			return pubsubClient
-		}
-		log.L().Error("new Pubsub instance", zap.Error(err),
-			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
+	pubsubClient, _ = registeredPubsubs["noop"](id, urlText)
+
+	if id != "" {
+		id = util.UUID("pubsub")
 	}
-	pubsubClient, _ = registeredPubsubs["noop"](id, metadata.Properties)
+
+	// parse url.
+	urlIns, err := url.Parse(urlText)
+	if nil != err {
+		log.L().Error("parse url", zap.Error(err), zfield.URL(urlText))
+		return pubsubClient
+	}
+
+	// new pubsub instance.
+	if generator, has := registeredPubsubs[urlIns.Scheme]; has {
+		var pubsubClient0 Pubsub
+		if pubsubClient0, err = generator(id, urlText); nil == err {
+			return pubsubClient0
+		}
+		log.L().Error("new Pubsub instance", zap.Error(err), zfield.URL(urlText))
+	}
+
 	return pubsubClient
 }

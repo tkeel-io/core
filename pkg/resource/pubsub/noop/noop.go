@@ -39,7 +39,7 @@ func (d *noopPubsub) Close() error {
 
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.noop> successful")
-	pubsub.Register("noop", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
+	pubsub.Register("noop", func(id string, urlText string) (pubsub.Pubsub, error) {
 		log.L().Info("create pubsub.noop instance", zfield.ID(id))
 		return &noopPubsub{id: id}, nil
 	})

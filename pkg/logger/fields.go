@@ -43,6 +43,10 @@ func PK(key string) zap.Field {
 	return zap.String("property_key", key)
 }
 
+func URL(urlText string) zap.Field {
+	return zap.String("url", urlText)
+}
+
 // Target return target key field.
 func Target(target string) zap.Field {
 	return zap.String("target", target)

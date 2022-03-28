@@ -36,6 +36,7 @@ var (
 	ErrPatchTypeInvalid         = errors.New("patch config type invalid")
 	ErrServerNotReady           = errors.New("Core.Service.NotReady")
 	ErrConnectionNil            = errors.New("Core.Resource.Connection.Nil")
+	ErrInvalidParam             = errors.New("Core.Params.Invalid")
 )
 
 func New(code string) error {

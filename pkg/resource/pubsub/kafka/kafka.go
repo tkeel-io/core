@@ -3,12 +3,13 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/dapr/kit/retry"
-	"github.com/goinggo/mapstructure"
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
@@ -24,13 +25,12 @@ type kafkaMetadata struct {
 	Timeout int64    `json:"timeout" mapstructure:"timeout"`
 }
 
-func newKafkaPubsub(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
+func newKafkaPubsub(id string, kafkaMeta *kafkaMetadata) (pubsub.Pubsub, error) {
 	var (
-		err       error
-		client    sarama.Client
-		consumer  sarama.ConsumerGroup
-		producer  sarama.SyncProducer
-		kafkaMeta kafkaMetadata
+		err      error
+		client   sarama.Client
+		consumer sarama.ConsumerGroup
+		producer sarama.SyncProducer
 	)
 
 	kafkaCfg := sarama.NewConfig()
@@ -38,9 +38,7 @@ func newKafkaPubsub(id string, properties map[string]interface{}) (pubsub.Pubsub
 	kafkaCfg.Producer.Retry.Max = 3
 	kafkaCfg.Producer.RequiredAcks = sarama.WaitForAll
 	kafkaCfg.Producer.Return.Successes = true
-	if err = mapstructure.Decode(properties, &kafkaMeta); nil != err {
-		return nil, errors.Wrap(err, "decode pubsub.kafka configuration")
-	} else if client, err = sarama.NewClient(kafkaMeta.Brokers, kafkaCfg); nil != err {
+	if client, err = sarama.NewClient(kafkaMeta.Brokers, kafkaCfg); nil != err {
 		return nil, errors.Wrap(err, "create kafka client instance")
 	} else if producer, err = sarama.NewSyncProducerFromClient(client); nil != err {
 		return nil, errors.Wrap(err, "create kafka producer instance")
@@ -53,7 +51,7 @@ func newKafkaPubsub(id string, properties map[string]interface{}) (pubsub.Pubsub
 		kafkaClient:   client,
 		kafkaConsumer: consumer,
 		kafkaProducer: producer,
-		kafkaMetadata: kafkaMeta,
+		kafkaMetadata: *kafkaMeta,
 	}, nil
 }
 
@@ -192,9 +190,30 @@ func (consumer *kafkaConsumer) Setup(sarama.ConsumerGroupSession) error {
 
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.kafka> successful")
-	pubsub.Register("kafka", func(id string, properties map[string]interface{}) (pubsub.Pubsub, error) {
-		log.L().Info("create pubsub.kafka instance", zfield.ID(id))
-		pubsubIns, err := newKafkaPubsub(id, properties)
+	pubsub.Register("kafka", func(id string, urlText string) (pubsub.Pubsub, error) {
+		log.L().Info("create pubsub.kafka instance", zfield.ID(id), zfield.URL(urlText))
+
+		kafkaMeta, err := parseURL(urlText)
+		if nil != err {
+			log.L().Error("create pubsub.kafka instance",
+				zap.Error(err), zfield.ID(id), zfield.URL(urlText))
+			return nil, errors.Wrap(err, "parse configuration from url")
+		}
+		pubsubIns, err := newKafkaPubsub(id, kafkaMeta)
 		return pubsubIns, errors.Wrap(err, "new kafka instance")
 	})
+}
+
+func parseURL(urlText string) (*kafkaMetadata, error) {
+	urlIns, err := url.Parse(urlText)
+	if nil != err {
+		return nil, errors.Wrap(err, "parse configuration from url")
+	}
+
+	return &kafkaMetadata{
+		Topic:   urlIns.Query().Get("topic"),
+		Group:   urlIns.Query().Get("group"),
+		Brokers: strings.Split(urlIns.Host, ","),
+		Timeout: 30,
+	}, nil
 }

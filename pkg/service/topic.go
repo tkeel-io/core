@@ -25,7 +25,9 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -58,19 +60,10 @@ func (s *TopicService) Init(apiManager apim.APIManager) {
 	s.apiManager = apiManager
 }
 
-func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	panic("never used")
-}
-
 func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
 	log.L().Debug("received event", zfield.ReqID(req.Meta.Id),
 		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
 		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))
-
-	id, _, _ := collectjs.Get(req.RawData, "id")
-	typ, _, _ := collectjs.Get(req.RawData, "type")
-	owner, _, _ := collectjs.Get(req.RawData, "owner")
-	source, _, _ := collectjs.Get(req.RawData, "source")
 
 	var payload []byte
 	// set event payload.
@@ -79,18 +72,19 @@ func (s *TopicService) TopicClusterEventHandler(ctx context.Context, req *pb.Top
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "get event payload")
 	}
 
+	cc := tdtl.New(req.RawData)
 	var ev pb.ProtoEvent
 	ev.SetType(pb.ETEntity)
 	ev.SetAttr(pb.MetaTopic, req.Meta.Topic)
-	ev.SetAttr(pb.MetaEntityID, string(id))
-	ev.SetAttr(pb.MetaOwner, string(owner))
-	ev.SetAttr(pb.MetaSource, string(source))
-	ev.SetAttr(pb.MetaEntityType, string(typ))
+	ev.SetAttr(pb.MetaEntityID, cc.Get("id").String())
+	ev.SetAttr(pb.MetaOwner, cc.Get("type").String())
+	ev.SetAttr(pb.MetaSource, cc.Get("owner").String())
+	ev.SetAttr(pb.MetaEntityType, cc.Get("source").String())
 	ev.SetPayload(&pb.ProtoEvent_Patches{
 		Patches: &pb.PatchDatas{
 			Patches: []*pb.PatchData{{
 				Path:     "properties.rawData",
-				Operator: "replace",
+				Operator: xjson.OpReplace.String(),
 				Value:    payload,
 			}},
 		},

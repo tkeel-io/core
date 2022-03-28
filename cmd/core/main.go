@@ -38,7 +38,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/kafka"
-	_ "github.com/tkeel-io/core/pkg/resource/pubsub/loopback"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
