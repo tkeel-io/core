@@ -89,6 +89,11 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 
 	// call callback once.
 	r.handleCallback(ctx, feed)
+	if nil != feed.Err {
+		log.Error("handle event", zap.Error(feed.Err),
+			zfield.ID(event.ID()), zfield.Eid(event.Entity()), zfield.Event(event))
+	}
+
 	return nil
 }
 
@@ -541,6 +546,10 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 				}}}}
 	err = r.dispatcher.Dispatch(ctx, ev)
 	return errors.Wrap(err, "On Template Changed")
+}
+
+func handleRawData(ctx context.Context, feed *Feed) *Feed {
+	return feed
 }
 
 func (r *Runtime) AppendMapper(mc MCache) {

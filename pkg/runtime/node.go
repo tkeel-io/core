@@ -200,6 +200,8 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 }
 
 func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
+	log.L().Debug("flush entity", zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+
 	// 1. flush state.
 	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
 		log.L().Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
@@ -213,6 +215,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 			zap.Error(indexData.Error()), zfield.Eid(en.ID()))
 		return errors.Wrap(indexData.Error(), "flush entity into search engine, build index data")
 	}
+
 	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), indexData.Raw()); nil != err {
 		log.L().Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into search engine")

@@ -18,6 +18,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
@@ -73,7 +74,11 @@ func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEvent
 	}
 
 	cc := tdtl.New(req.RawData)
-	var ev pb.ProtoEvent
+	ev := pb.ProtoEvent{
+		Id:        req.Meta.Id,
+		Timestamp: time.Now().UnixNano(),
+		Metadata:  make(map[string]string)}
+
 	ev.SetType(pb.ETEntity)
 	ev.SetAttr(pb.MetaTopic, req.Meta.Topic)
 	ev.SetAttr(pb.MetaEntityID, cc.Get("id").String())

@@ -118,6 +118,9 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 	if cc.Error() == nil {
 		e.state = *cc
 		e.Update()
+	} else {
+		log.L().Error("update entity", zap.Error(cc.Error()), zfield.Eid(e.id),
+			zfield.Event(feed.Event), zfield.Value(feed.Patches))
 	}
 
 	// in.Patches 处理完毕，丢弃.
