@@ -151,6 +151,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			preFuncs:  []Handler{&handlerImpl{fn: r.handleSubscribe}},
 			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}}}
 		return execer, &Feed{
+			Err:      err,
 			Event:    ev,
 			State:    state.Raw(),
 			EntityID: sender,

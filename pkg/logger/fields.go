@@ -191,6 +191,10 @@ func DispatcherName(name string) zap.Field {
 	return zap.String("dispatcher_name", name)
 }
 
+func Mode(mode string) zap.Field {
+	return zap.String("mode", mode)
+}
+
 func Topic(topic string) zap.Field {
 	return zap.String("topic", topic)
 }
