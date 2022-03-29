@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +36,7 @@ import (
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -329,6 +332,20 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 	log.L().Info("entity.AppendMapper",
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
+	{
+		// check TQL & mapper.
+		// TODO: 兼容v0.3, 后面去掉.
+		if mp.ID == "" && mp.Name != "" {
+			mp.ID = mp.Name
+		}
+
+		// check mapper.
+		if err := checkMapper(mp); nil != err {
+			log.L().Error("append mapper", zfield.Eid(mp.EntityID), zap.Error(err))
+			return errors.Wrap(err, "check mapper")
+		}
+	}
+
 	var err error
 	var mo *dao.Mapper
 	if mo, err = m.entityRepo.GetMapper(ctx, mp); nil != err {
@@ -418,6 +435,61 @@ func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
 				Name:        mp.Name,
 				Description: mp.Description,
 			})
+	}
+
+	return nil
+}
+
+func checkMapper(m *dao.Mapper) error {
+	sep := "."
+	FieldProps := "properties"
+	if m.ID == "" {
+		m.ID = util.UUID("mapper")
+	}
+
+	if m.TQL == "" {
+		return xerrors.ErrInvalidRequest
+	}
+
+	// check tql parse.
+	tdtlIns, err := tdtl.NewTDTL(m.TQL, nil)
+	if nil != err {
+		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		return errors.Wrap(err, "parse TQL")
+	}
+
+	propKeys := make(map[string]string)
+	for key := range tdtlIns.Fields() {
+		propKeys[" "+key] = " " + strings.Join([]string{FieldProps, key}, sep)
+	}
+
+	for _, keys := range tdtlIns.Entities() {
+		for _, key := range keys {
+			segs := strings.SplitN(key, sep, 2)
+			if segs[1] != "*" {
+				segs = append(segs[:1], append([]string{FieldProps}, segs[1:]...)...)
+			}
+			propKeys[key] = strings.Join(segs, sep)
+		}
+	}
+
+	// sort.
+	keys := sort.StringSlice{}
+	for key := range propKeys {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	for index := range keys {
+		key := keys[keys.Len()-index-1]
+		m.TQL = strings.ReplaceAll(m.TQL, key, propKeys[key])
+	}
+
+	// check tql parse.
+	_, err = tdtl.NewTDTL(m.TQL, nil)
+	if nil != err {
+		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
+		return errors.Wrap(xerrors.ErrInternal, "parse TQL")
 	}
 
 	return nil

@@ -751,7 +751,17 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		if state, err = r.LoadEntity(item.EntityID); nil != err {
 			log.L().Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
 			continue
-		} else if val = state.Get(item.PropertyKey); nil != val.Error() {
+		}
+
+		operator := xjson.OpReplace.String()
+		path := item.PropertyKey
+		if path == "*" {
+			// TODO: 现阶段 TQL 仅仅支持 eid.* .
+			path = FieldProperties
+			operator = xjson.OpMerge.String()
+		}
+
+		if val = state.Get(path); nil != val.Error() {
 			log.L().Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
 			continue
 		}
@@ -759,9 +769,9 @@ func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
 		patches[item.EntityID] =
 			append(patches[item.EntityID],
 				&v1.PatchData{
-					Operator: xjson.OpReplace.String(),
-					Path:     item.PropertyKey,
-					Value:    val.Raw()})
+					Path:     path,
+					Value:    val.Raw(),
+					Operator: operator})
 	}
 
 	// handle subscribe, dispatch entity state.

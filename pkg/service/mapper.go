@@ -2,70 +2,15 @@ package service
 
 import (
 	"context"
-	"sort"
-	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
-
-func checkMapper(m *dao.Mapper) error {
-	if m.ID == "" {
-		m.ID = util.UUID("mapper")
-	}
-
-	if m.TQL == "" {
-		return xerrors.ErrInvalidRequest
-	}
-
-	// check tql parse.
-	tdtlIns, err := tdtl.NewTDTL(m.TQL, nil)
-	if nil != err {
-		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
-		return errors.Wrap(err, "parse TQL")
-	}
-
-	propKeys := make(map[string]string)
-	for key := range tdtlIns.Fields() {
-		propKeys[" "+key] = " " + strings.Join([]string{FieldProps, key}, sep)
-	}
-
-	for _, keys := range tdtlIns.Entities() {
-		for _, key := range keys {
-			segs := strings.SplitN(key, sep, 2)
-			segs = append(segs[:1], append([]string{FieldProps}, segs[1:]...)...)
-			propKeys[key] = strings.Join(segs, sep)
-		}
-	}
-
-	// sort.
-	keys := sort.StringSlice{}
-	for key := range propKeys {
-		keys = append(keys, key)
-	}
-
-	sort.Sort(keys)
-	for index := range keys {
-		key := keys[keys.Len()-index-1]
-		m.TQL = strings.ReplaceAll(m.TQL, key, propKeys[key])
-	}
-
-	// check tql parse.
-	_, err = tdtl.NewTDTL(m.TQL, nil)
-	if nil != err {
-		log.L().Error("check mapper", zap.Error(err), zfield.TQL(m.TQL))
-		return errors.Wrap(xerrors.ErrInternal, "parse TQL")
-	}
-
-	return nil
-}
 
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
 	if !s.inited.Load() {
@@ -87,17 +32,6 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 		Owner:       entity.Owner,
 		EntityID:    req.EntityId,
 		Description: req.Mapper.Description,
-	}
-
-	// TODO: 兼容v0.3, 后面去掉.
-	if mp.ID == "" && req.Mapper.Name != "" {
-		mp.ID = req.Mapper.Name
-	}
-
-	// check mapper.
-	if err = checkMapper(&mp); nil != err {
-		log.L().Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
-		return
 	}
 
 	// append mapper.

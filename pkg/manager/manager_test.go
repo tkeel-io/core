@@ -18,8 +18,23 @@ package manager
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
 func TestEntity_GetEntity(t *testing.T) {
 	// NewAPIManager(context.Background(), nil, nil).
+}
+
+func Test_checkTQL(t *testing.T) {
+	mIns := &dao.Mapper{
+		ID:  "test",
+		TQL: `insert into iotd-098cafe6-821f-411d-8f84-3b4de355b5b7_core-broker-0 select iotd-098cafe6-821f-411d-8f84-3b4de355b5b7.*`,
+	}
+
+	checkMapper(mIns)
+	t.Log(mIns)
+
+	assert.Equal(t, `insert into device123 select device234.properties.metrics as properties.metrics, device234.properties.metrics.cpu as properties.cpu`, mIns.TQL)
 }

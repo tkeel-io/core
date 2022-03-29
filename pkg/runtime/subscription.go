@@ -2,6 +2,9 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -9,6 +12,7 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -49,24 +53,27 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 
 		changes := feed.Patches
 		if len(changes) == 0 {
-			log.Warn("publish empty message", zfield.ID(subID), zfield.Event(ev),
+			log.L().Warn("publish empty message", zfield.ID(subID), zfield.Event(ev),
 				zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 			return feed
 		}
 
 		var payload []byte
 		if payload, err = makePayload(ev, changes); nil != err {
-			log.Error("publish message, make payload", zfield.ID(subID), zfield.Event(ev),
+			log.L().Error("publish message, make payload", zfield.ID(subID), zfield.Event(ev),
 				zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 			return feed
 		}
+
+		log.L().Debug("publish message", zfield.ID(subID), zfield.Event(ev), zfield.Payload(payload),
+			zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 
 		switch mode {
 		case SModeRealtime.S():
 			ctOpts := daprSDK.PublishEventWithContentType("application/json")
 			err = dapr.Get().Select().PublishEvent(ctx, pubsubName, topic, payload, ctOpts)
 			if nil != err {
-				log.Error("publish message via dapr", zfield.ID(subID), zfield.Event(ev),
+				log.L().Error("publish message via dapr", zfield.ID(subID), zfield.Event(ev),
 					zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 				return feed
 			}
@@ -83,5 +90,24 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 }
 
 func makePayload(ev v1.PatchEvent, changes []Patch) ([]byte, error) {
-	return []byte(`{}`), nil
+	basics := map[string]string{
+		"id":           ev.Attr(v1.MetaSender),
+		"subscribe_id": ev.Entity(),
+		"type":         ev.Attr(v1.MetaEntityType),
+		"owner":        ev.Attr(v1.MetaOwner),
+		"source":       ev.Attr(v1.MetaSource),
+	}
+	bytes, _ := json.Marshal(basics)
+
+	fields := []string{}
+	for index := range changes {
+		fields = append(fields, fmt.Sprintf("\"%s\":%s",
+			changes[index].Path, string(changes[index].Value.Raw())))
+	}
+
+	cc := tdtl.New(bytes)
+	properties := fmt.Sprintf(`{%s}`, strings.Join(fields, ","))
+	cc.Set(FieldProperties, tdtl.New(properties))
+
+	return cc.Raw(), cc.Error()
 }
