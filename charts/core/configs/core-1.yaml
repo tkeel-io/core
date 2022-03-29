@@ -1,0 +1,41 @@
+logger:
+  level: debug
+
+server:
+  name: core
+  app_id: core 
+  sources:
+    - kafka://tkeel-middleware-kafka:9092/core4/core
+    - kafka://tkeel-middleware-kafka:9092/core5/core
+    - kafka://tkeel-middleware-kafka:9092/core6/core
+    - kafka://tkeel-middleware-kafka:9092/core7/core
+
+discovery:
+  endpoints:
+    - http://tkeel-middleware-etcd:2379
+
+components:
+  store:
+    name: dapr
+    properties:
+      - key: store_name
+        value: core-state
+  etcd:
+    endpoints:
+      - http://tkeel-middleware-etcd:2379
+
+dispatcher:
+  id: dispatcher
+  enabled: true
+  name: dispatcher
+  upstreams:
+    - dapr://localhost/core-pubsub/core-pub
+  downstreams:
+    - kafka://tkeel-middleware-kafka:9092/core0/core
+    - kafka://tkeel-middleware-kafka:9092/core1/core
+    - kafka://tkeel-middleware-kafka:9092/core2/core
+    - kafka://tkeel-middleware-kafka:9092/core3/core
+    - kafka://tkeel-middleware-kafka:9092/core4/core
+    - kafka://tkeel-middleware-kafka:9092/core5/core
+    - kafka://tkeel-middleware-kafka:9092/core6/core
+    - kafka://tkeel-middleware-kafka:9092/core7/core

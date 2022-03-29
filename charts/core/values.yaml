@@ -2,16 +2,22 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
+replicaCount: 2
+
+
 
 image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  # tag: "0.4.1"
+  tag: "runtime"
 
 nameOverride: "core"
 fullnameOverride: "core"
+serviceName: "core"
+configOverrides:
+  - core-0.yaml
+  - core-1.yaml
 
 daprConfig: core
 appPort: 6789
@@ -52,6 +58,7 @@ influxdb:
   auth:
     admin:
       token: tr2zy29F1Tusl8bkBwOR
+      password: vR3MwJZIWcroG5Q4yTHL
     user:
       org: tkeel
       bucket: core

@@ -5,6 +5,7 @@ metadata:
   labels:
     app: {{ include "core.name" . }}
 spec:
+  type: NodePort
   ports:
     - port: {{ .Values.appPort }}
       targetPort: http

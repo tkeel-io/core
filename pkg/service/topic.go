@@ -18,20 +18,25 @@ package service
 
 import (
 	"context"
+	"time"
 
+	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/statem"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
 type TopicService struct {
 	pb.UnimplementedTopicServer
-	ctx           context.Context
-	cancel        context.CancelFunc
-	entityManager entities.EntityManager
+	ctx        context.Context
+	cancel     context.CancelFunc
+	apiManager apim.APIManager
 }
 
 const (
@@ -43,58 +48,66 @@ const (
 	SubscriptionResponseStatusDrop = "DROP"
 )
 
-func NewTopicService(ctx context.Context, entityManager entities.EntityManager) (*TopicService, error) {
+func NewTopicService(ctx context.Context) (*TopicService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &TopicService{
-		ctx:           ctx,
-		cancel:        cancel,
-		entityManager: entityManager,
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
+func (s *TopicService) Init(apiManager apim.APIManager) {
+	s.apiManager = apiManager
+}
+
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	var values map[string]interface{}
-	var properties map[string]constraint.Node
-	switch kv := req.Data.AsInterface().(type) {
-	case map[string]interface{}:
-		values = kv
+	log.L().Debug("received event", zfield.ReqID(req.Meta.Id),
+		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
+		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))
 
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
+	var payload []byte
+	// set event payload.
+	if payload, _, err = collectjs.Get(req.RawData, "data.rawData"); nil != err {
+		log.L().Warn("get event payload", zap.String("id", req.Meta.Id), zap.Any("event", req), zfield.Reason(err.Error()))
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "get event payload")
 	}
 
-	// parse data.
-	switch data := values["data"].(type) {
-	case map[string]interface{}:
-		if len(data) > 0 {
-			properties = make(map[string]constraint.Node)
-			for key, val := range data {
-				properties[key] = constraint.NewNode(val)
-			}
-		}
-	default:
-		log.Warn("invalid event", zap.String("id", req.Id), zap.Any("event", req))
-		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, nil
-	}
+	cc := tdtl.New(req.RawData)
+	ev := pb.ProtoEvent{
+		Id:        req.Meta.Id,
+		Timestamp: time.Now().UnixNano(),
+		Metadata:  make(map[string]string)}
 
-	msgCtx := statem.MessageContext{
-		Headers: statem.Header{},
-		Message: statem.PropertyMessage{
-			StateID:    interface2string(values["id"]),
-			Operator:   constraint.PatchOpReplace.String(),
-			Properties: properties,
+	ev.SetType(pb.ETEntity)
+	ev.SetAttr(pb.MetaTopic, req.Meta.Topic)
+	ev.SetAttr(pb.MetaEntityID, cc.Get("id").String())
+	ev.SetAttr(pb.MetaOwner, cc.Get("type").String())
+	ev.SetAttr(pb.MetaSource, cc.Get("owner").String())
+	ev.SetAttr(pb.MetaEntityType, cc.Get("source").String())
+	ev.SetPayload(&pb.ProtoEvent_Patches{
+		Patches: &pb.PatchDatas{
+			Patches: []*pb.PatchData{{
+				Path:     "properties.rawData",
+				Operator: xjson.OpReplace.String(),
+				Value:    payload,
+			}},
 		},
+	})
+
+	res, err := dapr.HandleEvent(ctx, &ev)
+	if nil != err {
+		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "handle event")
 	}
 
-	msgCtx.Headers.SetTargetID(interface2string(values["id"]))
-	msgCtx.Headers.SetOwner(interface2string(values["owner"]))
-	msgCtx.Headers.SetOwner(interface2string(values["type"]))
-	msgCtx.Headers.SetOwner(interface2string(values["source"]))
+	return res, nil
+}
 
-	log.Debug("received event", zap.String("id", req.Id), zap.Any("event", req))
-
-	s.entityManager.OnMessage(ctx, msgCtx)
-	return &pb.TopicEventResponse{Status: SubscriptionResponseStatusSuccess}, nil
+type RawData struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Mark      string `json:"mark"`
+	Path      string `json:"path"`
+	Values    string `json:"values"`
+	Timestamp int64  `json:"ts"` //nolint
 }

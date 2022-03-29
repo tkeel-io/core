@@ -7,10 +7,10 @@ import (
 )
 
 func TestTentacle(t *testing.T) {
-	tentacle := NewTentacle(TentacleTypeEntity, "device123", []WatchKey{{
-		EntityId:    "device234",
+	tentacle := NewTentacle(nil, TentacleTypeEntity, "device123", []WatchKey{{
+		EntityID:    "device234",
 		PropertyKey: "temp",
-	}})
+	}}, 0)
 
 	assert.Equal(t, "device123", tentacle.TargetID())
 }

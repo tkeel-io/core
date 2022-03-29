@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+
+
+
+service Proxy {
+	rpc Respond (RespondRequest) returns (RespondResponse) {
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+        summary: "apis callback respond.";
+        operation_id: "Respond";
+        tags: "Proxy";
+        responses: {
+          key: "200"
+          value: {
+            description: "OK";
+          }
+        }
+    };
+	};
+}
+
+
+message RespondRequest {
+    map<string,string> metadata = 1;
+    bytes              data     = 2;
+}
+
+message RespondResponse {
+}

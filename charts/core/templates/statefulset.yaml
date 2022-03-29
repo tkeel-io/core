@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "core.name" . }}
+  labels:
+    app: {{ include "core.name" . }}
+spec:
+  serviceName: {{ .Values.serviceName }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ include "core.name" . }}
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: {{ include "core.name" . }}
+        dapr.io/app-port: {{ .Values.appPort | quote }}
+        dapr.io/app-protocol: "http"
+        dapr.io/log-level: "debug"
+      labels:
+        app: {{ include "core.name" . }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: core-init
+          image: busybox:1.32
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "cp /var/conf/`hostname`.yaml /config/config.yml"]
+          volumeMounts:
+            - mountPath: /var/conf
+              name: conf
+            - mountPath: /config
+              name: config
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{.Values.appPort}}
+              protocol: TCP
+          env:
+            - name: TKEEL_DATABASE
+              value: {{ .Values.middleware.database }}
+            - name: TKEEL_SEARCH
+              value: {{ .Values.middleware.search }}
+            - name: TKEEL_REGISTRY
+              value: {{ .Values.middleware.service_registry }}
+            - name: TKEEL_QUEUE
+              value: {{ .Values.middleware.queue }}
+          volumeMounts:
+            - mountPath: /var/conf
+              name: conf
+            - mountPath: /config
+              name: config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      volumes:
+        - name: conf
+          configMap:
+            name: core-cm
+        - name: config
+          emptyDir: {}

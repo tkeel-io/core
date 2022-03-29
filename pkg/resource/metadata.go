@@ -4,13 +4,13 @@ import "github.com/tkeel-io/core/pkg/config"
 
 type Metadata struct {
 	Name       string
-	Properties map[string]string `json:"properties"`
+	Properties map[string]interface{} `json:"properties"`
 }
 
 func ParseFrom(meta config.Metadata) Metadata {
 	m := Metadata{Name: meta.Name}
 	if len(meta.Properties) > 0 {
-		m.Properties = make(map[string]string)
+		m.Properties = make(map[string]interface{})
 		for _, pair := range meta.Properties {
 			m.Properties[pair.Key] = pair.Value
 		}

@@ -3,89 +3,66 @@ package mock
 import (
 	"context"
 
-	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/statem"
-	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
+	v1 "github.com/tkeel-io/core/api/core/v1"
+	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/manager/holder"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
-type EntityManagerMock struct {
+type APIManagerMock struct {
 }
 
-func NewEntityManagerMock() entities.EntityManager {
-	return &EntityManagerMock{}
+func NewAPIManagerMock() apim.APIManager {
+	return &APIManagerMock{}
 }
 
 // Start start Entity manager.
-func (m *EntityManagerMock) Start() error { return nil }
+func (m *APIManagerMock) Start() error { return nil }
 
 // OnMessage handle message.
-func (m *EntityManagerMock) OnMessage(ctx context.Context, msgCtx statem.MessageContext) {
-	log.Debug("handle message", zap.Any("headers", msgCtx.Headers), zap.Any("message", msgCtx.Message))
+func (m *APIManagerMock) OnRespond(ctx context.Context, resp *holder.Response) {
 }
 
 // CreateEntity create entity.
-func (m *EntityManagerMock) CreateEntity(ctx context.Context, en *statem.Base) (*statem.Base, error) {
-	return en, nil
+func (m *APIManagerMock) CreateEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
+	return nil, nil
+}
+
+// UpdateEntity update entity.
+func (m *APIManagerMock) PatchEntity(context.Context, *apim.Base, []*v1.PatchData, ...apim.Option) (*apim.BaseRet, []byte, error) {
+	return nil, nil, nil
 }
 
 // DeleteEntity delete entity.
-func (m *EntityManagerMock) DeleteEntity(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// GetProperties returns entity properties.
-func (m *EntityManagerMock) GetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// SetProperties set entity properties.
-func (m *EntityManagerMock) SetProperties(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// PatchEntity patch entity properties.
-func (m *EntityManagerMock) PatchEntity(ctx context.Context, en *statem.Base, patchData []*pb.PatchData) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// AppendMapper append entity mapper.
-func (m *EntityManagerMock) AppendMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// RemoveMapper remove entity mapper.
-func (m *EntityManagerMock) RemoveMapper(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
-}
-
-// CheckSubscription check subscription.
-func (m *EntityManagerMock) CheckSubscription(ctx context.Context, en *statem.Base) (err error) {
+func (m *APIManagerMock) DeleteEntity(context.Context, *apim.Base) error {
 	return nil
 }
 
-// SetConfigs set entity configs.
-func (m *EntityManagerMock) SetConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
+// GetProperties returns entity properties.
+func (m *APIManagerMock) GetEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
+	return nil, nil
 }
 
-// PatchConfigs patch entity configs.
-func (m *EntityManagerMock) PatchConfigs(ctx context.Context, en *statem.Base, patchData []*statem.PatchData) (base *statem.Base, err error) {
-	return en, nil
+// AppendMapper append entity mapper.
+func (m *APIManagerMock) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
+	return nil
 }
 
-// AppendConfigs append entity configs.
-func (m *EntityManagerMock) AppendConfigs(ctx context.Context, en *statem.Base) (base *statem.Base, err error) {
-	return en, nil
+// RemoveMapper remove entity mapper.
+func (m *APIManagerMock) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
+	return nil
 }
 
-// RemoveConfigs remove entity configs.
-func (m *EntityManagerMock) RemoveConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
-	return en, nil
+func (m *APIManagerMock) GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error) {
+	return &dao.Mapper{}, nil
 }
 
-// QueryConfigs returns entity configs.
-func (m *EntityManagerMock) QueryConfigs(ctx context.Context, en *statem.Base, propertyIDs []string) (base *statem.Base, err error) {
-	return en, nil
+// ListMapper returns entity mappers.
+func (m *APIManagerMock) ListMapper(context.Context, *apim.Base) ([]dao.Mapper, error) {
+	return []dao.Mapper{}, nil
+}
+
+// CheckSubscription check subscription.
+func (m *APIManagerMock) CheckSubscription(ctx context.Context, en *apim.Base) (err error) {
+	return nil
 }

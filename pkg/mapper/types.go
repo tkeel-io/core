@@ -20,13 +20,15 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/tkeel-io/tdtl"
 )
 
 const (
 	TentacleTypeUndefined = "undefined"
 	TentacleTypeEntity    = "entity"
 	TentacleTypeMapper    = "mapper"
+
+	VersionInited = 0
 
 	WatchKeyDelimiter = "."
 )
@@ -37,16 +39,18 @@ type Mapper interface {
 	Name() string
 	// String returns MQL text.
 	String() string
+	// Version returns mapper version.
+	Version() int64
 	// TargetEntity returns target entity.
 	TargetEntity() string
 	// SourceEntities returns source entities.
-	SourceEntities() []string
+	SourceEntities() map[string][]string
 	// Tentacles returns tentacles.
-	Tentacles() []Tentacler
+	Tentacles() map[string][]Tentacler
 	// Copy duplicate a mapper.
 	Copy() Mapper
 	// Exec excute input returns output.
-	Exec(map[string]constraint.Node) (map[string]constraint.Node, error)
+	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
 }
 
 type TentacleType = string
@@ -56,23 +60,26 @@ type Tentacler interface {
 	ID() string
 	// Type returns tentacle type.
 	Type() TentacleType
+	String() string
+	// Mapper return mapper.
+	Mapper() Mapper
 	// TargetID returns target id.
 	TargetID() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).
 	Items() []WatchKey
 	// Copy duplicate a mapper.
 	Copy() Tentacler
-	// IsRemote return remote flag.
-	IsRemote() bool
+	// Version return tentacle version.
+	Version() int64
 }
 
 type WatchKey struct {
-	EntityId    string //nolint
+	EntityID    string
 	PropertyKey string
 }
 
 func (wk *WatchKey) String() string {
-	return wk.EntityId + WatchKeyDelimiter + wk.PropertyKey
+	return wk.EntityID + WatchKeyDelimiter + wk.PropertyKey
 }
 
 // uuid generate an uuid.

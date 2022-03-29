@@ -21,26 +21,19 @@ import "log"
 type tentacle struct {
 	id       string
 	tp       TentacleType
-	remote   bool
+	version  int64
 	targetID string
+	mapper   Mapper
 	items    []WatchKey // key=entityId#propertyKey
 }
 
-func NewTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
+func NewTentacle(mp Mapper, tp TentacleType, targetID string, items []WatchKey, version int64) Tentacler {
 	return &tentacle{
 		id:       uuid(),
 		tp:       tp,
 		items:    items,
-		targetID: targetID,
-	}
-}
-
-func NewRemoteTentacle(tp TentacleType, targetID string, items []WatchKey) Tentacler {
-	return &tentacle{
-		id:       uuid(),
-		tp:       tp,
-		items:    items,
-		remote:   true,
+		mapper:   mp,
+		version:  version,
 		targetID: targetID,
 	}
 }
@@ -59,9 +52,21 @@ func (t *tentacle) TargetID() string {
 	return t.targetID
 }
 
+func (t *tentacle) String() string {
+	return t.targetID + t.id
+}
+
 // Items returns watch keys(watchKey=entityId#propertyKey).
 func (t *tentacle) Items() []WatchKey {
 	return t.items
+}
+
+func (t *tentacle) Version() int64 {
+	return t.version
+}
+
+func (t *tentacle) Mapper() Mapper {
+	return t.mapper
 }
 
 func (t *tentacle) Copy() Tentacler {
@@ -70,16 +75,16 @@ func (t *tentacle) Copy() Tentacler {
 		items[index] = item
 	}
 
-	return &tentacle{
+	ten := &tentacle{
 		id:       t.id,
 		tp:       t.tp,
 		items:    items,
+		version:  t.version,
 		targetID: t.targetID,
 	}
-}
 
-func (t *tentacle) IsRemote() bool {
-	return t.remote
+	t.version++
+	return ten
 }
 
 func MergeTentacles(tentacles ...Tentacler) Tentacler {
@@ -91,10 +96,15 @@ func MergeTentacles(tentacles ...Tentacler) Tentacler {
 	if !ok {
 		log.Fatalln("not want struct")
 	}
+
+	var version int64
 	itemMap := make(map[string]WatchKey)
 	for _, tentacle := range tentacles {
 		for _, item := range tentacle.Items() {
 			itemMap[item.String()] = item
+		}
+		if tentacle.Version() > version {
+			version = tentacle.Version()
 		}
 	}
 
@@ -105,5 +115,5 @@ func MergeTentacles(tentacles ...Tentacler) Tentacler {
 		items[index] = item
 	}
 
-	return NewTentacle(tentacle0.tp, tentacle0.targetID, items)
+	return NewTentacle(tentacle0.mapper, tentacle0.tp, tentacle0.targetID, items, version+1)
 }
