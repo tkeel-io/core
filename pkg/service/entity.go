@@ -682,7 +682,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	}
 
 	out = &pb.ListEntityResponse{}
-	out.Total = resp.Total
+	out.Total = int32(resp.Total)
 	out.PageNum = resp.PageNum
 	out.PageSize = resp.PageSize
 	for _, item := range resp.Items {

@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -25,6 +26,11 @@ import (
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
+)
+
+const (
+	rawDataRawType       = "rawData"
+	rawDataTelemetryType = "telemetry"
 )
 
 type EntityResourceFunc func(context.Context, Entity) error
@@ -556,6 +562,62 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 	return errors.Wrap(err, "On Template Changed")
 }
 
+type tsData struct {
+	TS    int64   `json:"ts,omitempty"`
+	Value float64 `json:"value,omitempty"`
+}
+
+type tsDevice struct {
+	TS     int64              `json:"ts,omitempty"`
+	Values map[string]float64 `json:"values,omitempty"`
+}
+
+func adjustTSData(bytes []byte) (dataAdjust []byte) {
+	// tsDevice1 no ts
+	tsDevice1 := make(map[string]float64)
+	err := json.Unmarshal(bytes, &tsDevice1)
+	if err == nil && len(tsDevice1) > 0 {
+		tsDeviceAdjustData := make(map[string]*tsData)
+		for k, v := range tsDevice1 {
+			tsDeviceAdjustData[k] = &tsData{TS: time.Now().UnixMilli(), Value: v}
+		}
+		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+		return
+	}
+
+	// tsDevice2 has ts
+	tsDevice2 := tsDevice{}
+	err = json.Unmarshal(bytes, &tsDevice2)
+	if err == nil && tsDevice2.TS != 0 {
+		tsDeviceAdjustData := make(map[string]*tsData)
+		for k, v := range tsDevice2.Values {
+			tsDeviceAdjustData[k] = &tsData{TS: tsDevice2.TS, Value: v}
+		}
+		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+		return
+	}
+
+	tsGatewayData := make(map[string]*tsDevice)
+	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
+	tsGatewayAdjustData := make(map[string]interface{})
+
+	err = json.Unmarshal(bytes, &tsGatewayData)
+	if err == nil {
+		for k, v := range tsGatewayData {
+			tsGatewayAdjustDataK := map[string]*tsData{}
+			for kk, vv := range v.Values {
+				tsGatewayAdjustDataK[kk] = &tsData{TS: v.TS, Value: vv}
+				//		tsGatewayAdjustData[strings.Join([]string{k, kk}, ".")] = &tsData{TS: v.TS, Value: vv}
+			}
+			tsGatewayAdjustData[k] = tsGatewayAdjustDataK
+		}
+		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
+		return
+	}
+	log.Error("ts data adjust error", zap.Error(err))
+	return dataAdjust
+}
+
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
 
@@ -564,6 +626,10 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 		if FieldRawData == patch.Path {
 			// attempt extract rawData.
 			prefix := patch.Value.Get("type").String()
+
+			if prefix == rawDataRawType {
+				return feed
+			}
 			values := patch.Value.Get("values").String()
 			bytes, err := base64.StdEncoding.DecodeString(values)
 			if nil != err {
@@ -574,6 +640,10 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 
 			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
 				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+
+			if prefix == rawDataTelemetryType {
+				bytes = adjustTSData(bytes)
+			}
 
 			path := strings.Join([]string{FieldProperties, prefix}, ".")
 			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
