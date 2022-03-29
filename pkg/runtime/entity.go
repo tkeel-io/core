@@ -76,9 +76,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 			cc.Append(patch.Path, patch.Value)
 		case xjson.OpCopy:
 		case xjson.OpMerge:
-			res := patch.Value
-			res.Merge(cc.Get(patch.Path))
-			cc.Set(patch.Path, res)
+			cc.Set(patch.Path, cc.Get(patch.Path).Merge(patch.Value))
 		case xjson.OpRemove:
 			cc.Del(patch.Path)
 		case xjson.OpReplace:
