@@ -3,14 +3,14 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	daprSDK "github.com/dapr/go-sdk/client"
+	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util/dapr"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
@@ -99,15 +99,26 @@ func makePayload(ev v1.PatchEvent, changes []Patch) ([]byte, error) {
 	}
 	bytes, _ := json.Marshal(basics)
 
-	fields := []string{}
-	for index := range changes {
-		fields = append(fields, fmt.Sprintf("\"%s\":%s",
-			changes[index].Path, string(changes[index].Value.Raw())))
+	cc := tdtl.New(`{"properties":{}}`)
+	for _, change := range changes {
+		switch change.Op {
+		case xjson.OpAdd:
+			cc.Append(change.Path, change.Value)
+		case xjson.OpMerge:
+			val := change.Value.Copy()
+			val.Merge(cc.Get(change.Path))
+			cc.Set(change.Path, val)
+		case xjson.OpReplace:
+			cc.Set(change.Path, change.Value)
+		}
+
+		// check patch.
+		if nil != cc.Error() {
+			return nil, errors.Wrap(cc.Error(), "patch json")
+		}
 	}
 
-	cc := tdtl.New(bytes)
-	properties := fmt.Sprintf(`{%s}`, strings.Join(fields, ","))
-	cc.Set(FieldProperties, tdtl.New(properties))
-
-	return cc.Raw(), cc.Error()
+	payload := tdtl.New(bytes)
+	payload.Set(FieldProperties, cc.Get(FieldProperties))
+	return payload.Raw(), payload.Error()
 }

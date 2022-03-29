@@ -42,7 +42,7 @@ type entity struct {
 }
 
 func DefaultEntity(id string) Entity {
-	return &entity{id: id, state: *tdtl.New([]byte(`{}`)), pathConstructor: pathConstructor}
+	return &entity{id: id, state: *tdtl.New([]byte(`{"properties":{}}`)), pathConstructor: pathConstructor}
 }
 
 func NewEntity(id string, state []byte) (Entity, error) {
@@ -76,7 +76,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 			cc.Append(patch.Path, patch.Value)
 		case xjson.OpCopy:
 		case xjson.OpMerge:
-			res := cc.Get(patch.Path).Merge(patch.Value)
+			res := patch.Value
+			res.Merge(cc.Get(patch.Path))
 			cc.Set(patch.Path, res)
 		case xjson.OpRemove:
 			cc.Del(patch.Path)
