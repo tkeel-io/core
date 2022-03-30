@@ -27,8 +27,8 @@ type RespondRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Metadata map[string]string `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Data     []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Metadata map[string]string `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Data     []byte            `protobuf:"bytes,2,opt,name=data,proto3" json:"data"`
 }
 
 func (x *RespondRequest) Reset() {

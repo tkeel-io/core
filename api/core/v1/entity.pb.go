@@ -29,12 +29,12 @@ type CreateEntityRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	From       string          `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
-	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
-	Properties *structpb.Value `protobuf:"bytes,6,opt,name=properties,proto3" json:"properties,omitempty"`
+	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	From       string          `protobuf:"bytes,2,opt,name=from,proto3" json:"from"`
+	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type"`
+	Properties *structpb.Value `protobuf:"bytes,6,opt,name=properties,proto3" json:"properties"`
 }
 
 func (x *CreateEntityRequest) Reset() {
@@ -117,13 +117,13 @@ type UpdateEntityRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type       string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	TemplateId string          `protobuf:"bytes,5,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
-	Properties *structpb.Value `protobuf:"bytes,15,opt,name=properties,proto3" json:"properties,omitempty"`
-	Configs    *structpb.Value `protobuf:"bytes,16,opt,name=configs,proto3" json:"configs,omitempty"`
+	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type       string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	TemplateId string          `protobuf:"bytes,5,opt,name=template_id,json=templateId,proto3" json:"template_id"`
+	Properties *structpb.Value `protobuf:"bytes,15,opt,name=properties,proto3" json:"properties"`
+	Configs    *structpb.Value `protobuf:"bytes,16,opt,name=configs,proto3" json:"configs"`
 }
 
 func (x *UpdateEntityRequest) Reset() {
@@ -213,10 +213,10 @@ type GetEntityRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type   string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner  string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
+	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type   string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner  string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
 }
 
 func (x *GetEntityRequest) Reset() {
@@ -285,10 +285,10 @@ type DeleteEntityRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type   string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner  string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
+	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type   string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner  string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
 }
 
 func (x *DeleteEntityRequest) Reset() {
@@ -357,8 +357,8 @@ type DeleteEntityResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status"`
 }
 
 func (x *DeleteEntityResponse) Reset() {
@@ -413,11 +413,11 @@ type UpdateEntityPropsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type       string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	Properties *structpb.Value `protobuf:"bytes,5,opt,name=properties,proto3" json:"properties,omitempty"`
+	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type       string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	Properties *structpb.Value `protobuf:"bytes,5,opt,name=properties,proto3" json:"properties"`
 }
 
 func (x *UpdateEntityPropsRequest) Reset() {
@@ -493,11 +493,11 @@ type PatchEntityPropsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
-	Properties *structpb.Value `protobuf:"bytes,6,opt,name=properties,proto3" json:"properties,omitempty"`
+	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type"`
+	Properties *structpb.Value `protobuf:"bytes,6,opt,name=properties,proto3" json:"properties"`
 }
 
 func (x *PatchEntityPropsRequest) Reset() {
@@ -573,11 +573,11 @@ type GetEntityPropsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Source       string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner        string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	Type         string `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
-	PropertyKeys string `protobuf:"bytes,6,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys,omitempty"`
+	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Source       string `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner        string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	Type         string `protobuf:"bytes,5,opt,name=type,proto3" json:"type"`
+	PropertyKeys string `protobuf:"bytes,6,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys"`
 }
 
 func (x *GetEntityPropsRequest) Reset() {
@@ -653,11 +653,11 @@ type RemoveEntityPropsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner        string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source       string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys,omitempty"`
+	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner        string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source       string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys"`
 }
 
 func (x *RemoveEntityPropsRequest) Reset() {
@@ -733,11 +733,11 @@ type UpdateEntityConfigsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id      string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type    string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner   string          `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source  string          `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	Configs *structpb.Value `protobuf:"bytes,5,opt,name=configs,proto3" json:"configs,omitempty"`
+	Id      string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type    string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner   string          `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source  string          `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	Configs *structpb.Value `protobuf:"bytes,5,opt,name=configs,proto3" json:"configs"`
 }
 
 func (x *UpdateEntityConfigsRequest) Reset() {
@@ -813,11 +813,11 @@ type PatchEntityConfigsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id      string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type    string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner   string          `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source  string          `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	Configs *structpb.Value `protobuf:"bytes,5,opt,name=configs,proto3" json:"configs,omitempty"`
+	Id      string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type    string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner   string          `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source  string          `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	Configs *structpb.Value `protobuf:"bytes,5,opt,name=configs,proto3" json:"configs"`
 }
 
 func (x *PatchEntityConfigsRequest) Reset() {
@@ -893,11 +893,11 @@ type GetEntityConfigsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source       string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner        string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys,omitempty"`
+	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source       string `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner        string `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys"`
 }
 
 func (x *GetEntityConfigsRequest) Reset() {
@@ -973,11 +973,11 @@ type RemoveEntityConfigsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner        string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source       string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys,omitempty"`
+	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type         string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner        string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source       string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	PropertyKeys string `protobuf:"bytes,5,opt,name=property_keys,json=propertyKeys,proto3" json:"property_keys"`
 }
 
 func (x *RemoveEntityConfigsRequest) Reset() {
@@ -1052,10 +1052,10 @@ type Mapper struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Tql         string `protobuf:"bytes,3,opt,name=tql,proto3" json:"tql,omitempty"`
-	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name"`
+	Tql         string `protobuf:"bytes,3,opt,name=tql,proto3" json:"tql"`
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description"`
 }
 
 func (x *Mapper) Reset() {
@@ -1124,11 +1124,11 @@ type AppendMapperRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source   string  `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner    string  `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper,omitempty"`
+	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source   string  `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner    string  `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
+	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper"`
 }
 
 func (x *AppendMapperRequest) Reset() {
@@ -1204,11 +1204,11 @@ type GetMapperRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
 }
 
 func (x *GetMapperRequest) Reset() {
@@ -1284,10 +1284,10 @@ type ListMapperRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Source   string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	EntityId string `protobuf:"bytes,4,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	Type     string `protobuf:"bytes,1,opt,name=type,proto3" json:"type"`
+	Source   string `protobuf:"bytes,2,opt,name=source,proto3" json:"source"`
+	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	EntityId string `protobuf:"bytes,4,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
 }
 
 func (x *ListMapperRequest) Reset() {
@@ -1356,11 +1356,11 @@ type RemoveMapperRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
 }
 
 func (x *RemoveMapperRequest) Reset() {
@@ -1436,11 +1436,11 @@ type AppendMapperResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner    string  `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source   string  `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper,omitempty"`
+	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner    string  `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source   string  `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
+	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper"`
 }
 
 func (x *AppendMapperResponse) Reset() {
@@ -1516,11 +1516,11 @@ type RemoveMapperResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
-	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
+	Id       string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Type     string `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Owner    string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Source   string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
+	EntityId string `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
 }
 
 func (x *RemoveMapperResponse) Reset() {
@@ -1596,11 +1596,11 @@ type GetMapperResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source   string  `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner    string  `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper,omitempty"`
+	Type     string  `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source   string  `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner    string  `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	EntityId string  `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
+	Mapper   *Mapper `protobuf:"bytes,6,opt,name=mapper,proto3" json:"mapper"`
 }
 
 func (x *GetMapperResponse) Reset() {
@@ -1676,11 +1676,11 @@ type ListMapperResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string    `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
-	Source   string    `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner    string    `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	EntityId string    `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	Mappers  []*Mapper `protobuf:"bytes,6,rep,name=mappers,proto3" json:"mappers,omitempty"`
+	Type     string    `protobuf:"bytes,2,opt,name=type,proto3" json:"type"`
+	Source   string    `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner    string    `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	EntityId string    `protobuf:"bytes,5,opt,name=entity_id,json=entityId,proto3" json:"entity_id"`
+	Mappers  []*Mapper `protobuf:"bytes,6,rep,name=mappers,proto3" json:"mappers"`
 }
 
 func (x *ListMapperResponse) Reset() {
@@ -1756,14 +1756,14 @@ type ListEntityRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Source       string             `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Owner        string             `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
-	Query        string             `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
-	Condition    []*SearchCondition `protobuf:"bytes,6,rep,name=condition,proto3" json:"condition,omitempty"`
-	PageNum      int32              `protobuf:"varint,7,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
-	PageSize     int32              `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	OrderBy      string             `protobuf:"bytes,9,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
-	IsDescending bool               `protobuf:"varint,10,opt,name=is_descending,json=isDescending,proto3" json:"is_descending,omitempty"`
+	Source       string             `protobuf:"bytes,2,opt,name=source,proto3" json:"source"`
+	Owner        string             `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
+	Query        string             `protobuf:"bytes,4,opt,name=query,proto3" json:"query"`
+	Condition    []*SearchCondition `protobuf:"bytes,6,rep,name=condition,proto3" json:"condition"`
+	PageNum      int32              `protobuf:"varint,7,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
+	PageSize     int32              `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
+	OrderBy      string             `protobuf:"bytes,9,opt,name=order_by,json=orderBy,proto3" json:"order_by"`
+	IsDescending bool               `protobuf:"varint,10,opt,name=is_descending,json=isDescending,proto3" json:"is_descending"`
 }
 
 func (x *ListEntityRequest) Reset() {
@@ -1860,10 +1860,10 @@ type ListEntityResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Total    int32             `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	PageNum  int32             `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
-	PageSize int32             `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	Items    []*EntityResponse `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
+	Total    int32             `protobuf:"varint,1,opt,name=total,proto3" json:"total"`
+	PageNum  int32             `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
+	PageSize int32             `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
+	Items    []*EntityResponse `protobuf:"bytes,5,rep,name=items,proto3" json:"items"`
 }
 
 func (x *ListEntityResponse) Reset() {
@@ -1932,16 +1932,16 @@ type EntityResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner,omitempty"`
-	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
-	Version    int64           `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
-	LastTime   int64           `protobuf:"varint,7,opt,name=last_time,json=lastTime,proto3" json:"last_time,omitempty"`
-	TemplateId string          `protobuf:"bytes,8,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
-	Mappers    []*Mapper       `protobuf:"bytes,9,rep,name=mappers,proto3" json:"mappers,omitempty"`
-	Configs    *structpb.Value `protobuf:"bytes,11,opt,name=configs,proto3" json:"configs,omitempty"`
-	Properties *structpb.Value `protobuf:"bytes,12,opt,name=properties,proto3" json:"properties,omitempty"`
+	Id         string          `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Source     string          `protobuf:"bytes,3,opt,name=source,proto3" json:"source"`
+	Owner      string          `protobuf:"bytes,4,opt,name=owner,proto3" json:"owner"`
+	Type       string          `protobuf:"bytes,5,opt,name=type,proto3" json:"type"`
+	Version    int64           `protobuf:"varint,6,opt,name=version,proto3" json:"version"`
+	LastTime   int64           `protobuf:"varint,7,opt,name=last_time,json=lastTime,proto3" json:"last_time"`
+	TemplateId string          `protobuf:"bytes,8,opt,name=template_id,json=templateId,proto3" json:"template_id"`
+	Mappers    []*Mapper       `protobuf:"bytes,9,rep,name=mappers,proto3" json:"mappers"`
+	Configs    *structpb.Value `protobuf:"bytes,11,opt,name=configs,proto3" json:"configs"`
+	Properties *structpb.Value `protobuf:"bytes,12,opt,name=properties,proto3" json:"properties"`
 }
 
 func (x *EntityResponse) Reset() {

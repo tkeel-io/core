@@ -28,7 +28,7 @@ type IndexObject struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Obj *_struct.Value `protobuf:"bytes,1,opt,name=obj,proto3" json:"obj,omitempty"`
+	Obj *_struct.Value `protobuf:"bytes,1,opt,name=obj,proto3" json:"obj"`
 }
 
 func (x *IndexObject) Reset() {
@@ -75,7 +75,7 @@ type IndexResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status"`
 }
 
 func (x *IndexResponse) Reset() {
@@ -122,9 +122,9 @@ type SearchCondition struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Field    string         `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
-	Operator string         `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
-	Value    *_struct.Value `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	Field    string         `protobuf:"bytes,1,opt,name=field,proto3" json:"field"`
+	Operator string         `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator"`
+	Value    *_struct.Value `protobuf:"bytes,3,opt,name=value,proto3" json:"value"`
 }
 
 func (x *SearchCondition) Reset() {
@@ -185,14 +185,14 @@ type SearchRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Source       string             `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	Owner        string             `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner,omitempty"`
-	Query        string             `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
-	Condition    []*SearchCondition `protobuf:"bytes,5,rep,name=condition,proto3" json:"condition,omitempty"`
-	PageNum      int32              `protobuf:"varint,7,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
-	PageSize     int32              `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	OrderBy      string             `protobuf:"bytes,9,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
-	IsDescending bool               `protobuf:"varint,10,opt,name=is_descending,json=isDescending,proto3" json:"is_descending,omitempty"`
+	Source       string             `protobuf:"bytes,1,opt,name=source,proto3" json:"source"`
+	Owner        string             `protobuf:"bytes,2,opt,name=owner,proto3" json:"owner"`
+	Query        string             `protobuf:"bytes,3,opt,name=query,proto3" json:"query"`
+	Condition    []*SearchCondition `protobuf:"bytes,5,rep,name=condition,proto3" json:"condition"`
+	PageNum      int32              `protobuf:"varint,7,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
+	PageSize     int32              `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
+	OrderBy      string             `protobuf:"bytes,9,opt,name=order_by,json=orderBy,proto3" json:"order_by"`
+	IsDescending bool               `protobuf:"varint,10,opt,name=is_descending,json=isDescending,proto3" json:"is_descending"`
 }
 
 func (x *SearchRequest) Reset() {
@@ -288,10 +288,10 @@ type SearchResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Total    int64            `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	PageNum  int32            `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
-	PageSize int32            `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	Items    []*_struct.Value `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
+	Total    int64            `protobuf:"varint,1,opt,name=total,proto3" json:"total"`
+	PageNum  int32            `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
+	PageSize int32            `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
+	Items    []*_struct.Value `protobuf:"bytes,5,rep,name=items,proto3" json:"items"`
 }
 
 func (x *SearchResponse) Reset() {
@@ -359,9 +359,9 @@ type DeleteByIDRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Owner  string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner,omitempty"`
+	Id     string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
+	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source"`
+	Owner  string `protobuf:"bytes,3,opt,name=owner,proto3" json:"owner"`
 }
 
 func (x *DeleteByIDRequest) Reset() {
