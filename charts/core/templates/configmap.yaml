@@ -1,0 +1,11 @@
+{{- if .Values.configOverrides }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-cm 
+data:
+{{- range .Values.configOverrides }}
+  {{ . }}: |
+{{ $.Files.Get (printf "%s%s" "configs/" .) | indent 4 }}
+{{- end }}
+{{- end }}

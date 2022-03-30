@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package api.core.v1;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.core.v1";
+
+
+
+
+service Probe {
+	rpc Health (HealthRequest) returns (HealthResponse) {
+		option (google.api.http) = {
+			get : "/health"
+		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "health for probe";
+            operation_id: "Health";
+            tags: "Probe";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+              }
+            }
+          };
+	};
+}
+
+
+
+message HealthRequest {
+    
+}
+
+message HealthResponse {
+
+}

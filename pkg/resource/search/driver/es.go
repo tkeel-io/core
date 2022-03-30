@@ -22,49 +22,73 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"reflect"
 
+	"github.com/goinggo/mapstructure"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"go.uber.org/zap"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 )
 
-const ElasticsearchDriver Type = "elasticsearch"
+const DriverTypeElasticsearch Type = "elasticsearch"
 
 const EntityIndex = "entity"
+const DefaultLimit int32 = 20
+const MaxLimit int32 = 200
+
+type ESConfig struct {
+	Username  string   `json:"username" mapstructure:"username"`
+	Password  string   `json:"password" mapstructure:"password"`
+	Endpoints []string `json:"endpoints" mapstructure:"endpoints"`
+}
 
 type ESClient struct {
 	Client *elastic.Client
 }
 
-func NewElasticsearchEngine(config config.ESConfig) SearchEngine {
+func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error) {
+	var cfg ESConfig
+	if err := mapstructure.Decode(cfgJSON, &cfg); nil != err {
+		log.L().Error("decode elasticsearch configuration", zap.Error(err), zfield.Value(cfgJSON))
+		return nil, errors.Wrap(err, "decode elasticsearch configuration")
+	}
+
+	addHTTPScheme(cfg.Endpoints)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
 	client, err := elastic.NewClient(
-		elastic.SetURL(config.Address...),
+		elastic.SetURL(cfg.Endpoints...),
 		elastic.SetSniff(false),
-		elastic.SetBasicAuth(config.Username, config.Password),
+		elastic.SetBasicAuth(cfg.Username, cfg.Password),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// ping connection.
-	if len(config.Address) == 0 {
-		log.Fatal("please check your configuration with elasticsearch")
+	if len(cfg.Endpoints) == 0 {
+		log.L().Error("please check your configuration with elasticsearch")
+		return nil, errors.Wrap(xerrors.ErrEmptyParam, "elasticsearch broker endpoints empty")
 	}
-	info, _, err := client.Ping(config.Address[0]).Do(context.Background())
+
+	info, _, err := client.Ping(cfg.Endpoints[0]).Do(context.Background())
 	if nil != err {
-		log.Fatal(err)
+		log.L().Error("ping elasticsearch cluster", zap.Error(err))
+		return nil, errors.Wrap(err, "ping elasticsearch cluster")
 	}
-	log.Info("use ElasticsearchDriver version:", info.Version.Number)
-	return &ESClient{Client: client}
+
+	log.L().Info("use ElasticsearchDriver version:", zfield.Value(info.Version.Number))
+	return &ESClient{Client: client}, nil
 }
 
-func (es *ESClient) BuildIndex(ctx context.Context, id, body string) error {
-	if _, err := es.Client.Index().Index(EntityIndex).Id(id).BodyString(body).Do(ctx); err != nil {
+func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
+	if _, err := es.Client.Index().Index(EntityIndex).
+		Id(index).BodyString(body).Do(ctx); err != nil {
 		return errors.Wrap(err, "set index in es error")
 	}
 	return nil
@@ -72,6 +96,11 @@ func (es *ESClient) BuildIndex(ctx context.Context, id, body string) error {
 
 func (es *ESClient) Delete(ctx context.Context, id string) error {
 	_, err := es.Client.Delete().Index(EntityIndex).Id(id).Do(ctx)
+	if nil != err {
+		if elastic.IsNotFound(err) {
+			return errors.Wrap(xerrors.ErrEntityNotFound, "elasticsearch delete by id")
+		}
+	}
 	return errors.Wrap(err, "elasticsearch delete by id")
 }
 
@@ -139,7 +168,7 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$gte":
 			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
 		case "$neq":
-			boolQuery = boolQuery.MustNot(elastic.NewTermQuery(condition.Field, condition.Value.AsInterface()))
+			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$eq":
 			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$prefix":
@@ -158,8 +187,11 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Limit == 0 {
-		page.Limit = 10
+		page.Limit = DefaultLimit
+	} else if page.Limit > MaxLimit {
+		page.Limit = MaxLimit
 	}
+
 	if page.Sort == "" {
 		page.Sort = "id"
 	}
@@ -167,5 +199,21 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 }
 
 func Elasticsearch() Type {
-	return ElasticsearchDriver
+	return DriverTypeElasticsearch
+}
+
+func init() {
+	registerDrivers[DriverTypeElasticsearch] = NewElasticsearchEngine
+}
+
+func addHTTPScheme(endpoints []string) []string {
+	for index := range endpoints {
+		urlIns := url.URL{}
+		urlIns.Scheme = "http"
+		urlIns.Host = endpoints[index]
+
+		// set endpoint.
+		endpoints[index] = urlIns.String()
+	}
+	return endpoints
 }

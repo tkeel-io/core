@@ -2,10 +2,14 @@ package search
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
+	"github.com/tkeel-io/kit/log"
+	"go.uber.org/zap"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -13,12 +17,39 @@ import (
 
 var GlobalService *Service
 
-func Init() *Service {
-	defaultRegistered := map[driver.Type]driver.SearchEngine{
-		// Add other drivers to SearchService here.
-		driver.ElasticsearchDriver: driver.NewElasticsearchEngine(config.Get().SearchEngine.ES),
+func Init(urlText string) error {
+	// pasre configuration.
+	meta, err := parseConfig(urlText)
+	if nil != err {
+		log.L().Error("parse default search engine configuration",
+			zap.Error(err), zap.String("url", urlText))
+		return errors.Wrap(err, "initialize SearchEngine")
 	}
-	return NewService(defaultRegistered).Use(driver.Parse(config.Get().SearchEngine.Use))
+	// register default(user set) search engine.
+	driverType := driver.Parse(meta.Name)()
+	defaultRegistered := defaultRegisteredSE()
+	if driverIns, has := driver.GetDriver(driverType); has {
+		searchIns, err := driverIns(meta.Properties)
+		if nil != err {
+			log.L().Error("new search engine instance",
+				zap.Error(err), zap.String("url", urlText))
+			return errors.Wrap(err, "new search engine instances")
+		}
+		defaultRegistered = map[driver.Type]driver.SearchEngine{
+			// Add other drivers to SearchService here.
+			driverType: searchIns,
+		}
+	}
+
+	GlobalService = NewService(defaultRegistered).Use(driver.Parse(meta.Name))
+	return nil
+}
+
+func defaultRegisteredSE() map[driver.Type]driver.SearchEngine {
+	searchIns, _ := driver.NewNoopSearchEngine(nil)
+	return map[driver.Type]driver.SearchEngine{
+		driver.DriverNameNoop: searchIns,
+	}
 }
 
 var _ pb.SearchHTTPServer = &Service{}
@@ -44,8 +75,8 @@ func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 		Condition: request.Condition,
 	}
 	req.Page = &pb.Pager{}
-	req.Page.Limit = int64(request.PageSize)
-	req.Page.Offset = int64(request.PageSize * (request.PageNum - 1))
+	req.Page.Limit = request.PageSize
+	req.Page.Offset = request.PageSize * (request.PageNum - 1)
 	req.Page.Reverse = request.IsDescending
 	req.Page.Sort = request.OrderBy
 
@@ -118,6 +149,19 @@ func (s *Service) Index(ctx context.Context, in *pb.IndexObject) (*pb.IndexRespo
 	return out, nil
 }
 
+func (s *Service) IndexBytes(ctx context.Context, id string, jsonData []byte) (out *pb.IndexResponse, err error) {
+	out = &pb.IndexResponse{}
+	engine, ok := s.drivers[s.selectOpt()]
+	if !ok {
+		return out, errors.New("no specified engine:" + string(s.selectOpt()))
+	}
+	if err = engine.BuildIndex(ctx, id, string(jsonData)); err != nil {
+		return out, errors.Wrap(err, "build index error")
+	}
+	out.Status = "SUCCESS"
+	return out, nil
+}
+
 // Use SelectDriveOption and set the option to this service.
 func (s *Service) Use(opt driver.SelectDriveOption) *Service {
 	s.selectOpt = opt
@@ -150,4 +194,29 @@ func interface2string(in interface{}) (out string) {
 		out = ""
 	}
 	return
+}
+
+func parseConfig(urlText string) (resource.Metadata, error) {
+	var result resource.Metadata
+	urlIns, err := url.Parse(urlText)
+	if nil != err {
+		return result, errors.Wrap(err, "parse search engine configuration")
+	}
+
+	result.Name = urlIns.Scheme
+	result.Properties = make(map[string]interface{})
+
+	// decode user info.
+	result.Properties["username"] = urlIns.User.Username()
+	result.Properties["password"], _ = urlIns.User.Password()
+
+	// decode queries.
+	for key, val := range urlIns.Query() {
+		result.Properties[key] = val[0]
+	}
+
+	// decode endpoints.
+	result.Properties["endpoints"] = strings.Split(urlIns.Host, ",")
+
+	return result, nil
 }

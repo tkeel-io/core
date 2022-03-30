@@ -19,38 +19,47 @@ package mapper
 import (
 	"testing"
 
-	"github.com/tkeel-io/core/pkg/constraint"
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestMapper(t *testing.T) {
-	input := map[string]constraint.Node{
-		"entity1.property1":      constraint.NewNode(123),
-		"entity2.property2.name": constraint.NewNode("tomas"),
-		"entity2.property3":      constraint.NewNode(123),
+	input := map[string]tdtl.Node{
+		"entity1.property1":      tdtl.IntNode(123),
+		"entity2.property2.name": tdtl.StringNode("tom"),
+		"entity2.property3":      tdtl.IntNode(123),
 	}
 
 	tqlTexts := []struct {
 		id       string
 		tqlText  string
-		input    map[string]constraint.Node
+		input    map[string]tdtl.Node
 		computed bool
 	}{
-		{"tql1", "insert into test123 select test234.temp as temp", map[string]constraint.Node{"test234.temp": constraint.NewNode(`123`)}, true},
-		{"tql2", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
-		{"tql3", "insert into sub123 select test123.temp", nil, false},
+		{"tql1", "insert into device1 select device2.*", input, false},
+		{"tql2", "insert into test123 select test234.temp as temp", map[string]tdtl.Node{"test234.temp": tdtl.IntNode(123)}, true},
+		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
+		{"tql4", "insert into sub123 select test123.temp", nil, false},
 	}
 
 	for _, tqlInst := range tqlTexts {
 		t.Run(tqlInst.id, func(t *testing.T) {
-			m, _ := NewMapper(tqlInst.id, tqlInst.tqlText)
+			m, err := NewMapper(dao.Mapper{ID: tqlInst.id, TQL: tqlInst.tqlText}, 0)
+			if nil != err {
+				t.Log("error: ", err)
+				return
+			}
 
 			t.Log("parse ID: ", m.ID())
 
 			tentacles := m.Tentacles()
 			t.Logf("parse tentacles, count %d.", len(tentacles))
-			for index, tentacle := range tentacles {
-				t.Logf("tentacle.%d, type: %s, target: %s, items: %s.",
-					index, tentacle.Type(), tentacle.TargetID(), tentacle.Items())
+			for _, tens := range tentacles {
+				for index, tentacle := range tens {
+					t.Logf("tentacle.%d, type: %s, target: %s, items: %s.",
+						index, tentacle.Type(), tentacle.TargetID(), tentacle.Items())
+				}
 			}
 
 			t.Log("parse target entity: ", m.TargetEntity())
@@ -66,71 +75,44 @@ func TestMapper(t *testing.T) {
 	}
 }
 
-func TestExec(t *testing.T) {
-	tqlString := `insert into 7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6 select f8f0327b-51e4-400a-a2e1-c95e371ec99d.path  + '/' + '7ffed0dc-3ed5-4137-9c16-a2c9c74e0bf6' as path`
-
-	mInstance, err := NewMapper("mapper123", tqlString)
-
-	t.Log(err)
-
-	t.Log("target: ", mInstance.TargetEntity())
-	t.Log("sources: ", mInstance.SourceEntities())
-	for _, tentacle := range mInstance.Tentacles() {
+func TestMapper1233(t *testing.T) {
+	tqlText := "insert into x4c1e33a1-6899-4643-a6b3-46cf37950b7f select x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/x4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
+	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
+	assert.Nil(t, err)
+	t.Log("id: ", mapperIns.ID())
+	t.Log("target: ", mapperIns.TargetEntity())
+	t.Log("sources: ", mapperIns.SourceEntities())
+	for _, tentacle := range mapperIns.Tentacles() {
 		t.Log("tentacle: ", tentacle)
 	}
 
-	result, err := mInstance.Exec(map[string]constraint.Node{
-		"f8f0327b-51e4-400a-a2e1-c95e371ec99d.path": constraint.NewNode("test"),
-		"entity.property2.name":                     constraint.NewNode("123"),
-		"entity.property3":                          constraint.NewNode("g123"),
+	res, err := mapperIns.Exec(map[string]tdtl.Node{
+		"x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
 	})
 
-	t.Log(err)
-	t.Log(result)
+	assert.Nil(t, err)
+	t.Log("result: ", res)
 }
 
-func TestExec2(t *testing.T) {
-	tqlString := `insert into bc90e5ba-4d15-4738-bf38-fdfe16740d9c select 0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath + '/bc90e5ba-4d15-4738-bf38-fdfe16740d9c'  as sysField._spacePath`
+func TestMapper123(t *testing.T) {
+	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath, aaa.p1, b3a22c80-6afe-44a0-91b7-f1e49f3c962e.temp * 2 as temp2 `
 
-	mInstance, err := NewMapper("mapper123", tqlString)
-
-	t.Log(err)
-
-	t.Log("target: ", mInstance.TargetEntity())
-	t.Log("sources: ", mInstance.SourceEntities())
-	for _, tentacle := range mInstance.Tentacles() {
+	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
+	assert.Nil(t, err)
+	t.Log("id: ", mapperIns.ID())
+	t.Log("target: ", mapperIns.TargetEntity())
+	t.Log("sources: ", mapperIns.SourceEntities())
+	for _, tentacle := range mapperIns.Tentacles() {
 		t.Log("tentacle: ", tentacle)
 	}
 
-	result, err := mInstance.Exec(map[string]constraint.Node{
-		"0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath": constraint.NewNode("test"),
-		"entity.property2.name": constraint.NewNode("123"),
-		"entity.property3":      constraint.NewNode("g123"),
+	tentacles := mapperIns.Tentacles()
+	t.Log("tentacles: ", tentacles)
+
+	res, err := mapperIns.Exec(map[string]tdtl.Node{
+		"x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.New(`"tom"`),
 	})
 
-	t.Log(err)
-	t.Log(result)
-}
-
-func TestExec3(t *testing.T) {
-	tqlString := `insert into 43ce9690-7c5d-4e62-be07-fb16a13f67d0 select 0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath + '/43ce9690-7c5d-4e62-be07-fb16a13f67d0'  as sysField._spacePath`
-
-	mInstance, err := NewMapper("mapper123", tqlString)
-
-	t.Log(err)
-
-	t.Log("target: ", mInstance.TargetEntity())
-	t.Log("sources: ", mInstance.SourceEntities())
-	for _, tentacle := range mInstance.Tentacles() {
-		t.Log("tentacle: ", tentacle)
-	}
-
-	result, err := mInstance.Exec(map[string]constraint.Node{
-		"0074c68f-679c-4290-a2be-3878c8fb75f6.sysField._spacePath": constraint.NewNode("test"),
-		"entity.property2.name": constraint.NewNode("123"),
-		"entity.property3":      constraint.NewNode("g123"),
-	})
-
-	t.Log(err)
-	t.Log(result)
+	assert.Nil(t, err)
+	t.Log("result: ", res)
 }

@@ -9,14 +9,15 @@ import (
 )
 
 func Test_NewSubscriptionService(t *testing.T) {
-	_, err := NewSubscriptionService(context.Background(), entityManager)
+	_, err := NewSubscriptionService(context.Background())
 	assert.Nil(t, err)
 }
 
 func Test_CreateSubscription(t *testing.T) {
-	ss, err := NewSubscriptionService(context.Background(), entityManager)
+	ss, err := NewSubscriptionService(context.Background())
 	assert.Nil(t, err)
 
+	ss.Init(apiManager)
 	res, err := ss.CreateSubscription(context.Background(), &pb.CreateSubscriptionRequest{
 		Id:     "sub123",
 		Source: "dm",
@@ -34,14 +35,13 @@ func Test_CreateSubscription(t *testing.T) {
 	assert.Equal(t, "sub123", res.Id)
 	assert.Equal(t, "admin", res.Owner)
 	assert.Equal(t, "dm", res.Source)
-	assert.Equal(t, "realtime", res.Subscription.Mode)
-	assert.Equal(t, "insert into sub123 select device123.*", res.Subscription.Filter)
 }
 
 func Test_UpdateSubscription(t *testing.T) {
-	ss, err := NewSubscriptionService(context.Background(), entityManager)
+	ss, err := NewSubscriptionService(context.Background())
 	assert.Nil(t, err)
 
+	ss.Init(apiManager)
 	res, err := ss.UpdateSubscription(context.Background(), &pb.UpdateSubscriptionRequest{
 		Id:     "sub123",
 		Source: "dm",
@@ -59,14 +59,13 @@ func Test_UpdateSubscription(t *testing.T) {
 	assert.Equal(t, "sub123", res.Id)
 	assert.Equal(t, "admin", res.Owner)
 	assert.Equal(t, "dm", res.Source)
-	assert.Equal(t, "realtime", res.Subscription.Mode)
-	assert.Equal(t, "insert into sub123 select device123.*", res.Subscription.Filter)
 }
 
 func Test_DeleteSubscription(t *testing.T) {
-	ss, err := NewSubscriptionService(context.Background(), entityManager)
+	ss, err := NewSubscriptionService(context.Background())
 	assert.Nil(t, err)
 
+	ss.Init(apiManager)
 	res, err := ss.DeleteSubscription(context.Background(), &pb.DeleteSubscriptionRequest{
 		Id:     "sub123",
 		Source: "dm",
@@ -79,9 +78,10 @@ func Test_DeleteSubscription(t *testing.T) {
 }
 
 func Test_GetSubscription(t *testing.T) {
-	ss, err := NewSubscriptionService(context.Background(), entityManager)
+	ss, err := NewSubscriptionService(context.Background())
 	assert.Nil(t, err)
 
+	ss.Init(apiManager)
 	res, err := ss.GetSubscription(context.Background(), &pb.GetSubscriptionRequest{
 		Id:     "sub123",
 		Source: "dm",

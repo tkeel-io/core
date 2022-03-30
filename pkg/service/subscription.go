@@ -18,190 +18,247 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
-	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/runtime"
-	"github.com/tkeel-io/core/pkg/statem"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/util"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
+const SMTypeSubscription = "SUBSCRIPTION"
+
 type SubscriptionService struct {
 	pb.UnimplementedSubscriptionServer
-	ctx           context.Context
-	cancel        context.CancelFunc
-	entityManager entities.EntityManager
+	ctx        context.Context
+	cancel     context.CancelFunc
+	inited     *atomic.Bool
+	apiManager apim.APIManager
 }
 
 // NewSubscriptionService returns a new SubscriptionService.
-func NewSubscriptionService(ctx context.Context, entityManager entities.EntityManager) (*SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context) (*SubscriptionService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return &SubscriptionService{
-		ctx:           ctx,
-		cancel:        cancel,
-		entityManager: entityManager,
+		ctx:    ctx,
+		cancel: cancel,
+		inited: atomic.NewBool(false),
 	}, nil
+}
+
+func (s *SubscriptionService) Init(apiManager apim.APIManager) {
+	s.apiManager = apiManager
+	s.inited.Store(true)
 }
 
 func interface2string(in interface{}) (out string) {
 	switch inString := in.(type) {
 	case string:
 		out = inString
-	case constraint.Node:
-		out = inString.String()
+	case tdtl.Node:
+		out = string(inString.Raw())
 	default:
 		out = ""
 	}
 	return
 }
 
-func (s *SubscriptionService) entity2SubscriptionResponse(entity *Entity) (out *pb.SubscriptionResponse) {
-	if entity == nil {
+func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (out *pb.SubscriptionResponse) {
+	if base == nil {
 		return
 	}
 
 	out = &pb.SubscriptionResponse{}
 
-	out.Id = entity.ID
-	out.Owner = entity.Owner
-	out.Source = entity.Source
-	out.Subscription = &pb.SubscriptionObject{}
-	out.Subscription.Source = interface2string(entity.KValues[runtime.SubscriptionFieldSource])
-	out.Subscription.Filter = interface2string(entity.KValues[runtime.SubscriptionFieldFilter])
-	out.Subscription.Target = interface2string(entity.KValues[runtime.SubscriptionFieldTarget])
-	out.Subscription.Topic = interface2string(entity.KValues[runtime.SubscriptionFieldTopic])
-	out.Subscription.Mode = interface2string(entity.KValues[runtime.SubscriptionFieldMode])
-	out.Subscription.PubsubName = interface2string(entity.KValues[runtime.SubscriptionFieldPubsubName])
+	out.Id = base.ID
+	out.Owner = base.Owner
+	out.Source = base.Source
+	out.Subscription = &pb.SubscriptionObject{
+		Mode:       interface2string(base.Properties["mode"]),
+		Source:     interface2string(base.Properties["source"]),
+		Filter:     interface2string(base.Properties["filter"]),
+		Target:     interface2string(base.Properties["target"]),
+		Topic:      interface2string(base.Properties["topic"]),
+		PubsubName: interface2string(base.Properties["pubsub_name"]),
+	}
 	return out
 }
 
 func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.CreateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
-	var entity = new(Entity)
-
-	if req.Id != "" {
-		entity.ID = req.Id
+	if !s.inited.Load() {
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
+	var entity = new(Entity)
+	if req.Id == "" {
+		req.Id = util.UUID("sub")
+	}
+
+	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = map[string]constraint.Node{
-		runtime.StateMachineFieldType:       constraint.StringNode(entity.Type),
-		runtime.StateMachineFieldOwner:      constraint.StringNode(entity.Owner),
-		runtime.StateMachineFieldSource:     constraint.StringNode(entity.Source),
-		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+	properties := map[string]interface{}{
+		"type":        entity.Type,
+		"owner":       entity.Owner,
+		"source":      entity.Source,
+		"mode":        strings.ToUpper(req.Subscription.Mode),
+		"topic":       req.Subscription.Topic,
+		"filter":      req.Subscription.Filter,
+		"pubsub_name": req.Subscription.PubsubName,
 	}
 
-	if err = s.entityManager.CheckSubscription(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
-		return
+	if entity.Properties, err = json.Marshal(properties); nil != err {
+		log.L().Error("create subscription, but invalid params",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+		return out, errors.Wrap(err, "create subscription")
 	}
-
-	// set mapper.
-	entity.Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
-	}}
 
 	// set properties.
-	if entity, err = s.entityManager.CreateEntity(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
+		log.L().Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
-	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("create subscription", zap.Error(err), logger.EntityID(req.Id))
-		if _, err0 := s.entityManager.DeleteEntity(ctx, entity); nil != err0 {
-			log.Error("destroy subscription", zap.Error(err0), logger.EntityID(req.Id))
+	mp := &dao.Mapper{
+		ID:          "Subscription",
+		TQL:         req.Subscription.Filter,
+		Name:        "SubscriptionMapper",
+		Owner:       entity.Owner,
+		EntityID:    entity.ID,
+		Description: "Subscription mapper instance",
+	}
+
+	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
+		log.L().Error("create subscription", zap.Error(err), zfield.Eid(req.Id))
+		if innerErr := s.apiManager.DeleteEntity(ctx, entity); nil != innerErr {
+			log.L().Error("destroy subscription", zap.Error(innerErr), zfield.Eid(req.Id))
 		}
 		return
 	}
 
-	out = s.entity2SubscriptionResponse(entity)
+	out = s.entity2SubscriptionResponse(baseRet)
 	return out, errors.Wrap(err, "create subscription")
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
+	if !s.inited.Load() {
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	var entity = new(Entity)
 
 	entity.ID = req.Id
 	entity.Owner = req.Owner
 	entity.Source = req.Source
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = SMTypeSubscription
 	parseHeaderFrom(ctx, entity)
-	entity.KValues = map[string]constraint.Node{
-		runtime.SubscriptionFieldSource:     constraint.StringNode(req.Subscription.Source),
-		runtime.SubscriptionFieldFilter:     constraint.StringNode(req.Subscription.Filter),
-		runtime.SubscriptionFieldTarget:     constraint.StringNode(req.Subscription.Target),
-		runtime.SubscriptionFieldTopic:      constraint.StringNode(req.Subscription.Topic),
-		runtime.SubscriptionFieldMode:       constraint.StringNode(req.Subscription.Mode),
-		runtime.SubscriptionFieldPubsubName: constraint.StringNode(req.Subscription.PubsubName),
+	properties := map[string]interface{}{
+		"mode":        strings.ToUpper(req.Subscription.Mode),
+		"topic":       req.Subscription.Topic,
+		"filter":      req.Subscription.Filter,
+		"pubsub_name": req.Subscription.PubsubName,
 	}
 
-	// set properties.
-	if entity, err = s.entityManager.SetProperties(ctx, entity); nil != err {
-		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
-		return
+	if entity.Properties, err = json.Marshal(properties); nil != err {
+		log.L().Error("create subscription, but invalid params",
+			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+		return out, errors.Wrap(err, "create subscription")
 	}
 
-	// set mapper.
-	entity.Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: entity.KValues[runtime.SubscriptionFieldFilter].String(),
+	patches := []*pb.PatchData{{
+		Path:     "properties",
+		Operator: xjson.OpMerge.String(),
+		Value:    entity.Properties,
 	}}
 
-	if _, err = s.entityManager.AppendMapper(ctx, entity); nil != err {
-		log.Error("update subscription", zap.Error(err), logger.EntityID(req.Id))
+	// set properties.
+	var baseRet *apim.BaseRet
+	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
+		log.L().Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
-	out = s.entity2SubscriptionResponse(entity)
+	mp := &dao.Mapper{
+		ID:          "Subscription",
+		TQL:         req.Subscription.Filter,
+		Name:        "SubscriptionMapper",
+		Owner:       entity.Owner,
+		EntityID:    entity.ID,
+		Description: "Subscription mapper instance",
+	}
 
+	if err = s.apiManager.AppendMapper(ctx, mp); nil != err {
+		log.L().Error("update subscription", zap.Error(err), zfield.Eid(req.Id))
+		return
+	}
+
+	out = s.entity2SubscriptionResponse(baseRet)
 	return out, errors.Wrap(err, "update subscription")
 }
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {
-	var entity = new(Entity)
+	if !s.inited.Load() {
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
 
+	var entity = new(Entity)
 	entity.ID = req.Id
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if _, err = s.entityManager.DeleteEntity(ctx, entity); nil != err {
-		log.Error("delete subscription", zap.Error(err), logger.EntityID(req.Id))
+	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
+		log.L().Error("delete subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
 
 	out = &pb.DeleteSubscriptionResponse{Id: req.Id, Status: "ok"}
-	return
+	return out, nil
 }
 
 func (s *SubscriptionService) GetSubscription(ctx context.Context, req *pb.GetSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
-	var entity = new(Entity)
+	if !s.inited.Load() {
+		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
 
+	var entity = new(Entity)
 	entity.ID = req.Id
-	entity.Type = runtime.StateMachineTypeSubscription
+	entity.Type = SMTypeSubscription
 	entity.Owner = req.Owner
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
-	if entity, err = s.entityManager.GetProperties(ctx, entity); nil != err {
-		log.Error("get subscription", zap.Error(err), logger.EntityID(req.Id))
+
+	var baseRet *apim.BaseRet
+	if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
+		log.L().Error("get subscription", zap.Error(err), zfield.Eid(req.Id))
 		return
 	}
-	out = s.entity2SubscriptionResponse(entity)
+	out = s.entity2SubscriptionResponse(baseRet)
 	return
 }
 
 func (s *SubscriptionService) ListSubscription(ctx context.Context, req *pb.ListSubscriptionRequest) (out *pb.ListSubscriptionResponse, err error) {
+	if !s.inited.Load() {
+		log.L().Warn("service not ready")
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	return &pb.ListSubscriptionResponse{}, nil
 }

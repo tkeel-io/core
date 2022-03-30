@@ -7,16 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/entities"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/service/mock"
-	"github.com/tkeel-io/core/pkg/statem"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var entityManager entities.EntityManager
+var apiManager apim.APIManager
 var entityService *EntityService
 
 func TestMain(m *testing.M) {
@@ -25,32 +22,15 @@ func TestMain(m *testing.M) {
 	// logger initialized.
 	log.InitLogger("core-service", "DEBUG", true)
 
-	entityManager = mock.NewEntityManagerMock()
-	entityService, err = NewEntityService(context.Background(), entityManager, mock.NewSearchMock())
+	searchMock := mock.NewSearchMock()
+	apiManager = mock.NewAPIManagerMock()
+	entityService, err = NewEntityService(context.Background())
 	if nil != err {
 		os.Exit(1)
 	}
+
+	entityService.Init(apiManager, searchMock)
 	os.Exit(m.Run())
-}
-
-func Test_entity2EntityResponse(t *testing.T) {
-	base := statem.Base{
-		ID:           "device123",
-		Type:         "DEVICE",
-		Owner:        "admin",
-		Source:       "dm",
-		Version:      0,
-		LastTime:     util.UnixMilli(),
-		Mappers:      []statem.MapperDesc{{Name: "mapper123", TQLString: "insert into device123 select device234.temp as temp"}},
-		KValues:      map[string]constraint.Node{"temp": constraint.NewNode(25)},
-		ConfigsBytes: nil,
-	}
-
-	out := entityService.entity2EntityResponse(&base)
-	assert.Equal(t, base.ID, out.Id)
-	assert.Equal(t, base.Type, out.Type)
-	assert.Equal(t, base.Owner, out.Owner)
-	assert.Equal(t, base.Source, out.Source)
 }
 
 func Test_CreateEntity(t *testing.T) {
@@ -69,24 +49,24 @@ func Test_CreateEntity(t *testing.T) {
 }
 
 func Test_UpdateEntity(t *testing.T) {
-	m := map[string]interface{}{}
-	properties, err := structpb.NewValue(m)
-	assert.Nil(t, err, "properties NewValue")
-	_, err = entityService.UpdateEntity(context.Background(), &pb.UpdateEntityRequest{
-		Id:         "device123",
-		Source:     "dm",
-		Owner:      "admin",
-		Type:       "DEVICE",
-		Properties: properties,
-	})
-	assert.Nil(t, err)
+	// 	m := map[string]interface{}{}
+	// 	properties, err := structpb.NewValue(m)
+	// 	assert.Nil(t, err, "properties NewValue")
+	// 	_, err = entityService.UpdateEntity(context.Background(), &pb.UpdateEntityRequest{
+	// 		Id:         "device123",
+	// 		Source:     "dm",
+	// 		Owner:      "admin",
+	// 		Type:       "DEVICE",
+	// 		Properties: properties,
+	// 	})
+	// 	assert.NotNil(t, err)
 }
 
 func Test_PatchEntity(t *testing.T) {
 	m := []interface{}{}
 	properties, err := structpb.NewValue(m)
 	assert.Nil(t, err, "properties NewValue")
-	_, err = entityService.PatchEntity(context.Background(), &pb.PatchEntityRequest{
+	_, err = entityService.PatchEntityProps(context.Background(), &pb.PatchEntityPropsRequest{
 		Id:         "device123",
 		Owner:      "admin",
 		Type:       "DEVICE",
@@ -108,11 +88,11 @@ func Test_DeleteEntity(t *testing.T) {
 
 func Test_GetEntityProps(t *testing.T) {
 	_, err := entityService.GetEntityProps(context.Background(), &pb.GetEntityPropsRequest{
-		Id:     "device123",
-		Owner:  "admin",
-		Type:   "DEVICE",
-		Source: "dm",
-		Pids:   "temp,metrics.cpu",
+		Id:           "device123",
+		Owner:        "admin",
+		Type:         "DEVICE",
+		Source:       "dm",
+		PropertyKeys: "temp,metrics.cpu",
 	})
 	assert.Nil(t, err)
 }
@@ -137,13 +117,15 @@ func Test_ListEntity(t *testing.T) {
 
 func Test_AppendMapper(t *testing.T) {
 	_, err := entityService.AppendMapper(context.Background(), &pb.AppendMapperRequest{
-		Id:     "device123",
-		Owner:  "admin",
-		Type:   "DEVICE",
-		Source: "dm",
-		Mapper: &pb.MapperDesc{
-			Name: "mapper123",
-			Tql:  "insert into device123 select device234.temp as temp",
+		EntityId: "device123",
+		Owner:    "admin",
+		Type:     "DEVICE",
+		Source:   "dm",
+		Mapper: &pb.Mapper{
+			Id:          "mapper123",
+			Name:        "mapper123",
+			Tql:         "insert into device123 select device234.temp as temp",
+			Description: "test mapper.",
 		},
 	})
 	assert.Nil(t, err)
@@ -151,11 +133,11 @@ func Test_AppendMapper(t *testing.T) {
 
 func Test_RemoveMapper(t *testing.T) {
 	_, err := entityService.RemoveMapper(context.Background(), &pb.RemoveMapperRequest{
-		Id:         "device123",
-		Owner:      "admin",
-		Type:       "DEVICE",
-		Source:     "dm",
-		MapperName: "mapper123",
+		Id:       "mapper123",
+		Owner:    "admin",
+		Type:     "DEVICE",
+		Source:   "dm",
+		EntityId: "device123",
 	})
 	assert.Nil(t, err)
 }
@@ -243,7 +225,7 @@ func Test_SetConfigs(t *testing.T) {
 			c, err := structpb.NewValue(cfg)
 			assert.Nil(t, err)
 
-			res, err := entityService.SetConfigs(context.Background(), &pb.SetConfigsRequest{
+			res, err := entityService.UpdateEntityConfigs(context.Background(), &pb.UpdateEntityConfigsRequest{
 				Id:      "device123",
 				Owner:   "admin",
 				Type:    "DEVICE",
@@ -258,28 +240,28 @@ func Test_SetConfigs(t *testing.T) {
 	}
 }
 
-func Test_AppendConfigs(t *testing.T) {
-	c, err := structpb.NewValue([]interface{}{
-		map[string]interface{}{
-			"id":   "temp",
-			"type": "int",
-			"define": map[string]interface{}{
-				"max":  100,
-				"unit": "°",
-				"ext": map[string]interface{}{
-					"unit_zh": "度",
-				},
-			},
-		},
-	})
+func Test_RemoveEntityConfigs(t *testing.T) {
+	res, err := entityService.RemoveEntityConfigs(context.Background(),
+		&pb.RemoveEntityConfigsRequest{
+			Id:           "device123",
+			Owner:        "admin",
+			Type:         "DEVICE",
+			Source:       "dm",
+			PropertyKeys: "temp,metrics.cpu_used",
+		})
 	assert.Nil(t, err)
+	assert.Equal(t, "device123", res.Id)
+	assert.Equal(t, "admin", res.Owner)
+	assert.Equal(t, "DEVICE", res.Type)
+}
 
-	res, err := entityService.AppendConfigs(context.Background(), &pb.AppendConfigsRequest{
-		Id:      "device123",
-		Owner:   "admin",
-		Type:    "DEVICE",
-		Source:  "dm",
-		Configs: c,
+func Test_GetEntityConfigs(t *testing.T) {
+	res, err := entityService.GetEntityConfigs(context.Background(), &pb.GetEntityConfigsRequest{
+		Id:           "device123",
+		Owner:        "admin",
+		Type:         "DEVICE",
+		Source:       "dm",
+		PropertyKeys: "temp,metrics.cpu_used",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", res.Id)
@@ -287,39 +269,11 @@ func Test_AppendConfigs(t *testing.T) {
 	assert.Equal(t, "DEVICE", res.Type)
 }
 
-func Test_RemoveConfigs(t *testing.T) {
-	res, err := entityService.RemoveConfigs(context.Background(), &pb.RemoveConfigsRequest{
-		Id:          "device123",
-		Owner:       "admin",
-		Type:        "DEVICE",
-		Source:      "dm",
-		PropertyIds: "temp,metrics.cpu_used",
-	})
-	assert.Nil(t, err)
-	assert.Equal(t, "device123", res.Id)
-	assert.Equal(t, "admin", res.Owner)
-	assert.Equal(t, "DEVICE", res.Type)
-}
-
-func Test_QueryConfigs(t *testing.T) {
-	res, err := entityService.QueryConfigs(context.Background(), &pb.QueryConfigsRequest{
-		Id:          "device123",
-		Owner:       "admin",
-		Type:        "DEVICE",
-		Source:      "dm",
-		PropertyIds: "temp,metrics.cpu_used",
-	})
-	assert.Nil(t, err)
-	assert.Equal(t, "device123", res.Id)
-	assert.Equal(t, "admin", res.Owner)
-	assert.Equal(t, "DEVICE", res.Type)
-}
-
-func Test_PatchConfigs(t *testing.T) {
+func Test_PatchEntityConfigs(t *testing.T) {
 	configs, err := structpb.NewValue([]interface{}{
 		map[string]interface{}{
 			"path":     "metrics.cpu_used",
-			"operator": "relpace",
+			"operator": "replace",
 			"value": map[string]interface{}{
 				"type": "int",
 				"define": map[string]interface{}{
@@ -376,15 +330,36 @@ func Test_PatchConfigs(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	res, err := entityService.PatchConfigs(context.Background(), &pb.PatchConfigsRequest{
-		Id:      "device123",
-		Owner:   "admin",
-		Type:    "DEVICE",
-		Source:  "dm",
-		Configs: configs,
-	})
+	res, err := entityService.PatchEntityConfigs(context.Background(),
+		&pb.PatchEntityConfigsRequest{
+			Id:      "device123",
+			Owner:   "admin",
+			Type:    "DEVICE",
+			Source:  "dm",
+			Configs: configs,
+		})
 	assert.Nil(t, err)
 	assert.Equal(t, "device123", res.Id)
 	assert.Equal(t, "admin", res.Owner)
 	assert.Equal(t, "DEVICE", res.Type)
+}
+
+func TestCopyFrom(t *testing.T) {
+	raw := []byte(`{
+		"id": "device123",
+		"type": "DEVICE",
+		"owner": "admin",
+		"source": "tomas",
+		"properties": {
+			"temp": 20,
+			"metrics": {
+				"cpu_used": 0.27,
+				"mem_used": 0.8
+			}
+		}}`)
+
+	propKeys := []string{"properties.temp", "properties.metrics", "properties.metrics.cpu_used"}
+	result, _, err := CopyFrom2(raw, propKeys...)
+	assert.Nil(t, err)
+	t.Log("\nResult: ", result)
 }

@@ -2,24 +2,43 @@ package runtime
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
+	"github.com/tkeel-io/tdtl"
 )
 
-func TestSubscription(t *testing.T) {
-	// sub, err := newSubscription(context.Background(), nil, &statem.Base{
-	// 	ID:     "sub123",
-	// 	Type:   "SUBCRIPTION",
-	// 	Owner:  "admin",
-	// 	Source: "device-manager",
-	// 	KValues: map[string]constraint.Node{
-	// 		"mode":        constraint.NewNode("realtime"),
-	// 		"source":      constraint.NewNode("device-manager"),
-	// 		"filter":      constraint.NewNode("insert into sub123 select device123.temp"),
-	// 		"target":      constraint.NewNode("device123"),
-	// 		"topic":       constraint.NewNode("core-sub123"),
-	// 		"pubsub_name": constraint.NewNode("core-pubsub"),
-	// 	},
-	// })
+func Test_makePayload(t *testing.T) {
+	// "id":           ev.Attr(v1.MetaSender),
+	// "subscribe_id": ev.Entity(),
+	// "type":         ev.Attr(v1.MetaEntityType),
+	// "owner":        ev.Attr(v1.MetaOwner),
+	// "source":       ev.Attr(v1.MetaSource),
+	ev := &v1.ProtoEvent{
+		Metadata: map[string]string{
+			v1.MetaEntityID:   "sub123",
+			v1.MetaOwner:      "admin",
+			v1.MetaSource:     "core",
+			v1.MetaSender:     "device123",
+			v1.MetaEntityType: dao.EntityTypeSubscription,
+		},
+	}
 
-	// assert.Equal(t, nil, err)
-	// assert.Equal(t, "sub123", sub.GetID())
+	bytes, err := makePayload(ev, []Patch{
+		{
+			Op:    xjson.OpMerge,
+			Path:  "properties.temps",
+			Value: tdtl.New(`{"temp":20}`),
+		},
+		{
+			Op:    xjson.OpReplace,
+			Path:  "properties.metrics.cpu.value",
+			Value: tdtl.New(`0.78`),
+		},
+	})
+
+	assert.Nil(t, err)
+	t.Log("payload: ", string(bytes))
 }

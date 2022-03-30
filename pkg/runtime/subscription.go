@@ -1,269 +1,124 @@
-/*
-Copyright 2021 The tKeel Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package runtime
 
 import (
 	"context"
+	"encoding/json"
 
-	dapr "github.com/dapr/go-sdk/client"
+	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/constraint"
-	"github.com/tkeel-io/core/pkg/environment"
-	"github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/statem"
+	v1 "github.com/tkeel-io/core/api/core/v1"
+	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/util/dapr"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
+type SubscriptionMode string
+
+func (sm SubscriptionMode) S() string {
+	return string(sm)
+}
+
 const (
-	// subscription mode enum.
-	SubscriptionModeUndefine = "undefine"
-	SubscriptionModeRealtime = "realtime"
-	SubscriptionModePeriod   = "period"
-	SubscriptionModeChanged  = "changed"
-
-	// subscription required fileds.
-	SubscriptionFieldMode       = "mode"
-	SubscriptionFieldSource     = "source"
-	SubscriptionFieldTarget     = "target"
-	SubscriptionFieldFilter     = "filter"
-	SubscriptionFieldTopic      = "topic"
-	SubscriptionFieldPubsubName = "pubsub_name"
-
-	// state machine required fileds.
-	StateMachineFieldType   = "type"
-	StateMachineFieldOwner  = "owner"
-	StateMachineFieldSource = "source"
+	SModePeriod    SubscriptionMode = "PERIOD"
+	SModeRealtime  SubscriptionMode = "REALTIME"
+	SModeOnChanged SubscriptionMode = "ONCHANGED"
 )
 
-// SubscriptionBase subscription basic information.
-type SubscriptionBase struct {
-	Mode       string `json:"mode" mapstructure:"mode"`
-	Source     string `json:"source" mapstructure:"source"`
-	Filter     string `json:"filter" mapstructure:"filter"`
-	Topic      string `json:"topic" mapstructure:"topic"`
-	PubsubName string `json:"pubsub_name" mapstructure:"pubsub_name"`
-}
+// 为了订阅实体实现的外部订阅.
+func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle subscribe", zfield.Eid(feed.EntityID), zfield.Event(feed.Event))
+	ev, _ := feed.Event.(v1.PatchEvent)
 
-// subscription subscription actor based entity.
-type subscription struct {
-	SubscriptionBase `mapstructure:",squash"`
-	daprClient       dapr.Client
-	stateMachine     statem.StateMachiner `mapstructure:"-"`
-}
-
-func decode2Subscription(kvalues map[string]constraint.Node, subsc *SubscriptionBase) {
-	// parse Mode.
-	if node, has := kvalues[SubscriptionFieldMode]; has {
-		subsc.Mode = node.String()
-	}
-	// parse Source.
-	if node, has := kvalues[SubscriptionFieldSource]; has {
-		subsc.Source = node.String()
-	}
-	// parse Filter.
-	if node, has := kvalues[SubscriptionFieldFilter]; has {
-		subsc.Filter = node.String()
-	}
-	// parse Topic.
-	if node, has := kvalues[SubscriptionFieldTopic]; has {
-		subsc.Topic = node.String()
-	}
-	// parse PubsubName.
-	if node, has := kvalues[SubscriptionFieldPubsubName]; has {
-		subsc.PubsubName = node.String()
-	}
-}
-
-// newSubscription returns a subscription.
-func newSubscription(ctx context.Context, mgr *Manager, in *statem.Base) (stateM statem.StateMachiner, err error) {
-	subsc := subscription{SubscriptionBase: SubscriptionBase{
-		Mode: SubscriptionModeUndefine,
-	}}
-
-	errFunc := func(err error) error { return errors.Wrap(err, "create subscription failed") }
-	if stateM, err = statem.NewState(ctx, mgr, in, subsc.HandleMessage); nil != err {
-		return nil, errFunc(err)
+	var err error
+	subID := ev.Entity()
+	entityID := ev.Attr(v1.MetaSender)
+	state, err := r.LoadEntity(subID)
+	if nil != err {
+		log.L().Error("load entity", zap.Error(err), zfield.Eid(subID))
+		feed.Err = err
+		return feed
 	}
 
-	// decode in.KValues into subsc.
-	decode2Subscription(in.KValues, &subsc.SubscriptionBase)
-	if err = subsc.checkSubscription(); nil != err {
-		return nil, errFunc(err)
-	}
+	switch state.Type() {
+	case dao.EntityTypeSubscription:
+		mode := state.GetProp("mode").String()
+		topic := state.GetProp("topic").String()
+		pubsubName := state.GetProp("pubsub_name").String()
+		log.L().Debug("publish subscription message", zfield.ID(subID), zfield.Event(ev),
+			zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 
-	var daprClient dapr.Client
-	if daprClient, err = dapr.NewClient(); nil != err {
-		return nil, errFunc(err)
-	}
+		changes := feed.Patches
+		if len(changes) == 0 {
+			log.L().Warn("publish empty message", zfield.ID(subID), zfield.Event(ev),
+				zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
+			return feed
+		}
 
-	subsc.daprClient = daprClient
-	subsc.stateMachine = stateM
-	subsc.GetBase().KValues = in.KValues
+		var payload []byte
+		if payload, err = makePayload(ev, changes); nil != err {
+			log.L().Error("publish message, make payload", zfield.ID(subID), zfield.Event(ev),
+				zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
+			return feed
+		}
 
-	// set mapper.
-	subsc.stateMachine.GetBase().Mappers = []statem.MapperDesc{{
-		Name:      "subscription",
-		TQLString: subsc.Filter,
-	}}
-	return &subsc, nil
-}
+		log.L().Debug("publish message", zfield.ID(subID), zfield.Event(ev), zfield.Payload(payload),
+			zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 
-func (s *subscription) Flush(ctx context.Context) error {
-	return errors.Wrap(s.stateMachine.Flush(ctx), "flush subscription")
-}
-
-// Setup setup filter.
-func (s *subscription) Setup() error {
-	return errors.Wrap(s.stateMachine.Setup(), "subscription setup")
-}
-
-// GetID return state machine id.
-func (s *subscription) GetID() string {
-	return s.stateMachine.GetID()
-}
-
-// GetMode returns subscription mode.
-func (s *subscription) GetMode() string {
-	return s.Mode
-}
-
-func (s *subscription) GetBase() *statem.Base {
-	return s.stateMachine.GetBase()
-}
-
-func (s *subscription) SetStatus(status statem.Status) {
-	s.stateMachine.SetStatus(status)
-}
-
-func (s *subscription) GetStatus() statem.Status {
-	return s.stateMachine.GetStatus()
-}
-
-func (s *subscription) LoadEnvironments(env environment.ActorEnv) {
-	s.stateMachine.LoadEnvironments(env)
-}
-
-func (s *subscription) GetManager() statem.StateManager {
-	return s.stateMachine.GetManager()
-}
-
-// SetConfig set entity configs.
-func (s *subscription) SetConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMachine.SetConfigs(configs)
-	return errors.Wrap(err, "set subscription configs")
-}
-
-// PatchConfigs set entity configs.
-func (s *subscription) PatchConfigs(patchData []*statem.PatchData) error {
-	err := s.stateMachine.PatchConfigs(patchData)
-	return errors.Wrap(err, "patch subscription configs")
-}
-
-// AppendConfig append entity property config.
-func (s *subscription) AppendConfigs(configs map[string]constraint.Config) error {
-	err := s.stateMachine.AppendConfigs(configs)
-	return errors.Wrap(err, "append subscription configs")
-}
-
-// RemoveConfig remove entity property configs.
-func (s *subscription) RemoveConfigs(propertyIDs []string) error {
-	err := s.stateMachine.RemoveConfigs(propertyIDs)
-	return errors.Wrap(err, "remove subscription configs")
-}
-
-// OnMessage recv message from pubsub.
-func (s *subscription) OnMessage(msg statem.Message) bool {
-	return s.stateMachine.OnMessage(msg)
-}
-
-// InvokeMsg dispose entity message.
-func (s *subscription) HandleLoop() {
-	s.stateMachine.HandleLoop()
-}
-
-func (s *subscription) HandleMessage(message statem.Message) []WatchKey {
-	log.Debug("on subscribe", zap.String("subscription", s.GetID()), logger.MessageInst(message))
-	var watchKeys []WatchKey
-	switch msg := message.(type) {
-	case statem.PropertyMessage:
-		switch s.Mode {
-		case SubscriptionModeRealtime:
-			watchKeys = s.invokeRealtime(msg)
-		case SubscriptionModePeriod:
-			watchKeys = s.invokePeriod(msg)
-		case SubscriptionModeChanged:
-			watchKeys = s.invokeChanged(msg)
+		switch mode {
+		case SModeRealtime.S():
+			ctOpts := daprSDK.PublishEventWithContentType("application/json")
+			err = dapr.Get().Select().PublishEvent(ctx, pubsubName, topic, payload, ctOpts)
+			if nil != err {
+				log.L().Error("publish message via dapr", zfield.ID(subID), zfield.Event(ev),
+					zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
+				return feed
+			}
+		case SModeOnChanged.S():
+		//	dapr.Get().Select().PublishEvent(ctx, pubsubName, topic, nil)
+		case SModePeriod.S():
 		default:
-			// invalid subscription mode.
-			log.Error("undefine subscription mode, mode.", zap.String("mode", s.Mode))
 		}
 	default:
-		// invalid msg typs.
-		log.Error("undefine message type.", logger.MessageInst(msg))
+		return feed
 	}
-	return watchKeys
+
+	return feed
 }
 
-// invokeRealtime invoke property where mode is realtime.
-func (s *subscription) invokeRealtime(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Realtime 直接转发就OK了.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	base.CopyPropertiesForJSON()
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
-		log.Error("invoke realtime subscription failed.", logger.MessageInst(msg), zap.Error(err))
+func makePayload(ev v1.PatchEvent, changes []Patch) ([]byte, error) {
+	basics := map[string]string{
+		"id":           ev.Attr(v1.MetaSender),
+		"subscribe_id": ev.Entity(),
+		"type":         ev.Attr(v1.MetaEntityType),
+		"owner":        ev.Attr(v1.MetaOwner),
+		"source":       ev.Attr(v1.MetaSource),
+	}
+	bytes, _ := json.Marshal(basics)
+
+	cc := tdtl.New(`{"properties":{}}`)
+	for _, change := range changes {
+		switch change.Op {
+		case xjson.OpAdd:
+			cc.Append(change.Path, change.Value)
+		case xjson.OpMerge:
+			val := change.Value.Copy()
+			val.Merge(cc.Get(change.Path))
+			cc.Set(change.Path, val)
+		case xjson.OpReplace:
+			cc.Set(change.Path, change.Value)
+		}
+
+		// check patch.
+		if nil != cc.Error() {
+			return nil, errors.Wrap(cc.Error(), "patch json")
+		}
 	}
 
-	return nil
-}
-
-// invokePeriod.
-func (s *subscription) invokePeriod(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Period 直接查询快照.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	base.CopyPropertiesForJSON()
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
-		log.Error("invoke period subscription failed.", logger.MessageInst(msg), zap.Error(err))
-	}
-
-	return nil
-}
-
-// invokeChanged.
-func (s *subscription) invokeChanged(msg statem.PropertyMessage) []WatchKey {
-	// 对于 Changed 直接转发就OK了.
-	base := s.GetBase().DuplicateExpectValue()
-	base.KValues = msg.Properties
-	base.CopyPropertiesForJSON()
-	if err := s.daprClient.PublishEvent(context.Background(), s.PubsubName, s.Topic, base); nil != err {
-		log.Error("invoke changed subscription failed.", logger.MessageInst(msg), zap.Error(err))
-	}
-
-	return nil
-}
-
-// checkSubscription returns subscription status.
-func (s *subscription) checkSubscription() error {
-	if s.Mode == SubscriptionModeUndefine || s.Source == "" ||
-		s.Filter == "" || s.Topic == "" || s.PubsubName == "" {
-		return ErrSubscriptionInvalid
-	}
-
-	return nil
+	payload := tdtl.New(bytes)
+	payload.Set(FieldProperties, cc.Get(FieldProperties))
+	return payload.Raw(), payload.Error()
 }

@@ -24,7 +24,7 @@ func TestParseSearchEngine(t *testing.T) {
 			password string
 			urls     []string
 			err      error
-		}{drive: driver.ElasticsearchDriver, username: "username", password: "password", urls: []string{"localhost"}, err: nil},
+		}{drive: driver.DriverTypeElasticsearch, username: "username", password: "password", urls: []string{"localhost"}, err: nil},
 		},
 		{"es://username:password@localhost,otherhost", struct {
 			drive    driver.Type
@@ -32,7 +32,7 @@ func TestParseSearchEngine(t *testing.T) {
 			password string
 			urls     []string
 			err      error
-		}{drive: driver.ElasticsearchDriver, username: "username", password: "password", urls: []string{"localhost", "otherhost"}, err: nil},
+		}{drive: driver.DriverTypeElasticsearch, username: "username", password: "password", urls: []string{"localhost", "otherhost"}, err: nil},
 		},
 	}
 

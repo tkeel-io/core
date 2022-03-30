@@ -9,7 +9,7 @@ import (
 type SearchMock struct {
 }
 
-func NewSearchMock() *SearchMock {
+func NewSearchMock() pb.SearchHTTPServer {
 	return &SearchMock{}
 }
 
@@ -23,7 +23,7 @@ func (s *SearchMock) Index(context.Context, *pb.IndexObject) (*pb.IndexResponse,
 
 func (s *SearchMock) Search(context.Context, *pb.SearchRequest) (*pb.SearchResponse, error) {
 	return &pb.SearchResponse{
-		PageNum:  2,
-		PageSize: 10,
+		PageNum:  1,
+		PageSize: 100,
 	}, nil
 }
