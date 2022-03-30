@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
@@ -222,11 +224,59 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	}
 
 	// 3. flush timeseries data.
-	// if _, err := n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{}); nil != err {
-	// 	log.L().Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
-	// }
 
+	en.Properties()
+	if err := n.flushTimeSeries(ctx, en); nil != err {
+		log.L().Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
+	}
 	return nil
+}
+
+func (n *Node) flushTimeSeries(ctx context.Context, en Entity) (err error) {
+	tsData := en.GetProp("telemetry")
+	var flushData []*tseries.TSeriesData
+	log.Info("tsData: ", tsData)
+	var res interface{}
+
+	err = json.Unmarshal(tsData.Raw(), &res)
+	if nil != err {
+		log.L().Warn("parse json type", zap.Error(err))
+		return
+	}
+	tss, ok := res.(map[string]interface{})
+	if ok {
+		for k, v := range tss {
+			switch tsOne := v.(type) {
+			case map[string]interface{}:
+				if ts, ok := tsOne["ts"]; ok {
+					tsItem := tseries.TSeriesData{
+						Measurement: "keel",
+						Tags:        map[string]string{"id": en.ID()},
+						Fields:      map[string]float32{},
+						Timestamp:   0,
+					}
+					switch tttV := tsOne["value"].(type) {
+					case float64:
+						tsItem.Fields[k] = float32(tttV)
+						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						flushData = append(flushData, &tsItem)
+					case float32:
+						tsItem.Fields[k] = tttV
+						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						flushData = append(flushData, &tsItem)
+					}
+					continue
+				}
+			default:
+				log.Info(tsOne)
+			}
+		}
+	}
+	_, err = n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{
+		Data:     flushData,
+		Metadata: map[string]string{},
+	})
+	return errors.Wrap(err, "write ts db error")
 }
 
 func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {

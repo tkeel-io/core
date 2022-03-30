@@ -3,7 +3,7 @@ logger:
 
 server:
   name: core
-  app_id: core 
+  app_id: core
   sources:
     - kafka://tkeel-middleware-kafka:9092/core4/core
     - kafka://tkeel-middleware-kafka:9092/core5/core
@@ -23,6 +23,17 @@ components:
   etcd:
     endpoints:
       - http://tkeel-middleware-etcd:2379
+  time_series:
+    name: influxdb
+    properties:
+      - key: url
+        value: http://tkeel-core-influxdb:8086
+      - key: token
+        value: tr2zy29F1Tusl8bkBwOR
+      - key: org
+        value: tkeel
+      - key: bucket
+        value: core
 
 dispatcher:
   id: dispatcher
