@@ -699,10 +699,12 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 				log.L().Error("get entity failed.", zfield.Eid(interface2string(kv["id"])), zap.Error(err))
 				continue
 			}
+
 			entityItem, _ := s.makeResponse(baseRet)
 			out.Items = append(out.Items, entityItem)
 		}
 	}
+
 	if err != nil {
 		log.L().Error("list apim failed", zap.Error(err))
 		return out, errors.Wrap(err, "entity search failed")
