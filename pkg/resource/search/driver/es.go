@@ -83,6 +83,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 	}
 
 	log.L().Info("use ElasticsearchDriver version:", zfield.Value(info.Version.Number))
+	client.Index().Index(EntityIndex).Id("core_init").BodyString(`{"id":"core_init"}`).Do(context.Background())
 	return &ESClient{Client: client}, nil
 }
 
@@ -170,7 +171,12 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$neq":
 			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$eq":
-			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
+			switch valueItem := condition.Value.AsInterface().(type) {
+			case bool:
+				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, valueItem))
+			default:
+				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", valueItem))
+			}
 		case "$prefix":
 			boolQuery = boolQuery.Must(elastic.NewPrefixQuery(condition.Field+".keyword", condition.Value.GetStringValue()))
 		case "$wildcard":
