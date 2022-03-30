@@ -563,13 +563,13 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 }
 
 type tsData struct {
-	TS    int64   `json:"ts,omitempty"`
-	Value float64 `json:"value,omitempty"`
+	TS    int64   `json:"ts"`
+	Value float64 `json:"value"`
 }
 
 type tsDevice struct {
-	TS     int64              `json:"ts,omitempty"`
-	Values map[string]float64 `json:"values,omitempty"`
+	TS     int64              `json:"ts"`
+	Values map[string]float64 `json:"values"`
 }
 
 func adjustTSData(bytes []byte) (dataAdjust []byte) {
