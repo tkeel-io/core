@@ -124,15 +124,15 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		}
 
 		execer := &Execer{
-			state:    state,
-			preFuncs: []Handler{},
+			state: state,
+			preFuncs: []Handler{
+				&handlerImpl{fn: r.handleRawData}},
 			execFunc: state,
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: r.handlePersistent},
-				&handlerImpl{fn: r.handleTemplate},
-				&handlerImpl{fn: r.handleRawData}}}
+				&handlerImpl{fn: r.handleTemplate}}}
 
 		return execer, &Feed{
 			Err:      err,
@@ -622,7 +622,7 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
 
 	// match properties.rawData.
-	for _, patch := range feed.Changes {
+	for _, patch := range feed.Patches {
 		if FieldRawData == patch.Path {
 			// attempt extract rawData.
 			prefix := patch.Value.Get("type").String()
@@ -630,6 +630,7 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			if prefix == rawDataRawType {
 				return feed
 			}
+
 			values := patch.Value.Get("values").String()
 			bytes, err := base64.StdEncoding.DecodeString(values)
 			if nil != err {
@@ -646,21 +647,12 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			}
 
 			path := strings.Join([]string{FieldProperties, prefix}, ".")
-			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-				Id:        util.IG().EvID(),
-				Timestamp: time.Now().UnixNano(),
-				Metadata: map[string]string{
-					v1.MetaType:     string(v1.ETEntity),
-					v1.MetaEntityID: feed.EntityID},
-				Data: &v1.ProtoEvent_Patches{
-					Patches: &v1.PatchDatas{
-						Patches: []*v1.PatchData{{
-							Path:     path,
-							Value:    bytes,
-							Operator: xjson.OpMerge.String(),
-						}},
-					}},
+			feed.Patches = append(feed.Patches, Patch{
+				Path:  path,
+				Value: tdtl.New(bytes),
+				Op:    xjson.OpMerge,
 			})
+			return feed
 		}
 	}
 
