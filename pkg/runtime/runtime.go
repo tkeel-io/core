@@ -124,15 +124,15 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		}
 
 		execer := &Execer{
-			state:    state,
-			preFuncs: []Handler{},
+			state: state,
+			preFuncs: []Handler{
+				&handlerImpl{fn: r.handleRawData}},
 			execFunc: state,
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: r.handlePersistent},
-				&handlerImpl{fn: r.handleTemplate},
-				&handlerImpl{fn: r.handleRawData}}}
+				&handlerImpl{fn: r.handleTemplate}}}
 
 		return execer, &Feed{
 			Err:      err,
@@ -619,6 +619,47 @@ func adjustTSData(bytes []byte) (dataAdjust []byte) {
 }
 
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
+
+	// match properties.rawData.
+	for _, patch := range feed.Patches {
+		if FieldRawData == patch.Path {
+			// attempt extract rawData.
+			prefix := patch.Value.Get("type").String()
+
+			if prefix == rawDataRawType {
+				return feed
+			}
+
+			values := patch.Value.Get("values").String()
+			bytes, err := base64.StdEncoding.DecodeString(values)
+			if nil != err {
+				log.L().Warn("attempt extract RawData", zfield.Eid(feed.EntityID),
+					zfield.Reason(err.Error()), zfield.Value(patch.Value.String()))
+				return feed
+			}
+
+			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
+				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+
+			if prefix == rawDataTelemetryType {
+				bytes = adjustTSData(bytes)
+			}
+
+			path := strings.Join([]string{FieldProperties, prefix}, ".")
+			feed.Patches = append(feed.Patches, Patch{
+				Path:  path,
+				Value: tdtl.New(bytes),
+				Op:    xjson.OpMerge,
+			})
+			return feed
+		}
+	}
+
+	return feed
+}
+
+func (r *Runtime) handleRawData2(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
 
 	// match properties.rawData.
