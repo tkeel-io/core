@@ -24,13 +24,23 @@ func (m *APIManagerMock) OnRespond(ctx context.Context, resp *holder.Response) {
 }
 
 // CreateEntity create entity.
-func (m *APIManagerMock) CreateEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
-	return nil, nil
+func (m *APIManagerMock) CreateEntity(_ context.Context, in *apim.Base) (*apim.BaseRet, error) {
+	return &apim.BaseRet{
+		ID:     in.ID,
+		Type:   in.Type,
+		Owner:  in.Owner,
+		Source: in.Source,
+	}, nil
 }
 
 // UpdateEntity update entity.
-func (m *APIManagerMock) PatchEntity(context.Context, *apim.Base, []*v1.PatchData, ...apim.Option) (*apim.BaseRet, []byte, error) {
-	return nil, nil, nil
+func (m *APIManagerMock) PatchEntity(_ context.Context, in *apim.Base, _ []*v1.PatchData, _ ...apim.Option) (*apim.BaseRet, []byte, error) {
+	return &apim.BaseRet{
+		ID:     in.ID,
+		Type:   in.Type,
+		Owner:  in.Owner,
+		Source: in.Source,
+	}, nil, nil
 }
 
 // DeleteEntity delete entity.
@@ -39,8 +49,13 @@ func (m *APIManagerMock) DeleteEntity(context.Context, *apim.Base) error {
 }
 
 // GetProperties returns entity properties.
-func (m *APIManagerMock) GetEntity(context.Context, *apim.Base) (*apim.BaseRet, error) {
-	return nil, nil
+func (m *APIManagerMock) GetEntity(_ context.Context, in *apim.Base) (*apim.BaseRet, error) {
+	return &apim.BaseRet{
+		ID:     in.ID,
+		Type:   in.Type,
+		Owner:  in.Owner,
+		Source: in.Source,
+	}, nil
 }
 
 // AppendMapper append entity mapper.

@@ -563,7 +563,7 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 
 	// clip copy scheme.
 	if scheme, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
-		log.L().Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(err.Error()))
+		log.L().Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
 	} else if cpflag {
 		baseRet.Scheme = make(map[string]interface{})
 		for path, schemeValue := range scheme {

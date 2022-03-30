@@ -31,5 +31,5 @@ func Test_defaultPage(t *testing.T) {
 	page := &pb.Pager{Offset: 20}
 
 	defaultPage(page)
-	assert.Equal(t, int64(10), page.Limit)
+	assert.Equal(t, DefaultLimit, page.Limit)
 }

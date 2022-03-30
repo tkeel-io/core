@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
@@ -38,7 +39,8 @@ func TestEntity_Handle(t *testing.T) {
 
 	in := []*Feed{
 		{
-			Event: nil,
+			Event: &v1.ProtoEvent{
+				Metadata: map[string]string{}},
 			Patches: []Patch{
 				{
 					Path:  "properties.temp",

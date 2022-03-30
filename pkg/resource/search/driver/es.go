@@ -39,6 +39,8 @@ import (
 const DriverTypeElasticsearch Type = "elasticsearch"
 
 const EntityIndex = "entity"
+const DefaultLimit int32 = 20
+const MaxLimit int32 = 200
 
 type ESConfig struct {
 	Username  string   `json:"username" mapstructure:"username"`
@@ -185,8 +187,11 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Limit == 0 {
-		page.Limit = 0
+		page.Limit = DefaultLimit
+	} else if page.Limit > MaxLimit {
+		page.Limit = MaxLimit
 	}
+
 	if page.Sort == "" {
 		page.Sort = "id"
 	}

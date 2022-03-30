@@ -273,7 +273,7 @@ func Test_PatchEntityConfigs(t *testing.T) {
 	configs, err := structpb.NewValue([]interface{}{
 		map[string]interface{}{
 			"path":     "metrics.cpu_used",
-			"operator": "relpace",
+			"operator": "replace",
 			"value": map[string]interface{}{
 				"type": "int",
 				"define": map[string]interface{}{

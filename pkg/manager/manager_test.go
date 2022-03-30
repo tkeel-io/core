@@ -28,13 +28,26 @@ func TestEntity_GetEntity(t *testing.T) {
 }
 
 func Test_checkTQL(t *testing.T) {
-	mIns := &dao.Mapper{
-		ID:  "test",
-		TQL: `insert into iotd-098cafe6-821f-411d-8f84-3b4de355b5b7_core-broker-0 select iotd-098cafe6-821f-411d-8f84-3b4de355b5b7.*`,
+	mappers := []struct {
+		Name   string
+		TQL    string
+		Expect string
+	}{{
+		Name:   "test1",
+		TQL:    "insert into device123 select device234.metrics as metrics, device234.metrics.cpu as cpu",
+		Expect: "insert into device123 select device234.properties.metrics as properties.metrics, device234.properties.metrics.cpu as properties.cpu",
+	}, {
+		Name:   "test2",
+		TQL:    "insert into sub123 select device123.*",
+		Expect: "insert into sub123 select device123.*",
+	}}
+
+	for index := range mappers {
+		t.Run(mappers[index].Name, func(t *testing.T) {
+			mp := &dao.Mapper{Name: mappers[index].Name, TQL: mappers[index].TQL}
+			err := checkMapper(mp)
+			assert.Nil(t, err)
+			assert.Equal(t, mappers[index].Expect, mp.TQL)
+		})
 	}
-
-	checkMapper(mIns)
-	t.Log(mIns)
-
-	assert.Equal(t, `insert into device123 select device234.properties.metrics as properties.metrics, device234.properties.metrics.cpu as properties.cpu`, mIns.TQL)
 }
