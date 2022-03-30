@@ -258,11 +258,13 @@ func (n *Node) flushTimeSeries(ctx context.Context, en Entity) (err error) {
 					switch tttV := tsOne["value"].(type) {
 					case float64:
 						tsItem.Fields[k] = float32(tttV)
-						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						timestamp, _ := ts.(float64)
+						tsItem.Timestamp = int64(timestamp) * 1e6
 						flushData = append(flushData, &tsItem)
 					case float32:
 						tsItem.Fields[k] = tttV
-						tsItem.Timestamp = int64(ts.(float64)) * 1e6
+						timestamp, _ := ts.(float64)
+						tsItem.Timestamp = int64(timestamp) * 1e6
 						flushData = append(flushData, &tsItem)
 					}
 					continue

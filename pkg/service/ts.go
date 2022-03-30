@@ -242,9 +242,10 @@ func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 	h := ctx.Value(contextHTTPHeaderKey)
 	header, ok := h.(http.Header)
 	if ok {
+		var bytes []byte
 		auth := header.Get("X-Tkeel-Auth")
 		log.Info("user: ", auth)
-		if bytes, err := base64.StdEncoding.DecodeString(auth); err == nil {
+		if bytes, err = base64.StdEncoding.DecodeString(auth); err == nil {
 			urlquery, err1 := url.ParseQuery(string(bytes))
 			if err1 == nil {
 				user = urlquery.Get("user")
@@ -274,7 +275,9 @@ func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 				log.L().Error("get entity", zfield.Eid(entityBase.ID), zap.Error(err))
 				continue
 			}
-			if entity, err := Entity2EntityResponse(baseRet); nil != err {
+
+			var entity *pb.EntityResponse
+			if entity, err = Entity2EntityResponse(baseRet); nil != err {
 				log.Error("patch entity failed.", zfield.Eid(v), zap.Error(err))
 			} else {
 				resp.Items = append(resp.Items, entity)

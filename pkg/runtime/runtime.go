@@ -659,55 +659,6 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func (r *Runtime) handleRawData2(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
-
-	// match properties.rawData.
-	for _, patch := range feed.Changes {
-		if FieldRawData == patch.Path {
-			// attempt extract rawData.
-			prefix := patch.Value.Get("type").String()
-
-			if prefix == rawDataRawType {
-				return feed
-			}
-			values := patch.Value.Get("values").String()
-			bytes, err := base64.StdEncoding.DecodeString(values)
-			if nil != err {
-				log.L().Warn("attempt extract RawData", zfield.Eid(feed.EntityID),
-					zfield.Reason(err.Error()), zfield.Value(patch.Value.String()))
-				return feed
-			}
-
-			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
-				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
-
-			if prefix == rawDataTelemetryType {
-				bytes = adjustTSData(bytes)
-			}
-
-			path := strings.Join([]string{FieldProperties, prefix}, ".")
-			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-				Id:        util.IG().EvID(),
-				Timestamp: time.Now().UnixNano(),
-				Metadata: map[string]string{
-					v1.MetaType:     string(v1.ETEntity),
-					v1.MetaEntityID: feed.EntityID},
-				Data: &v1.ProtoEvent_Patches{
-					Patches: &v1.PatchDatas{
-						Patches: []*v1.PatchData{{
-							Path:     path,
-							Value:    bytes,
-							Operator: xjson.OpMerge.String(),
-						}},
-					}},
-			})
-		}
-	}
-
-	return feed
-}
-
 func (r *Runtime) AppendMapper(mc MCache) {
 	log.L().Info("append mapper into runtime", zfield.ID(r.id),
 		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
