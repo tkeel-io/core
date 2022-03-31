@@ -49,6 +49,7 @@ func NewTSService() (*TSService, error) {
 		tseriesClient: tseriesClient,
 		entityCache:   make(map[string][]string),
 		lock:          new(sync.RWMutex),
+		inited:        atomic.NewBool(false),
 	}, nil
 }
 
