@@ -247,7 +247,7 @@ func initialzeService(apiManager apim.APIManager, searchClient corev1.SearchHTTP
 	// initialize proxy service.
 	_proxySrv.Init(apiManager)
 	// initialize ts service.
-	_proxySrv.Init(apiManager)
+	_tsSrv.Init(apiManager)
 }
 
 var (
