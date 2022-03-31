@@ -172,6 +172,20 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	}
 }
 
+func (r *Runtime) loadTemplate(tid string) (tdtl.Node, error) {
+	if strings.TrimSpace(tid) == "" {
+		return tdtl.New(`{}`), nil
+	}
+
+	ten, err := r.LoadEntity(tid)
+	if nil != err {
+		log.L().Error("load template", zap.Error(err), zfield.Eid(tid))
+		return nil, errors.Wrap(err, "load template")
+	}
+
+	return ten.Get(FieldScheme), nil
+}
+
 // 处理实体生命周期.
 func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
 	log.L().Info("prepare system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
@@ -216,7 +230,18 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 				EntityID: ev.Entity()}
 		}
 
-		props := state.Get("properties")
+		var scheme tdtl.Node
+		templateID := state.Get(FieldTemplate).String()
+		if scheme, err = r.loadTemplate(templateID); nil != err {
+			log.L().Error("load template", zap.Error(err),
+				zfield.Eid(ev.Entity()), zfield.Template(templateID))
+			return execer, &Feed{
+				Err:      err,
+				Event:    ev,
+				EntityID: ev.Entity()}
+		}
+
+		props := state.Get(FieldProperties)
 		r.entities[ev.Entity()] = state
 		execer.state = state
 		execer.execFunc = state
@@ -227,8 +252,12 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			EntityID: ev.Entity(),
 			Patches: []Patch{{
 				Op:    xjson.OpMerge,
-				Path:  "properties",
-				Value: tdtl.New(props.Raw())}}}
+				Path:  FieldProperties,
+				Value: tdtl.New(props.Raw())}, {
+				Op:    xjson.OpReplace,
+				Path:  FieldScheme,
+				Value: tdtl.New(scheme.Raw()),
+			}}}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
@@ -520,8 +549,12 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle template", zfield.Eid(feed.EntityID))
 	for index := range feed.Changes {
-		if FieldTemplate == feed.Changes[index].Path {
+		targetPath := "properties.basicInfo.templateId"
+		if targetPath == feed.Changes[index].Path {
+			log.Info("entity template changed", zfield.Eid(feed.EntityID),
+				zfield.Template(feed.Changes[index].Value.String()))
 			feed.Err = r.onTemplateChanged(ctx,
 				feed.EntityID, feed.Changes[index].Value.String())
 			break
