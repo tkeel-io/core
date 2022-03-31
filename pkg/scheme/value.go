@@ -201,6 +201,13 @@ func parseField(in Config) (out Config, err error) {
 		return out, xerrors.ErrEntityConfigInvalid
 	}
 
-	in.LastTime = util.UnixMilli()
+	in.LastTime = lastTimestamp(in.LastTime)
 	return in, errors.Wrap(err, "parse property config failed")
+}
+
+func lastTimestamp(timestamp int64) int64 {
+	if timestamp == 0 {
+		timestamp = util.UnixMilli()
+	}
+	return timestamp
 }
