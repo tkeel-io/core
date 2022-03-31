@@ -15,10 +15,12 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -33,6 +35,7 @@ type TSService struct {
 	entityCache   map[string][]string
 	apiManager    apim.APIManager
 	lock          *sync.RWMutex
+	inited        *atomic.Bool
 }
 
 func NewTSService() (*TSService, error) {
@@ -50,6 +53,7 @@ func NewTSService() (*TSService, error) {
 }
 
 func (s *TSService) Init(apiManager apim.APIManager) {
+	s.inited.Store(true)
 	s.apiManager = apiManager
 }
 
@@ -238,6 +242,11 @@ func Entity2EntityResponse(base *apim.BaseRet) (out *pb.EntityResponse, err erro
 }
 
 func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEntitiesRequest) (resp *pb.GetLatestEntitiesResponse, err error) {
+	if !s.inited.Load() {
+		log.L().Warn("service not ready")
+		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
+	}
+
 	resp = &pb.GetLatestEntitiesResponse{}
 	user := defalutUser
 	h := ctx.Value(contextHTTPHeaderKey)
