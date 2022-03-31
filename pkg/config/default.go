@@ -22,7 +22,7 @@ var (
 		GRPCAddr: ":31234",
 	}
 	_defaultLogConfig = LogConfig{
-		Dev:      true,
+		Dev:      false,
 		Level:    "INFO",
 		Encoding: "json",
 	}

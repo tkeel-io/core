@@ -47,7 +47,12 @@ func DefaultEntity(id string) Entity {
 
 func NewEntity(id string, state []byte) (Entity, error) {
 	s := tdtl.New(state)
-	s.Set("scheme", tdtl.New([]byte("{}")))
+	// construct scheme if not exists.
+	scheme := s.Get(FieldScheme)
+	if tdtl.Null == scheme.Type() {
+		s.Set(FieldScheme, tdtl.New([]byte("{}")))
+	}
+
 	return &entity{id: id, state: *s,
 			pathConstructor: pathConstructor},
 		errors.Wrap(s.Error(), "new entity")

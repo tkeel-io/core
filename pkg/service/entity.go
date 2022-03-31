@@ -161,6 +161,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 				Value:    entity.Properties,
 				Operator: xjson.OpMerge.String()})
 		}
+	case nil:
 	default:
 		log.L().Error("update entity failed.",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
@@ -168,7 +169,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	schemeVal := req.Configs.AsInterface()
-	switch properties.(type) {
+	switch schemeVal.(type) {
 	case map[string]interface{}:
 		if entity.Scheme, err = json.Marshal(schemeVal); nil != err {
 			log.L().Error("update entity, invalid params", zfield.Reason(err.Error()),
@@ -179,10 +180,11 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		// patch replace configs.
 		if len(entity.Scheme) > 0 {
 			patches = append(patches, &pb.PatchData{
-				Path:     FieldProps,
+				Path:     FieldScheme,
 				Value:    entity.Scheme,
 				Operator: xjson.OpReplace.String()})
 		}
+	case nil:
 	default:
 		log.L().Error("update entity failed.",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))

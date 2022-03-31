@@ -173,6 +173,10 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 }
 
 func (r *Runtime) loadTemplate(tid string) (tdtl.Node, error) {
+	if strings.TrimSpace(tid) == "" {
+		return tdtl.New(`{}`), nil
+	}
+
 	ten, err := r.LoadEntity(tid)
 	if nil != err {
 		log.L().Error("load template", zap.Error(err), zfield.Eid(tid))
@@ -545,9 +549,12 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handle template", zfield.Eid(feed.EntityID))
 	for index := range feed.Changes {
 		targetPath := "properties.basicInfo.templateId"
 		if targetPath == feed.Changes[index].Path {
+			log.Info("entity template changed", zfield.Eid(feed.EntityID),
+				zfield.Template(feed.Changes[index].Value.String()))
 			feed.Err = r.onTemplateChanged(ctx,
 				feed.EntityID, feed.Changes[index].Value.String())
 			break
