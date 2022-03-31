@@ -22,6 +22,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
 )
@@ -200,5 +201,13 @@ func parseField(in Config) (out Config, err error) {
 		return out, xerrors.ErrEntityConfigInvalid
 	}
 
+	in.LastTime = lastTimestamp(in.LastTime)
 	return in, errors.Wrap(err, "parse property config failed")
+}
+
+func lastTimestamp(timestamp int64) int64 {
+	if timestamp == 0 {
+		timestamp = util.UnixMilli()
+	}
+	return timestamp
 }
