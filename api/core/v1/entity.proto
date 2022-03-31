@@ -375,7 +375,8 @@ message UpdateEntityRequest {
   string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
   string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
   string template_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "template id"}];
-  google.protobuf.Value properties = 15 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity properties"}];
+  string description = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "template id"}];
+  google.protobuf.Value properties = 15 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity description"}];
   google.protobuf.Value configs = 16 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity configs"}];
 }
 

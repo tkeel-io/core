@@ -38,11 +38,12 @@ import (
 )
 
 const (
-	sep           = "."
-	FieldScheme   = "scheme"
-	FieldProps    = "properties"
-	FieldTemplate = "template_id"
-	InternalSep   = ".define.fields."
+	sep              = "."
+	FieldScheme      = "scheme"
+	FieldProps       = "properties"
+	FieldTemplate    = "template_id"
+	FieldDescription = "description"
+	InternalSep      = ".define.fields."
 )
 
 func schemeKey(key string) string {
@@ -137,14 +138,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	parseHeaderFrom(ctx, entity)
 	patches := []*pb.PatchData{}
 
-	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
-		patches = append(patches, &pb.PatchData{
-			Path:     FieldTemplate,
-			Value:    tdtl.New(template).Raw(),
-			Operator: xjson.OpReplace.String(),
-		})
-	}
-
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
 	case map[string]interface{}:
@@ -153,6 +146,9 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
+
+		// TODO: 临时截取.
+		req.TemplateId = tdtl.New(entity.Properties).Get("basicInfo.templateId").String()
 
 		// patch merge properties.
 		if len(entity.Properties) > 0 {
@@ -166,6 +162,22 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		log.L().Error("update entity failed.",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
+	}
+
+	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
+		patches = append(patches, &pb.PatchData{
+			Path:     FieldTemplate,
+			Value:    tdtl.New(template).Raw(),
+			Operator: xjson.OpReplace.String(),
+		})
+	}
+
+	if len(req.Description) > 0 {
+		patches = append(patches, &pb.PatchData{
+			Path:     FieldDescription,
+			Value:    tdtl.New(req.Description).Raw(),
+			Operator: xjson.OpReplace.String(),
+		})
 	}
 
 	schemeVal := req.Configs.AsInterface()
