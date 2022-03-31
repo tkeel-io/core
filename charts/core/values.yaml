@@ -10,7 +10,7 @@ image:
   repository: tkeelio/core
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "runtime"
+#   tag: "runtime"
 
 nameOverride: "core"
 fullnameOverride: "core"

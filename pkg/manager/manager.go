@@ -348,7 +348,8 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 
 	var err error
 	var mo *dao.Mapper
-	if mo, err = m.entityRepo.GetMapper(ctx, mp); nil != err {
+	if mo, err = m.entityRepo.GetMapper(ctx, &dao.Mapper{
+		ID: mp.ID, Owner: mp.Owner, EntityID: mp.EntityID}); nil != err {
 		if !errors.Is(err, xerrors.ErrMapperNotFound) {
 			log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 			return errors.Wrap(err, "append mapper")

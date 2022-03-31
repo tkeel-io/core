@@ -104,3 +104,12 @@ func TestTTDL(t *testing.T) {
 	t.Log(string(cc.Raw()))
 	t.Log(cc.Get("").String())
 }
+
+func Test_adjustTSData(t *testing.T) {
+	in := []byte(`{"subOffline":334,"a":0}`)
+	out := adjustTSData(in)
+	t.Log(string(out))
+	in = []byte(`{"ts":1646954803319,"values":{"humidity5":83.0,"temperature5":43.6}}`)
+	out = adjustTSData(in)
+	t.Log(string(out))
+}

@@ -238,6 +238,7 @@ func Entity2EntityResponse(base *apim.BaseRet) (out *pb.EntityResponse, err erro
 }
 
 func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEntitiesRequest) (resp *pb.GetLatestEntitiesResponse, err error) {
+	resp = &pb.GetLatestEntitiesResponse{}
 	user := defalutUser
 	h := ctx.Value(contextHTTPHeaderKey)
 	header, ok := h.(http.Header)
