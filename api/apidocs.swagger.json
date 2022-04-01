@@ -518,9 +518,13 @@
                   "type": "string",
                   "description": "template id"
                 },
+                "description": {
+                  "type": "string",
+                  "description": "template id"
+                },
                 "properties": {
                   "type": "object",
-                  "description": "entity properties"
+                  "description": "entity description"
                 },
                 "configs": {
                   "type": "object",
@@ -1774,6 +1778,10 @@
           "type": "string",
           "description": "entity template"
         },
+        "description": {
+          "type": "string",
+          "description": "entity description"
+        },
         "mappers": {
           "type": "array",
           "items": {
@@ -1918,8 +1926,8 @@
       "type": "object",
       "properties": {
         "total": {
-          "type": "string",
-          "format": "int64",
+          "type": "integer",
+          "format": "int32",
           "description": "total count of the entities"
         },
         "page_num": {

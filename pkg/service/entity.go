@@ -38,11 +38,12 @@ import (
 )
 
 const (
-	sep           = "."
-	FieldScheme   = "scheme"
-	FieldProps    = "properties"
-	FieldTemplate = "template_id"
-	InternalSep   = ".define.fields."
+	sep              = "."
+	FieldScheme      = "scheme"
+	FieldProps       = "properties"
+	FieldTemplate    = "template_id"
+	FieldDescription = "description"
+	InternalSep      = ".define.fields."
 )
 
 func schemeKey(key string) string {
@@ -129,6 +130,10 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
+	log.L().Debug("update entity", zfield.Eid(req.Id),
+		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
+		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -136,14 +141,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	patches := []*pb.PatchData{}
-
-	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
-		patches = append(patches, &pb.PatchData{
-			Path:     FieldTemplate,
-			Value:    tdtl.New(template).Raw(),
-			Operator: xjson.OpReplace.String(),
-		})
-	}
 
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
@@ -166,6 +163,22 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		log.L().Error("update entity failed.",
 			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
+	}
+
+	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
+		patches = append(patches, &pb.PatchData{
+			Path:     FieldTemplate,
+			Value:    tdtl.NewString(template).Raw(),
+			Operator: xjson.OpReplace.String(),
+		})
+	}
+
+	if len(req.Description) > 0 {
+		patches = append(patches, &pb.PatchData{
+			Path:     FieldDescription,
+			Value:    tdtl.NewString(req.Description).Raw(),
+			Operator: xjson.OpReplace.String(),
+		})
 	}
 
 	schemeVal := req.Configs.AsInterface()
@@ -792,6 +805,8 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	out.Source = base.Source
 	out.Version = base.Version
 	out.LastTime = base.LastTime
+	out.TemplateId = base.TemplateID
+	out.Description = base.Description
 	return out, nil
 }
 

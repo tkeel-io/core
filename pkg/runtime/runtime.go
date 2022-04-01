@@ -551,8 +551,7 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle template", zfield.Eid(feed.EntityID))
 	for index := range feed.Changes {
-		targetPath := "properties.basicInfo.templateId"
-		if targetPath == feed.Changes[index].Path {
+		if FieldTemplate == feed.Changes[index].Path {
 			log.Info("entity template changed", zfield.Eid(feed.EntityID),
 				zfield.Template(feed.Changes[index].Value.String()))
 			feed.Err = r.onTemplateChanged(ctx,
