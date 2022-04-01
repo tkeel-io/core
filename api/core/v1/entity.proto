@@ -595,9 +595,10 @@ message EntityResponse {
     int64 version = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity version"}];
     int64 last_time = 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity last modify timestamp"}];
     string template_id = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity template"}];
-    repeated Mapper mappers = 9 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity mappers"}];
-    google.protobuf.Value configs = 11 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity configs"}];
-    google.protobuf.Value properties = 12 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity properties"}];
+    string description = 10 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity description"}];
+    repeated Mapper mappers = 11 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity mappers"}];
+    google.protobuf.Value configs = 12 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity configs"}];
+    google.protobuf.Value properties = 13 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity properties"}];
 }
 
 

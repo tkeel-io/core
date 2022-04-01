@@ -1778,6 +1778,10 @@
           "type": "string",
           "description": "entity template"
         },
+        "description": {
+          "type": "string",
+          "description": "entity description"
+        },
         "mappers": {
           "type": "array",
           "items": {

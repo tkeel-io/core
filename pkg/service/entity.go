@@ -130,6 +130,10 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
+	log.L().Debug("update entity", zfield.Eid(req.Id),
+		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
+		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
+
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -146,9 +150,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
-
-		// TODO: 临时截取.
-		req.TemplateId = tdtl.New(entity.Properties).Get("basicInfo.templateId").String()
 
 		// patch merge properties.
 		if len(entity.Properties) > 0 {
@@ -167,7 +168,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
 		patches = append(patches, &pb.PatchData{
 			Path:     FieldTemplate,
-			Value:    tdtl.New(template).Raw(),
+			Value:    tdtl.NewString(template).Raw(),
 			Operator: xjson.OpReplace.String(),
 		})
 	}
@@ -175,7 +176,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	if len(req.Description) > 0 {
 		patches = append(patches, &pb.PatchData{
 			Path:     FieldDescription,
-			Value:    tdtl.New(req.Description).Raw(),
+			Value:    tdtl.NewString(req.Description).Raw(),
 			Operator: xjson.OpReplace.String(),
 		})
 	}
@@ -804,6 +805,8 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 	out.Source = base.Source
 	out.Version = base.Version
 	out.LastTime = base.LastTime
+	out.TemplateId = base.TemplateID
+	out.Description = base.Description
 	return out, nil
 }
 

@@ -23,16 +23,17 @@ type Base struct {
 }
 
 type BaseRet struct {
-	ID         string                 `json:"id" msgpack:"id" mapstructure:"id"`
-	Type       string                 `json:"type" msgpack:"type" mapstructure:"type"`
-	Owner      string                 `json:"owner" msgpack:"owner" mapstructure:"owner"`
-	Source     string                 `json:"source" msgpack:"source" mapstructure:"source"`
-	Version    int64                  `json:"version" msgpack:"version" mapstructure:"version"`
-	LastTime   int64                  `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
-	Mappers    []*v1.Mapper           `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
-	TemplateID string                 `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
-	Properties map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"properties"`
-	Scheme     map[string]interface{} `json:"scheme" msgpack:"-" mapstructure:"scheme"`
+	ID          string                 `json:"id" msgpack:"id" mapstructure:"id"`
+	Type        string                 `json:"type" msgpack:"type" mapstructure:"type"`
+	Owner       string                 `json:"owner" msgpack:"owner" mapstructure:"owner"`
+	Source      string                 `json:"source" msgpack:"source" mapstructure:"source"`
+	Version     int64                  `json:"version" msgpack:"version" mapstructure:"version"`
+	LastTime    int64                  `json:"last_time" msgpack:"last_time" mapstructure:"last_time"`
+	Mappers     []*v1.Mapper           `json:"mappers" msgpack:"mappers" mapstructure:"mappers"`
+	TemplateID  string                 `json:"template_id" msgpack:"template_id" mapstructure:"template_id"`
+	Description string                 `json:"description" msgpack:"description" mapstructure:"description"`
+	Properties  map[string]interface{} `json:"properties" msgpack:"properties" mapstructure:"properties"`
+	Scheme      map[string]interface{} `json:"scheme" msgpack:"-" mapstructure:"scheme"`
 }
 
 func (b *Base) Basic() Base {
