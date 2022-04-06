@@ -447,6 +447,9 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				mapper.TentacleTypeEntity == tentacle.Type() {
 				targets = append(targets, tentacle.TargetID())
 			}
+
+			log.L().Debug("tentacle matched", zfield.Eid(entityID), zfield.Path(change.Path),
+				zfield.Type(tentacle.Type()), zfield.ID(tentacle.ID()), zfield.Target(tentacle.TargetID()))
 		}
 
 		targets = util.Unique(targets)
