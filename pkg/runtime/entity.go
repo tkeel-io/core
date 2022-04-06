@@ -82,7 +82,21 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
 			cc.Append(patch.Path, patch.Value)
 		case xjson.OpCopy:
 		case xjson.OpMerge:
-			cc.Set(patch.Path, cc.Get(patch.Path).Merge(patch.Value))
+			var err error
+			mval := cc.Get(patch.Path).Merge(patch.Value)
+			if err = mval.Error(); tdtl.Object != mval.Type() {
+				log.Error("patch merge", zfield.Eid(e.id), zap.Error(err),
+					zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
+				err = xerrors.ErrInternal
+			}
+
+			if nil != err {
+				feed.Err = err
+				feed.Patches = []Patch{}
+				feed.State = e.Raw()
+				return feed
+			}
+			cc.Set(patch.Path, mval)
 		case xjson.OpRemove:
 			cc.Del(patch.Path)
 		case xjson.OpReplace:
