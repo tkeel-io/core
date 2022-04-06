@@ -126,7 +126,7 @@ func (n *Node) listMetadata() {
 				continue
 			}
 			log.L().Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-			n.mappers[mp.ID] = mpIns
+			n.mappers[mpIns.ID()] = mpIns
 		}
 	})
 
@@ -164,7 +164,7 @@ func (n *Node) watchMetadata() {
 				}
 
 				// cache mapper.
-				n.mappers[mp.ID] = mpIns
+				n.mappers[mpIns.ID()] = mpIns
 				for rtID, mc := range n.mapper(mpIns) {
 					if rt, has := n.runtimes[rtID]; has {
 						rt.AppendMapper(*mc)
