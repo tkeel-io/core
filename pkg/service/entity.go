@@ -869,7 +869,7 @@ func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error
 	}
 
 	if err := s.apiManager.AppendMapper(ctx, mp); nil != err {
-		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(req.Id))
+		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(en.ID))
 		return errors.Wrap(err, "create template mapper")
 	}
 
