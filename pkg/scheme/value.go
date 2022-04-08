@@ -188,12 +188,12 @@ func parseField(in Config) (out Config, err error) {
 			return out, errors.Wrap(err, "parse property config failed")
 		}
 
-		for _, field := range jsonDefine.Fields {
+		for cfgID, field := range jsonDefine.Fields {
 			var cfg Config
 			if cfg, err = parseField(field); nil != err {
 				return out, errors.Wrap(err, "parse property config failed")
 			}
-			jsonDefine2.Fields[cfg.ID] = cfg
+			jsonDefine2.Fields[cfgID] = cfg
 		}
 
 		in.Define["fields"] = jsonDefine2.Fields
