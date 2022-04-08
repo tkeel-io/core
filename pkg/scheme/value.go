@@ -193,6 +193,7 @@ func parseField(in Config) (out Config, err error) {
 			if cfg, err = parseField(field); nil != err {
 				return out, errors.Wrap(err, "parse property config failed")
 			}
+			cfg.ID = cfgID
 			jsonDefine2.Fields[cfgID] = cfg
 		}
 
