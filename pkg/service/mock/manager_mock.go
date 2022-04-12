@@ -63,6 +63,11 @@ func (m *APIManagerMock) AppendMapper(ctx context.Context, mp *dao.Mapper) error
 	return nil
 }
 
+// AppendMapperZ append entity mapper.
+func (m *APIManagerMock) AppendMapperZ(ctx context.Context, mp *dao.Mapper) error {
+	return nil
+}
+
 // RemoveMapper remove entity mapper.
 func (m *APIManagerMock) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
 	return nil

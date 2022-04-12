@@ -868,7 +868,7 @@ func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error
 		Description: "mapper instance to sync scheme",
 	}
 
-	if err := s.apiManager.AppendMapper(ctx, mp); nil != err {
+	if err := s.apiManager.AppendMapperZ(ctx, mp); nil != err {
 		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(en.ID))
 		return errors.Wrap(err, "create template mapper")
 	}

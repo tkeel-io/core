@@ -369,6 +369,34 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 	return nil
 }
 
+// AppendMapper append a mapper into entity.
+func (m *apiManager) AppendMapperZ(ctx context.Context, mp *dao.Mapper) error {
+	log.L().Info("entity.AppendMapperZ",
+		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
+
+	var err error
+	var mo *dao.Mapper
+	if mo, err = m.entityRepo.GetMapper(ctx, &dao.Mapper{
+		ID: mp.ID, Owner: mp.Owner, EntityID: mp.EntityID}); nil != err {
+		if !errors.Is(err, xerrors.ErrMapperNotFound) {
+			log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+			return errors.Wrap(err, "append mapper")
+		}
+	} else {
+		if mo.Owner != mp.Owner || mo.EntityID != mp.EntityID {
+			log.L().Error("append mapper, exists.", zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+			return errors.Wrap(err, "append mapper")
+		}
+	}
+
+	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
+		log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
+		return errors.Wrap(err, "append mapper")
+	}
+
+	return nil
+}
+
 // DeleteMapper delete mapper from entity.
 func (m *apiManager) RemoveMapper(ctx context.Context, mp *dao.Mapper) error {
 	log.L().Info("entity.RemoveMapper",
