@@ -67,7 +67,7 @@ func (e *entity) Get(path string) tdtl.Node {
 	return e.state.Get(path)
 }
 
-func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed {
+func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 	if nil != feed.Err {
 		return feed
 	}
