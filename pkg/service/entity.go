@@ -135,10 +135,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("update entity", zfield.Eid(req.Id),
-		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
-		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
-
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -146,6 +142,11 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	patches := []*pb.PatchData{}
+
+	log.L().Debug("update entity",
+		zfield.Eid(req.Id), zfield.Owner(entity.Owner),
+		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
+		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
 
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
@@ -171,6 +172,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
+		entity.TemplateID = template
 		patches = append(patches, &pb.PatchData{
 			Path:     FieldTemplate,
 			Value:    tdtl.NewString(template).Raw(),
@@ -867,6 +869,8 @@ func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error
 		EntityID:    en.ID,
 		Description: "mapper instance to sync scheme",
 	}
+
+	log.L().Info("onTemplateChanged", zfield.Eid(en.ID), zfield.ID(mp.ID), zfield.TQL(mp.TQL))
 
 	if err := s.apiManager.AppendMapperZ(ctx, mp); nil != err {
 		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(en.ID))
