@@ -21,6 +21,7 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -204,15 +205,20 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 
 func (n *Node) getGlobalData(en Entity) (res []byte) {
 	globalData := collectjs.ByteNew([]byte(`{}`))
-	globalData.Set(FieldID, []byte(en.ID()))
-	globalData.Set(FieldType, []byte(en.Type()))
-	globalData.Set(FieldOwner, []byte(en.Owner()))
-	globalData.Set(FieldSource, []byte(en.Source()))
-	globalData.Set(FieldTemplate, []byte(en.TemplateID()))
+	globalData.Set(FieldID, en.Get(FieldID).Raw())
+	globalData.Set(FieldType, en.Get(FieldType).Raw())
+	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
+	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
+	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+
 	sysField := en.GetProp("sysField")
-	globalData.Set("sysField", sysField.Raw())
+	if sysField.Type() != tdtl.Null {
+		globalData.Set("sysField", sysField.Raw())
+	}
 	basicInfo := en.GetProp("basicInfo")
-	globalData.Set("basicInfo", basicInfo.Raw())
+	if basicInfo.Type() != tdtl.Null {
+		globalData.Set("basicInfo", basicInfo.Raw())
+	}
 	return globalData.GetRaw()
 }
 

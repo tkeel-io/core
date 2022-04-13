@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"testing"
 )
@@ -74,7 +75,7 @@ func TestNode_getGlobalData(t *testing.T) {
                 "_sockPort": "",
                 "_userName": ""
             },
-            "sysField": {
+            "sysField1": {
                 "_createdAt": 1649820366777,
                 "_enable": true,
                 "_id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",
@@ -95,4 +96,9 @@ func TestNode_getGlobalData(t *testing.T) {
 	t.Log(en)
 	res := node.getGlobalData(en)
 	t.Log(string(res))
+
+	resMap := make(map[string]interface{})
+
+	err = json.Unmarshal(res, &resMap)
+	t.Log(err)
 }
