@@ -48,6 +48,7 @@ type APIManager interface {
 	GetEntity(context.Context, *Base) (*BaseRet, error)
 	// AppendMapper append entity mapper.
 	AppendMapper(context.Context, *dao.Mapper) error
+	AppendMapperZ(context.Context, *dao.Mapper) error
 	// RemoveMapper remove entity mapper.
 	RemoveMapper(context.Context, *dao.Mapper) error
 	// GetMapper returns entity mapper.

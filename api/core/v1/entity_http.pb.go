@@ -1012,6 +1012,11 @@ func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restf
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
 		return
 	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")

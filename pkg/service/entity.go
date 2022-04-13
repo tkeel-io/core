@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
@@ -120,6 +122,9 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
+	// ignore error.
+	s.onTemplateChanged(ctx, entity)
+
 	out, err = s.makeResponse(baseRet)
 	return out, errors.Wrap(err, "create entity failed")
 }
@@ -130,10 +135,6 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("update entity", zfield.Eid(req.Id),
-		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
-		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
-
 	var entity = new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
@@ -141,6 +142,11 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, entity)
 	patches := []*pb.PatchData{}
+
+	log.L().Debug("update entity",
+		zfield.Eid(req.Id), zfield.Owner(entity.Owner),
+		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
+		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
 
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
@@ -166,6 +172,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	}
 
 	if template := strings.TrimSpace(req.TemplateId); len(template) > 0 {
+		entity.TemplateID = template
 		patches = append(patches, &pb.PatchData{
 			Path:     FieldTemplate,
 			Value:    tdtl.NewString(template).Raw(),
@@ -210,6 +217,8 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return out, errors.Wrap(err, "update entity failed")
 	}
 
+	// ignore error.
+	s.onTemplateChanged(ctx, entity)
 	out, err = s.makeResponse(baseRet)
 	return out, errors.Wrap(err, "update entity failed")
 }
@@ -843,4 +852,30 @@ func CopyFrom2(raw []byte, paths ...string) (map[string]interface{}, bool, error
 	}
 	result, flag, err := CopyFrom(raw, patches...)
 	return result, flag, errors.Wrap(err, "copy result")
+}
+
+func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error {
+	if en.TemplateID == "" {
+		return nil
+	}
+
+	// create a mapper for sync scheme.
+	// insert into eid select template.scheme as scheme
+	mp := &dao.Mapper{
+		ID:          "SyncScheme",
+		TQL:         fmt.Sprintf("insert into %s select %s.scheme as scheme", en.ID, en.TemplateID),
+		Name:        "SyncScheme",
+		Owner:       en.Owner,
+		EntityID:    en.ID,
+		Description: "mapper instance to sync scheme",
+	}
+
+	log.L().Info("onTemplateChanged", zfield.Eid(en.ID), zfield.ID(mp.ID), zfield.TQL(mp.TQL))
+
+	if err := s.apiManager.AppendMapperZ(ctx, mp); nil != err {
+		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(en.ID))
+		return errors.Wrap(err, "create template mapper")
+	}
+
+	return nil
 }
