@@ -8,6 +8,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 	"go.uber.org/zap"
 )
 
@@ -201,6 +203,25 @@ func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
 	return res
 }
 
+func (n *Node) getGlobalData(en Entity) (res []byte) {
+	globalData := collectjs.ByteNew([]byte(`{}`))
+	globalData.Set(FieldID, en.Get(FieldID).Raw())
+	globalData.Set(FieldType, en.Get(FieldType).Raw())
+	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
+	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
+	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+
+	sysField := en.GetProp("sysField")
+	if sysField.Type() != tdtl.Null {
+		globalData.Set("sysField", sysField.Raw())
+	}
+	basicInfo := en.GetProp("basicInfo")
+	if basicInfo.Type() != tdtl.Null {
+		globalData.Set("basicInfo", basicInfo.Raw())
+	}
+	return globalData.GetRaw()
+}
+
 func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	log.L().Debug("flush entity", zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
 
@@ -211,17 +232,15 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	}
 
 	// 2. flush search engine data.
-	indexData := en.Tiled()
-	if nil != indexData.Error() {
-		log.L().Error("flush entity search engine, build index data",
-			zap.Error(indexData.Error()), zfield.Eid(en.ID()))
-		return errors.Wrap(indexData.Error(), "flush entity into search engine, build index data")
+	// 2.1 flush search global data.
+	globalData := n.getGlobalData(en)
+	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
+		log.L().Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
+		//			return errors.Wrap(err, "flush entity into search engine")
 	}
 
-	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), indexData.Raw()); nil != err {
-		log.L().Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
-		return errors.Wrap(err, "flush entity into search engine")
-	}
+	// 2.2 flush search model data.
+	// TODO.
 
 	// 3. flush timeseries data.
 
