@@ -1,0 +1,39 @@
+discovery:
+  dial_timeout: 3
+  endpoints:
+    - http://localhost:2379
+  heart_time: 3
+logger:
+  level: debug
+server:
+  name: core
+  app_id: core
+  sources:
+    - kafka://kafka:9092/core0/core
+    - kafka://kafka:9092/core1/core
+proxy:
+  name: core
+  http_port: 20000
+  grpc_port: 20001
+components:
+  etcd:
+    dial_timeout: 3
+    endpoints:
+      - http://localhost:2379
+  store:
+    name: noop
+    properties:
+      - key: store_name
+        value: core-state
+  time_series:
+    name: noop
+  search_engine: noop://admin:admin@127.0.0.1:9200"
+dispatcher:
+  id: dispatcher0
+  enabled: true
+  name: core-dispatcher
+  upstreams:
+    - dapr://localhost/core-pubsub/core-pub
+  downstreams:
+    - kafka://kafka:9092/core0/core
+    - kafka://kafka:9092/core1/core

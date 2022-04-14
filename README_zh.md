@@ -33,10 +33,53 @@ git clone  https://github.com/tkeel-io/core.git
 cd core
 ```
 #### Self-hosted
-> ⚠️ 注意：请本地先运行一个 redis 进程，监听 6379 端口，无密码
+> 1. 请先安装好dapr
+> 2. 启动一个etcd 监听127.0.0.1:2379
+> 3. 启动一个kafka，监听kafka:9092端口，注意修改hosts
 ##### 通过 Dapr 启动项目
 ```bash
-dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3500 --dapr-grpc-port 50001 --log-level debug  --components-path ./examples/configs/core  go run . serve
+dapr run --app-id core --app-protocol http --app-port 6789 --dapr-http-port 3501 --dapr-grpc-port 50002 --log-level debug --components-path ./examples/configs/core0/ -- go run cmd/core/main.go -c ./simple.yml
+```
+##### 单步调试
+使用vscode运行dapr调试
+task.json
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "daprd-debug-go",
+            "type": "daprd",
+            "appId": "core",
+            "componentsPath": "examples/configs/core0",
+            "appPort": 6789
+        }
+    ]
+}
+```
+launch.json
+```json
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch file",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "cmd/core/main.go",
+            "args": [
+                "-c",
+                "../../simple.yml"
+            ],
+            "console": "integratedTerminal",
+            "preLaunchTask": "daprd-debug-go"
+        }
+    ]
+}
 ```
 #### Kubernetes
 1. 部署 reids 服务
@@ -218,18 +261,18 @@ Core 的更多功能 API 详细请参见[ API 文档](https://tkeel-io.github.io
 ### 🌟 联系我们
 提出您可能有的任何问题，我们将确保尽快答复！
 
-| 平台 | 链接 |
-|:---|----|
-|email| tkeel@yunify.com|
-|微博| [@tkeel]()|
+| 平台  | 链接             |
+| :---- | ---------------- |
+| email | tkeel@yunify.com |
+| 微博  | [@tkeel]()       |
 
 
 ## 🏘️ 仓库
 
-| 仓库 | 描述 |
-|:-----|:------------|
-| [tKeel](https://github.com/tkeel-io/tkeel) | tKeel 开放物联网平台|
-| [Core](https://github.com/tkeel-io/core) | tKeel 的数据中心 |
-| [CLI](https://github.com/tkeel-io/cli) | tKeel CLI 是用于各种 tKeel 相关任务的主要工具 |
-| [Helm](https://github.com/tkeel-io/helm-charts) | tKeel 对应的 Helm charts |
+| 仓库                                            | 描述                                          |
+| :---------------------------------------------- | :-------------------------------------------- |
+| [tKeel](https://github.com/tkeel-io/tkeel)      | tKeel 开放物联网平台                          |
+| [Core](https://github.com/tkeel-io/core)        | tKeel 的数据中心                              |
+| [CLI](https://github.com/tkeel-io/cli)          | tKeel CLI 是用于各种 tKeel 相关任务的主要工具 |
+| [Helm](https://github.com/tkeel-io/helm-charts) | tKeel 对应的 Helm charts                      |
 
