@@ -107,6 +107,10 @@ func Source(source string) zap.Field {
 	return zap.String("source", source)
 }
 
+func Expr(expr string) zap.Field {
+	return zap.String("expression", expr)
+}
+
 func Template(tid string) zap.Field {
 	return zap.String("template_id", tid)
 }

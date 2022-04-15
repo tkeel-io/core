@@ -17,8 +17,10 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
@@ -42,12 +44,12 @@ type EntityResource struct {
 
 type Runtime struct {
 	id              string
-	pathTree        *path.Tree
-	tentacleTree    *path.Tree
+	evalTree        *path.Tree
+	subTree         *path.RefTree
 	enCache         EntityCache
 	entities        map[string]Entity // 存放Runtime的实体.
 	dispatcher      dispatch.Dispatcher
-	mapperCaches    map[string]MCache
+	expressions     map[string]ExpressionInfo
 	repository      repository.IRepository
 	entityResourcer EntityResource
 
@@ -63,12 +65,12 @@ func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatc
 		id:              id,
 		enCache:         NewCache(repository),
 		entities:        map[string]Entity{},
-		mapperCaches:    map[string]MCache{},
+		expressions:     map[string]ExpressionInfo{},
 		entityResourcer: ercFuncs,
 		dispatcher:      dispatcher,
 		repository:      repository,
-		tentacleTree:    path.New(),
-		pathTree:        path.New(),
+		subTree:         path.NewRefTree(),
+		evalTree:        path.New(),
 		lock:            sync.RWMutex{},
 		mlock:           sync.RWMutex{},
 		cancel:          cancel,
@@ -328,23 +330,26 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle computed", zfield.Eid(feed.EntityID))
 	// 1. 检查 ret.path 和 订阅列表.
 	entityID := feed.EntityID
-	mappers := make(map[string]mapper.Mapper)
+	expressions := make(map[string]ExpressionInfo)
 	for _, change := range feed.Changes {
-		for _, node := range r.pathTree.
+		for _, node := range r.evalTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
-			tentacle, _ := node.(mapper.Tentacler)
-			if tentacle.Type() == mapper.TentacleTypeMapper {
-				mappers[tentacle.TargetID()] = tentacle.Mapper()
+			evalEnd, _ := node.(*EvalEndpoint)
+			r.mlock.RLock()
+			if expr, has := r.expressions[evalEnd.expresionID]; has {
+				expressions[expr.ID] = expr
 			}
+			r.mlock.RUnlock()
 		}
 	}
 
 	patches := make(map[string][]*v1.PatchData)
-	for id, mp := range mappers {
-		target := mp.TargetEntity()
-		log.L().Debug("compute mapper",
-			zfield.Eid(entityID), zfield.Mid(id))
-		result := r.computeMapper(ctx, mp)
+	for id, expr := range expressions {
+		target := expr.EntityID
+		log.L().Debug("eval expression",
+			zfield.Eid(entityID), zfield.Mid(id),
+			zfield.Expr(expr.Expression.Expression))
+		result := r.evalExpression(ctx, expr.Expression)
 		for path, val := range result {
 			patches[target] = append(
 				patches[target],
@@ -374,62 +379,74 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func (r *Runtime) computeMapper(ctx context.Context, mp mapper.Mapper) map[string]tdtl.Node {
+func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) map[string]tdtl.Node {
 	var (
-		has bool
-		err error
-		mc  MCache
+		err      error
+		has      bool
+		exprInfo ExpressionInfo
 	)
 
 	r.mlock.RLock()
-	if mc, has = r.mapperCaches[mp.ID()]; !has {
+	if exprInfo, has = r.expressions[expr.ID]; !has {
 		r.mlock.RUnlock()
 		return map[string]tdtl.Node{}
 	}
 	r.mlock.RUnlock()
 
-	// construct mapper input.
 	in := make(map[string]tdtl.Node)
-	for _, tentacle := range mc.Tentacles {
-		for _, item := range tentacle.Items() {
-			var state Entity
-			// get value from entities.
-			if state, has = r.entities[item.EntityID]; has {
-				in[item.String()] = state.Get(item.PropertyKey)
-				continue
-			}
-			// get value from cache.
-			if state, err = r.enCache.Load(ctx, item.EntityID); nil == err {
-				in[item.String()] = state.Get(item.PropertyKey)
-			}
+	for _, item := range exprInfo.evalEndpoints {
+		// entityID.propertyKey
+		segs := strings.SplitN(item.path, ".", 2)
+
+		var state Entity
+		// get value from entities.
+		if state, has = r.entities[segs[0]]; has {
+			in[item.String()] = state.Get(segs[1])
+			continue
+		}
+		// get value from cache.
+		if state, err = r.enCache.Load(ctx, segs[0]); nil == err {
+			in[item.String()] = state.Get(segs[1])
 		}
 	}
 
 	// ignore empty input.
 	if len(in) == 0 {
-		log.L().Warn("ignore empty input", zfield.Mid(mp.ID()))
+		log.L().Warn("ignore empty input",
+			zfield.ID(expr.ID), zfield.Expr(expr.Expression))
 		return map[string]tdtl.Node{}
 	}
 
+	exprIns, err := expression.NewExpr(exprInfo.Expression)
+	if nil != err {
+		log.L().Error("parse expression",
+			zfield.Eid(expr.EntityID), zap.Error(err))
+		return map[string]tdtl.Node{}
+	}
+
+	// eval expression.
 	var out map[string]tdtl.Node
-	if out, err = mp.Exec(in); nil != err {
-		log.L().Error("exec mapper", zfield.ID(mp.ID()), zfield.Eid(mp.TargetEntity()))
+	if out, err = exprIns.Eval(ctx, in); nil != err {
+		log.L().Error("eval expression",
+			zfield.ID(expr.ID), zfield.Eid(expr.EntityID))
 		return map[string]tdtl.Node{}
 	}
 
-	log.L().Debug("exec mapper", zfield.ID(mp.ID()),
-		zfield.Eid(mp.TargetEntity()), zfield.Input(in), zfield.Output(out))
+	log.L().Debug("eval expression", zfield.ID(expr.ID),
+		zfield.Eid(expr.EntityID), zfield.Input(in), zfield.Output(out))
 
 	// clean nil feed.
 	for path, val := range out {
 		if val == nil || val.Type() == tdtl.Null ||
 			val.Type() == tdtl.Undefined || val.Error() != nil {
-			log.L().Warn("invalid computed feed", zap.Any("value", val), zfield.Mid(mp.ID()))
+			log.L().Warn("invalid computed feed", zfield.Eid(expr.EntityID),
+				zap.Any("value", val.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
 			delete(out, path)
 		}
 	}
 
 	return out
+
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
@@ -440,7 +457,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	entityID := feed.EntityID
 	var patches = make(map[string][]*v1.PatchData)
 	for _, change := range feed.Changes {
-		for _, node := range r.pathTree.
+		for _, node := range r.subTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			tentacle, _ := node.(mapper.Tentacler)
 			if entityID != tentacle.TargetID() &&
@@ -694,146 +711,146 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func (r *Runtime) AppendMapper(mc MCache) {
-	log.L().Info("append mapper into runtime", zfield.ID(r.id),
-		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
+func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
+	log.L().Debug("append expression into runtime",
+		zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
+		zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
 
 	r.mlock.Lock()
-	// remove if existed.
-	if _, exists := r.mapperCaches[mc.ID]; exists {
-		mc0 := r.mapperCaches[mc.ID]
-		delete(r.mapperCaches, mc.ID)
-		for _, tentacle := range mc0.Tentacles {
-			for _, item := range tentacle.Items() {
-				r.pathTree.Remove(item.String(), tentacle)
-			}
+	// remove expression if exists.
+	if _, exists := r.expressions[exprInfo.ID]; exists {
+		expr0 := r.expressions[exprInfo.ID]
+		// remove sub-endpoint from sub-tree.
+		for _, item := range expr0.subEndpoints {
+			r.subTree.Remove(item.path, &item)
+		}
+
+		// remove eval-endpoint from eval-tree.
+		for _, item := range expr0.evalEndpoints {
+			r.evalTree.Remove(item.path, &item)
 		}
 	}
 
-	r.mapperCaches[mc.ID] = mc
-	for _, tentacle := range mc.Tentacles {
-		for _, item := range tentacle.Items() {
-			r.pathTree.Add(item.String(), tentacle)
-		}
+	// cache expression info.
+	r.expressions[exprInfo.ID] = exprInfo
+	// mount sub-endpoint to sub-tree.
+	for _, item := range exprInfo.subEndpoints {
+		r.subTree.Add(item.path, &item)
 	}
-	r.mlock.Unlock()
+	// mount eval-endpoint to eval-tree.
+	for _, item := range exprInfo.evalEndpoints {
+		r.evalTree.Add(item.path, &item)
+	}
 
-	// initialize mapper, exec mapper once.
-	r.initializeMapper(context.TODO(), mc)
-
-	r.pathTree.Print()
+	r.initializeExpression(context.TODO(), exprInfo)
 }
 
-func (r *Runtime) initializeMapper(ctx context.Context, mc MCache) {
-	if mapper.VersionInited != mc.Mapper.Version() {
+func (r *Runtime) RemoveExpression(exprID string) {
+	r.mlock.Lock()
+	defer r.mlock.Unlock()
+	// remove expression if exists.
+	if exprInfo, exists := r.expressions[exprID]; exists {
+		log.L().Debug("remove expression from runtime",
+			zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
+			zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
+
+		// remove sub-endpoint from sub-tree.
+		for _, item := range exprInfo.subEndpoints {
+			r.subTree.Remove(item.path, &item)
+		}
+
+		// remove eval-endpoint from eval-tree.
+		for _, item := range exprInfo.evalEndpoints {
+			r.evalTree.Remove(item.path, &item)
+		}
+	}
+}
+
+func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo) {
+	if mapper.VersionInited != expr.version {
 		return
 	}
 
-	log.L().Info("initialize mapper", zfield.ID(r.id),
-		zfield.Eid(mc.EntityID), zfield.Mid(mc.ID), zfield.Value(mc.Mapper.String()))
+	log.L().Info("initialize expression", zfield.ID(r.id),
+		zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Value(expr.Expression))
 
-	var items []mapper.WatchKey
-	for _, tentacle := range mc.Tentacles {
-		switch tentacle.Type() {
-		case mapper.TentacleTypeEntity:
-			items = append(items, tentacle.Items()...)
-		default:
-			// TODO: 解决 Cache 消息 先于 mapper 初始化, 需要深入思考原因.
-			mp := tentacle.Mapper()
-			patches := []*v1.PatchData{}
-			target := mp.TargetEntity()
-			log.L().Debug("compute mapper",
-				zfield.Eid(mc.EntityID), zfield.Mid(mc.ID))
-			result := r.computeMapper(ctx, mp)
-			for path, val := range result {
-				patches = append(
-					patches,
-					&v1.PatchData{
-						Operator: xjson.OpReplace.String(),
-						Path:     path,
-						Value:    val.Raw(),
-					})
-			}
-
-			// 2. dispatch.send() .
-			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-				Id:        util.IG().EvID(),
-				Timestamp: time.Now().UnixNano(),
-				Metadata: map[string]string{
-					v1.MetaType:     string(v1.ETEntity),
-					v1.MetaEntityID: target},
-				Data: &v1.ProtoEvent_Patches{
-					Patches: &v1.PatchDatas{
-						Patches: patches,
-					}},
-			})
-		}
-	}
-
-	patches := map[string][]*v1.PatchData{}
-	for _, item := range items {
-		var err error
-		var val tdtl.Node
-		var state Entity
-		if state, err = r.LoadEntity(item.EntityID); nil != err {
-			log.L().Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
-			continue
-		}
-
-		operator := xjson.OpReplace.String()
-		path := item.PropertyKey
-		if path == "*" {
-			// TODO: 现阶段 TQL 仅仅支持 eid.* .
-			path = FieldProperties
-			operator = xjson.OpMerge.String()
-		}
-
-		if val = state.Get(path); nil != val.Error() {
-			log.L().Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
-			continue
-		}
-
-		patches[item.EntityID] =
-			append(patches[item.EntityID],
+	if len(expr.evalEndpoints) > 0 {
+		// TODO: 解决 Cache 消息 先于 mapper 初始化, 需要深入思考原因.
+		patches := []*v1.PatchData{}
+		log.L().Debug("eval expression", zfield.Expr(expr.Expression.Expression),
+			zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Owner(expr.Owner))
+		result := r.evalExpression(ctx, expr.Expression)
+		for path, val := range result {
+			patches = append(
+				patches,
 				&v1.PatchData{
+					Operator: xjson.OpReplace.String(),
 					Path:     path,
 					Value:    val.Raw(),
-					Operator: operator})
-	}
+				})
+		}
 
-	// handle subscribe, dispatch entity state.
-	for entityID, patch := range patches {
+		// 2. dispatch.send() .
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
 			Id:        util.IG().EvID(),
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
-				v1.MetaType:     string(v1.ETCache),
-				v1.MetaEntityID: mc.EntityID,
-				v1.MetaSender:   entityID},
+				v1.MetaType:     string(v1.ETEntity),
+				v1.MetaEntityID: expr.EntityID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
-					Patches: patch,
+					Patches: patches,
 				}},
 		})
-	}
-}
+	} else {
+		patches := map[string][]*v1.PatchData{}
+		for _, subEnd := range expr.subEndpoints {
+			var err error
+			var val tdtl.Node
+			var state Entity
+			item := mapper.NewWatchKey(subEnd.path)
+			if state, err = r.LoadEntity(item.EntityID); nil != err {
+				log.L().Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
+				continue
+			}
 
-func (r *Runtime) RemoveMapper(mc MCache) {
-	r.mlock.Lock()
-	defer r.mlock.Unlock()
-	if _, exists := r.mapperCaches[mc.ID]; !exists {
-		return
-	}
+			operator := xjson.OpReplace.String()
+			path := item.PropertyKey
+			if path == "*" {
+				// TODO: 现阶段 TQL 仅仅支持 eid.* .
+				path = FieldProperties
+				operator = xjson.OpMerge.String()
+			}
 
-	mc = r.mapperCaches[mc.ID]
-	delete(r.mapperCaches, mc.ID)
-	for _, tentacle := range mc.Tentacles {
-		for _, item := range tentacle.Items() {
-			r.pathTree.Remove(item.String(), tentacle)
+			if val = state.Get(path); nil != val.Error() {
+				log.L().Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
+				continue
+			}
+
+			patches[item.EntityID] =
+				append(patches[item.EntityID],
+					&v1.PatchData{
+						Path:     path,
+						Value:    val.Raw(),
+						Operator: operator})
+		}
+
+		// handle subscribe, dispatch entity state.
+		for entityID, patch := range patches {
+			r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+				Id:        util.IG().EvID(),
+				Timestamp: time.Now().UnixNano(),
+				Metadata: map[string]string{
+					v1.MetaType:     string(v1.ETCache),
+					v1.MetaEntityID: expr.EntityID,
+					v1.MetaSender:   entityID},
+				Data: &v1.ProtoEvent_Patches{
+					Patches: &v1.PatchDatas{
+						Patches: patch,
+					}},
+			})
 		}
 	}
-
-	r.pathTree.Print()
 }
 
 func (r *Runtime) LoadEntity(id string) (Entity, error) {

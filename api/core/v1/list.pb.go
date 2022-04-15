@@ -25,10 +25,10 @@ type Pager struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Limit   int32  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit"`
-	Offset  int32  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset"`
-	Sort    string `protobuf:"bytes,3,opt,name=sort,proto3" json:"sort"`
-	Reverse bool   `protobuf:"varint,4,opt,name=reverse,proto3" json:"reverse"`
+	Limit   int32  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset  int32  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	Sort    string `protobuf:"bytes,3,opt,name=sort,proto3" json:"sort,omitempty"`
+	Reverse bool   `protobuf:"varint,4,opt,name=reverse,proto3" json:"reverse,omitempty"`
 }
 
 func (x *Pager) Reset() {

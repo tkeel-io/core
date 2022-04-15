@@ -27,12 +27,16 @@ type WatchExpressionFunc func(EnventType, Expression)
 
 type Expression struct {
 	ID string
+	// expression name.
+	Name string
 	// expression owner.
 	Owner string
 	// entity id.
 	EntityID string
 	// expression.
 	Expression string
+	// description.
+	Description string
 }
 
 func NewExpression(owner, entityID, expr string) *Expression {

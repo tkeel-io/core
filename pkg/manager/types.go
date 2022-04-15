@@ -55,6 +55,12 @@ type APIManager interface {
 	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
 	// ListMapper returns entity mappers.
 	ListMapper(context.Context, *Base) ([]dao.Mapper, error)
+
+	// Expression.
+	AppendExpression(context.Context, dao.Expression) error
+	RemoveExpression(context.Context, dao.Expression) error
+	GetExpression(context.Context, dao.Expression) (*dao.Expression, error)
+	ListExpression(context.Context, *Base) ([]dao.Expression, error)
 }
 
 type Metadata map[string]string

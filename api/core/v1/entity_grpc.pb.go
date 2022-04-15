@@ -36,6 +36,11 @@ type EntityClient interface {
 	GetMapper(ctx context.Context, in *GetMapperRequest, opts ...grpc.CallOption) (*GetMapperResponse, error)
 	ListMapper(ctx context.Context, in *ListMapperRequest, opts ...grpc.CallOption) (*ListMapperResponse, error)
 	RemoveMapper(ctx context.Context, in *RemoveMapperRequest, opts ...grpc.CallOption) (*RemoveMapperResponse, error)
+	// expression.
+	AppendExpression(ctx context.Context, in *AppendExpressionReq, opts ...grpc.CallOption) (*AppendExpressionResp, error)
+	GetExpression(ctx context.Context, in *GetExpressionReq, opts ...grpc.CallOption) (*GetExpressionResp, error)
+	ListExpression(ctx context.Context, in *ListExpressionReq, opts ...grpc.CallOption) (*ListExpressionResp, error)
+	RemoveExpression(ctx context.Context, in *RemoveExpressionReq, opts ...grpc.CallOption) (*RemoveExpressionResp, error)
 	ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error)
 }
 
@@ -209,6 +214,42 @@ func (c *entityClient) RemoveMapper(ctx context.Context, in *RemoveMapperRequest
 	return out, nil
 }
 
+func (c *entityClient) AppendExpression(ctx context.Context, in *AppendExpressionReq, opts ...grpc.CallOption) (*AppendExpressionResp, error) {
+	out := new(AppendExpressionResp)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/AppendExpression", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) GetExpression(ctx context.Context, in *GetExpressionReq, opts ...grpc.CallOption) (*GetExpressionResp, error) {
+	out := new(GetExpressionResp)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/GetExpression", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) ListExpression(ctx context.Context, in *ListExpressionReq, opts ...grpc.CallOption) (*ListExpressionResp, error) {
+	out := new(ListExpressionResp)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/ListExpression", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *entityClient) RemoveExpression(ctx context.Context, in *RemoveExpressionReq, opts ...grpc.CallOption) (*RemoveExpressionResp, error) {
+	out := new(RemoveExpressionResp)
+	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/RemoveExpression", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *entityClient) ListEntity(ctx context.Context, in *ListEntityRequest, opts ...grpc.CallOption) (*ListEntityResponse, error) {
 	out := new(ListEntityResponse)
 	err := c.cc.Invoke(ctx, "/api.core.v1.Entity/ListEntity", in, out, opts...)
@@ -240,6 +281,11 @@ type EntityServer interface {
 	GetMapper(context.Context, *GetMapperRequest) (*GetMapperResponse, error)
 	ListMapper(context.Context, *ListMapperRequest) (*ListMapperResponse, error)
 	RemoveMapper(context.Context, *RemoveMapperRequest) (*RemoveMapperResponse, error)
+	// expression.
+	AppendExpression(context.Context, *AppendExpressionReq) (*AppendExpressionResp, error)
+	GetExpression(context.Context, *GetExpressionReq) (*GetExpressionResp, error)
+	ListExpression(context.Context, *ListExpressionReq) (*ListExpressionResp, error)
+	RemoveExpression(context.Context, *RemoveExpressionReq) (*RemoveExpressionResp, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
 	mustEmbedUnimplementedEntityServer()
 }
@@ -301,6 +347,18 @@ func (UnimplementedEntityServer) ListMapper(context.Context, *ListMapperRequest)
 }
 func (UnimplementedEntityServer) RemoveMapper(context.Context, *RemoveMapperRequest) (*RemoveMapperResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveMapper not implemented")
+}
+func (UnimplementedEntityServer) AppendExpression(context.Context, *AppendExpressionReq) (*AppendExpressionResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendExpression not implemented")
+}
+func (UnimplementedEntityServer) GetExpression(context.Context, *GetExpressionReq) (*GetExpressionResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExpression not implemented")
+}
+func (UnimplementedEntityServer) ListExpression(context.Context, *ListExpressionReq) (*ListExpressionResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListExpression not implemented")
+}
+func (UnimplementedEntityServer) RemoveExpression(context.Context, *RemoveExpressionReq) (*RemoveExpressionResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveExpression not implemented")
 }
 func (UnimplementedEntityServer) ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListEntity not implemented")
@@ -642,6 +700,78 @@ func _Entity_RemoveMapper_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Entity_AppendExpression_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendExpressionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).AppendExpression(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/AppendExpression",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).AppendExpression(ctx, req.(*AppendExpressionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_GetExpression_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExpressionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).GetExpression(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/GetExpression",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).GetExpression(ctx, req.(*GetExpressionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_ListExpression_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListExpressionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).ListExpression(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/ListExpression",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).ListExpression(ctx, req.(*ListExpressionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Entity_RemoveExpression_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveExpressionReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EntityServer).RemoveExpression(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.core.v1.Entity/RemoveExpression",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EntityServer).RemoveExpression(ctx, req.(*RemoveExpressionReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Entity_ListEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListEntityRequest)
 	if err := dec(in); err != nil {
@@ -738,6 +868,22 @@ var Entity_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RemoveMapper",
 			Handler:    _Entity_RemoveMapper_Handler,
+		},
+		{
+			MethodName: "AppendExpression",
+			Handler:    _Entity_AppendExpression_Handler,
+		},
+		{
+			MethodName: "GetExpression",
+			Handler:    _Entity_GetExpression_Handler,
+		},
+		{
+			MethodName: "ListExpression",
+			Handler:    _Entity_ListExpression_Handler,
+		},
+		{
+			MethodName: "RemoveExpression",
+			Handler:    _Entity_RemoveExpression_Handler,
 		},
 		{
 			MethodName: "ListEntity",

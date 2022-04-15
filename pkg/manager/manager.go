@@ -31,6 +31,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/manager/holder"
+	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
@@ -534,4 +535,62 @@ func checkMapper(m *dao.Mapper) error {
 	}
 
 	return nil
+}
+
+// implement apis for Expression.
+
+func (m *apiManager) AppendExpression(ctx context.Context, expr dao.Expression) error {
+	// validate expression.
+	if err := expression.Validate(expr); nil != err {
+		log.Error("append expression, invalidate expression",
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "invalid expression")
+	}
+
+	// update expression.
+	if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
+		log.Error("append expression", zap.Error(err),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "append expression")
+	}
+	return nil
+}
+
+func (m *apiManager) RemoveExpression(ctx context.Context, expr dao.Expression) error {
+	// delete expression.
+	if err := m.entityRepo.DelExpression(ctx, expr); nil != err {
+		log.Error("delete expression", zap.Error(err),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "delete expression")
+	}
+	return nil
+}
+
+func (m *apiManager) GetExpression(ctx context.Context, expr dao.Expression) (*dao.Expression, error) {
+	// get expression.
+	expr, err := m.entityRepo.GetExpression(ctx, expr)
+	if nil != err {
+		log.Error("get expression", zap.Error(err),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return nil, errors.Wrap(err, "get expression")
+	}
+	return &expr, nil
+}
+
+func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]dao.Expression, error) {
+	// list expressions.
+	var err error
+	var exprs []dao.Expression
+	if exprs, err = m.entityRepo.ListExpression(ctx,
+		m.entityRepo.GetLastRevision(ctx),
+		&dao.ListExprReq{
+			Owner:    en.Owner,
+			EntityID: en.ID,
+		}); nil != err {
+		log.L().Error("list expression", zap.Error(err),
+			zfield.Eid(en.ID), zfield.Owner(en.Owner))
+		return exprs, errors.Wrap(err, "list expression")
+	}
+
+	return exprs, nil
 }

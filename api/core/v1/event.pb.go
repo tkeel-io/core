@@ -26,9 +26,9 @@ type PatchData struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Path     string `protobuf:"bytes,1,opt,name=path,proto3" json:"path"`
-	Operator string `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator"`
-	Value    []byte `protobuf:"bytes,3,opt,name=value,proto3" json:"value"`
+	Path     string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Operator string `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
+	Value    []byte `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (x *PatchData) Reset() {
@@ -89,7 +89,7 @@ type PatchDatas struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Patches []*PatchData `protobuf:"bytes,1,rep,name=patches,proto3" json:"patches"`
+	Patches []*PatchData `protobuf:"bytes,1,rep,name=patches,proto3" json:"patches,omitempty"`
 }
 
 func (x *PatchDatas) Reset() {
@@ -136,8 +136,8 @@ type SystemData struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Operator string `protobuf:"bytes,1,opt,name=operator,proto3" json:"operator"`
-	Data     []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data"`
+	Operator string `protobuf:"bytes,1,opt,name=operator,proto3" json:"operator,omitempty"`
+	Data     []byte `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
 func (x *SystemData) Reset() {
@@ -191,10 +191,10 @@ type ProtoEvent struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id        string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
-	Timestamp int64             `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp"`
-	Callback  string            `protobuf:"bytes,3,opt,name=callback,proto3" json:"callback"`
-	Metadata  map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Id        string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Timestamp int64             `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Callback  string            `protobuf:"bytes,3,opt,name=callback,proto3" json:"callback,omitempty"`
+	Metadata  map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Types that are assignable to Data:
 	//	*ProtoEvent_RawData
 	//	*ProtoEvent_Patches

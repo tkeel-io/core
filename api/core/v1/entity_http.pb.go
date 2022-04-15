@@ -28,14 +28,17 @@ var (
 )
 
 type EntityHTTPServer interface {
+	AppendExpression(context.Context, *AppendExpressionReq) (*AppendExpressionResp, error)
 	AppendMapper(context.Context, *AppendMapperRequest) (*AppendMapperResponse, error)
 	CreateEntity(context.Context, *CreateEntityRequest) (*EntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteEntityResponse, error)
 	GetEntity(context.Context, *GetEntityRequest) (*EntityResponse, error)
 	GetEntityConfigs(context.Context, *GetEntityConfigsRequest) (*EntityResponse, error)
 	GetEntityProps(context.Context, *GetEntityPropsRequest) (*EntityResponse, error)
+	GetExpression(context.Context, *GetExpressionReq) (*GetExpressionResp, error)
 	GetMapper(context.Context, *GetMapperRequest) (*GetMapperResponse, error)
 	ListEntity(context.Context, *ListEntityRequest) (*ListEntityResponse, error)
+	ListExpression(context.Context, *ListExpressionReq) (*ListExpressionResp, error)
 	ListMapper(context.Context, *ListMapperRequest) (*ListMapperResponse, error)
 	PatchEntityConfigs(context.Context, *PatchEntityConfigsRequest) (*EntityResponse, error)
 	PatchEntityConfigsZ(context.Context, *PatchEntityConfigsRequest) (*EntityResponse, error)
@@ -43,6 +46,7 @@ type EntityHTTPServer interface {
 	PatchEntityPropsZ(context.Context, *PatchEntityPropsRequest) (*EntityResponse, error)
 	RemoveEntityConfigs(context.Context, *RemoveEntityConfigsRequest) (*EntityResponse, error)
 	RemoveEntityProps(context.Context, *RemoveEntityPropsRequest) (*EntityResponse, error)
+	RemoveExpression(context.Context, *RemoveExpressionReq) (*RemoveExpressionResp, error)
 	RemoveMapper(context.Context, *RemoveMapperRequest) (*RemoveMapperResponse, error)
 	UpdateEntity(context.Context, *UpdateEntityRequest) (*EntityResponse, error)
 	UpdateEntityConfigs(context.Context, *UpdateEntityConfigsRequest) (*EntityResponse, error)
@@ -55,6 +59,69 @@ type EntityHTTPHandler struct {
 
 func newEntityHTTPHandler(s EntityHTTPServer) *EntityHTTPHandler {
 	return &EntityHTTPHandler{srv: s}
+}
+
+func (h *EntityHTTPHandler) AppendExpression(req *go_restful.Request, resp *go_restful.Response) {
+	in := AppendExpressionReq{}
+	if err := transportHTTP.GetBody(req, &in.Expression); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.AppendExpression(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteHeaderAndJson(httpCode,
+			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		return
+	}
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
 }
 
 func (h *EntityHTTPHandler) AppendMapper(req *go_restful.Request, resp *go_restful.Response) {
@@ -410,6 +477,64 @@ func (h *EntityHTTPHandler) GetEntityProps(req *go_restful.Request, resp *go_res
 	}
 }
 
+func (h *EntityHTTPHandler) GetExpression(req *go_restful.Request, resp *go_restful.Response) {
+	in := GetExpressionReq{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.GetExpression(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteHeaderAndJson(httpCode,
+			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		return
+	}
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
+}
+
 func (h *EntityHTTPHandler) GetMapper(req *go_restful.Request, resp *go_restful.Response) {
 	in := GetMapperRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
@@ -479,6 +604,64 @@ func (h *EntityHTTPHandler) ListEntity(req *go_restful.Request, resp *go_restful
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
 
 	out, err := h.srv.ListEntity(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteHeaderAndJson(httpCode,
+			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		return
+	}
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
+}
+
+func (h *EntityHTTPHandler) ListExpression(req *go_restful.Request, resp *go_restful.Response) {
+	in := ListExpressionReq{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.ListExpression(ctx, &in)
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -947,6 +1130,64 @@ func (h *EntityHTTPHandler) RemoveEntityProps(req *go_restful.Request, resp *go_
 	}
 }
 
+func (h *EntityHTTPHandler) RemoveExpression(req *go_restful.Request, resp *go_restful.Response) {
+	in := RemoveExpressionReq{}
+	if err := transportHTTP.GetQuery(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	if err := transportHTTP.GetPathValue(req, &in); err != nil {
+		resp.WriteHeaderAndJson(http.StatusBadRequest,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
+
+	out, err := h.srv.RemoveExpression(ctx, &in)
+	if err != nil {
+		tErr := errors.FromError(err)
+		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
+		resp.WriteHeaderAndJson(httpCode,
+			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		return
+	}
+	anyOut, err := anypb.New(out)
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+
+	outB, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(&result.Http{
+		Code: errors.Success.Reason,
+		Msg:  "",
+		Data: anyOut,
+	})
+	if err != nil {
+		resp.WriteHeaderAndJson(http.StatusInternalServerError,
+			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		return
+	}
+	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
+
+	var remain int
+	for {
+		outB = outB[remain:]
+		remain, err = resp.Write(outB)
+		if err != nil {
+			return
+		}
+		if remain == 0 {
+			break
+		}
+	}
+}
+
 func (h *EntityHTTPHandler) RemoveMapper(req *go_restful.Request, resp *go_restful.Response) {
 	in := RemoveMapperRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
@@ -1008,11 +1249,6 @@ func (h *EntityHTTPHandler) RemoveMapper(req *go_restful.Request, resp *go_restf
 func (h *EntityHTTPHandler) UpdateEntity(req *go_restful.Request, resp *go_restful.Response) {
 	in := UpdateEntityRequest{}
 	if err := transportHTTP.GetBody(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
-		return
-	}
-	if err := transportHTTP.GetQuery(req, &in); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
 		return
@@ -1246,6 +1482,14 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.ListMapper))
 	ws.Route(ws.DELETE("/entities/{entity_id}/mappers").
 		To(handler.RemoveMapper))
+	ws.Route(ws.POST("/entities/{entity_id}/expressions").
+		To(handler.AppendExpression))
+	ws.Route(ws.GET("/entities/{entity_id}/expressions/{id}").
+		To(handler.GetExpression))
+	ws.Route(ws.GET("/entities/{entity_id}/expressions").
+		To(handler.ListExpression))
+	ws.Route(ws.DELETE("/entities/{entity_id}/expressions").
+		To(handler.RemoveExpression))
 	ws.Route(ws.POST("/entities/search").
 		To(handler.ListEntity))
 }
