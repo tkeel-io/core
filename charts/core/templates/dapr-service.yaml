@@ -1,0 +1,36 @@
+{{- if semverCompare "<1.6.0" .Values.daprVersion -}}
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    dapr.io/app-id: core
+    prometheus.io/path: /
+    prometheus.io/port: "9090"
+    prometheus.io/scrape: "true"
+  labels:
+    dapr.io/enabled: "true"
+  name: {{ printf "%s-dapr" (include "core.name" .) }}
+spec:
+  clusterIP: None
+  ports:
+  - name: dapr-http
+    port: 80
+    protocol: TCP
+    targetPort: 3500
+  - name: dapr-grpc
+    port: 50001
+    protocol: TCP
+    targetPort: 50001
+  - name: dapr-internal
+    port: 50002
+    protocol: TCP
+    targetPort: 50002
+  - name: dapr-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: {{ include "core.name" . }}
+  type: ClusterIP
+{{- end}}
