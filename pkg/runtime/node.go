@@ -79,7 +79,7 @@ func (n *Node) Start(cfg NodeConf) error {
 			if nil != err {
 				log.L().Error("parse expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.ID), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
 				continue
 			}
 
@@ -130,7 +130,7 @@ func (n *Node) listMetadata() {
 		for _, expr := range expressions {
 			log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
 				zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-				zfield.Mid(expr.ID), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 			// cache for node.
 			n.expressions[exprKey(expr)] = newExprInfo(expr)
@@ -150,23 +150,23 @@ func (n *Node) watchMetadata() {
 				exprInfo := newExprInfo(expr)
 				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.ID), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 				// remove mapper from all runtime.
 				for _, rt := range n.runtimes {
-					rt.RemoveExpression(exprInfo.ID)
+					rt.RemoveExpression(exprInfo.Path)
 				}
 			case dao.PUT:
 				exprInfo := newExprInfo(expr)
 				log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.ID), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 				exprInfos, err := parseExpression(exprInfo.Expression, 0)
 				if nil != err {
 					log.L().Error("parse expression", zfield.Eid(expr.EntityID),
 						zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-						zfield.Mid(expr.ID), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+						zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
 					return
 				}
 
@@ -344,13 +344,15 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 			if eid != expr.EntityID {
 				exprInfos[info.ID].subEndpoints =
 					append(exprInfos[info.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, info.ID))
+						newSubEnd(path, expr.EntityID, expr.Path, info.ID))
 			}
 
-			// construct eval endpoint.
-			exprInfos[info.ID].evalEndpoints =
-				append(exprInfos[info.ID].evalEndpoints,
-					newEvalEnd(path, expr.EntityID, expr.ID))
+			if len(exprIns.Fields()) == 1 {
+				// construct eval endpoint.
+				exprInfos[info.ID].evalEndpoints =
+					append(exprInfos[info.ID].evalEndpoints,
+						newEvalEnd(path, expr.EntityID, expr.Path))
+			}
 		}
 	}
 
@@ -359,13 +361,14 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 
 // exprKey return unique expression identifier.
 func exprKey(expr dao.Expression) string {
-	return expr.EntityID + expr.ID
+	return expr.EntityID + expr.Path
 }
 
 func newExprInfo(expr dao.Expression) ExpressionInfo {
 	return ExpressionInfo{
 		Expression: dao.Expression{
-			ID:          exprKey(expr),
+			ID:          expr.ID,
+			Path:        expr.Path,
 			Name:        expr.Name,
 			Owner:       expr.Owner,
 			EntityID:    expr.EntityID,

@@ -8,7 +8,6 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -25,28 +24,13 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, &entity)
 
-	expr := dao.Expression{
-		ID:          util.UUID("expr"),
-		Name:        req.Expression.Name,
-		Owner:       entity.Owner,
-		EntityID:    req.EntityId,
-		Expression:  req.Expression.Expression,
-		Description: req.Expression.Description,
-	}
-
 	// append expression.
 
 	return &pb.AppendExpressionResp{
 		Type:     entity.Type,
 		Owner:    entity.Owner,
 		Source:   entity.Source,
-		EntityId: expr.EntityID,
-		Expression: &pb.Expression{
-			Id:          expr.ID,
-			Name:        expr.Name,
-			Expression:  expr.Expression,
-			Description: expr.Description,
-		},
+		EntityId: entity.ID,
 	}, nil
 }
 
@@ -63,18 +47,12 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 	entity.Source = req.Source
 	parseHeaderFrom(ctx, &entity)
 
-	expr := dao.Expression{
-		ID:       req.Id,
-		Owner:    entity.Owner,
-		EntityID: req.EntityId,
-	}
-
 	return &pb.RemoveExpressionResp{
-		Id:       expr.ID,
+		Path:     req.Path,
 		Type:     entity.Type,
 		Owner:    entity.Owner,
 		Source:   entity.Source,
-		EntityId: expr.EntityID,
+		EntityId: req.EntityId,
 	}, nil
 }
 
@@ -92,7 +70,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 	parseHeaderFrom(ctx, &entity)
 
 	expr := &dao.Expression{
-		ID:       in.Id,
+		Path:     in.Path,
 		Owner:    entity.Owner,
 		EntityID: in.EntityId,
 	}
@@ -103,7 +81,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 		Source:   entity.Source,
 		EntityId: expr.EntityID,
 		Expression: &pb.Expression{
-			Id:          expr.ID,
+			Path:        expr.Path,
 			Name:        expr.Name,
 			Expression:  expr.Expression,
 			Description: expr.Description,

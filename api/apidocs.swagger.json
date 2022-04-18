@@ -210,8 +210,8 @@
             "type": "string"
           },
           {
-            "name": "id",
-            "description": "expression id",
+            "name": "path",
+            "description": "expression target path",
             "in": "query",
             "required": false,
             "type": "string"
@@ -244,7 +244,7 @@
         ]
       },
       "post": {
-        "summary": "Append expression for entity",
+        "summary": "Append expressions for entity",
         "operationId": "AppendExpression",
         "responses": {
           "200": {
@@ -274,7 +274,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1Expression",
+              "$ref": "#/definitions/v1Expressions",
               "description": "expression information"
             }
           },
@@ -306,7 +306,7 @@
         ]
       }
     },
-    "/entities/{entity_id}/expressions/{id}": {
+    "/entities/{entity_id}/expressions/{path}": {
       "get": {
         "summary": "get expression by id",
         "operationId": "GetExpression",
@@ -333,8 +333,8 @@
             "type": "string"
           },
           {
-            "name": "id",
-            "description": "mapper id",
+            "name": "path",
+            "description": "target property path",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1926,9 +1926,10 @@
           "type": "string",
           "description": "entity id"
         },
-        "expression": {
-          "$ref": "#/definitions/v1Expression",
-          "description": "expression information"
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "effect count"
         }
       },
       "description": "Append Expression Response."
@@ -2065,9 +2066,9 @@
     "v1Expression": {
       "type": "object",
       "properties": {
-        "id": {
+        "path": {
           "type": "string",
-          "description": "expression id"
+          "description": "target property path"
         },
         "name": {
           "type": "string",
@@ -2083,6 +2084,17 @@
         }
       },
       "description": "Expression Definition."
+    },
+    "v1Expressions": {
+      "type": "object",
+      "properties": {
+        "expressions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Expression"
+          }
+        }
+      }
     },
     "v1GetExpressionResp": {
       "type": "object",
@@ -2388,9 +2400,9 @@
     "v1RemoveExpressionResp": {
       "type": "object",
       "properties": {
-        "id": {
+        "path": {
           "type": "string",
-          "description": "expression id"
+          "description": "expression target path"
         },
         "type": {
           "type": "string",

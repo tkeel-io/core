@@ -63,7 +63,7 @@ func newEntityHTTPHandler(s EntityHTTPServer) *EntityHTTPHandler {
 
 func (h *EntityHTTPHandler) AppendExpression(req *go_restful.Request, resp *go_restful.Response) {
 	in := AppendExpressionReq{}
-	if err := transportHTTP.GetBody(req, &in.Expression); err != nil {
+	if err := transportHTTP.GetBody(req, &in.Expressions); err != nil {
 		resp.WriteHeaderAndJson(http.StatusBadRequest,
 			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
 		return
@@ -1484,7 +1484,7 @@ func RegisterEntityHTTPServer(container *go_restful.Container, srv EntityHTTPSer
 		To(handler.RemoveMapper))
 	ws.Route(ws.POST("/entities/{entity_id}/expressions").
 		To(handler.AppendExpression))
-	ws.Route(ws.GET("/entities/{entity_id}/expressions/{id}").
+	ws.Route(ws.GET("/entities/{entity_id}/expressions/{path}").
 		To(handler.GetExpression))
 	ws.Route(ws.GET("/entities/{entity_id}/expressions").
 		To(handler.ListExpression))

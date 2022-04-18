@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -26,7 +27,10 @@ type ExpressionFunc func([]Expression)
 type WatchExpressionFunc func(EnventType, Expression)
 
 type Expression struct {
+	// expression identifier.
 	ID string
+	// target path.
+	Path string
 	// expression name.
 	Name string
 	// expression owner.
@@ -39,9 +43,12 @@ type Expression struct {
 	Description string
 }
 
-func NewExpression(owner, entityID, expr string) *Expression {
+func NewExpression(owner, entityID, path, expr string) *Expression {
+	escapePath := url.PathEscape(path)
+	identifier := fmt.Sprintf(fmtExprString, owner, entityID, escapePath)
 	return &Expression{
-		ID:         util.UUID("expr"),
+		ID:         identifier,
+		Path:       path,
 		Owner:      owner,
 		EntityID:   entityID,
 		Expression: expr,
@@ -49,7 +56,8 @@ func NewExpression(owner, entityID, expr string) *Expression {
 }
 
 func (e *Expression) Key() string {
-	return fmt.Sprintf(fmtExprString, e.Owner, e.EntityID, e.ID)
+	escapePath := url.PathEscape(e.Path)
+	return fmt.Sprintf(fmtExprString, e.Owner, e.EntityID, escapePath)
 }
 
 func (e *Expression) EKey() string {

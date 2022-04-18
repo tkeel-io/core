@@ -116,9 +116,3 @@ func TestMapper123(t *testing.T) {
 	assert.Nil(t, err)
 	t.Log("result: ", res)
 }
-
-
-
-func TestExpression(t *testing.T) {
-	
-}
