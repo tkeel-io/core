@@ -343,7 +343,6 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 		}
 
 		for _, path := range paths {
-			path = eid + "." + path
 			// construct sub endpoint.
 			if eid != expr.EntityID {
 				exprInfos[info.ID].subEndpoints =

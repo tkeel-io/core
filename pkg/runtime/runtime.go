@@ -408,12 +408,12 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 		var state Entity
 		// get value from entities.
 		if state, has = r.entities[segs[0]]; has {
-			in[item.String()] = state.Get(segs[1])
+			in[item.path] = state.Get(segs[1])
 			continue
 		}
 		// get value from cache.
 		if state, err = r.enCache.Load(ctx, segs[0]); nil == err {
-			in[item.String()] = state.Get(segs[1])
+			in[item.path] = state.Get(segs[1])
 		}
 	}
 
