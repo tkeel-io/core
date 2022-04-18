@@ -14,7 +14,11 @@ type IExpression interface {
 }
 
 func Validate(expr dao.Expression) error {
-	return nil
+	// check path.
+
+	// check expression.
+	_, err := NewExpr(expr.Expression, nil)
+	return errors.Wrap(err, "invalid expression")
 }
 
 type Expr struct {

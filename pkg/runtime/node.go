@@ -351,8 +351,7 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 			// construct eval endpoint.
 			exprInfos[info.ID].evalEndpoints =
 				append(exprInfos[info.ID].evalEndpoints,
-					newEvalEnd(path, expr.EntityID, expr.Path))
-
+					newEvalEnd(path, expr.EntityID, expr.ID))
 		}
 	}
 

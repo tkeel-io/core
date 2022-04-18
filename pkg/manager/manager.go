@@ -334,12 +334,6 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	{
-		// check TQL & mapper.
-		// TODO: 兼容v0.3, 后面去掉.
-		if mp.ID == "" && mp.Name != "" {
-			mp.ID = mp.Name
-		}
-
 		// check mapper.
 		if err := checkMapper(mp); nil != err {
 			log.L().Error("append mapper", zfield.Eid(mp.EntityID), zap.Error(err))
@@ -538,21 +532,25 @@ func checkMapper(m *dao.Mapper) error {
 }
 
 // implement apis for Expression.
-
-func (m *apiManager) AppendExpression(ctx context.Context, expr dao.Expression) error {
-	// validate expression.
-	if err := expression.Validate(expr); nil != err {
-		log.Error("append expression, invalidate expression",
-			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
-		return errors.Wrap(err, "invalid expression")
+func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expression) error {
+	// validate expressions.
+	for _, expr := range exprs {
+		if err := expression.Validate(expr); nil != err {
+			log.Error("append expression, invalidate expression",
+				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "invalid expression")
+		}
 	}
 
-	// update expression.
-	if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
-		log.Error("append expression", zap.Error(err),
-			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
-		return errors.Wrap(err, "append expression")
+	// update expressions.
+	for _, expr := range exprs {
+		if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
+			log.Error("append expression", zap.Error(err),
+				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "append expression")
+		}
 	}
+
 	return nil
 }
 
