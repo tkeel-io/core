@@ -13,6 +13,7 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -324,7 +325,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 }
 
 func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionInfo, error) {
-	exprIns, err := tdtl.NewExpr(expr.Expression, nil)
+	exprIns, err := expression.NewExpr(expr.Expression, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "parse expression")
 	}
@@ -347,12 +348,11 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 						newSubEnd(path, expr.EntityID, expr.Path, info.ID))
 			}
 
-			if len(exprIns.Fields()) == 1 {
-				// construct eval endpoint.
-				exprInfos[info.ID].evalEndpoints =
-					append(exprInfos[info.ID].evalEndpoints,
-						newEvalEnd(path, expr.EntityID, expr.Path))
-			}
+			// construct eval endpoint.
+			exprInfos[info.ID].evalEndpoints =
+				append(exprInfos[info.ID].evalEndpoints,
+					newEvalEnd(path, expr.EntityID, expr.Path))
+
 		}
 	}
 

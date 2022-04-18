@@ -349,16 +349,26 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 		log.L().Debug("eval expression",
 			zfield.Eid(entityID), zfield.Mid(id),
 			zfield.Expr(expr.Expression.Expression))
-		result := r.evalExpression(ctx, expr.Expression)
-		for path, val := range result {
-			patches[target] = append(
-				patches[target],
-				&v1.PatchData{
-					Operator: xjson.OpReplace.String(),
-					Path:     path,
-					Value:    val.Raw(),
-				})
+		result, err := r.evalExpression(ctx, expr.Expression)
+		if nil != err {
+			log.L().Error("eval expression",
+				zfield.Eid(entityID), zfield.Mid(id),
+				zfield.Expr(expr.Expression.Expression))
+			continue
+		} else if nil == result {
+			log.L().Warn("eval expression, empty result.",
+				zfield.Eid(entityID), zfield.Mid(id),
+				zfield.Expr(expr.Expression.Expression))
+			continue
 		}
+
+		patches[target] = append(
+			patches[target],
+			&v1.PatchData{
+				Operator: xjson.OpReplace.String(),
+				Path:     expr.Expression.Path,
+				Value:    result.Raw(),
+			})
 	}
 
 	// 2. dispatch.send()
@@ -379,7 +389,7 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) map[string]tdtl.Node {
+func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl.Node, error) {
 	var (
 		err      error
 		has      bool
@@ -389,10 +399,12 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) map[s
 	r.mlock.RLock()
 	if exprInfo, has = r.expressions[expr.ID]; !has {
 		r.mlock.RUnlock()
-		return map[string]tdtl.Node{}
+		log.Error("expression not exsists", zfield.ID(expr.ID),
+			zfield.Eid(expr.EntityID), zfield.Expr(expr.Expression))
+		return nil, xerrors.ErrExpressionNotFound
 	}
-	r.mlock.RUnlock()
 
+	r.mlock.RUnlock()
 	in := make(map[string]tdtl.Node)
 	for _, item := range exprInfo.evalEndpoints {
 		// entityID.propertyKey
@@ -414,38 +426,36 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) map[s
 	if len(in) == 0 {
 		log.L().Warn("ignore empty input",
 			zfield.ID(expr.ID), zfield.Expr(expr.Expression))
-		return map[string]tdtl.Node{}
+		return nil, nil
 	}
 
-	exprIns, err := expression.NewExpr(exprInfo.Expression)
+	exprIns, err := expression.NewExpr(exprInfo.Expression.Expression, nil)
 	if nil != err {
 		log.L().Error("parse expression",
 			zfield.Eid(expr.EntityID), zap.Error(err))
-		return map[string]tdtl.Node{}
+		return nil, errors.Wrap(err, "parse expression")
 	}
 
 	// eval expression.
-	var out map[string]tdtl.Node
+	var out tdtl.Node
 	if out, err = exprIns.Eval(ctx, in); nil != err {
 		log.L().Error("eval expression",
 			zfield.ID(expr.ID), zfield.Eid(expr.EntityID))
-		return map[string]tdtl.Node{}
+		return nil, errors.Wrap(err, "eval expression")
 	}
 
 	log.L().Debug("eval expression", zfield.ID(expr.ID),
 		zfield.Eid(expr.EntityID), zfield.Input(in), zfield.Output(out))
 
 	// clean nil feed.
-	for path, val := range out {
-		if val == nil || val.Type() == tdtl.Null ||
-			val.Type() == tdtl.Undefined || val.Error() != nil {
-			log.L().Warn("invalid computed feed", zfield.Eid(expr.EntityID),
-				zap.Any("value", val.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
-			delete(out, path)
-		}
+
+	if out.Type() == tdtl.Null || out.Type() == tdtl.Undefined {
+		log.L().Warn("invalid eval result", zfield.Eid(expr.EntityID),
+			zap.Any("value", out.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
+		return nil, xerrors.ErrInvalidParam
 	}
 
-	return out
+	return out, nil
 
 }
 
@@ -459,14 +469,10 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	for _, change := range feed.Changes {
 		for _, node := range r.subTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
-			tentacle, _ := node.(mapper.Tentacler)
-			if entityID != tentacle.TargetID() &&
-				mapper.TentacleTypeEntity == tentacle.Type() {
-				targets = append(targets, tentacle.TargetID())
-			}
-
-			log.L().Debug("tentacle matched", zfield.Eid(entityID), zfield.Path(change.Path),
-				zfield.Type(tentacle.Type()), zfield.ID(tentacle.ID()), zfield.Target(tentacle.TargetID()))
+			subEnd, _ := node.(*SubEndpoint)
+			targets = append(targets, subEnd.deliveryID)
+			log.L().Debug("expression sub matched", zfield.Eid(entityID), zfield.Path(change.Path),
+				zfield.Target(subEnd.target), zfield.Path(subEnd.path), zfield.ID(subEnd.deliveryID), zfield.Expr(subEnd.Expression()))
 		}
 
 		targets = util.Unique(targets)
@@ -502,9 +508,9 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 			Id:        util.IG().EvID(),
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
-				v1.MetaType:     string(v1.ETCache),
-				v1.MetaEntityID: target,
-				v1.MetaSender:   entityID},
+				v1.MetaType:        string(v1.ETCache),
+				v1.MetaPartitionID: target,
+				v1.MetaSender:      entityID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patch,
@@ -779,16 +785,26 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 		patches := []*v1.PatchData{}
 		log.L().Debug("eval expression", zfield.Expr(expr.Expression.Expression),
 			zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Owner(expr.Owner))
-		result := r.evalExpression(ctx, expr.Expression)
-		for path, val := range result {
-			patches = append(
-				patches,
-				&v1.PatchData{
-					Operator: xjson.OpReplace.String(),
-					Path:     path,
-					Value:    val.Raw(),
-				})
+		result, err := r.evalExpression(ctx, expr.Expression)
+		if nil != err {
+			log.L().Error("eval expression",
+				zfield.Eid(expr.EntityID), zfield.Mid(expr.ID),
+				zfield.Expr(expr.Expression.Expression))
+			return
+		} else if nil == result {
+			log.L().Warn("eval expression, empty result.",
+				zfield.Eid(expr.EntityID), zfield.Mid(expr.ID),
+				zfield.Expr(expr.Expression.Expression))
+			return
 		}
+
+		patches = append(
+			patches,
+			&v1.PatchData{
+				Operator: xjson.OpReplace.String(),
+				Path:     expr.Expression.Path,
+				Value:    result.Raw(),
+			})
 
 		// 2. dispatch.send() .
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{

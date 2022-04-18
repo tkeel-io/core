@@ -9,8 +9,8 @@ import (
 )
 
 type IExpression interface {
-	ID() string
-	Eval(context.Context, map[string]tdtl.Node) (map[string]tdtl.Node, error)
+	Eval(context.Context, map[string]tdtl.Node) (tdtl.Node, error)
+	Entities() map[string][]string
 }
 
 func Validate(expr dao.Expression) error {
@@ -18,19 +18,19 @@ func Validate(expr dao.Expression) error {
 }
 
 type Expr struct {
-	id      string
-	evalIns tdtl.TDTL
+	exprIns tdtl.Expression
 }
 
-func NewExpr(expr dao.Expression) (IExpression, error) {
-	exprIns, err := tdtl.NewExpr(expr.Expression, nil)
-	return &Expr{id: expr.ID, evalIns: exprIns}, errors.Wrap(err, "new expression evaler")
+func NewExpr(expression string, extFuncs map[string]tdtl.ContextFunc) (IExpression, error) {
+	exprIns, err := tdtl.NewExpr(expression, extFuncs)
+	return &Expr{exprIns: exprIns}, errors.Wrap(err, "new expression evaler")
 }
 
-func (e *Expr) ID() string {
-	return e.id
+func (e *Expr) Eval(ctx context.Context, in map[string]tdtl.Node) (tdtl.Node, error) {
+	result := e.exprIns.Eval(in)
+	return result, errors.Wrap(result.Error(), "eval expression")
 }
 
-func (e *Expr) Eval(ctx context.Context, in map[string]tdtl.Node) (map[string]tdtl.Node, error) {
-	return nil, nil
+func (e *Expr) Entities() map[string][]string {
+	return e.exprIns.Sources()
 }
