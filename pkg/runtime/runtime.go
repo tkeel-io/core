@@ -335,11 +335,9 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 		for _, node := range r.evalTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			evalEnd, _ := node.(*EvalEndpoint)
-			r.mlock.RLock()
-			if expr, has := r.expressions[evalEnd.expresionID]; has {
+			if expr, has := r.getExpr(evalEnd.expresionID); has {
 				expressions[expr.ID] = expr
 			}
-			r.mlock.RUnlock()
 		}
 	}
 
@@ -396,15 +394,12 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 		exprInfo ExpressionInfo
 	)
 
-	r.mlock.RLock()
-	if exprInfo, has = r.expressions[expr.ID]; !has {
-		r.mlock.RUnlock()
-		log.Error("expression not exsists", zfield.ID(expr.ID),
+	if exprInfo, has = r.getExpr(expr.ID); !has {
+		log.L().Error("expression not exsists", zfield.ID(expr.ID),
 			zfield.Eid(expr.EntityID), zfield.Expr(expr.Expression))
 		return nil, xerrors.ErrExpressionNotFound
 	}
 
-	r.mlock.RUnlock()
 	in := make(map[string]tdtl.Node)
 	for _, item := range exprInfo.evalEndpoints {
 		// entityID.propertyKey
@@ -439,8 +434,8 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 	// eval expression.
 	var out tdtl.Node
 	if out, err = exprIns.Eval(ctx, in); nil != err {
-		log.L().Error("eval expression",
-			zfield.ID(expr.ID), zfield.Eid(expr.EntityID))
+		log.L().Error("eval expression", zfield.Input(in),
+			zfield.ID(expr.ID), zfield.Eid(expr.EntityID), zfield.Output(out.String()))
 		return nil, errors.Wrap(err, "eval expression")
 	}
 
@@ -722,23 +717,22 @@ func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
 		zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
 		zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
 
-	r.mlock.Lock()
 	// remove expression if exists.
-	if _, exists := r.expressions[exprInfo.ID]; exists {
-		expr0 := r.expressions[exprInfo.ID]
+	if exprOld, exists := r.getExpr(exprInfo.ID); exists {
 		// remove sub-endpoint from sub-tree.
-		for _, item := range expr0.subEndpoints {
+		for _, item := range exprOld.subEndpoints {
 			r.subTree.Remove(item.path, &item)
 		}
 
 		// remove eval-endpoint from eval-tree.
-		for _, item := range expr0.evalEndpoints {
+		for _, item := range exprOld.evalEndpoints {
 			r.evalTree.Remove(item.path, &item)
 		}
 	}
 
 	// cache expression info.
-	r.expressions[exprInfo.ID] = exprInfo
+	r.setExpr(exprInfo)
+
 	// mount sub-endpoint to sub-tree.
 	for _, item := range exprInfo.subEndpoints {
 		r.subTree.Add(item.path, &item)
@@ -752,10 +746,8 @@ func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
 }
 
 func (r *Runtime) RemoveExpression(exprID string) {
-	r.mlock.Lock()
-	defer r.mlock.Unlock()
 	// remove expression if exists.
-	if exprInfo, exists := r.expressions[exprID]; exists {
+	if exprInfo, exists := r.getExpr(exprID); exists {
 		log.L().Debug("remove expression from runtime",
 			zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
 			zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
@@ -783,20 +775,21 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 	if len(expr.evalEndpoints) > 0 {
 		// TODO: 解决 Cache 消息 先于 mapper 初始化, 需要深入思考原因.
 		patches := []*v1.PatchData{}
-		log.L().Debug("eval expression", zfield.Expr(expr.Expression.Expression),
-			zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Owner(expr.Owner))
 		result, err := r.evalExpression(ctx, expr.Expression)
 		if nil != err {
 			log.L().Error("eval expression",
-				zfield.Eid(expr.EntityID), zfield.Mid(expr.ID),
+				zfield.Eid(expr.EntityID), zfield.ID(expr.ID),
 				zfield.Expr(expr.Expression.Expression))
 			return
 		} else if nil == result {
 			log.L().Warn("eval expression, empty result.",
-				zfield.Eid(expr.EntityID), zfield.Mid(expr.ID),
+				zfield.Eid(expr.EntityID), zfield.ID(expr.ID),
 				zfield.Expr(expr.Expression.Expression))
 			return
 		}
+
+		log.L().Debug("eval expression", zfield.Expr(expr.Expression.Expression),
+			zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Owner(expr.Owner))
 
 		patches = append(
 			patches,
@@ -910,4 +903,17 @@ func conv(patches []*v1.PatchData) []Patch {
 		})
 	}
 	return res
+}
+
+func (r *Runtime) getExpr(id string) (ExpressionInfo, bool) {
+	r.mlock.RLock()
+	defer r.mlock.RUnlock()
+	exprInfo, has := r.expressions[id]
+	return exprInfo, has
+}
+
+func (r *Runtime) setExpr(exprInfo ExpressionInfo) {
+	r.mlock.Lock()
+	defer r.mlock.Unlock()
+	r.expressions[exprInfo.ID] = exprInfo
 }

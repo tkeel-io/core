@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	fmtExprPrefix = "/core/v1/expression"
-	// owner/entityID/id
-	fmtExprString       = "/core/v1/expression/%s/%s/%s"
-	fmtExprPrefixString = "/core/v1/expression/%s/%s"
+	fmtExprPrefix = "/core/v1/expressions"
+	// owner/entityID/path
+	fmtExprString       = "/core/v1/expressions/%s/%s/%s"
+	fmtExprPrefixString = "/core/v1/expressions/%s/%s"
 )
 
 type ExpressionFunc func([]Expression)
@@ -229,9 +229,18 @@ func (d *Dao) WatchExpression(ctx context.Context, rev int64, handler WatchExpre
 
 			for _, ev := range wr.Events {
 				var expr Expression
-				if err := json.Unmarshal(ev.Kv.Value, &expr); nil != err {
-					log.L().Error("unmarshal expression", zap.Error(err),
-						zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
+				switch EnventType(ev.Type) {
+				case PUT:
+					log.L().Debug("catch event", zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
+					if err := json.Unmarshal(ev.Kv.Value, &expr); nil != err {
+						log.L().Error("unmarshal expression", zap.Error(err),
+							zfield.Key(string(ev.Kv.Key)), zfield.Value(string(ev.Kv.Value)))
+						continue
+					}
+				case DELETE:
+					expr = Expression{ID: string(ev.Kv.Key)}
+				default:
+					log.L().Debug("catch event, invalid event type", zap.Any("event_type", ev.Type))
 					continue
 				}
 				handler(EnventType(ev.Type), expr)

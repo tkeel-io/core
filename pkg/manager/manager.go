@@ -536,7 +536,7 @@ func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expressio
 	// validate expressions.
 	for _, expr := range exprs {
 		if err := expression.Validate(expr); nil != err {
-			log.Error("append expression, invalidate expression",
+			log.L().Error("append expression, invalidate expression", zfield.Path(expr.Path),
 				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 			return errors.Wrap(err, "invalid expression")
 		}
@@ -544,9 +544,11 @@ func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expressio
 
 	// update expressions.
 	for _, expr := range exprs {
+		log.L().Debug("append expression", zfield.Path(expr.Path),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 		if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
-			log.Error("append expression", zap.Error(err),
-				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			log.L().Error("append expression", zfield.Eid(expr.EntityID),
+				zap.Error(err), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 			return errors.Wrap(err, "append expression")
 		}
 	}
@@ -557,7 +559,7 @@ func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expressio
 func (m *apiManager) RemoveExpression(ctx context.Context, expr dao.Expression) error {
 	// delete expression.
 	if err := m.entityRepo.DelExpression(ctx, expr); nil != err {
-		log.Error("delete expression", zap.Error(err),
+		log.L().Error("delete expression", zap.Error(err), zfield.Path(expr.Path),
 			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 		return errors.Wrap(err, "delete expression")
 	}
@@ -568,7 +570,7 @@ func (m *apiManager) GetExpression(ctx context.Context, expr dao.Expression) (*d
 	// get expression.
 	expr, err := m.entityRepo.GetExpression(ctx, expr)
 	if nil != err {
-		log.Error("get expression", zap.Error(err),
+		log.L().Error("get expression", zap.Error(err), zfield.Path(expr.Path),
 			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 		return nil, errors.Wrap(err, "get expression")
 	}

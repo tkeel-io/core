@@ -155,7 +155,7 @@ func (n *Node) watchMetadata() {
 
 				// remove mapper from all runtime.
 				for _, rt := range n.runtimes {
-					rt.RemoveExpression(exprInfo.Path)
+					rt.RemoveExpression(exprInfo.ID)
 				}
 			case dao.PUT:
 				exprInfo := newExprInfo(expr)
@@ -177,6 +177,8 @@ func (n *Node) watchMetadata() {
 						rt.AppendExpression(*exprItem)
 					}
 				}
+			default:
+				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
 }
@@ -341,6 +343,7 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 		}
 
 		for _, path := range paths {
+			path = eid + "." + path
 			// construct sub endpoint.
 			if eid != expr.EntityID {
 				exprInfos[info.ID].subEndpoints =

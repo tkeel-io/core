@@ -214,12 +214,12 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	coreRepo := repository.New(coreDao)
-	stateManager := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
+	nodeInstance := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
 	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
 		log.Fatal(err)
 	}
 
-	if err = stateManager.Start(runtime.NodeConf{Sources: config.Get().Server.Sources}); nil != err {
+	if err = nodeInstance.Start(runtime.NodeConf{Sources: config.Get().Server.Sources}); nil != err {
 		log.Fatal(err)
 	}
 
