@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -98,7 +99,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 	var expr *dao.Expression
 	if expr, err = s.apiManager.GetExpression(ctx,
 		dao.Expression{
-			Path:     in.Path,
+			Path:     propKey(in.Path),
 			Owner:    entity.Owner,
 			EntityID: in.EntityId,
 		}); nil != err {
@@ -157,9 +158,9 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 }
 
 func dao2pbExpression(expr *dao.Expression) *pb.Expression {
-	path := ""
+	var path string
 	if expr.Type == dao.ExprTypeEval {
-		path = expr.Path
+		path = strings.SplitN(expr.Path, sep, 2)[1]
 	}
 
 	return &pb.Expression{
