@@ -184,7 +184,7 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$wildcard":
 			wildcard := condition.Value.GetStringValue()
 			if wildcard != "" {
-				boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+condition.Value.GetStringValue()+"*"))
+				boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+wildcard+"*"))
 			}
 		default:
 			boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
