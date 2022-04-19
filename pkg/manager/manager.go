@@ -417,27 +417,28 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 }
 
 func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
-	mappers, err := m.entityRepo.ListMapper(ctx,
-		m.entityRepo.GetLastRevision(ctx),
-		&dao.ListMapperReq{
-			Owner:    base.Owner,
-			EntityID: base.ID,
-		})
-	if nil != err {
-		return errors.Wrap(err, "list mapper by entity id.")
-	}
-
-	for _, mp := range mappers {
-		base.Mappers = append(base.Mappers,
-			&v1.Mapper{
-				Id:          mp.ID,
-				Tql:         mp.TQL,
-				Name:        mp.Name,
-				Description: mp.Description,
-			})
-	}
-
 	return nil
+	// mappers, err := m.entityRepo.ListMapper(ctx,
+	// 	m.entityRepo.GetLastRevision(ctx),
+	// 	&dao.ListMapperReq{
+	// 		Owner:    base.Owner,
+	// 		EntityID: base.ID,
+	// 	})
+	// if nil != err {
+	// 	return errors.Wrap(err, "list mapper by entity id.")
+	// }
+
+	// for _, mp := range mappers {
+	// 	base.Mappers = append(base.Mappers,
+	// 		&v1.Mapper{
+	// 			Id:          mp.ID,
+	// 			Tql:         mp.TQL,
+	// 			Name:        mp.Name,
+	// 			Description: mp.Description,
+	// 		})
+	// }
+
+	// return nil
 }
 
 func checkMapper(m *dao.Mapper) error {
