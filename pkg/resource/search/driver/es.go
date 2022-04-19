@@ -182,7 +182,10 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$prefix":
 			boolQuery = boolQuery.Must(elastic.NewPrefixQuery(condition.Field+".keyword", condition.Value.GetStringValue()))
 		case "$wildcard":
-			boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+condition.Value.GetStringValue()+"*"))
+			wildcard := condition.Value.GetStringValue()
+			if wildcard != "" {
+				boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+condition.Value.GetStringValue()+"*"))
+			}
 		default:
 			boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
 		}
