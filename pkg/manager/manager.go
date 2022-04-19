@@ -531,11 +531,64 @@ func checkMapper(m *dao.Mapper) error {
 	return nil
 }
 
+func checkExpression(expr *dao.Expression) error {
+	sep := "."
+	FieldProps := "properties"
+
+	if expr.Expression == "" {
+		return xerrors.ErrInvalidRequest
+	}
+
+	exprIns, err := expression.NewExpr(expr.Expression, nil)
+	if nil != err {
+		log.L().Error("check expression", zfield.Path(expr.Path), zap.Error(err),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "invalid expression")
+	}
+
+	propKeys := make(map[string]string)
+	for _, keys := range exprIns.Entities() {
+		for _, key := range keys {
+			segs := strings.SplitN(key, sep, 2)
+			if segs[1] != "*" {
+				segs = append(segs[:1], append([]string{FieldProps}, segs[1:]...)...)
+			}
+			propKeys[key] = strings.Join(segs, sep)
+		}
+	}
+
+	// sort.
+	keys := sort.StringSlice{}
+	for key := range propKeys {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	for index := range keys {
+		key := keys[keys.Len()-index-1]
+		expr.Expression = strings.ReplaceAll(expr.Expression, key, propKeys[key])
+	}
+
+	// check tql parse.
+	_, err = expression.NewExpr(expr.Expression, nil)
+	if nil != err {
+		log.L().Error("check expression", zap.Error(err), zfield.Expr(expr.Expression))
+		return errors.Wrap(xerrors.ErrInternal, "preparse expression")
+	}
+
+	return nil
+
+}
+
 // implement apis for Expression.
 func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expression) error {
 	// validate expressions.
-	for _, expr := range exprs {
-		if err := expression.Validate(expr); nil != err {
+	for index, expr := range exprs {
+		if err := checkExpression(&exprs[index]); nil != err {
+			log.L().Error("append expression, invalidate expression", zfield.Path(expr.Path),
+				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "invalid expression")
+		} else if err := expression.Validate(expr); nil != err {
 			log.L().Error("append expression, invalidate expression", zfield.Path(expr.Path),
 				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
 			return errors.Wrap(err, "invalid expression")
@@ -593,4 +646,17 @@ func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]dao.Expres
 	}
 
 	return exprs, nil
+}
+
+func convExprs(mp dao.Mapper) []dao.Expression {
+	segs := strings.SplitN(mp.TQL, "select", 2)
+	arr := strings.Split(segs[1], ",")
+
+	exprs := []dao.Expression{}
+	for index := range arr {
+		segs = strings.Split(arr[index], " as ")
+		exprs = append(exprs,
+			*dao.NewExpression(mp.Owner, mp.EntityID, path, segs[0]))
+	}
+
 }

@@ -29,7 +29,7 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 	expressions := make([]dao.Expression, len(req.Expressions.Expressions))
 	for index, expr := range req.Expressions.Expressions {
 		expressions[index] = *dao.NewExpression(
-			req.Owner, req.EntityId, expr.Path, expr.Expression)
+			req.Owner, req.EntityId, propKey(expr.Path), expr.Expression)
 	}
 
 	if err = s.apiManager.AppendExpression(ctx, expressions); nil != err {
@@ -63,7 +63,7 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 	parseHeaderFrom(ctx, &entity)
 
 	if err = s.apiManager.RemoveExpression(ctx, dao.Expression{
-		Path:     req.Path,
+		Path:     propKey(req.Path),
 		Owner:    req.Owner,
 		EntityID: req.EntityId,
 	}); nil != err {
