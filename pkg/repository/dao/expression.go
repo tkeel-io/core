@@ -17,6 +17,11 @@ import (
 )
 
 const (
+	ExprTypeSub  = "sub"
+	ExprTypeEval = "eval"
+)
+
+const (
 	fmtExprPrefix = "/core/v1/expressions"
 	// owner/entityID/path
 	fmtExprString       = "/core/v1/expressions/%s/%s/%s"
@@ -33,6 +38,8 @@ type Expression struct {
 	Path string
 	// expression name.
 	Name string
+	// expression type.
+	Type string
 	// expression owner.
 	Owner string
 	// entity id.
@@ -45,10 +52,18 @@ type Expression struct {
 
 func NewExpression(owner, entityID, path, expr string) *Expression {
 	escapePath := url.PathEscape(path)
+
+	typ := ExprTypeEval
+	if escapePath == "" {
+		path = util.UUID("exprsub")
+		typ = ExprTypeSub
+	}
+
 	identifier := fmt.Sprintf(fmtExprString, owner, entityID, escapePath)
 	return &Expression{
 		ID:         identifier,
 		Path:       path,
+		Type:       typ,
 		Owner:      owner,
 		EntityID:   entityID,
 		Expression: expr,

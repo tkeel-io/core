@@ -347,13 +347,15 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 			if eid != expr.EntityID {
 				exprInfos[info.ID].subEndpoints =
 					append(exprInfos[info.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.Path, info.ID))
+						newSubEnd(path, expr.EntityID, expr.ID, info.ID))
 			}
 
 			// construct eval endpoint.
-			exprInfos[info.ID].evalEndpoints =
-				append(exprInfos[info.ID].evalEndpoints,
-					newEvalEnd(path, expr.EntityID, expr.ID))
+			if dao.ExprTypeEval == expr.Type {
+				exprInfos[info.ID].evalEndpoints =
+					append(exprInfos[info.ID].evalEndpoints,
+						newEvalEnd(path, expr.EntityID, expr.ID))
+			}
 		}
 	}
 
@@ -371,6 +373,7 @@ func newExprInfo(expr dao.Expression) ExpressionInfo {
 			ID:          expr.ID,
 			Path:        expr.Path,
 			Name:        expr.Name,
+			Type:        expr.Type,
 			Owner:       expr.Owner,
 			EntityID:    expr.EntityID,
 			Expression:  expr.Expression,
