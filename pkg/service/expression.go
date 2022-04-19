@@ -7,6 +7,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
+	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/kit/log"
 	"go.uber.org/zap"
@@ -94,23 +95,24 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, &entity)
 
-	expr := &dao.Expression{
-		Path:     in.Path,
-		Owner:    entity.Owner,
-		EntityID: in.EntityId,
+	var expr *dao.Expression
+	if expr, err = s.apiManager.GetExpression(ctx,
+		dao.Expression{
+			Path:     in.Path,
+			Owner:    entity.Owner,
+			EntityID: in.EntityId,
+		}); nil != err {
+		log.L().Error("get expression", zap.Error(err),
+			zfield.Eid(in.EntityId), zfield.Owner(entity.Owner), zfield.Path(in.Path))
+		return nil, errors.Wrap(err, "get expression")
 	}
 
 	return &pb.GetExpressionResp{
-		Type:     entity.Type,
-		Owner:    entity.Owner,
-		Source:   entity.Source,
-		EntityId: expr.EntityID,
-		Expression: &pb.Expression{
-			Path:        expr.Path,
-			Name:        expr.Name,
-			Expression:  expr.Expression,
-			Description: expr.Description,
-		},
+		Type:       entity.Type,
+		Owner:      entity.Owner,
+		Source:     entity.Source,
+		EntityId:   expr.EntityID,
+		Expression: dao2pbExpression(expr),
 	}, nil
 }
 
@@ -127,11 +129,43 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 	entity.Source = in.Source
 	parseHeaderFrom(ctx, &entity)
 
-	return &pb.ListExpressionResp{
+	var exprs []dao.Expression
+	if exprs, err = s.apiManager.ListExpression(ctx,
+		&apim.Base{
+			ID:    in.EntityId,
+			Owner: in.Owner,
+		}); nil != err {
+		log.L().Error("list expressions", zap.Error(err),
+			zfield.Eid(in.EntityId), zfield.Owner(in.Owner))
+		return nil, errors.Wrap(err, "list expressions")
+	}
+
+	out = &pb.ListExpressionResp{
 		Type:        entity.Type,
 		Owner:       entity.Owner,
 		Source:      entity.Source,
 		EntityId:    in.EntityId,
 		Expressions: []*pb.Expression{},
-	}, nil
+	}
+
+	for index := range exprs {
+		out.Expressions = append(out.Expressions,
+			dao2pbExpression(&exprs[index]))
+	}
+
+	return out, nil
+}
+
+func dao2pbExpression(expr *dao.Expression) *pb.Expression {
+	path := ""
+	if expr.Type == dao.ExprTypeEval {
+		path = expr.Path
+	}
+
+	return &pb.Expression{
+		Path:        path,
+		Name:        expr.Name,
+		Expression:  expr.Expression,
+		Description: expr.Description,
+	}
 }
