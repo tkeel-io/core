@@ -199,6 +199,10 @@ func (n *Node) getGlobalData(en Entity) (res []byte) {
 	if basicInfo.Type() != tdtl.Null {
 		globalData.Set("basicInfo", basicInfo.Raw())
 	}
+	connectInfo := en.GetProp("connectInfo")
+	if connectInfo.Type() != tdtl.Null {
+		globalData.Set("connectInfo", connectInfo.Raw())
+	}
 	return globalData.GetRaw()
 }
 
