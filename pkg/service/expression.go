@@ -20,12 +20,14 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity Entity
-	entity.ID = req.EntityId
-	entity.Type = req.Type
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-	parseHeaderFrom(ctx, &entity)
+	en := Entity{
+		ID:     req.EntityId,
+		Owner:  req.Owner,
+		Source: req.Source}
+	parseHeaderFrom(ctx, &en)
+
+	log.L().Debug("append expression", zfield.Owner(req.Owner),
+		zfield.Eid(req.EntityId), zfield.Value(req.Expressions))
 
 	// append expressions.
 	expressions := make([]dao.Expression, len(req.Expressions.Expressions))
@@ -40,10 +42,8 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 	}
 
 	return &pb.AppendExpressionResp{
-		Type:     entity.Type,
-		Owner:    entity.Owner,
-		Source:   entity.Source,
-		EntityId: entity.ID,
+		Owner:    en.Owner,
+		EntityId: en.ID,
 		Count:    int32(len(expressions)),
 	}, nil
 }
@@ -54,32 +54,40 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("remove expression", zfield.Owner(req.Owner),
-		zfield.Eid(req.EntityId), zfield.Path(req.Path))
+	en := Entity{
+		ID:     req.EntityId,
+		Owner:  req.Owner,
+		Source: req.Source}
+	parseHeaderFrom(ctx, &en)
 
-	var entity Entity
-	entity.ID = req.EntityId
-	entity.Type = req.Type
-	entity.Owner = req.Owner
-	entity.Source = req.Source
-	parseHeaderFrom(ctx, &entity)
+	log.L().Debug("remove expression", zfield.Owner(en.Owner),
+		zfield.Eid(en.ID), zfield.Path(req.Paths))
 
-	if err = s.apiManager.RemoveExpression(ctx, dao.Expression{
-		Path:     propKey(req.Path),
-		Owner:    req.Owner,
-		EntityID: req.EntityId,
-	}); nil != err {
-		log.L().Error("remove expression", zfield.Owner(req.Owner),
-			zfield.Eid(req.EntityId), zfield.Path(req.Path))
-		return nil, errors.Wrap(err, "remove expression")
+	paths := []string{}
+	if pathText := strings.TrimSpace(req.Paths); len(pathText) > 0 {
+		paths = strings.Split(pathText, ",")
+	}
+
+	exprs := []dao.Expression{}
+	for index := range paths {
+		exprs = append(exprs,
+			dao.Expression{
+				Path:     paths[index],
+				Owner:    en.Owner,
+				EntityID: en.ID,
+			})
+	}
+
+	if err = s.apiManager.RemoveExpression(ctx, exprs); nil != err {
+		log.L().Error("remove expressions",
+			zfield.Owner(en.Owner), zfield.Eid(en.ID), zfield.Path(req.Paths))
+		return nil, errors.Wrap(err, "remove expressions")
 	}
 
 	return &pb.RemoveExpressionResp{
-		Path:     req.Path,
-		Type:     entity.Type,
-		Owner:    entity.Owner,
-		Source:   entity.Source,
-		EntityId: req.EntityId,
+		EntityId: en.ID,
+		Owner:    en.Owner,
+		Count:    int32(len(exprs)),
 	}, nil
 }
 
@@ -89,29 +97,26 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity Entity
-	entity.ID = in.EntityId
-	entity.Type = in.Type
-	entity.Owner = in.Owner
-	entity.Source = in.Source
-	parseHeaderFrom(ctx, &entity)
+	en := Entity{
+		ID:     in.EntityId,
+		Owner:  in.Owner,
+		Source: in.Source}
+	parseHeaderFrom(ctx, &en)
 
 	var expr *dao.Expression
 	if expr, err = s.apiManager.GetExpression(ctx,
 		dao.Expression{
 			Path:     propKey(in.Path),
-			Owner:    entity.Owner,
+			Owner:    en.Owner,
 			EntityID: in.EntityId,
 		}); nil != err {
 		log.L().Error("get expression", zap.Error(err),
-			zfield.Eid(in.EntityId), zfield.Owner(entity.Owner), zfield.Path(in.Path))
+			zfield.Eid(in.EntityId), zfield.Owner(en.Owner), zfield.Path(in.Path))
 		return nil, errors.Wrap(err, "get expression")
 	}
 
 	return &pb.GetExpressionResp{
-		Type:       entity.Type,
-		Owner:      entity.Owner,
-		Source:     entity.Source,
+		Owner:      en.Owner,
 		EntityId:   expr.EntityID,
 		Expression: dao2pbExpression(expr),
 	}, nil
@@ -123,12 +128,11 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity Entity
-	entity.ID = in.EntityId
-	entity.Type = in.Type
-	entity.Owner = in.Owner
-	entity.Source = in.Source
-	parseHeaderFrom(ctx, &entity)
+	en := Entity{
+		ID:     in.EntityId,
+		Owner:  in.Owner,
+		Source: in.Source}
+	parseHeaderFrom(ctx, &en)
 
 	var exprs []dao.Expression
 	if exprs, err = s.apiManager.ListExpression(ctx,
@@ -142,9 +146,7 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 	}
 
 	out = &pb.ListExpressionResp{
-		Type:        entity.Type,
-		Owner:       entity.Owner,
-		Source:      entity.Source,
+		Owner:       en.Owner,
 		EntityId:    in.EntityId,
 		Expressions: []*pb.Expression{},
 	}

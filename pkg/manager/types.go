@@ -58,7 +58,7 @@ type APIManager interface {
 
 	// Expression.
 	AppendExpression(context.Context, []dao.Expression) error
-	RemoveExpression(context.Context, dao.Expression) error
+	RemoveExpression(context.Context, []dao.Expression) error
 	GetExpression(context.Context, dao.Expression) (*dao.Expression, error)
 	ListExpression(context.Context, *Base) ([]dao.Expression, error)
 }
