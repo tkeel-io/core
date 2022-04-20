@@ -72,7 +72,7 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 	for index := range paths {
 		exprs = append(exprs,
 			dao.Expression{
-				Path:     paths[index],
+				Path:     propKey(paths[index]),
 				Owner:    en.Owner,
 				EntityID: en.ID,
 			})
