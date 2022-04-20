@@ -158,13 +158,6 @@
             "type": "string"
           },
           {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
             "name": "source",
             "description": "source id",
             "in": "query",
@@ -210,15 +203,8 @@
             "type": "string"
           },
           {
-            "name": "path",
+            "name": "paths",
             "description": "expression target path",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "description": "entity type",
             "in": "query",
             "required": false,
             "type": "string"
@@ -279,13 +265,6 @@
             }
           },
           {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
             "name": "source",
             "description": "source id",
             "in": "query",
@@ -337,13 +316,6 @@
             "description": "target property path",
             "in": "path",
             "required": true,
-            "type": "string"
-          },
-          {
-            "name": "type",
-            "description": "entity type",
-            "in": "query",
-            "required": false,
             "type": "string"
           },
           {
@@ -1910,17 +1882,9 @@
     "v1AppendExpressionResp": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "description": "entity type"
-        },
         "owner": {
           "type": "string",
           "description": "owner id"
-        },
-        "source": {
-          "type": "string",
-          "description": "source id"
         },
         "entity_id": {
           "type": "string",
@@ -2099,14 +2063,6 @@
     "v1GetExpressionResp": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "description": "entity type"
-        },
-        "source": {
-          "type": "string",
-          "description": "source id"
-        },
         "owner": {
           "type": "string",
           "description": "owner id"
@@ -2275,14 +2231,6 @@
     "v1ListExpressionResp": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "description": "entity type"
-        },
-        "source": {
-          "type": "string",
-          "description": "source id"
-        },
         "owner": {
           "type": "string",
           "description": "owner id"
@@ -2400,25 +2348,18 @@
     "v1RemoveExpressionResp": {
       "type": "object",
       "properties": {
-        "path": {
-          "type": "string",
-          "description": "expression target path"
-        },
-        "type": {
-          "type": "string",
-          "description": "entity type"
-        },
         "owner": {
           "type": "string",
           "description": "owner id"
         },
-        "source": {
-          "type": "string",
-          "description": "source id"
-        },
         "entity_id": {
           "type": "string",
           "description": "entity id"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "effect count"
         }
       },
       "description": "Remove Expression Response."

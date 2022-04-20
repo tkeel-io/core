@@ -651,7 +651,6 @@ message Expressions {
 
 // Append Expression Request.
 message AppendExpressionReq {
-  string type = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
   string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
   string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
   string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
@@ -661,7 +660,6 @@ message AppendExpressionReq {
 // Get Expression Request.
 message GetExpressionReq {
   string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "target property path"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
   string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
   string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
   string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
@@ -669,7 +667,6 @@ message GetExpressionReq {
 
 // List Expression Request.
 message ListExpressionReq {
-  string type = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
   string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
   string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
   string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}]; 
@@ -677,8 +674,7 @@ message ListExpressionReq {
 
 // Remove Expression Request.
 message RemoveExpressionReq {
-  string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression target path"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
+  string paths = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression target path"}];
   string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
   string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
   string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
@@ -686,38 +682,30 @@ message RemoveExpressionReq {
 
 // Append Expression Response.
 message AppendExpressionResp {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
-  int32 count = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "effect count"}];
+  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  int32 count = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "effect count"}];
 }
 
 // Remove Expression Response.
 message RemoveExpressionResp {
-  string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression target path"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  int32 count = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "effect count"}];
 }
 
 // Get Expression Response.
 message GetExpressionResp {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
-  Expression expression = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression information"}];
+  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  Expression expression = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression information"}];
 } 
 
 // List Expression Response.
 message ListExpressionResp {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity type"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
-  repeated Expression expressions = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression informations"}];
+  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
+  repeated Expression expressions = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "expression informations"}];
 } 
 
 

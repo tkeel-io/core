@@ -584,12 +584,14 @@ func (m *apiManager) appendExpression(ctx context.Context, exprs []dao.Expressio
 	return nil
 }
 
-func (m *apiManager) RemoveExpression(ctx context.Context, expr dao.Expression) error {
-	// delete expression.
-	if err := m.entityRepo.DelExpression(ctx, expr); nil != err {
-		log.L().Error("delete expression", zap.Error(err), zfield.Path(expr.Path),
-			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
-		return errors.Wrap(err, "delete expression")
+func (m *apiManager) RemoveExpression(ctx context.Context, exprs []dao.Expression) error {
+	// delete expressions.
+	for index := range exprs {
+		if err := m.entityRepo.DelExpression(ctx, exprs[index]); nil != err {
+			log.L().Error("delete expression", zap.Error(err), zfield.Path(exprs[index].Path),
+				zfield.Eid(exprs[index].EntityID), zfield.Owner(exprs[index].Owner), zfield.Expr(exprs[index].Expression))
+			return errors.Wrap(err, "delete expression")
+		}
 	}
 	return nil
 }

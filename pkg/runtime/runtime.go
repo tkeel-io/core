@@ -344,6 +344,12 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	patches := make(map[string][]*v1.PatchData)
 	for id, expr := range expressions {
 		target := expr.EntityID
+
+		// TODO: 当收到 ETEntity 类型的事件，事件不应该触发不属于自己的 Expression.
+		if target != feed.EntityID && v1.ETEntity == feed.Event.Type() {
+			continue
+		}
+
 		log.L().Debug("eval expression",
 			zfield.Eid(entityID), zfield.Mid(id),
 			zfield.Expr(expr.Expression.Expression))
