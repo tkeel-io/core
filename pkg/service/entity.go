@@ -731,7 +731,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	if err != nil {
 		log.L().Error("list apim failed", zap.Error(err))
-		return out, errors.Wrap(err, "entity search failed")
+		// return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil
 }
