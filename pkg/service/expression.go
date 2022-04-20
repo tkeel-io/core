@@ -108,7 +108,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 		dao.Expression{
 			Path:     propKey(in.Path),
 			Owner:    en.Owner,
-			EntityID: in.EntityId,
+			EntityID: en.ID,
 		}); nil != err {
 		log.L().Error("get expression", zap.Error(err),
 			zfield.Eid(in.EntityId), zfield.Owner(en.Owner), zfield.Path(in.Path))
@@ -137,17 +137,17 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 	var exprs []dao.Expression
 	if exprs, err = s.apiManager.ListExpression(ctx,
 		&apim.Base{
-			ID:    in.EntityId,
-			Owner: in.Owner,
+			ID:    en.ID,
+			Owner: en.Owner,
 		}); nil != err {
 		log.L().Error("list expressions", zap.Error(err),
-			zfield.Eid(in.EntityId), zfield.Owner(in.Owner))
+			zfield.Eid(en.ID), zfield.Owner(en.Owner))
 		return nil, errors.Wrap(err, "list expressions")
 	}
 
 	out = &pb.ListExpressionResp{
 		Owner:       en.Owner,
-		EntityId:    in.EntityId,
+		EntityId:    en.ID,
 		Expressions: []*pb.Expression{},
 	}
 

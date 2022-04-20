@@ -587,6 +587,11 @@ func (m *apiManager) appendExpression(ctx context.Context, exprs []dao.Expressio
 func (m *apiManager) RemoveExpression(ctx context.Context, exprs []dao.Expression) error {
 	// delete expressions.
 	for index := range exprs {
+		log.L().Debug("remove expression",
+			zfield.Eid(exprs[index].EntityID),
+			zfield.Owner(exprs[index].Owner),
+			zfield.Path(exprs[index].Path),
+			zfield.Expr(exprs[index].Expression))
 		if err := m.entityRepo.DelExpression(ctx, exprs[index]); nil != err {
 			log.L().Error("delete expression", zap.Error(err), zfield.Path(exprs[index].Path),
 				zfield.Eid(exprs[index].EntityID), zfield.Owner(exprs[index].Owner), zfield.Expr(exprs[index].Expression))
