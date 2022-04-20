@@ -26,7 +26,7 @@ require (
 	github.com/tidwall/gjson v1.12.0
 	github.com/tkeel-io/collectjs v0.0.0-20220223040031-79acd37e4d90
 	github.com/tkeel-io/kit v0.0.0-20220325093202-6fee69755ded
-	github.com/tkeel-io/tdtl v0.1.4
+	github.com/tkeel-io/tdtl v0.1.5-0.20220420062753-9c76b10af95b
 	//github.com/tkeel-io/tdtl v0.0.0-20220223041036-cd8d1672a07c
 	github.com/tkeel-io/tkeel-interface/openapi v0.0.0-20220218062650-cbf6e212c1bd
 	go.etcd.io/etcd/api/v3 v3.5.1
@@ -95,5 +95,3 @@ require (
 )
 
 replace github.com/antlr/antlr4 => github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211221011931-643d94fcab96
-
-replace github.com/tkeel-io/tdtl => ../tdtl
