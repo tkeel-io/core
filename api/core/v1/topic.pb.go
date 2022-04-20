@@ -27,10 +27,10 @@ type TopicEventRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Meta       *Metadata      `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta"`
-	Data       *_struct.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data"`
-	DataBase64 string         `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64"`
-	RawData    []byte         `protobuf:"bytes,8,opt,name=raw_data,json=rawData,proto3" json:"raw_data"`
+	Meta       *Metadata      `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
+	Data       *_struct.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
+	DataBase64 string         `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"`
+	RawData    []byte         `protobuf:"bytes,8,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty"`
 }
 
 func (x *TopicEventRequest) Reset() {
@@ -98,14 +98,14 @@ type Metadata struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id              string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
-	Specversion     string `protobuf:"bytes,2,opt,name=specversion,proto3" json:"specversion"`
-	Type            string `protobuf:"bytes,3,opt,name=type,proto3" json:"type"`
-	Source          string `protobuf:"bytes,4,opt,name=source,proto3" json:"source"`
-	Datacontenttype string `protobuf:"bytes,5,opt,name=datacontenttype,proto3" json:"datacontenttype"`
-	Subject         string `protobuf:"bytes,9,opt,name=subject,proto3" json:"subject"`
-	Topic           string `protobuf:"bytes,10,opt,name=topic,proto3" json:"topic"`
-	Pubsubname      string `protobuf:"bytes,11,opt,name=pubsubname,proto3" json:"pubsubname"`
+	Id              string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Specversion     string `protobuf:"bytes,2,opt,name=specversion,proto3" json:"specversion,omitempty"`
+	Type            string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Source          string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	Datacontenttype string `protobuf:"bytes,5,opt,name=datacontenttype,proto3" json:"datacontenttype,omitempty"`
+	Subject         string `protobuf:"bytes,9,opt,name=subject,proto3" json:"subject,omitempty"`
+	Topic           string `protobuf:"bytes,10,opt,name=topic,proto3" json:"topic,omitempty"`
+	Pubsubname      string `protobuf:"bytes,11,opt,name=pubsubname,proto3" json:"pubsubname,omitempty"`
 }
 
 func (x *Metadata) Reset() {
@@ -201,7 +201,7 @@ type TopicEventResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status"`
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
 }
 
 func (x *TopicEventResponse) Reset() {

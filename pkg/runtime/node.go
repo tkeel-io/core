@@ -13,7 +13,7 @@ import (
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -33,7 +33,7 @@ type Node struct {
 	runtimes        map[string]*Runtime
 	dispatch        dispatch.Dispatcher
 	resourceManager types.ResourceManager
-	mappers         map[string]mapper.Mapper
+	expressions     map[string]ExpressionInfo
 	revision        int64
 
 	lock   sync.RWMutex
@@ -50,7 +50,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 		dispatch:        dispatcher,
 		resourceManager: resourceManager,
 		runtimes:        make(map[string]*Runtime),
-		mappers:         make(map[string]mapper.Mapper),
+		expressions:     make(map[string]ExpressionInfo),
 	}
 }
 
@@ -58,7 +58,7 @@ func (n *Node) Start(cfg NodeConf) error {
 	log.L().Info("start node...")
 
 	var elapsed util.ElapsedTime
-	n.initializeMetadata()
+	n.listMetadata()
 	for index := range cfg.Sources {
 		var err error
 		var sourceIns *xkafka.Pubsub
@@ -75,15 +75,29 @@ func (n *Node) Start(cfg NodeConf) error {
 
 		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
 		rt := NewRuntime(n.ctx, entityResouce, rid, n.dispatch, n.resourceManager.Repo())
-		for _, mp := range n.mapperSlice() {
-			if mc, has := n.mapper(mp)[rt.ID()]; has {
-				rt.AppendMapper(*mc)
+		for _, expr := range n.expressions {
+			exprInfos, err := parseExpression(expr.Expression, 1)
+			if nil != err {
+				log.L().Error("parse expression", zfield.Eid(expr.EntityID),
+					zfield.Expr(expr.Expression.Expression), zfield.Desc(expr.Description),
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+				continue
+			}
+
+			if exprIns, has := exprInfos[rt.ID()]; has {
+				rt.AppendExpression(*exprIns)
 			}
 		}
+
 		n.runtimes[rid] = rt
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
 	}
 
+	// release expressions.
+	n.expressions = nil
+
+	// watch metadata.
+	n.watchMetadata()
 	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
 
 	return nil
@@ -103,11 +117,6 @@ func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) e
 	return nil
 }
 
-func (n *Node) initializeMetadata() {
-	n.listMetadata()
-	go n.watchMetadata()
-}
-
 // initialize runtime environments.
 func (n *Node) listMetadata() {
 	elapsedTime := util.NewElapsed()
@@ -117,18 +126,15 @@ func (n *Node) listMetadata() {
 	repo := n.resourceManager.Repo()
 	n.revision = repo.GetLastRevision(context.Background())
 	log.L().Info("initialize actor manager, mapper loadding...")
-	repo.RangeMapper(ctx, n.revision, func(mappers []dao.Mapper) {
+	repo.RangeExpression(ctx, n.revision, func(expressions []dao.Expression) {
 		// 将mapper加入每一个 runtime.
-		for _, mp := range mappers {
-			// parse mapper.
-			mpIns, err := mapper.NewMapper(mp, 1)
-			if nil != err {
-				log.L().Error("parse mapper", zap.Error(err),
-					zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
-				continue
-			}
-			log.L().Debug("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-			n.mappers[mpIns.ID()] = mpIns
+		for _, expr := range expressions {
+			log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
+				zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+
+			// cache for node.
+			n.expressions[exprKey(expr)] = newExprInfo(expr)
 		}
 	})
 
@@ -138,69 +144,43 @@ func (n *Node) listMetadata() {
 // watchResource watch resources.
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
-	repo.WatchMapper(context.Background(), n.revision,
-		func(et dao.EnventType, mp dao.Mapper) {
+	repo.WatchExpression(context.Background(), n.revision,
+		func(et dao.EnventType, expr dao.Expression) {
 			switch et {
 			case dao.DELETE:
-				// parse mapper.
-				var err error
-				var mpIns mapper.Mapper
-				log.L().Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
-					log.L().Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
-					return
-				}
+				exprInfo := newExprInfo(expr)
+				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
+					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 				// remove mapper from all runtime.
 				for _, rt := range n.runtimes {
-					rt.RemoveMapper(MCache{ID: mpIns.ID()})
+					rt.RemoveExpression(exprInfo.ID)
 				}
 			case dao.PUT:
-				// parse mapper.
-				var err error
-				var mpIns mapper.Mapper
-				log.L().Info("parse mapper", zfield.Eid(mp.EntityID), zfield.Mid(mp.ID), zfield.Value(mp))
-				if mpIns, err = mapper.NewMapper(mp, 0); nil != err {
-					log.L().Error("parse mapper", zap.Error(err), zfield.Eid(mp.EntityID), zfield.Mid(mp.ID))
+				exprInfo := newExprInfo(expr)
+				log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
+					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+
+				exprInfos, err := parseExpression(exprInfo.Expression, 0)
+				if nil != err {
+					log.L().Error("parse expression", zfield.Eid(expr.EntityID),
+						zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+						zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
 					return
 				}
 
-				// cache mapper.
-				n.mappers[mpIns.ID()] = mpIns
-				for rtID, mc := range n.mapper(mpIns) {
+				// delivery expression.
+				for rtID, exprItem := range exprInfos {
 					if rt, has := n.runtimes[rtID]; has {
-						rt.AppendMapper(*mc)
+						rt.AppendExpression(*exprItem)
 					}
 				}
+			default:
+				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
-}
-
-func (n *Node) mapperSlice() []mapper.Mapper {
-	mps := []mapper.Mapper{}
-	for _, mp := range n.mappers {
-		mps = append(mps, mp)
-	}
-	return mps
-}
-
-func (n *Node) mapper(mp mapper.Mapper) map[string]*MCache {
-	res := make(map[string]*MCache)
-	for eid, tentacles := range mp.Tentacles() {
-		// select runtime.
-		info := placement.Global().Select(eid)
-		if _, exists := res[info.ID]; !exists {
-			res[info.ID] = &MCache{
-				ID:       mp.ID(),
-				Mapper:   mp,
-				EntityID: mp.TargetEntity()}
-		}
-		// append tentacles.
-		res[info.ID].Tentacles =
-			append(res[info.ID].Tentacles, tentacles...)
-	}
-
-	return res
 }
 
 func (n *Node) getGlobalData(en Entity) (res []byte) {
@@ -344,4 +324,59 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 		return errors.Wrap(err, "remove mapper by entity")
 	}
 	return nil
+}
+
+func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionInfo, error) {
+	exprIns, err := expression.NewExpr(expr.Expression, nil)
+	if nil != err {
+		return nil, errors.Wrap(err, "parse expression")
+	}
+
+	exprInfos := map[string]*ExpressionInfo{}
+	for eid, paths := range exprIns.Entities() {
+		info := placement.Global().Select(eid)
+		if _, has := exprInfos[info.ID]; !has {
+			exprInfos[info.ID] = &ExpressionInfo{
+				version:    version,
+				Expression: expr,
+			}
+		}
+
+		for _, path := range paths {
+			// construct sub endpoint.
+			if eid != expr.EntityID {
+				exprInfos[info.ID].subEndpoints =
+					append(exprInfos[info.ID].subEndpoints,
+						newSubEnd(path, expr.EntityID, expr.ID, info.ID))
+			}
+
+			// construct eval endpoint.
+			if dao.ExprTypeEval == expr.Type {
+				exprInfos[info.ID].evalEndpoints =
+					append(exprInfos[info.ID].evalEndpoints,
+						newEvalEnd(path, expr.EntityID, expr.ID))
+			}
+		}
+	}
+
+	return exprInfos, nil
+}
+
+// exprKey return unique expression identifier.
+func exprKey(expr dao.Expression) string {
+	return expr.EntityID + expr.Path
+}
+
+func newExprInfo(expr dao.Expression) ExpressionInfo {
+	return ExpressionInfo{
+		Expression: dao.Expression{
+			ID:          expr.ID,
+			Path:        expr.Path,
+			Name:        expr.Name,
+			Type:        expr.Type,
+			Owner:       expr.Owner,
+			EntityID:    expr.EntityID,
+			Expression:  expr.Expression,
+			Description: expr.Description,
+		}}
 }

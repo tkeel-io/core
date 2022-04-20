@@ -131,6 +131,242 @@
         ]
       }
     },
+    "/entities/{entity_id}/expressions": {
+      "get": {
+        "summary": "list expression",
+        "operationId": "ListExpression",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1ListExpressionResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Expression"
+        ]
+      },
+      "delete": {
+        "summary": "remove expression from entity",
+        "operationId": "RemoveExpression",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1RemoveExpressionResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "description": "expression target path",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Expression"
+        ]
+      },
+      "post": {
+        "summary": "Append expressions for entity",
+        "operationId": "AppendExpression",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1AppendExpressionResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "description": "expression information",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1Expressions",
+              "description": "expression information"
+            }
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Expression"
+        ]
+      }
+    },
+    "/entities/{entity_id}/expressions/{path}": {
+      "get": {
+        "summary": "get expression by id",
+        "operationId": "GetExpression",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1GetExpressionResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "entity id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "description": "target property path",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "entity type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "owner id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "source id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Entity",
+          "Expression"
+        ]
+      }
+    },
     "/entities/{entity_id}/mappers": {
       "get": {
         "summary": "list mappers",
@@ -1671,6 +1907,33 @@
         }
       }
     },
+    "v1AppendExpressionResp": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "entity type"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        },
+        "count": {
+          "type": "integer",
+          "format": "int32",
+          "description": "effect count"
+        }
+      },
+      "description": "Append Expression Response."
+    },
     "v1AppendMapperResponse": {
       "type": "object",
       "properties": {
@@ -1799,6 +2062,65 @@
         }
       },
       "description": "Entity Response."
+    },
+    "v1Expression": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "target property path"
+        },
+        "name": {
+          "type": "string",
+          "description": "expression name"
+        },
+        "expression": {
+          "type": "string",
+          "description": "expression text"
+        },
+        "description": {
+          "type": "string",
+          "description": "expression description"
+        }
+      },
+      "description": "Expression Definition."
+    },
+    "v1Expressions": {
+      "type": "object",
+      "properties": {
+        "expressions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Expression"
+          }
+        }
+      }
+    },
+    "v1GetExpressionResp": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "entity type"
+        },
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        },
+        "expression": {
+          "$ref": "#/definitions/v1Expression",
+          "description": "expression information"
+        }
+      },
+      "description": "Get Expression Response."
     },
     "v1GetLatestEntitiesResponse": {
       "type": "object",
@@ -1950,6 +2272,35 @@
       },
       "description": "List Entity Response."
     },
+    "v1ListExpressionResp": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "entity type"
+        },
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        },
+        "expressions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Expression"
+          },
+          "description": "expression informations"
+        }
+      },
+      "description": "List Expression Response."
+    },
     "v1ListMapperResponse": {
       "type": "object",
       "properties": {
@@ -2045,6 +2396,32 @@
           "type": "string"
         }
       }
+    },
+    "v1RemoveExpressionResp": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "expression target path"
+        },
+        "type": {
+          "type": "string",
+          "description": "entity type"
+        },
+        "owner": {
+          "type": "string",
+          "description": "owner id"
+        },
+        "source": {
+          "type": "string",
+          "description": "source id"
+        },
+        "entity_id": {
+          "type": "string",
+          "description": "entity id"
+        }
+      },
+      "description": "Remove Expression Response."
     },
     "v1RemoveMapperResponse": {
       "type": "object",

@@ -31,6 +31,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/manager/holder"
+	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
@@ -333,12 +334,6 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	{
-		// check TQL & mapper.
-		// TODO: 兼容v0.3, 后面去掉.
-		if mp.ID == "" && mp.Name != "" {
-			mp.ID = mp.Name
-		}
-
 		// check mapper.
 		if err := checkMapper(mp); nil != err {
 			log.L().Error("append mapper", zfield.Eid(mp.EntityID), zap.Error(err))
@@ -346,27 +341,10 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *dao.Mapper) error {
 		}
 	}
 
-	var err error
-	var mo *dao.Mapper
-	if mo, err = m.entityRepo.GetMapper(ctx, &dao.Mapper{
-		ID: mp.ID, Owner: mp.Owner, EntityID: mp.EntityID}); nil != err {
-		if !errors.Is(err, xerrors.ErrMapperNotFound) {
-			log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-			return errors.Wrap(err, "append mapper")
-		}
-	} else {
-		if mo.Owner != mp.Owner || mo.EntityID != mp.EntityID {
-			log.L().Error("append mapper, exists.", zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-			return errors.Wrap(err, "append mapper")
-		}
-	}
-
-	log.L().Info("entity.AppendMapper", zfield.TQL(mp.TQL),
-		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
-
-	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
-		log.L().Error("append mapper", zap.Error(err), zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-		return errors.Wrap(err, "append mapper")
+	exprs := convExprs(*mp)
+	if err := m.appendExpression(ctx, exprs); nil != err {
+		log.L().Error("append mapper", zap.Error(err),
+			zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
 	}
 
 	return nil
@@ -378,32 +356,13 @@ func (m *apiManager) AppendMapperZ(ctx context.Context, mp *dao.Mapper) error {
 		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
 
 	var err error
-	var mo *dao.Mapper
-	if mo, err = m.entityRepo.GetMapper(ctx, &dao.Mapper{
-		ID: mp.ID, Owner: mp.Owner, EntityID: mp.EntityID}); nil != err {
-		if !errors.Is(err, xerrors.ErrMapperNotFound) {
-			log.L().Error("append mapper", zap.Error(err),
-				zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-			return errors.Wrap(err, "append mapper")
-		}
-	} else {
-		if mo.Owner != mp.Owner || mo.EntityID != mp.EntityID {
-			log.L().Error("append mapper, exists.",
-				zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-			return errors.Wrap(err, "append mapper")
-		}
-	}
-
-	log.L().Info("entity.AppendMapperZ", zfield.TQL(mp.TQL),
-		zfield.ID(mp.ID), zfield.Eid(mp.EntityID), zfield.Owner(mp.Owner))
-
-	if err = m.entityRepo.PutMapper(ctx, mp); nil != err {
+	exprs := convExprs(*mp)
+	if err = m.appendExpression(ctx, exprs); nil != err {
 		log.L().Error("append mapper", zap.Error(err),
 			zfield.ID(mp.ID), zfield.Eid(mp.EntityID))
-		return errors.Wrap(err, "append mapper")
 	}
 
-	return nil
+	return errors.Wrap(err, "append mapper")
 }
 
 // DeleteMapper delete mapper from entity.
@@ -458,27 +417,28 @@ func (m *apiManager) ListMapper(ctx context.Context, en *Base) ([]dao.Mapper, er
 }
 
 func (m *apiManager) addMapper(ctx context.Context, base *BaseRet) error {
-	mappers, err := m.entityRepo.ListMapper(ctx,
-		m.entityRepo.GetLastRevision(ctx),
-		&dao.ListMapperReq{
-			Owner:    base.Owner,
-			EntityID: base.ID,
-		})
-	if nil != err {
-		return errors.Wrap(err, "list mapper by entity id.")
-	}
-
-	for _, mp := range mappers {
-		base.Mappers = append(base.Mappers,
-			&v1.Mapper{
-				Id:          mp.ID,
-				Tql:         mp.TQL,
-				Name:        mp.Name,
-				Description: mp.Description,
-			})
-	}
-
 	return nil
+	// mappers, err := m.entityRepo.ListMapper(ctx,
+	// 	m.entityRepo.GetLastRevision(ctx),
+	// 	&dao.ListMapperReq{
+	// 		Owner:    base.Owner,
+	// 		EntityID: base.ID,
+	// 	})
+	// if nil != err {
+	// 	return errors.Wrap(err, "list mapper by entity id.")
+	// }
+
+	// for _, mp := range mappers {
+	// 	base.Mappers = append(base.Mappers,
+	// 		&v1.Mapper{
+	// 			Id:          mp.ID,
+	// 			Tql:         mp.TQL,
+	// 			Name:        mp.Name,
+	// 			Description: mp.Description,
+	// 		})
+	// }
+
+	// return nil
 }
 
 func checkMapper(m *dao.Mapper) error {
@@ -534,4 +494,150 @@ func checkMapper(m *dao.Mapper) error {
 	}
 
 	return nil
+}
+
+func checkExpression(expr *dao.Expression) error {
+	sep := "."
+	FieldProps := "properties"
+
+	if expr.Expression == "" {
+		return xerrors.ErrInvalidRequest
+	}
+
+	exprIns, err := expression.NewExpr(expr.Expression, nil)
+	if nil != err {
+		log.L().Error("check expression", zfield.Path(expr.Path), zap.Error(err),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "invalid expression")
+	}
+
+	propKeys := make(map[string]string)
+	for _, keys := range exprIns.Entities() {
+		for _, key := range keys {
+			segs := strings.SplitN(key, sep, 2)
+			if segs[1] != "*" {
+				segs = append(segs[:1], append([]string{FieldProps}, segs[1:]...)...)
+			}
+			propKeys[key] = strings.Join(segs, sep)
+		}
+	}
+
+	// sort.
+	keys := sort.StringSlice{}
+	for key := range propKeys {
+		keys = append(keys, key)
+	}
+
+	sort.Sort(keys)
+	for index := range keys {
+		key := keys[keys.Len()-index-1]
+		expr.Expression = strings.ReplaceAll(expr.Expression, key, propKeys[key])
+	}
+
+	// check tql parse.
+	_, err = expression.NewExpr(expr.Expression, nil)
+	if nil != err {
+		log.L().Error("check expression", zap.Error(err), zfield.Expr(expr.Expression))
+		return errors.Wrap(xerrors.ErrInternal, "preparse expression")
+	}
+
+	return nil
+
+}
+
+// implement apis for Expression.
+func (m *apiManager) AppendExpression(ctx context.Context, exprs []dao.Expression) error {
+	// validate expressions.
+	for index, expr := range exprs {
+		if err := checkExpression(&exprs[index]); nil != err {
+			log.L().Error("append expression, invalidate expression", zfield.Path(expr.Path),
+				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "invalid expression")
+		}
+	}
+
+	return errors.Wrap(m.appendExpression(ctx, exprs), "append expression")
+}
+
+// implement apis for Expression.
+func (m *apiManager) appendExpression(ctx context.Context, exprs []dao.Expression) error {
+	// validate expressions.
+	for _, expr := range exprs {
+		if err := expression.Validate(expr); nil != err {
+			log.L().Error("append expression, invalidate expression", zfield.Path(expr.Path),
+				zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "invalid expression")
+		}
+	}
+
+	// update expressions.
+	for _, expr := range exprs {
+		log.L().Debug("append expression", zfield.Path(expr.Path),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
+			log.L().Error("append expression", zfield.Eid(expr.EntityID),
+				zap.Error(err), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+			return errors.Wrap(err, "append expression")
+		}
+	}
+
+	return nil
+}
+
+func (m *apiManager) RemoveExpression(ctx context.Context, expr dao.Expression) error {
+	// delete expression.
+	if err := m.entityRepo.DelExpression(ctx, expr); nil != err {
+		log.L().Error("delete expression", zap.Error(err), zfield.Path(expr.Path),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return errors.Wrap(err, "delete expression")
+	}
+	return nil
+}
+
+func (m *apiManager) GetExpression(ctx context.Context, expr dao.Expression) (*dao.Expression, error) {
+	// get expression.
+	expr, err := m.entityRepo.GetExpression(ctx, expr)
+	if nil != err {
+		log.L().Error("get expression", zap.Error(err), zfield.Path(expr.Path),
+			zfield.Eid(expr.EntityID), zfield.Owner(expr.Owner), zfield.Expr(expr.Expression))
+		return nil, errors.Wrap(err, "get expression")
+	}
+	return &expr, nil
+}
+
+func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]dao.Expression, error) {
+	// list expressions.
+	var err error
+	var exprs []dao.Expression
+	if exprs, err = m.entityRepo.ListExpression(ctx,
+		m.entityRepo.GetLastRevision(ctx),
+		&dao.ListExprReq{
+			Owner:    en.Owner,
+			EntityID: en.ID,
+		}); nil != err {
+		log.L().Error("list expression", zap.Error(err),
+			zfield.Eid(en.ID), zfield.Owner(en.Owner))
+		return exprs, errors.Wrap(err, "list expression")
+	}
+
+	return exprs, nil
+}
+
+func convExprs(mp dao.Mapper) []dao.Expression {
+	segs := strings.SplitN(mp.TQL, "select", 2)
+	arr := strings.Split(segs[1], ",")
+
+	exprs := []dao.Expression{}
+	for index := range arr {
+		segs = strings.Split(arr[index], " as ")
+
+		path := ""
+		if len(segs) > 1 {
+			path = segs[1]
+		}
+
+		exprs = append(exprs,
+			*dao.NewExpression(mp.Owner, mp.EntityID, path, segs[0]))
+	}
+	return exprs
 }

@@ -37,6 +37,7 @@ var (
 	ErrServerNotReady           = errors.New("Core.Service.NotReady")
 	ErrConnectionNil            = errors.New("Core.Resource.Connection.Nil")
 	ErrInvalidParam             = errors.New("Core.Params.Invalid")
+	ErrExpressionNotFound       = errors.New("Core.Expression.NotFound")
 )
 
 func New(code string) error {

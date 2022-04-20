@@ -6,7 +6,7 @@ import (
 
 type RefNode struct {
 	node    Node
-	counter int64
+	counter int
 }
 
 func (n *RefNode) Inc() bool {

@@ -86,3 +86,14 @@ func (m *APIManagerMock) ListMapper(context.Context, *apim.Base) ([]dao.Mapper, 
 func (m *APIManagerMock) CheckSubscription(ctx context.Context, en *apim.Base) (err error) {
 	return nil
 }
+
+func (m *APIManagerMock) AppendExpression(context.Context, []dao.Expression) error { return nil }
+func (m *APIManagerMock) RemoveExpression(context.Context, dao.Expression) error   { return nil }
+
+func (m *APIManagerMock) GetExpression(context.Context, dao.Expression) (*dao.Expression, error) {
+	return nil, nil
+}
+
+func (m *APIManagerMock) ListExpression(context.Context, *apim.Base) ([]dao.Expression, error) {
+	return nil, nil
+}

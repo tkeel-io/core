@@ -29,3 +29,18 @@ func (r *repo) ListMapper(context.Context, int64, *dao.ListMapperReq) ([]dao.Map
 }
 func (r *repo) RangeMapper(ctx context.Context, rev int64, handler dao.MapperHandler)      {}
 func (r *repo) WatchMapper(ctx context.Context, rev int64, handler dao.WatchMapperHandler) {}
+
+func (r *repo) PutExpression(ctx context.Context, expr dao.Expression) error { return nil }
+func (r *repo) GetExpression(ctx context.Context, expr dao.Expression) (dao.Expression, error) {
+	return dao.Expression{}, nil
+}
+func (r *repo) DelExpression(ctx context.Context, expr dao.Expression) error  { return nil }
+func (r *repo) DelExprByEnity(ctx context.Context, expr dao.Expression) error { return nil }
+func (r *repo) HasExpression(ctx context.Context, expr dao.Expression) (bool, error) {
+	return false, nil
+}
+func (r *repo) ListExpression(ctx context.Context, rev int64, req *dao.ListExprReq) ([]dao.Expression, error) {
+	return nil, nil
+}
+func (r *repo) RangeExpression(ctx context.Context, rev int64, handler dao.ExpressionFunc)      {}
+func (r *repo) WatchExpression(ctx context.Context, rev int64, handler dao.WatchExpressionFunc) {}
