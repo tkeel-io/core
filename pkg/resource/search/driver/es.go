@@ -84,6 +84,8 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 
 	log.L().Info("use ElasticsearchDriver version:", zfield.Value(info.Version.Number))
 	client.Index().Index(EntityIndex).Id("core_init").BodyString(`{"id":"core_init"}`).Do(context.Background())
+	// 1. 检查索引是否存在 2. 字段是否符合要求 3. 创建索引
+	client.PutMapping().Index(EntityIndex).BodyString(`{"properties":{"sysField":{"properties":{"_subscribeAddr":{"type":"text", "fields":{"keyword":{"type":"keyword", "ignore_above":4096}}}}}}}`).Do(context.Background())
 	return &ESClient{Client: client}, nil
 }
 
@@ -180,7 +182,10 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 		case "$prefix":
 			boolQuery = boolQuery.Must(elastic.NewPrefixQuery(condition.Field+".keyword", condition.Value.GetStringValue()))
 		case "$wildcard":
-			boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+condition.Value.GetStringValue()+"*"))
+			wildcard := condition.Value.GetStringValue()
+			if wildcard != "" {
+				boolQuery = boolQuery.Must(elastic.NewWildcardQuery(condition.Field+".keyword", "*"+wildcard+"*"))
+			}
 		default:
 			boolQuery = boolQuery.Must(elastic.NewMatchQuery(condition.Field, condition.Value.AsInterface()))
 		}
