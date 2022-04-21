@@ -287,6 +287,7 @@ func (t *Tree) matchPrefix(result []*node, i int, segments []string, node *node)
 	// match segments and get children.
 	if segment != t.WildcardOne && segment != t.WildcardSome {
 		if child, ok := node.children[segment]; ok {
+			result = append(result, child)
 			result = t.matchPrefix(result, i+1, segments, child)
 		}
 	}

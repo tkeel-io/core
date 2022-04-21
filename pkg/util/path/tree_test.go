@@ -14,6 +14,11 @@ func TestTree(t *testing.T) {
 	tr.Add("a.b.c.d.e.g", &NodeMock{path: "5"})
 	tr.Add("a.b.c.d.e.g", &NodeMock{path: "6"})
 	tr.Add("a.b.c.d.e.g", &NodeMock{path: "7"})
+	tr.Add("a.b.c.d.e", &NodeMock{path: "888"})
+	// path matched.
+	tr.Add("a.b.c.d", &NodeMock{path: "70"})
+	tr.Add("a.b.c.d", &NodeMock{path: "770"})
+	tr.Add("a.b.c", &NodeMock{path: "7710"})
 
 	tr.Print()
 
