@@ -102,3 +102,37 @@ func TestNode_getGlobalData(t *testing.T) {
 	err = json.Unmarshal(res, &resMap)
 	t.Log(err)
 }
+
+func TestNode_flushRawData(t *testing.T) {
+	node := NewNode(context.Background(), nil, nil)
+
+	entityBytes := `{
+        "id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",
+        "source": "device",
+        "owner": "usr-3358ac43d4ca8a05fee8a6db7b14",
+        "type": "device",
+        "version": "13",
+        "last_time": "1649824136703",
+        "template_id": "",
+        "description": "",
+        "properties": {
+			"rawData":
+				{
+				"id": "iotd-d91f7109-9406-4ac8-a586-6fbed28c36c0",
+				"mark": "upstream",
+				"path": "iotd-d91f7109-9406-4ac8-a586-6fbed28c36c0/v1/devices/me/telemetry",
+				"ts": 1650783463744720000,
+				"type": "telemetry",
+				"values": "eyAiYWJjcyI6ImFiZGMiLAoKICAgImFiYyI6MzYxfQ=="
+			  }
+		
+		}
+
+	}`
+	en, err := NewEntity("iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41", []byte(entityBytes))
+	if err != nil {
+		t.Log(err)
+	}
+	t.Log(en)
+	node.flushRawData(context.TODO(), en)
+}

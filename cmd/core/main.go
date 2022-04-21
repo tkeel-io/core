@@ -39,6 +39,8 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/kafka"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
+	"github.com/tkeel-io/core/pkg/resource/rawdata"
+	_ "github.com/tkeel-io/core/pkg/resource/rawdata/clickhouse"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
@@ -257,6 +259,7 @@ var (
 	_entitySrv       *service.EntityService
 	_searchSrv       *service.SearchService
 	_subscriptionSrv *service.SubscriptionService
+	_rawdataSrv      *service.RawdataService
 )
 
 // serviceRegisterToCoreV1 register your services here.
@@ -288,11 +291,17 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	corev1.RegisterSearchHTTPServer(httpSrv.Container, _searchSrv)
 	corev1.RegisterSearchServer(grpcSrv.GetServe(), _searchSrv)
 
-	// register search service.
+	// register ts service.
 	if _tsSrv, err = service.NewTSService(); nil != err {
 		log.Fatal(err)
 	}
 	corev1.RegisterTSHTTPServer(httpSrv.Container, _tsSrv)
+
+	// register ts service.
+	if _rawdataSrv, err = service.NewRawdataService(); nil != err {
+		log.Fatal(err)
+	}
+	corev1.RegisterRawdataHTTPServer(httpSrv.Container, _rawdataSrv)
 }
 
 func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {
@@ -307,7 +316,12 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	// default time series.
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
 	tsdbClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries))
-	return types.NewResources(search.GlobalService, tsdbClient, coreRepo)
+	// default rawdata
+	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
+	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
+		log.L().Error("initialize rawdata server", zap.Error(err))
+	}
+	return types.NewResources(search.GlobalService, tsdbClient, rawdataClient, coreRepo)
 }
 
 func loadDispatcher(ctx context.Context) error {

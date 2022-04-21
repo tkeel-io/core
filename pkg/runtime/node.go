@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
@@ -243,11 +245,38 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// TODO.
 
 	// 3. flush timeseries data.
-
-	en.Properties()
 	if err := n.flushTimeSeries(ctx, en); nil != err {
 		log.L().Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
 	}
+
+	// 4. flush raw data.
+	if err := n.flushRawData(ctx, en); nil != err {
+		log.L().Error("flush entity rawData", zap.Error(err), zfield.Eid(en.ID()))
+	}
+	return nil
+}
+
+func (n *Node) flushRawData(ctx context.Context, en Entity) (err error) {
+	req := &rawdata.RawDataRequest{}
+	req.Metadata = make(map[string]string)
+	raw := en.GetProp("rawData")
+
+	req.Metadata["path"] = en.GetProp("rawData.path").String()
+	req.Metadata["type"] = en.GetProp("rawData.type").String()
+	req.Metadata["mark"] = en.GetProp("rawData.mark").String()
+
+	tsStr := en.GetProp("rawData.ts").String()
+	ts, err := strconv.ParseInt(tsStr, 10, 64)
+	if err != nil {
+		return err
+	}
+	req.Data = append(req.Data, &rawdata.RawData{
+		EntityID:  en.ID(),
+		Path:      "rawData",
+		Values:    string(raw.Raw()),
+		Timestamp: time.UnixMicro(ts / 1e3),
+	})
+	n.resourceManager.RawData().Write(context.Background(), req)
 	return nil
 }
 
