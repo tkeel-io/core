@@ -13,6 +13,14 @@ func Eid(id string) zap.Field {
 	return zap.String("entity_id", id)
 }
 
+func EvID(id string) zap.Field {
+	return zap.String("event_id", id)
+}
+
+func RID(id string) zap.Field {
+	return zap.String("runtime_id", id)
+}
+
 // Message returns message field.
 func Message(msg interface{}) zap.Field {
 	return zap.Any("message", msg)
