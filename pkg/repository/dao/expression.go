@@ -52,10 +52,10 @@ type Expression struct {
 
 func NewExpression(owner, entityID, path, expr string) *Expression {
 	escapePath := url.PathEscape(path)
-
 	typ := ExprTypeEval
 	if escapePath == "" {
 		path = util.UUID("exprsub")
+		escapePath = url.PathEscape(path)
 		typ = ExprTypeSub
 	}
 
