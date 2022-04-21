@@ -448,7 +448,6 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 		zfield.Eid(expr.EntityID), zfield.Input(in), zfield.Output(out))
 
 	// clean nil feed.
-
 	if out.Type() == tdtl.Null || out.Type() == tdtl.Undefined {
 		log.L().Warn("invalid eval result", zfield.Eid(expr.EntityID),
 			zap.Any("value", out.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
@@ -456,7 +455,6 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 	}
 
 	return out, nil
-
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
