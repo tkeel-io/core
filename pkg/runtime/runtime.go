@@ -85,7 +85,8 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	var err error
 	var ev v1.ProtoEvent
 	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
-		log.L().Error("decode Event", zap.Error(err))
+		log.L().Error("decode Event", zap.Error(err),
+			zfield.Message(string(msg.Value)), zfield.RID(r.id))
 		return
 	}
 
@@ -93,6 +94,9 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 }
 
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
+	log.L().Debug("handle event", zfield.RID(r.id),
+		zfield.Event(event), zfield.EvID(event.ID()))
+
 	execer, feed := r.PrepareEvent(ctx, event)
 	feed = execer.Exec(ctx, feed)
 
@@ -107,7 +111,8 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
-	log.L().Info("handle event", zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
+	log.L().Info("prepare event", zfield.RID(r.id),
+		zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
 
 	switch ev.Type() {
 	case v1.ETSystem:
@@ -381,6 +386,7 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
 				v1.MetaType:     string(v1.ETEntity),
+				v1.MetaBorn:     "handleComputed",
 				v1.MetaEntityID: target},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
@@ -490,14 +496,6 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 
 	// 2. dispatch.send()
 	for target, patch := range patches {
-		// // check target entity placement.
-		// info := placement.Global().Select(target)
-		// if info.ID == r.id {
-		// 	log.L().Debug("target entity belong this runtime, ignore dispatch.",
-		// 		zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
-		// 	// continue.
-		// }
-
 		eventID := util.IG().EvID()
 		log.L().Debug("republish event", zfield.ID(r.id),
 			zap.String("event_id", eventID), zfield.Target(target), zfield.Value(patch))
@@ -508,6 +506,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
 				v1.MetaType:        string(v1.ETCache),
+				v1.MetaBorn:        "handleTentacle",
 				v1.MetaPartitionID: target,
 				v1.MetaSender:      entityID},
 			Data: &v1.ProtoEvent_Patches{
@@ -523,7 +522,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	var err error
 	event := feed.Event
-	log.L().Debug("handle event, callback.", zfield.ID(event.ID()),
+	log.L().Debug("handle event callback.", zfield.ID(event.ID()),
 		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
@@ -537,6 +536,7 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 				Data: &v1.ProtoEvent_RawData{
 					RawData: feed.State}}
 			ev.SetType(v1.ETCallback)
+			ev.SetAttr(v1.MetaBorn, "handleCallback")
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
 			err = r.dispatcher.Dispatch(ctx, ev)
 		} else {
@@ -548,8 +548,9 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 				Data: &v1.ProtoEvent_RawData{
 					RawData: []byte(`{}`)}}
 			ev.SetType(v1.ETCallback)
-			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
+			ev.SetAttr(v1.MetaBorn, "handleCallback")
 			ev.SetAttr(v1.MetaResponseErrCode, feed.Err.Error())
+			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusError))
 			err = r.dispatcher.Dispatch(ctx, ev)
 		}
 	}
@@ -597,15 +598,12 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 		return errors.Wrap(err, "On Template Changed")
 	}
 
-	// 为什么使用dispatch 异步更新scheme， 而不是直接更新？
-	// 1. 将 templateID 更新 scheme 更新分离，降低 api调用时延.
-	// 2.
-
 	ev := &v1.ProtoEvent{
 		Id:        entityID,
 		Timestamp: time.Now().UnixNano(),
 		Metadata: map[string]string{
 			v1.MetaType:     string(v1.ETEntity),
+			v1.MetaBorn:     "onTemplateChanged",
 			v1.MetaEntityID: entityID,
 			v1.MetaSender:   entityID},
 		Data: &v1.ProtoEvent_Patches{
@@ -809,6 +807,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
 				v1.MetaType:     string(v1.ETEntity),
+				v1.MetaBorn:     "initializeExpression",
 				v1.MetaEntityID: expr.EntityID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
@@ -855,6 +854,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 				Timestamp: time.Now().UnixNano(),
 				Metadata: map[string]string{
 					v1.MetaType:     string(v1.ETCache),
+					v1.MetaBorn:     "initializeExpression",
 					v1.MetaEntityID: expr.EntityID,
 					v1.MetaSender:   entityID},
 				Data: &v1.ProtoEvent_Patches{

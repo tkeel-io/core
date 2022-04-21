@@ -102,3 +102,10 @@ func TestNode_getGlobalData(t *testing.T) {
 	err = json.Unmarshal(res, &resMap)
 	t.Log(err)
 }
+
+
+
+
+func Test_parseExpression(t *testing.T) {
+    
+}

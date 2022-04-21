@@ -18,12 +18,13 @@ const (
 	MetaType            = "x-msg-type"
 	MetaTopic           = "x-msg-topic"
 	MetaEntityID        = "x-msg-en-id"
-	MetaPartitionID = "x-msg-partition"	// 实体数据分区ID，并不一定是kafka的partition.
+	MetaPartitionID 	= "x-msg-partition"	// 实体数据分区ID，并不一定是kafka的partition.
 	MetaEntityType      = "x-msg-en-type"
 	MetaOwner           = "x-msg-owner"
 	MetaSource          = "x-msg-source"
 	MetaVersion         = "x-msg-version"
 	MetaSender          = "x-msg-sender"
+	MetaBorn			= "x-msg-born"
 	MetaRequestID       = "x-msg-request-id"
 	MetaResponseStatus  = "x-msg-response-status"
 	MetaResponseErrCode = "x-msg-response-errcode"

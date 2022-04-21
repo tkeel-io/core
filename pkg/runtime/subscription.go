@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
@@ -60,7 +59,7 @@ func (r *Runtime) handleSubscribePublish(ctx context.Context, subID string, feed
 		}
 
 		var payload []byte
-		if payload, err = makePayload(ev, changes); nil != err {
+		if payload, err = makePayload(ev, subID, changes); nil != err {
 			log.L().Error("publish message, make payload", zfield.ID(subID), zfield.Event(ev),
 				zfield.Eid(entityID), zfield.Topic(topic), zfield.Pubsub(pubsubName), zfield.Mode(mode))
 			return feed
@@ -112,7 +111,6 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 		}
 	}
 
-	fmt.Println("======", subPatchs)
 	for subID, patchs := range subPatchs {
 		feedCopy := feed.Copy()
 		feedCopy.Patches = patchs
@@ -122,16 +120,16 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func makePayload(ev v1.PatchEvent, changes []Patch) ([]byte, error) {
+func makePayload(ev v1.PatchEvent, subID string, changes []Patch) ([]byte, error) {
 	basics := map[string]string{
 		"id":           ev.Attr(v1.MetaSender),
-		"subscribe_id": ev.Entity(),
+		"subscribe_id": subID,
 		"type":         ev.Attr(v1.MetaEntityType),
 		"owner":        ev.Attr(v1.MetaOwner),
 		"source":       ev.Attr(v1.MetaSource),
 	}
-	bytes, _ := json.Marshal(basics)
 
+	bytes, _ := json.Marshal(basics)
 	cc := tdtl.New(`{"properties":{}}`)
 	for _, change := range changes {
 		switch change.Op {

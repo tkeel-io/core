@@ -47,6 +47,13 @@ const (
 	enET  = string(v1.ETEntity)
 )
 
+const (
+	bornCreate = "apis.CreateEntity"
+	bornPatch  = "apis.PatchEntity"
+	bornGet    = "apis.GetEntity"
+	bornDelete = "apis.DeleteEntity"
+)
+
 type apiManager struct {
 	holder     holder.Holder
 	dispatcher dispatch.Dispatcher
@@ -119,6 +126,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 		Timestamp: time.Now().UnixNano(),
 		Callback:  m.callbackAddr(),
 		Metadata: map[string]string{
+			v1.MetaBorn:      bornCreate,
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
 			v1.MetaEntityID:  en.ID},
@@ -172,6 +180,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 
 	// setup metadata.
 	metadata := Metadata{
+		v1.MetaBorn:      bornPatch,
 		v1.MetaType:      enET,
 		v1.MetaEntityID:  en.ID,
 		v1.MetaRequestID: reqID}
@@ -242,6 +251,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 			Timestamp: time.Now().UnixNano(),
 			Callback:  m.callbackAddr(),
 			Metadata: map[string]string{
+				v1.MetaBorn:      bornGet,
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
 				v1.MetaEntityID:  en.ID},
@@ -298,6 +308,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		Timestamp: time.Now().UnixNano(),
 		Callback:  m.callbackAddr(),
 		Metadata: map[string]string{
+			v1.MetaBorn:      bornDelete,
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
 			v1.MetaEntityID:  en.ID},
