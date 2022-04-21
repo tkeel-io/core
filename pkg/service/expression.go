@@ -33,7 +33,8 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 	expressions := make([]dao.Expression, len(req.Expressions.Expressions))
 	for index, expr := range req.Expressions.Expressions {
 		expressions[index] = *dao.NewExpression(
-			req.Owner, req.EntityId, propKey(expr.Path), expr.Expression)
+			req.Owner, req.EntityId, expr.Name,
+			propKey(expr.Path), expr.Expression, expr.Description)
 	}
 
 	if err = s.apiManager.AppendExpression(ctx, expressions); nil != err {
@@ -162,7 +163,11 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 func dao2pbExpression(expr *dao.Expression) *pb.Expression {
 	var path string
 	if expr.Type == dao.ExprTypeEval {
-		path = strings.SplitN(expr.Path, sep, 2)[1]
+		path = expr.Path
+		segs := strings.SplitN(expr.Path, sep, 2)
+		if len(segs) == 2 {
+			path = segs[1]
+		}
 	}
 
 	return &pb.Expression{
