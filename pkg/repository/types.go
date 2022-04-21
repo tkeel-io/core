@@ -28,4 +28,11 @@ type IRepository interface {
 	ListExpression(ctx context.Context, rev int64, req *dao.ListExprReq) ([]dao.Expression, error)
 	RangeExpression(ctx context.Context, rev int64, handler dao.ExpressionFunc)
 	WatchExpression(ctx context.Context, rev int64, handler dao.WatchExpressionFunc)
+	PutCostumeResource(ctx context.Context, expr dao.CostumeResource) error
+	GetCostumeResource(ctx context.Context, expr dao.CostumeResource) (dao.CostumeResource, error)
+	DelCostumeResource(ctx context.Context, expr dao.CostumeResource) error
+	HasCostumeResource(ctx context.Context, expr dao.CostumeResource) (bool, error)
+	ListCostumeResource(ctx context.Context, rev int64, req *dao.ListExprReq) ([]dao.CostumeResource, error)
+	RangeCostumeResource(ctx context.Context, rev int64, handler func([]dao.CostumeResource))
+	WatchCostumeResource(ctx context.Context, rev int64, handler func(dao.EnventType, dao.CostumeResource))
 }
