@@ -26,6 +26,18 @@ type Feed struct {
 	Changes  []Patch
 }
 
+func (feed *Feed) Copy() *Feed {
+	return &Feed{
+		TTL:      feed.TTL,
+		Err:      feed.Err,
+		Event:    feed.Event,
+		State:    feed.State,
+		EntityID: feed.EntityID,
+		Patches:  feed.Patches,
+		Changes:  feed.Changes,
+	}
+}
+
 // The *Funcs functions are executed in the following order:
 //   * preFuncs()
 //   * execFunc()

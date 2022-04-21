@@ -18,7 +18,6 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
-	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
@@ -449,7 +448,6 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 		zfield.Eid(expr.EntityID), zfield.Input(in), zfield.Output(out))
 
 	// clean nil feed.
-
 	if out.Type() == tdtl.Null || out.Type() == tdtl.Undefined {
 		log.L().Warn("invalid eval result", zfield.Eid(expr.EntityID),
 			zap.Any("value", out.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
@@ -457,7 +455,6 @@ func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl
 	}
 
 	return out, nil
-
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
@@ -493,20 +490,21 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 
 	// 2. dispatch.send()
 	for target, patch := range patches {
-		// check target entity placement.
-		info := placement.Global().Select(target)
-		if info.ID == r.id {
-			log.L().Debug("target entity belong this runtime, ignore dispatch.",
-				zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
-			// continue.
-		}
+		// // check target entity placement.
+		// info := placement.Global().Select(target)
+		// if info.ID == r.id {
+		// 	log.L().Debug("target entity belong this runtime, ignore dispatch.",
+		// 		zfield.Sender(entityID), zfield.Eid(target), zfield.ID(info.ID))
+		// 	// continue.
+		// }
 
+		eventID := util.IG().EvID()
 		log.L().Debug("republish event", zfield.ID(r.id),
-			zfield.Target(target), zfield.Value(info), zfield.Value(patch))
+			zap.String("event_id", eventID), zfield.Target(target), zfield.Value(patch))
 
 		// dispatch cache event.
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
-			Id:        util.IG().EvID(),
+			Id:        eventID,
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
 				v1.MetaType:        string(v1.ETCache),

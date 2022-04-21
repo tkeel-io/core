@@ -644,7 +644,8 @@ func convExprs(mp dao.Mapper) []dao.Expression {
 		}
 
 		exprs = append(exprs,
-			*dao.NewExpression(mp.Owner, mp.EntityID, path, segs[0]))
+			*dao.NewExpression(
+				mp.Owner, mp.EntityID, mp.Name, path, segs[0], mp.Description))
 	}
 	return exprs
 }

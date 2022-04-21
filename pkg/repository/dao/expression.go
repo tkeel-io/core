@@ -50,7 +50,7 @@ type Expression struct {
 	Description string
 }
 
-func NewExpression(owner, entityID, path, expr string) *Expression {
+func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 	escapePath := url.PathEscape(path)
 	typ := ExprTypeEval
 	if escapePath == "" {
@@ -61,12 +61,14 @@ func NewExpression(owner, entityID, path, expr string) *Expression {
 
 	identifier := fmt.Sprintf(fmtExprString, owner, entityID, escapePath)
 	return &Expression{
-		ID:         identifier,
-		Path:       path,
-		Type:       typ,
-		Owner:      owner,
-		EntityID:   entityID,
-		Expression: expr,
+		ID:          identifier,
+		Name:        name,
+		Path:        path,
+		Type:        typ,
+		Owner:       owner,
+		EntityID:    entityID,
+		Expression:  expr,
+		Description: desc,
 	}
 }
 
