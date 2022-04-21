@@ -337,6 +337,7 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 		ownerInfo.ID: {
 			version:    version,
 			Expression: expr,
+			isHere:     true,
 		}}
 
 	for eid, paths := range exprIns.Entities() {
