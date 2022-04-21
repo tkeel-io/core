@@ -106,10 +106,14 @@ func TestTTDL(t *testing.T) {
 }
 
 func Test_adjustTSData(t *testing.T) {
-	in := []byte(`{"subOffline":334,"a":0}`)
+	in := []byte(`{"subOffline":334,"a":"abc"}`)
 	out := adjustTSData(in)
 	t.Log(string(out))
 	in = []byte(`{"ts":1646954803319,"values":{"humidity5":83.0,"temperature5":43.6}}`)
+	out = adjustTSData(in)
+	t.Log(string(out))
+
+	in = []byte(`{"ModBus-TCP":{"ts":1649215733364,"values":{"wet":42,"temperature":"abc"}},"OPC-UA":{"ts":1649215733364,"values":{"counter":15}}}`)
 	out = adjustTSData(in)
 	t.Log(string(out))
 }
