@@ -332,7 +332,13 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 		return nil, errors.Wrap(err, "parse expression")
 	}
 
-	exprInfos := map[string]*ExpressionInfo{}
+	ownerInfo := placement.Global().Select(expr.EntityID)
+	exprInfos := map[string]*ExpressionInfo{
+		ownerInfo.ID: {
+			version:    version,
+			Expression: expr,
+		}}
+
 	for eid, paths := range exprIns.Entities() {
 		info := placement.Global().Select(eid)
 		if _, has := exprInfos[info.ID]; !has {
@@ -347,14 +353,18 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 			if eid != expr.EntityID {
 				exprInfos[info.ID].subEndpoints =
 					append(exprInfos[info.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, info.ID))
+						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
 			}
 
 			// construct eval endpoint.
 			if dao.ExprTypeEval == expr.Type {
-				exprInfos[info.ID].evalEndpoints =
-					append(exprInfos[info.ID].evalEndpoints,
+				exprInfos[ownerInfo.ID].evalEndpoints =
+					append(exprInfos[ownerInfo.ID].evalEndpoints,
 						newEvalEnd(path, expr.EntityID, expr.ID))
+			} else if dao.ExprTypeSub == expr.Type {
+				exprInfos[ownerInfo.ID].subEndpoints =
+					append(exprInfos[ownerInfo.ID].subEndpoints,
+						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
 			}
 		}
 	}

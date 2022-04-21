@@ -63,6 +63,7 @@ type ExpressionInfo struct {
 	// embeded Expression.
 	dao.Expression
 
+	isHere        bool // expression 所属 entity 是否属于当前 runtime.
 	version       int
 	subEndpoints  []SubEndpoint
 	evalEndpoints []EvalEndpoint
