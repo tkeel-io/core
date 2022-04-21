@@ -618,18 +618,18 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 }
 
 type tsData struct {
-	TS    int64   `json:"ts"`
-	Value float64 `json:"value"`
+	TS    int64       `json:"ts"`
+	Value interface{} `json:"value"`
 }
 
 type tsDevice struct {
-	TS     int64              `json:"ts"`
-	Values map[string]float64 `json:"values"`
+	TS     int64                  `json:"ts"`
+	Values map[string]interface{} `json:"values"`
 }
 
 func adjustTSData(bytes []byte) (dataAdjust []byte) {
 	// tsDevice1 no ts
-	tsDevice1 := make(map[string]float64)
+	tsDevice1 := make(map[string]interface{})
 	err := json.Unmarshal(bytes, &tsDevice1)
 	if err == nil && len(tsDevice1) > 0 {
 		tsDeviceAdjustData := make(map[string]*tsData)
