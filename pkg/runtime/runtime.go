@@ -634,6 +634,11 @@ func adjustTSData(bytes []byte) (dataAdjust []byte) {
 	if err == nil && len(tsDevice1) > 0 {
 		tsDeviceAdjustData := make(map[string]*tsData)
 		for k, v := range tsDevice1 {
+			switch v.(type) {
+			case map[string]interface{}:
+				goto dataType2
+			default:
+			}
 			tsDeviceAdjustData[k] = &tsData{TS: time.Now().UnixMilli(), Value: v}
 		}
 		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
@@ -641,6 +646,7 @@ func adjustTSData(bytes []byte) (dataAdjust []byte) {
 	}
 
 	// tsDevice2 has ts
+dataType2:
 	tsDevice2 := tsDevice{}
 	err = json.Unmarshal(bytes, &tsDevice2)
 	if err == nil && tsDevice2.TS != 0 {
