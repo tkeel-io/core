@@ -120,7 +120,7 @@ pipeline {
                         script {         
                             sh 'wget -q https://raw.githubusercontent.com/tkeel-io/cli/master/install/install.sh -O - | /bin/bash'
                             sh 'tkeel admin login -p changeme'
-                            sh 'tkeel upgrade --repo-url=https://lunz1207.github.io/helm-charts/ --repo-name=lunz1207 --core-version=$HELM_CHART_VERSION'
+                            sh 'tkeel upgrade --repo-url=https://$GITHUB_ORG.github.io/helm-charts/ --repo-name=$GITHUB_ORG --core-version=$HELM_CHART_VERSION'
                         }
                     }
                 }
