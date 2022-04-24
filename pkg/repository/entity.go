@@ -139,36 +139,34 @@ type entityResource struct {
 	data []byte
 }
 
-func (e *entityResource) Key() string {
-	return e.id
-}
-
-func (e *entityResource) GKey() string { // group key.
-	return e.id
-}
-
 func (e *entityResource) Codec() dao.KVCodec {
 	return &defaultEntityCodec{}
 }
 
 func (r *repo) PutEntity(ctx context.Context, eid string, data []byte) error {
-	err := r.dao.PutResource(ctx, &entityResource{id: eid, data: data})
+	err := r.dao.StoreResource(ctx, &entityResource{id: eid, data: data})
 	return errors.Wrap(err, "put entity repository")
 }
 
 func (r *repo) GetEntity(ctx context.Context, eid string) ([]byte, error) {
-	ret, err := r.dao.GetResource(ctx, &entityResource{id: eid})
+	ret, err := r.dao.GetStoreResource(ctx, &entityResource{id: eid})
 
 	res, _ := ret.(*entityResource)
 	return res.data, errors.Wrap(err, "get entity repository")
 }
 
 func (r *repo) DelEntity(ctx context.Context, eid string) error {
-	err := r.dao.DelResource(ctx, &entityResource{id: eid})
+	err := r.dao.RemoveStoreResource(ctx, &entityResource{id: eid})
 	return errors.Wrap(err, "del entity repository")
 }
 
 func (r *repo) HasEntity(ctx context.Context, eid string) (bool, error) {
-	has, err := r.dao.HasResource(ctx, &entityResource{id: eid})
-	return has, errors.Wrap(err, "exists entity repository")
+	_, err := r.dao.GetStoreResource(ctx, &entityResource{id: eid})
+	if nil != err {
+		if errors.Is(err, xerrors.ErrResourceNotFound) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "exists entity repository")
+	}
+	return true, errors.Wrap(err, "exists entity repository")
 }
