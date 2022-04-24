@@ -136,3 +136,7 @@ func TestNode_flushRawData(t *testing.T) {
 	t.Log(en)
 	node.flushRawData(context.TODO(), en)
 }
+
+func Test_parseExpression(t *testing.T) {
+
+}

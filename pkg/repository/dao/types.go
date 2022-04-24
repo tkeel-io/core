@@ -27,6 +27,11 @@ type ListMapperReq struct {
 	EntityID string
 }
 
+type ListExprReq struct {
+	Owner    string
+	EntityID string
+}
+
 type IDao interface {
 	Get(ctx context.Context, id string) (en *Entity, err error)
 	Put(ctx context.Context, en *Entity) error

@@ -19,6 +19,7 @@ package mapper
 import (
 	"crypto/rand"
 	"fmt"
+	"strings"
 
 	"github.com/tkeel-io/tdtl"
 )
@@ -76,6 +77,13 @@ type Tentacler interface {
 type WatchKey struct {
 	EntityID    string
 	PropertyKey string
+}
+
+func NewWatchKey(path string) WatchKey {
+	if segs := strings.SplitN(path, WatchKeyDelimiter, 2); len(segs) == 2 {
+		return WatchKey{EntityID: segs[0], PropertyKey: segs[1]}
+	}
+	return WatchKey{}
 }
 
 func (wk *WatchKey) String() string {

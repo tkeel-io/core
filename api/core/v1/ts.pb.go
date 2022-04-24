@@ -27,12 +27,12 @@ type GetTSDataRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
-	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time"`
-	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time"`
-	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers"`
-	PageNum     int32  `protobuf:"varint,5,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
-	PageSize    int32  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers,omitempty"`
+	PageNum     int32  `protobuf:"varint,5,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
+	PageSize    int32  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 }
 
 func (x *GetTSDataRequest) Reset() {
@@ -114,10 +114,10 @@ type GetTSDataResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Total    int32         `protobuf:"varint,1,opt,name=total,proto3" json:"total"`
-	PageNum  int32         `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num"`
-	PageSize int32         `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size"`
-	Items    []*TSResponse `protobuf:"bytes,5,rep,name=items,proto3" json:"items"`
+	Total    int32         `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
+	PageNum  int32         `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
+	PageSize int32         `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Items    []*TSResponse `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
 }
 
 func (x *GetTSDataResponse) Reset() {
@@ -185,8 +185,8 @@ type TSResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Time  int64              `protobuf:"varint,1,opt,name=time,proto3" json:"time"`
-	Value map[string]float32 `protobuf:"bytes,2,rep,name=value,proto3" json:"value" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"fixed32,2,opt,name=value,proto3"`
+	Time  int64              `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
+	Value map[string]float32 `protobuf:"bytes,2,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"fixed32,2,opt,name=value,proto3"`
 }
 
 func (x *TSResponse) Reset() {
@@ -240,10 +240,10 @@ type DownloadTSDataRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id"`
-	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time"`
-	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time"`
-	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers"`
+	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StartTime   int64  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime     int64  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	Identifiers string `protobuf:"bytes,4,opt,name=identifiers,proto3" json:"identifiers,omitempty"`
 }
 
 func (x *DownloadTSDataRequest) Reset() {
@@ -311,9 +311,9 @@ type DownloadTSDataResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Data     []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data"`
-	Length   string `protobuf:"bytes,2,opt,name=length,proto3" json:"length"`
-	Filename string `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename"`
+	Data     []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Length   string `protobuf:"bytes,2,opt,name=length,proto3" json:"length,omitempty"`
+	Filename string `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
 }
 
 func (x *DownloadTSDataResponse) Reset() {
@@ -412,8 +412,8 @@ type GetLatestEntitiesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Total int64             `protobuf:"varint,1,opt,name=total,proto3" json:"total"`
-	Items []*EntityResponse `protobuf:"bytes,2,rep,name=items,proto3" json:"items"`
+	Total int64             `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
+	Items []*EntityResponse `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
 }
 
 func (x *GetLatestEntitiesResponse) Reset() {

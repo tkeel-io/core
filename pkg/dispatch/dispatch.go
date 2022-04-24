@@ -74,8 +74,12 @@ func (d *dispatcher) Start(ctx context.Context, cfg config.DispatchConfig) error
 
 func (d *dispatcher) dispatch(ctx context.Context, ev v1.Event) error {
 	eid := ev.Entity()
-	info := placement.Global().Select(eid)
-	err := d.downstreams[info.ID].Send(ctx, ev)
+	partitionID := ev.Attr(v1.MetaPartitionID)
+	if partitionID == "" {
+		info := placement.Global().Select(eid)
+		partitionID = info.ID
+	}
+	err := d.downstreams[partitionID].Send(ctx, ev)
 	return errors.Wrap(err, "dispatch event")
 }
 

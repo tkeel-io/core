@@ -78,7 +78,7 @@ func (d *Dao) DelMapper(ctx context.Context, m *Mapper) error {
 }
 
 func (d *Dao) DelMapperByEntity(ctx context.Context, m *Mapper) error {
-	_, err := d.etcdEndpoint.Delete(ctx, m.Key(), clientv3.WithPrefix())
+	_, err := d.etcdEndpoint.Delete(ctx, m.EKey(), clientv3.WithPrefix())
 	return errors.Wrap(err, "delete mapper by entity")
 }
 

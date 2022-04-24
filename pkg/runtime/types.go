@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
@@ -57,3 +58,67 @@ type MCache struct {
 }
 
 type Task func()
+
+type ExpressionInfo struct {
+	// embeded Expression.
+	dao.Expression
+
+	isHere        bool // expression 所属 entity 是否属于当前 runtime.
+	version       int
+	subEndpoints  []SubEndpoint
+	evalEndpoints []EvalEndpoint
+}
+
+type SubEndpoint struct {
+	path         string
+	target       string
+	deliveryID   string
+	expressionID string
+}
+
+func newSubEnd(path, target, exprID, deliveryID string) SubEndpoint {
+	return SubEndpoint{
+		path:         path,
+		target:       target,
+		deliveryID:   deliveryID,
+		expressionID: exprID,
+	}
+}
+
+func (s *SubEndpoint) ID() string {
+	return s.path + s.deliveryID
+}
+
+func (s *SubEndpoint) String() string {
+	return s.path + s.deliveryID + s.target
+}
+
+func (s *SubEndpoint) Expression() string {
+	return s.expressionID
+}
+
+type EvalEndpoint struct {
+	path        string
+	target      string
+	expresionID string
+}
+
+func newEvalEnd(path, target, expressionID string) EvalEndpoint {
+	return EvalEndpoint{
+		path:        path,
+		target:      target,
+		expresionID: expressionID,
+	}
+}
+
+func (e EvalEndpoint) ID() string {
+	return e.path + e.target
+}
+
+func (e *EvalEndpoint) String() string {
+	return e.path + e.target
+}
+
+func (e *EvalEndpoint) Expression() string {
+	return e.expresionID
+}
