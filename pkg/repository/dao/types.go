@@ -1,8 +1,6 @@
 package dao
 
 import (
-	"context"
-
 	"go.etcd.io/etcd/api/v3/mvccpb"
 )
 
@@ -22,18 +20,13 @@ func (et EnventType) String() string {
 	return mvccpb.Event_EventType(et).String()
 }
 
-type ListMapperReq struct {
-	Owner    string
-	EntityID string
-}
-
-type ListExprReq struct {
-	Owner    string
-	EntityID string
-}
-
 type IDao interface {
-	Get(ctx context.Context, id string) (en *Entity, err error)
-	Put(ctx context.Context, en *Entity) error
-	Exists(ctx context.Context, id string) error
+}
+
+type DecodeFunc func([]byte) (Resource, error)
+type RangeResourceFunc func([]*mvccpb.KeyValue)
+type WatchResourceFunc func(EnventType, *mvccpb.KeyValue)
+
+type Resource interface {
+	Codec() KVCodec
 }

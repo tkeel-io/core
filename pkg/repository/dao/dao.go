@@ -22,7 +22,6 @@ type Dao struct {
 	etcdCfg      config.EtcdConfig
 	stateClient  store.Store
 	etcdEndpoint *clientv3.Client
-	entityCodec  entityCodec
 }
 
 func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfig) (*Dao, error) {
@@ -45,7 +44,6 @@ func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfi
 		etcdCfg:      etcdCfg,
 		storeCfg:     storeCfg,
 		etcdEndpoint: etcdEndpoint,
-		entityCodec:  entityCodec{},
 		stateClient:  store.NewStore(storeMeta),
 	}, nil
 }

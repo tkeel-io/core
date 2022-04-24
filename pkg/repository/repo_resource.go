@@ -18,44 +18,42 @@ package repository
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
-func (r *repo) PutCostumeResource(ctx context.Context, crd dao.CostumeResource) error {
-	return errors.Wrap(r.dao.PutCostumeResource(ctx, crd), "put mapper repository")
+func (r *repo) PutCostumeResource(ctx context.Context, crd dao.Resource) error {
+	return errors.Wrap(r.dao.PutResource(ctx, crd), "put mapper repository")
 }
 
-
-func (r *repo) GetCostumeResource(ctx context.Context, m dao.CostumeResource) (dao.CostumeResource, error) {
-	mapper, err := r.dao.GetCostumeResource(ctx, m)
+func (r *repo) GetCostumeResource(ctx context.Context, m dao.Resource) (dao.Resource, error) {
+	mapper, err := r.dao.GetResource(ctx, m)
 	return mapper, errors.Wrap(err, "get mapper repository")
 }
 
-func (r *repo) DelCostumeResource(ctx context.Context, m dao.CostumeResource) error {
-	return errors.Wrap(r.dao.DelCostumeResource(ctx, m), "del mapper repository")
+func (r *repo) DelCostumeResource(ctx context.Context, m dao.Resource) error {
+	return errors.Wrap(r.dao.DelResource(ctx, m), "del mapper repository")
 }
 
-//func (r *repo) DelCostumeResourceByEntity(ctx context.Context, m dao.CostumeResource) error {
+//func (r *repo) DelResourceByEntity(ctx context.Context, m dao.Resource) error {
 //	return errors.Wrap(r.dao.DelByEntity(ctx, m), "del mapper repository")
 //}
 
-func (r *repo) HasCostumeResource(ctx context.Context, m dao.CostumeResource) (bool, error) {
-	has, err := r.dao.HasCostumeResource(ctx, m)
+func (r *repo) HasCostumeResource(ctx context.Context, m dao.Resource) (bool, error) {
+	has, err := r.dao.HasResource(ctx, m)
 	return has, errors.Wrap(err, "exists mapper repository")
 }
 
-func (r *repo) ListCostumeResource(ctx context.Context, rev int64, req dao.CostumeResourceReq) ([]dao.CostumeResource, error) {
-	mappers, err := r.dao.ListCostumeResource(ctx, rev, req)
+func (r *repo) ListCostumeResource(ctx context.Context, rev int64, prefix string, decodeFunc dao.DecodeFunc) ([]dao.Resource, error) {
+	mappers, err := r.dao.ListResource(ctx, rev, prefix, decodeFunc)
 	return mappers, errors.Wrap(err, "list mapper repository")
 }
 
-func (r *repo) RangeCostumeResource(ctx context.Context, rev int64, handler dao.ListCostumeResourceFunc) {
-	r.dao.RangeCostumeResource(ctx, rev, handler)
+func (r *repo) RangeCostumeResource(ctx context.Context, rev int64, prefix string, handler dao.RangeResourceFunc) {
+	r.dao.RangeResource(ctx, rev, prefix, handler)
 }
 
-func (r *repo) WatchCostumeResource(ctx context.Context, rev int64, handler dao.WatchCostumeResourceFunc) {
-	go r.dao.WatchCostumeResource(ctx, rev, handler)
+func (r *repo) WatchCostumeResource(ctx context.Context, rev int64, prefix string, handler dao.WatchResourceFunc) {
+	go r.dao.WatchResource(ctx, rev, prefix, handler)
 }
-
-

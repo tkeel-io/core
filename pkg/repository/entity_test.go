@@ -1,4 +1,4 @@
-package dao
+package repository
 
 import (
 	"testing"
@@ -24,10 +24,6 @@ func TestEntity(t *testing.T) {
 	assert.Equal(t, "BASIC", en.Type)
 	assert.Equal(t, "admin", en.Owner)
 	assert.Equal(t, "dm", en.Source)
-
-	bytes, err := Encode(&en)
-	assert.Nil(t, err)
-	t.Log(string(bytes))
 }
 
 func TestEntity_Copy(t *testing.T) {
