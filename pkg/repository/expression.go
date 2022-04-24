@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -13,8 +15,9 @@ import (
 )
 
 const (
-	ExprTypeSub  = "sub"
-	ExprTypeEval = "eval"
+	ExprTypeSub   = "sub"
+	ExprTypeEval  = "eval"
+	fmtExprPrefix = "/core/v1/expressions"
 )
 
 type ListExprReq struct {
@@ -36,19 +39,30 @@ type defaultExprKeyCodec struct{}
 type defaultExprValueCodec struct{}
 
 func (dec *defaultExprKeyCodec) Encode(v interface{}) ([]byte, error) {
-	panic("implement me")
+	switch val := v.(type) {
+	case *Expression:
+		escapePath := url.PathEscape(val.Path)
+		keyString := fmt.Sprintf("%s/%s/%s/%s",
+			fmtExprPrefix, val.Owner, val.EntityID, escapePath)
+		return []byte(keyString), nil
+	default:
+		return nil, xerrors.ErrInternal
+	}
 }
 
 func (dec *defaultExprKeyCodec) Decode(raw []byte, v interface{}) error {
+	// never use.
 	panic("implement me")
 }
 
 func (dec *defaultExprValueCodec) Encode(v interface{}) ([]byte, error) {
-	panic("implement me")
+	bytes, err := json.Marshal(v)
+	return bytes, errors.Wrap(err, "encode Expression")
 }
 
 func (dec *defaultExprValueCodec) Decode(raw []byte, v interface{}) error {
-	panic("implement me")
+	err := json.Unmarshal(raw, v)
+	return errors.Wrap(err, "decode Expression")
 }
 
 type Expression struct {
