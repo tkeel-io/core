@@ -10,6 +10,8 @@ import (
 	"github.com/tkeel-io/tdtl"
 )
 
+const EntityStorePrefix = "CORE.ENTITY"
+
 type Entity struct {
 	ID            string               `json:"id" msgpack:"id" mapstructure:"id"`
 	Type          string               `json:"type" msgpack:"type" mapstructure:"type"`
@@ -106,10 +108,10 @@ type entityKeyCodec struct{}
 
 func (ec *entityKeyCodec) Encode(v interface{}) ([]byte, error) {
 	switch val := v.(type) {
-	case []byte:
-		return val, nil
+	case *entityResource:
+		return []byte(EntityStorePrefix + "." + val.id), nil
 	default:
-		return nil, xerrors.ErrEmptyParam
+		return nil, xerrors.ErrInternal
 	}
 }
 
@@ -122,16 +124,21 @@ type entityValueCodec struct{}
 
 func (ec *entityValueCodec) Encode(v interface{}) ([]byte, error) {
 	switch val := v.(type) {
-	case []byte:
-		return val, nil
+	case *entityResource:
+		return val.data, nil
 	default:
-		return nil, xerrors.ErrEmptyParam
+		return nil, xerrors.ErrInternal
 	}
 }
 
 func (ec *entityValueCodec) Decode(raw []byte, v interface{}) error {
-	// nerver use.
-	return nil
+	switch val := v.(type) {
+	case *entityResource:
+		val.data = raw
+		return nil
+	default:
+		return xerrors.ErrInternal
+	}
 }
 
 type entityResource struct {
