@@ -1,29 +1,40 @@
 package repository
 
 import (
+	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
-func TestEntity(t *testing.T) {
-	en := Entity{
-		ID:       "device123",
-		Type:     "BASIC",
-		Owner:    "admin",
-		Source:   "dm",
-		LastTime: time.Now().UnixNano() / 1e6,
-		Properties: map[string]tdtl.Node{
-			"temp": tdtl.FloatNode(123.3),
-		},
-	}
+var repoIns IRepository
+var testReady bool
 
-	assert.Equal(t, "device123", en.ID)
-	assert.Equal(t, "BASIC", en.Type)
-	assert.Equal(t, "admin", en.Owner)
-	assert.Equal(t, "dm", en.Source)
+func TestMain(m *testing.M) {
+	// create dao instance.
+	daoIns, err := dao.New(context.Background(), config.Metadata{
+		Name: "dapr",
+		Properties: []config.Pair{
+			{
+				Key:   "store_name",
+				Value: "core-state",
+			},
+		},
+	}, config.EtcdConfig{
+		Endpoints:   []string{"heep://localhost:2379"},
+		DialTimeout: 3,
+	})
+
+	if nil != err {
+		os.Exit(1)
+	}
+	testReady = true
+	repoIns = New(daoIns)
 }
 
 func TestEntity_Copy(t *testing.T) {
@@ -88,4 +99,20 @@ func BenchmarkCopy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		en.Copy()
 	}
+}
+
+func Test_PutEntity(t *testing.T) {
+
+}
+
+func Test_GetEntity(t *testing.T) {
+
+}
+
+func Test_DelEntity(t *testing.T) {
+
+}
+
+func Test_HasEntity(t *testing.T) {
+
 }

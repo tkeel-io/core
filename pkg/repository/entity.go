@@ -10,7 +10,11 @@ import (
 	"github.com/tkeel-io/tdtl"
 )
 
-const EntityStorePrefix = "CORE.ENTITY"
+const (
+	EntityTypeBasic        = "BASIC"
+	EntityTypeSubscription = "SUBSCRIPTION"
+	EntityStorePrefix      = "CORE.ENTITY"
+)
 
 type Entity struct {
 	ID            string               `json:"id" msgpack:"id" mapstructure:"id"`

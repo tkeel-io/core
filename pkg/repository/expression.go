@@ -51,8 +51,7 @@ func (dec *defaultExprKeyCodec) Encode(v interface{}) ([]byte, error) {
 }
 
 func (dec *defaultExprKeyCodec) Decode(raw []byte, v interface{}) error {
-	// never use.
-	panic("implement me")
+	panic("never use")
 }
 
 func (dec *defaultExprValueCodec) Encode(v interface{}) ([]byte, error) {

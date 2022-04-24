@@ -24,7 +24,7 @@ type Dao struct {
 	etcdEndpoint *clientv3.Client
 }
 
-func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfig) (*Dao, error) {
+func New(ctx context.Context, storeCfg config.Metadata, etcdCfg config.EtcdConfig) (IDao, error) {
 	storeMeta := resource.ParseFrom(storeCfg)
 	timeout := etcdCfg.DialTimeout * int64(time.Second)
 	etcdEndpoint, err := clientv3.New(clientv3.Config{
