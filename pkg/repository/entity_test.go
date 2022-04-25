@@ -2,40 +2,16 @@ package repository
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/core/pkg/config"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
+	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
 	"github.com/tkeel-io/tdtl"
 )
-
-var repoIns IRepository
-var testReady bool
-
-func TestMain(m *testing.M) {
-	// create dao instance.
-	daoIns, err := dao.New(context.Background(), config.Metadata{
-		Name: "dapr",
-		Properties: []config.Pair{
-			{
-				Key:   "store_name",
-				Value: "core-state",
-			},
-		},
-	}, config.EtcdConfig{
-		Endpoints:   []string{"heep://localhost:2379"},
-		DialTimeout: 3,
-	})
-
-	if nil != err {
-		os.Exit(1)
-	}
-	testReady = true
-	repoIns = New(daoIns)
-}
 
 func TestEntity_Copy(t *testing.T) {
 	en := Entity{
@@ -102,17 +78,22 @@ func BenchmarkCopy(b *testing.B) {
 }
 
 func Test_PutEntity(t *testing.T) {
-
+	err := repoIns.PutEntity(context.Background(), "device123", []byte(`{}`))
+	assert.Nil(t, err)
 }
 
 func Test_GetEntity(t *testing.T) {
-
+	_, err := repoIns.GetEntity(context.Background(), "device123")
+	assert.Equal(t, true, errors.Is(err, xerrors.ErrResourceNotFound))
 }
 
 func Test_DelEntity(t *testing.T) {
-
+	err := repoIns.DelEntity(context.Background(), "device123")
+	assert.Nil(t, err)
 }
 
 func Test_HasEntity(t *testing.T) {
-
+	has, err := repoIns.HasEntity(context.Background(), "device123")
+	assert.Nil(t, err)
+	assert.Equal(t, false, has)
 }

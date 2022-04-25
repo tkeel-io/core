@@ -22,7 +22,8 @@ import (
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/manager/holder"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/repository"
 )
 
 const CoreAPISender = "core.api"
@@ -47,20 +48,14 @@ type APIManager interface {
 	// GetProperties returns entity properties.
 	GetEntity(context.Context, *Base) (*BaseRet, error)
 	// AppendMapper append entity mapper.
-	AppendMapper(context.Context, *dao.Mapper) error
-	AppendMapperZ(context.Context, *dao.Mapper) error
-	// RemoveMapper remove entity mapper.
-	RemoveMapper(context.Context, *dao.Mapper) error
-	// GetMapper returns entity mapper.
-	GetMapper(context.Context, *dao.Mapper) (*dao.Mapper, error)
-	// ListMapper returns entity mappers.
-	ListMapper(context.Context, *Base) ([]dao.Mapper, error)
+	AppendMapper(context.Context, *mapper.Mapper) error
+	AppendMapperZ(context.Context, *mapper.Mapper) error
 
 	// Expression.
-	AppendExpression(context.Context, []dao.Expression) error
-	RemoveExpression(context.Context, []dao.Expression) error
-	GetExpression(context.Context, dao.Expression) (*dao.Expression, error)
-	ListExpression(context.Context, *Base) ([]dao.Expression, error)
+	AppendExpression(context.Context, []repository.Expression) error
+	RemoveExpression(context.Context, []repository.Expression) error
+	GetExpression(context.Context, repository.Expression) (*repository.Expression, error)
+	ListExpression(context.Context, *Base) ([]*repository.Expression, error)
 }
 
 type Metadata map[string]string

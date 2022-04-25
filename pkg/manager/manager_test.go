@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/mapper"
 )
 
 func TestEntity_GetEntity(t *testing.T) {
@@ -44,7 +44,7 @@ func Test_checkTQL(t *testing.T) {
 
 	for index := range mappers {
 		t.Run(mappers[index].Name, func(t *testing.T) {
-			mp := &dao.Mapper{Name: mappers[index].Name, TQL: mappers[index].TQL}
+			mp := &mapper.Mapper{Name: mappers[index].Name, TQL: mappers[index].TQL}
 			err := checkMapper(mp)
 			assert.Nil(t, err)
 			assert.Equal(t, mappers[index].Expect, mp.TQL)

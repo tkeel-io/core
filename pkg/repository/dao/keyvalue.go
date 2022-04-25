@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -52,12 +53,15 @@ func (n *keyValueNoop) Close() error { return nil }
 func (n *keyValueNoop) Put(ctx context.Context, key, val string, opts ...clientv3.OpOption) (*clientv3.PutResponse, error) {
 	return &clientv3.PutResponse{}, nil
 }
+
 func (n *keyValueNoop) Get(ctx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.GetResponse, error) {
-	return &clientv3.GetResponse{}, nil
+	return &clientv3.GetResponse{}, xerrors.ErrResourceNotFound
 }
+
 func (n *keyValueNoop) Delete(ctx context.Context, key string, opts ...clientv3.OpOption) (*clientv3.DeleteResponse, error) {
 	return &clientv3.DeleteResponse{}, nil
 }
+
 func (n *keyValueNoop) MemberList(ctx context.Context) (*clientv3.MemberListResponse, error) {
 	return &clientv3.MemberListResponse{}, nil
 }

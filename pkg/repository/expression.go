@@ -38,12 +38,23 @@ func (ec *defaultExprCodec) Value() dao.Codec {
 type defaultExprKeyCodec struct{}
 type defaultExprValueCodec struct{}
 
+func encodeKey(entityID, owner, path string) string {
+	escapePath := url.PathEscape(path)
+	keyString := fmt.Sprintf("%s/%s/%s/%s",
+		fmtExprPrefix, owner, entityID, escapePath)
+	return keyString
+}
+
+func encodePrefix(entityID, owner string) string {
+	keyString := fmt.Sprintf("%s/%s/%s",
+		fmtExprPrefix, owner, entityID)
+	return keyString
+}
+
 func (dec *defaultExprKeyCodec) Encode(v interface{}) ([]byte, error) {
 	switch val := v.(type) {
 	case *Expression:
-		escapePath := url.PathEscape(val.Path)
-		keyString := fmt.Sprintf("%s/%s/%s/%s",
-			fmtExprPrefix, val.Owner, val.EntityID, escapePath)
+		keyString := encodeKey(val.EntityID, val.Owner, val.Path)
 		return []byte(keyString), nil
 	default:
 		return nil, xerrors.ErrInternal
@@ -92,7 +103,8 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 		typ = ExprTypeSub
 	}
 
-	identifier := fmt.Sprintf("", owner, entityID, escapePath)
+	identifier := fmt.Sprintf("%s/%s/%s/%s",
+		fmtExprPrefix, owner, entityID, escapePath)
 	return &Expression{
 		ID:          identifier,
 		Name:        name,
@@ -126,8 +138,7 @@ func (r *repo) DelExpression(ctx context.Context, expr Expression) error {
 
 func (r *repo) DelExprByEnity(ctx context.Context, expr Expression) error {
 	// construct prefix key.
-	var prefix string
-
+	prefix := encodePrefix(expr.EntityID, expr.Owner)
 	err := r.dao.DelResources(ctx, prefix)
 	return errors.Wrap(err, "del expressions repository")
 }
@@ -139,7 +150,7 @@ func (r *repo) HasExpression(ctx context.Context, expr Expression) (bool, error)
 
 func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) ([]*Expression, error) {
 	// construct prefix.
-	prefix := ""
+	prefix := encodePrefix(req.EntityID, req.Owner)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
 		func(raw []byte) (dao.Resource, error) {
 			var res Expression // escape.
@@ -179,19 +190,16 @@ func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpr
 
 func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc) {
 	var prefix string
-	r.dao.RangeResource(ctx, rev, prefix, func(kvs []*mvccpb.KeyValue) {
+	r.dao.WatchResource(ctx, rev, prefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
+		var expr Expression
 		valCodec := &defaultExprValueCodec{}
-		for index := range kvs {
-			var expr Expression
-			err := valCodec.Decode(kvs[index].Value, &expr)
-			if nil != err {
-				log.L().Error("")
-				continue
-			}
-			handler(expr)
+		err := valCodec.Decode(kv.Value, &expr)
+		if nil != err {
+			log.L().Error("")
 		}
+		handler(et, expr)
 	})
 }
 
 type RangeExpressionFunc func([]*Expression)
-type WatchExpressionFunc func(Expression)
+type WatchExpressionFunc func(dao.EnventType, Expression)

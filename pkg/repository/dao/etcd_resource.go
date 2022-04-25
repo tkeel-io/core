@@ -35,7 +35,7 @@ func (d *Dao) PutResource(ctx context.Context, res Resource) error {
 		bytes []byte
 	)
 
-	if bytes, err = res.Codec().Value().Encode(res); nil == err {
+	if bytes, err = res.Codec().Value().Encode(res); nil != err {
 		return errors.Wrap(err, "put costume resource")
 	} else if key, err = res.Codec().Key().Encode(res); nil == err {
 		_, err = d.etcdEndpoint.Put(ctx, string(key), string(bytes))
@@ -55,7 +55,7 @@ func (d *Dao) GetResource(ctx context.Context, res Resource) (Resource, error) {
 		return res, errors.Wrap(err, "get costume resource")
 	} else if ret, err = d.etcdEndpoint.Get(ctx, string(key)); nil == err {
 		if len(ret.Kvs) == 0 {
-			return res, errors.Wrap(xerrors.ErrMapperNotFound, "get costume resource")
+			return res, errors.Wrap(xerrors.ErrResourceNotFound, "get costume resource")
 		}
 		err = res.Codec().Value().Decode(ret.Kvs[0].Value, res)
 	}
@@ -89,7 +89,7 @@ func (d *Dao) HasResource(ctx context.Context, res Resource) (has bool, err erro
 		if len(ret.Kvs) == 1 {
 			return true, nil
 		}
-		err = xerrors.ErrMapperNotFound
+		err = xerrors.ErrResourceNotFound
 	}
 	return false, errors.Wrap(err, "exists costume resource")
 }

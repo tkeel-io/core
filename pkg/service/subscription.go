@@ -26,7 +26,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
@@ -133,7 +133,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return
 	}
 
-	mp := &dao.Mapper{
+	mp := &mapper.Mapper{
 		ID:          "Subscription",
 		TQL:         req.Subscription.Filter,
 		Name:        "SubscriptionMapper",
@@ -193,7 +193,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return
 	}
 
-	mp := &dao.Mapper{
+	mp := &mapper.Mapper{
 		ID:          "Subscription",
 		TQL:         req.Subscription.Filter,
 		Name:        "SubscriptionMapper",

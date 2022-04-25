@@ -23,11 +23,11 @@ type tentacle struct {
 	tp       TentacleType
 	version  int64
 	targetID string
-	mapper   Mapper
+	mapper   IMapper
 	items    []WatchKey // key=entityId#propertyKey
 }
 
-func NewTentacle(mp Mapper, tp TentacleType, targetID string, items []WatchKey, version int64) Tentacler {
+func NewTentacle(mp IMapper, tp TentacleType, targetID string, items []WatchKey, version int64) Tentacler {
 	return &tentacle{
 		id:       uuid(),
 		tp:       tp,
@@ -65,7 +65,7 @@ func (t *tentacle) Version() int64 {
 	return t.version
 }
 
-func (t *tentacle) Mapper() Mapper {
+func (t *tentacle) Mapper() IMapper {
 	return t.mapper
 }
 

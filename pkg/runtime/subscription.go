@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
@@ -44,7 +44,7 @@ func (r *Runtime) handleSubscribePublish(ctx context.Context, subID string, feed
 	}
 
 	switch state.Type() {
-	case dao.EntityTypeSubscription:
+	case repository.EntityTypeSubscription:
 		mode := state.GetProp("mode").String()
 		topic := state.GetProp("topic").String()
 		pubsubName := state.GetProp("pubsub_name").String()
@@ -100,7 +100,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 			MatchPrefix(path.FmtWatchKey(entityID, patch.Path)) {
 			subEnd, _ := node.(*SubEndpoint)
 			exprInfo, has := r.getExpr(subEnd.expressionID)
-			if has && exprInfo.isHere && exprInfo.Type == dao.ExprTypeSub {
+			if has && exprInfo.isHere && exprInfo.Type == repository.ExprTypeSub {
 				subPatchs[exprInfo.EntityID] =
 					append(subPatchs[exprInfo.EntityID], patch)
 			}

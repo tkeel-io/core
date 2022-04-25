@@ -28,7 +28,7 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
@@ -861,7 +861,7 @@ func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error
 
 	// create a mapper for sync scheme.
 	// insert into eid select template.scheme as scheme
-	mp := &dao.Mapper{
+	mp := &mapper.Mapper{
 		ID:          "SyncScheme",
 		TQL:         fmt.Sprintf("insert into %s select %s.scheme as scheme", en.ID, en.TemplateID),
 		Name:        "SyncScheme",
