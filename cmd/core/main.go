@@ -297,7 +297,7 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	}
 	corev1.RegisterTSHTTPServer(httpSrv.Container, _tsSrv)
 
-	// register ts service.
+	// register rawdata service.
 	if _rawdataSrv, err = service.NewRawdataService(); nil != err {
 		log.Fatal(err)
 	}
