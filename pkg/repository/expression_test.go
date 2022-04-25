@@ -1,0 +1,98 @@
+package repository
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/core/pkg/config"
+	xerrors "github.com/tkeel-io/core/pkg/errors"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+)
+
+var repoIns IRepository
+var testReady bool
+
+func TestMain(m *testing.M) {
+	// create dao instance.
+	daoIns, err := dao.NewMock(context.Background(), config.Metadata{
+		Name: "noop",
+		Properties: []config.Pair{
+			{
+				Key:   "store_name",
+				Value: "core-state",
+			},
+		},
+	}, config.EtcdConfig{
+		Endpoints:   []string{"http://localhost:2x379"},
+		DialTimeout: 3,
+	})
+
+	if nil != err {
+		os.Exit(1)
+	}
+	testReady = true
+	repoIns = New(daoIns)
+
+	os.Exit(m.Run())
+}
+
+func TestNewExpression(t *testing.T) {
+	expr := NewExpression("admin", "device123", "expression001", "temp", "device234.temp", "")
+	assert.Equal(t, encodeKey("device123", "admin", "temp"), expr.ID)
+	t.Log("expressionID: ", expr.ID)
+}
+
+func TestPutExpression(t *testing.T) {
+	tests := []struct {
+		name string
+		expr *Expression
+	}{
+		{
+			name: "test1",
+			expr: NewExpression("admin", "device123", "expr1", "temp", "device002.temp", ""),
+		},
+		{
+			name: "test2",
+			expr: NewExpression("admin", "device123", "expr2", "cpu0", "device002.metrics.cpus[0].value", ""),
+		},
+		{
+			name: "test3",
+			expr: NewExpression("admin", "device123", "expr3", "mems[1].value", "device002.metrics.mems[1].value", ""),
+		},
+	}
+
+	for _, exprInfo := range tests {
+		t.Run(exprInfo.name, func(t *testing.T) {
+			err := repoIns.PutExpression(context.Background(), *exprInfo.expr)
+			assert.Nil(t, err)
+		})
+	}
+}
+
+func TestGetExpression(t *testing.T) {
+	_, err := repoIns.GetExpression(context.Background(), Expression{EntityID: "device123", Owner: "admin", Path: "temp"})
+	assert.ErrorIs(t, err, xerrors.ErrResourceNotFound)
+	// assert.Equal(t, "admin", expr.Owner)
+	// assert.Equal(t, "device123", expr.EntityID)
+	// assert.Equal(t, "temp", expr.Path)
+}
+
+func TestListExpression(t *testing.T) {
+	_, err := repoIns.ListExpression(context.Background(),
+		repoIns.GetLastRevision(context.Background()),
+		&ListExprReq{EntityID: "device123", Owner: "admin"})
+	assert.ErrorIs(t, err, xerrors.ErrResourceNotFound)
+	// t.Log("expressions: ", exprs)
+}
+
+func TestDelExpression(t *testing.T) {
+	err := repoIns.DelExpression(context.Background(), Expression{Owner: "admin", EntityID: "device123", Path: "temp"})
+	assert.Nil(t, err)
+}
+
+func TestDeleteExpressions(t *testing.T) {
+	err := repoIns.DelExprByEnity(context.Background(), Expression{Owner: "admin", EntityID: "device123"})
+	assert.Nil(t, err)
+}

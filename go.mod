@@ -17,7 +17,6 @@ require (
 	github.com/olivere/elastic/v7 v7.0.29
 	github.com/panjf2000/ants/v2 v2.4.6
 	github.com/pkg/errors v0.9.1
-	github.com/shamaton/msgpack/v2 v2.1.0
 	github.com/smartystreets/assertions v1.2.0
 	github.com/smartystreets/gunit v1.4.2
 	github.com/spf13/cobra v1.1.3
@@ -38,6 +37,8 @@ require (
 	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.27.1
 )
+
+require go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 
 require (
 	github.com/DataDog/zstd v1.4.6-0.20210211175136-c6db21d202f4 // indirect

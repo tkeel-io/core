@@ -19,7 +19,6 @@ import (
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/core/pkg/util"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
@@ -398,7 +397,7 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 	return feed
 }
 
-func (r *Runtime) evalExpression(ctx context.Context, expr dao.Expression) (tdtl.Node, error) {
+func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression) (tdtl.Node, error) {
 	var (
 		err      error
 		has      bool

@@ -38,6 +38,9 @@ var (
 	ErrConnectionNil            = errors.New("Core.Resource.Connection.Nil")
 	ErrInvalidParam             = errors.New("Core.Params.Invalid")
 	ErrExpressionNotFound       = errors.New("Core.Expression.NotFound")
+
+	// Resource errors.
+	ErrResourceNotFound = errors.New("Core.Resource.NotFound")
 )
 
 func New(code string) error {
