@@ -210,12 +210,8 @@ func (c *Clickhouse) genSql(row *execNode) string {
 }
 
 func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp *pb.GetRawdataResponse, err error) {
-	var (
-	//	tx *sql.Tx
-	)
-
-	querySql := "SELECT   `id`,`timestamp`, `entity_id`, `values`, `path`, `tag` FROM core.event_data1 where "
-	countSql := "SELECT   count() FROM core.event_data1 where "
+	querySql := fmt.Sprintf("SELECT   `id`,`timestamp`, `entity_id`, `values`, `path`, `tag` FROM %s.%s where ", c.option.DbName, c.option.Table)
+	countSql := fmt.Sprintf("SELECT   count() FROM %s.%s where ", c.option.DbName, c.option.Table)
 
 	querySql = querySql + fmt.Sprintf(" `timestamp` > FROM_UNIXTIME(%d) AND `timestamp` < FROM_UNIXTIME(%d)", req.StartTime, req.EndTime)
 	countSql = countSql + fmt.Sprintf(" `timestamp` > FROM_UNIXTIME(%d) AND `timestamp` < FROM_UNIXTIME(%d)", req.StartTime, req.EndTime)
@@ -292,7 +288,6 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	}
 	resp.PageNum = req.PageNum
 	resp.PageSize = req.PageSize
-
 	return
 }
 

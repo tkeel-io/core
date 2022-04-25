@@ -34,6 +34,16 @@ components:
         value: tkeel
       - key: bucket
         value: core
+  rawdata:
+    name: clickhouse
+    properties:
+      - key: database
+        value: core
+      - key: urls
+        value:
+          - http://default:C1ickh0use@clickhouse-tkeel-core:8123
+      - key: table
+        value: event_data
 
 dispatcher:
   id: dispatcher
