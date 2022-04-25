@@ -16,6 +16,17 @@ service Rawdata {
 			post : "/rawdata/{entity_id}"
             body : "*" 
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            summary: "Get entity rawdata";
+            operation_id: "GetRawdata";
+            tags: "Rawdata";
+            responses: {
+              key: "200"
+              value: {
+                description: "OK";
+            }
+          }
+        };
 	};
 }
 

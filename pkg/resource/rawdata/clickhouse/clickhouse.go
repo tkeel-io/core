@@ -17,15 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type field struct {
-	name  string `json:"name"`
-	typ   string `json:"typ"`
-	value string `json:"value"`
-}
-
 type Clickhouse struct {
 	option  *Option
-	fields  []*field
 	balance LoadBalance
 }
 
@@ -47,34 +40,38 @@ func (c *Clickhouse) parseOption(metadata resource.Metadata) (*Option, error) {
 	}
 
 	if opt.Fields == nil {
-		return nil, errors.New(fmt.Sprintf("field not found"))
+		return nil, errors.New("field not found")
 	}
 
 	for key, field := range opt.Fields {
 		if key == "" {
-			return nil, errors.New(fmt.Sprintf("field name is empty"))
+			return nil, errors.New("field name is empty")
 		}
 		if field.Type == "" {
-			return nil, errors.New(fmt.Sprintf("field(%s) types is empty", key))
+			return nil, fmt.Errorf("field(%s) types is empty", key)
 		}
 		if field.Value == "" {
-			return nil, errors.New(fmt.Sprintf("field(%s) types is empty", key))
+			return nil, fmt.Errorf("field(%s) types is empty", key)
 		}
 	}
 	return &opt, nil
 }
 
-const CLICKHOUSE_DB = `CREATE DATABASE IF NOT EXISTS core`
-const CLICKHOUSE_RAW_DATA = `CREATE TABLE IF NOT EXISTS core.raw_data1 (
-	id 		String,
-	type 		String,
-	mark   	    String,
-	path		String,
-	abc1 Float,
-	values			String,
-	timestamp			UInt64,
-	tag Array(String)
-) Engine=MergeTree() ORDER BY timestamp`
+const CLICKHOUSE_DB = `CREATE DATABASE IF NOT EXISTS %s`
+
+const CLICKHOUSE_RAW_DATA = `CREATE TABLE %s.%s
+(
+    id UUID DEFAULT generateUUIDv4(),
+    entity_id String,
+    path String,
+    timestamp DateTime64(3, 'Asia/Shanghai'),
+    tag Array(String),
+    values String
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+SETTINGS index_granularity = 8192;
+`
 
 func (c *Clickhouse) Init(metadata resource.Metadata) error {
 	opt, err := c.parseOption(metadata)
@@ -83,22 +80,22 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 	}
 	servers := make([]*Server, len(opt.Urls))
 	for k, v := range opt.Urls {
-		log.Info("chronus init " + v)
+		log.Info("clickhouse init " + v)
 		db, err := sqlx.Open("clickhouse", v)
 		if err != nil {
-			log.Error("open chronus", zap.Any("error", err))
+			log.Error("open clickhouse", zap.Any("error", err))
 			return err
 		}
 		if err = db.PingContext(context.Background()); err != nil {
-			log.Error("ping chronus", zap.Any("error", err))
+			log.Error("ping clickhouse", zap.Any("error", err))
 			return err
 		}
-		_, err = db.Exec(CLICKHOUSE_DB)
+		_, err = db.Exec(fmt.Sprintf(CLICKHOUSE_DB, opt.DbName))
 		if err != nil {
 			log.Warn(err.Error())
 		}
 
-		_, err = db.Exec(CLICKHOUSE_RAW_DATA)
+		_, err = db.Exec(fmt.Sprintf(CLICKHOUSE_RAW_DATA, opt.DbName, opt.Table))
 		if err != nil {
 			log.Warn(err.Error())
 		}
@@ -111,13 +108,6 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 		servers[k] = &Server{db, v, 1}
 	}
 	c.option = opt
-
-	c.fields = make([]*field, 0, len(opt.Fields))
-	for key, fd := range opt.Fields {
-		c.fields = append(c.fields, &field{
-			key, fd.Type, fd.Value,
-		})
-	}
 
 	c.balance = NewLoadBalanceRandom(servers)
 	return nil

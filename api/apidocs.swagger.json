@@ -1392,10 +1392,11 @@
     },
     "/rawdata/{entity_id}": {
       "post": {
-        "operationId": "Rawdata_GetRawdata",
+        "summary": "Get entity rawdata",
+        "operationId": "GetRawdata",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1GetRawdataResponse"
             }

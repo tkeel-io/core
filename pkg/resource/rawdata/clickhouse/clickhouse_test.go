@@ -13,12 +13,11 @@ import (
 func TestClickhouse_genSql(t *testing.T) {
 	c := Clickhouse{
 		option: &Option{
-			Urls:   []string{"tcp://139.198.18.173:9089?username=default&password=qingcloud2019&database=iot_manage_dev&alt_hosts=139.198.18.173:9090,139.198.18.173:9091"},
+			Urls:   []string{"tcp://139.19.1.173:9089?username=default&password=qingcloud2019&database=iot_manage_dev&alt_hosts=139.198.18.173:9090,139.198.18.173:9091"},
 			DbName: "dbname",
 			Table:  "table",
 			Fields: map[string]Field{},
 		},
-		fields:  []*field{},
 		balance: nil,
 	}
 	row := execNode{
@@ -62,9 +61,9 @@ func TestClickhouse_Query(t *testing.T) {
 	metadata := resource.Metadata{
 		Name: "myck",
 		Properties: map[string]interface{}{
-			"database": "core",
-			"urls":     []interface{}{"http://default:tkeel123!@139.198.112.150:8123"},
-			"table":    "event_data1",
+			"database": "core1",
+			"urls":     []interface{}{"http://default:tkeel@139.19.112.15:8123"},
+			"table":    "event_data",
 		},
 	}
 	ck := NewClickhouse()
