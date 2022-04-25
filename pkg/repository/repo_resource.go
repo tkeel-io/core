@@ -36,10 +36,6 @@ func (r *repo) DelCostumeResource(ctx context.Context, m dao.Resource) error {
 	return errors.Wrap(r.dao.DelResource(ctx, m), "del mapper repository")
 }
 
-//func (r *repo) DelResourceByEntity(ctx context.Context, m dao.Resource) error {
-//	return errors.Wrap(r.dao.DelByEntity(ctx, m), "del mapper repository")
-//}
-
 func (r *repo) HasCostumeResource(ctx context.Context, m dao.Resource) (bool, error) {
 	has, err := r.dao.HasResource(ctx, m)
 	return has, errors.Wrap(err, "exists mapper repository")
