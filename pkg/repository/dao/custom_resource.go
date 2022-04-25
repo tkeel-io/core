@@ -11,7 +11,6 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
-	"strings"
 )
 
 type ListCostumeResourceFunc func([]*mvccpb.KeyValue)
@@ -25,6 +24,7 @@ type CostumeResource interface {
 type CostumeResourceReq interface {
 	Owner()    string
 	EntityID() string
+	Prefix() string
 }
 
 func (d *Dao) PutCostumeResource(ctx context.Context, expr CostumeResource) error {
@@ -78,7 +78,7 @@ func (d *Dao) ListCostumeResource(ctx context.Context, rev int64, req CostumeRes
 		arr = append(arr, req.EntityID())
 	}
 
-	prefix := strings.Join(arr, "/")
+	prefix := req.Prefix()
 	opts := make([]clientv3.OpOption, 0)
 	opts = append(opts, clientv3.WithRev(rev),
 		clientv3.WithRange(clientv3.GetPrefixRangeEnd(prefix)))
