@@ -7,11 +7,11 @@
 package v1
 
 import (
-	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 )
@@ -28,7 +28,7 @@ type IndexObject struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Obj *_struct.Value `protobuf:"bytes,1,opt,name=obj,proto3" json:"obj,omitempty"`
+	Obj *structpb.Value `protobuf:"bytes,1,opt,name=obj,proto3" json:"obj,omitempty"`
 }
 
 func (x *IndexObject) Reset() {
@@ -63,7 +63,7 @@ func (*IndexObject) Descriptor() ([]byte, []int) {
 	return file_api_core_v1_search_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *IndexObject) GetObj() *_struct.Value {
+func (x *IndexObject) GetObj() *structpb.Value {
 	if x != nil {
 		return x.Obj
 	}
@@ -122,9 +122,9 @@ type SearchCondition struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Field    string         `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
-	Operator string         `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
-	Value    *_struct.Value `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	Field    string          `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
+	Operator string          `protobuf:"bytes,2,opt,name=operator,proto3" json:"operator,omitempty"`
+	Value    *structpb.Value `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (x *SearchCondition) Reset() {
@@ -173,7 +173,7 @@ func (x *SearchCondition) GetOperator() string {
 	return ""
 }
 
-func (x *SearchCondition) GetValue() *_struct.Value {
+func (x *SearchCondition) GetValue() *structpb.Value {
 	if x != nil {
 		return x.Value
 	}
@@ -288,10 +288,10 @@ type SearchResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Total    int64            `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	PageNum  int32            `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
-	PageSize int32            `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	Items    []*_struct.Value `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
+	Total    int64             `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
+	PageNum  int32             `protobuf:"varint,2,opt,name=page_num,json=pageNum,proto3" json:"page_num,omitempty"`
+	PageSize int32             `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Items    []*structpb.Value `protobuf:"bytes,5,rep,name=items,proto3" json:"items,omitempty"`
 }
 
 func (x *SearchResponse) Reset() {
@@ -347,7 +347,7 @@ func (x *SearchResponse) GetPageSize() int32 {
 	return 0
 }
 
-func (x *SearchResponse) GetItems() []*_struct.Value {
+func (x *SearchResponse) GetItems() []*structpb.Value {
 	if x != nil {
 		return x.Items
 	}
@@ -596,7 +596,7 @@ var file_api_core_v1_search_proto_goTypes = []interface{}{
 	(*SearchResponse)(nil),     // 4: api.core.v1.SearchResponse
 	(*DeleteByIDRequest)(nil),  // 5: api.core.v1.DeleteByIDRequest
 	(*DeleteByIDResponse)(nil), // 6: api.core.v1.DeleteByIDResponse
-	(*_struct.Value)(nil),      // 7: google.protobuf.Value
+	(*structpb.Value)(nil),     // 7: google.protobuf.Value
 }
 var file_api_core_v1_search_proto_depIdxs = []int32{
 	7, // 0: api.core.v1.IndexObject.obj:type_name -> google.protobuf.Value

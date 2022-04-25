@@ -19,6 +19,9 @@
     },
     {
       "name": "Topic"
+    },
+    {
+      "name": "Rawdata"
     }
   ],
   "consumes": [
@@ -1387,6 +1390,84 @@
         ]
       }
     },
+    "/rawdata/{entity_id}": {
+      "post": {
+        "operationId": "Rawdata_GetRawdata",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetRawdataResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "description": "实体 id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "start_time": {
+                  "type": "string",
+                  "format": "int64",
+                  "description": "起始时间"
+                },
+                "end_time": {
+                  "type": "string",
+                  "format": "int64",
+                  "description": "终止时间"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "属性的位置"
+                },
+                "page_num": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "记录开始位置"
+                },
+                "page_size": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "每页限制条数"
+                },
+                "is_descending": {
+                  "type": "boolean",
+                  "description": "是否逆序， false：不逆序，true:逆序"
+                },
+                "filters": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "过滤条件"
+                }
+              },
+              "description": "Get raw data Request",
+              "title": "GetRawdata"
+            }
+          }
+        ],
+        "tags": [
+          "Rawdata"
+        ]
+      }
+    },
     "/search": {
       "delete": {
         "summary": "Delete objects by id",
@@ -2121,6 +2202,33 @@
       },
       "description": "Get Mapper Response."
     },
+    "v1GetRawdataResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "format": "int32",
+          "description": "total count of the entities"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1RawdataResponse"
+          },
+          "description": "data list"
+        }
+      }
+    },
     "v1GetTSDataResponse": {
       "type": "object",
       "properties": {
@@ -2341,6 +2449,27 @@
           "type": "string"
         },
         "pubsubname": {
+          "type": "string"
+        }
+      }
+    },
+    "v1RawdataResponse": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "int64"
+        },
+        "id": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "values": {
           "type": "string"
         }
       }

@@ -7,10 +7,10 @@
 package v1
 
 import (
-	_struct "github.com/golang/protobuf/ptypes/struct"
 	_ "github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 )
@@ -27,10 +27,10 @@ type TopicEventRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Meta       *Metadata      `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
-	Data       *_struct.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
-	DataBase64 string         `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"`
-	RawData    []byte         `protobuf:"bytes,8,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty"`
+	Meta       *Metadata       `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
+	Data       *structpb.Value `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
+	DataBase64 string          `protobuf:"bytes,7,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"`
+	RawData    []byte          `protobuf:"bytes,8,opt,name=raw_data,json=rawData,proto3" json:"raw_data,omitempty"`
 }
 
 func (x *TopicEventRequest) Reset() {
@@ -72,7 +72,7 @@ func (x *TopicEventRequest) GetMeta() *Metadata {
 	return nil
 }
 
-func (x *TopicEventRequest) GetData() *_struct.Value {
+func (x *TopicEventRequest) GetData() *structpb.Value {
 	if x != nil {
 		return x.Data
 	}
@@ -315,7 +315,7 @@ var file_api_core_v1_topic_proto_goTypes = []interface{}{
 	(*TopicEventRequest)(nil),  // 0: api.core.v1.TopicEventRequest
 	(*Metadata)(nil),           // 1: api.core.v1.Metadata
 	(*TopicEventResponse)(nil), // 2: api.core.v1.TopicEventResponse
-	(*_struct.Value)(nil),      // 3: google.protobuf.Value
+	(*structpb.Value)(nil),     // 3: google.protobuf.Value
 }
 var file_api_core_v1_topic_proto_depIdxs = []int32{
 	1, // 0: api.core.v1.TopicEventRequest.meta:type_name -> api.core.v1.Metadata

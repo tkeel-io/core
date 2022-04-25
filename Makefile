@@ -91,7 +91,7 @@ BINS_OUT_DIR := $(OUT_DIR)/$(GOOS)_$(GOARCH)/$(BUILDTYPE_DIR)
 LDFLAGS :="-X $(BASE_PACKAGE_NAME)/pkg/version.GitCommit=$(GIT_COMMIT) -X $(BASE_PACKAGE_NAME)/pkg/version.GitBranch=$(GIT_BRANCH) -X $(BASE_PACKAGE_NAME)/pkg/version.GitVersion=$(GIT_VERSION) -X $(BASE_PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_DATE) -X $(BASE_PACKAGE_NAME)/pkg/version.Version=$(CORE_VERSION)"
 
 INTERNAL_PROTO_FILES=$(shell find internal -name *.proto)
-API_PROTO_FILES := api/core/v1/entity.proto api/core/v1/subscription.proto api/core/v1/list.proto api/core/v1/search.proto api/core/v1/ts.proto api/core/v1/topic.proto api/core/v1/event.proto
+API_PROTO_FILES := api/core/v1/entity.proto api/core/v1/subscription.proto api/core/v1/list.proto api/core/v1/search.proto api/core/v1/ts.proto api/core/v1/topic.proto api/core/v1/event.proto api/core/v1/rawdata.proto
 
 .PHONY: init
 # init env

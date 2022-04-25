@@ -17,11 +17,6 @@ service Rawdata {
             body : "*" 
 		};
 	};
-	rpc DownloadRawdata (DownloadRawdataRequest) returns (DownloadRawdataResponse) {
-		option (google.api.http) = {
-			get : "/rawdata/{entity_id}"
-		};
-	};
 }
 
 message GetRawdataRequest {
@@ -54,23 +49,4 @@ message RawdataResponse {
     string entity_id = 3;
     string path = 4;
     string values = 5;
-}
-
-message DownloadRawdataRequest {
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
-              json_schema: {
-                title: "GetTSData"
-                description: "Get time series Request"
-              }
-            };
-    string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体 id"}];
-    int64 start_time = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "起始时间"}];
-    int64 end_time = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "终止时间"}];
-    string marks = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "标识符"}];
-}
-
-message DownloadRawdataResponse {
-    bytes data = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content"}];
-    string length = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "content length in string"}];
-    string filename = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "filename"}];
 }

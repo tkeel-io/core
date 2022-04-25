@@ -19,7 +19,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RawdataClient interface {
 	GetRawdata(ctx context.Context, in *GetRawdataRequest, opts ...grpc.CallOption) (*GetRawdataResponse, error)
-	DownloadRawdata(ctx context.Context, in *DownloadRawdataRequest, opts ...grpc.CallOption) (*DownloadRawdataResponse, error)
 }
 
 type rawdataClient struct {
@@ -39,21 +38,11 @@ func (c *rawdataClient) GetRawdata(ctx context.Context, in *GetRawdataRequest, o
 	return out, nil
 }
 
-func (c *rawdataClient) DownloadRawdata(ctx context.Context, in *DownloadRawdataRequest, opts ...grpc.CallOption) (*DownloadRawdataResponse, error) {
-	out := new(DownloadRawdataResponse)
-	err := c.cc.Invoke(ctx, "/api.core.v1.Rawdata/DownloadRawdata", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // RawdataServer is the server API for Rawdata service.
 // All implementations must embed UnimplementedRawdataServer
 // for forward compatibility
 type RawdataServer interface {
 	GetRawdata(context.Context, *GetRawdataRequest) (*GetRawdataResponse, error)
-	DownloadRawdata(context.Context, *DownloadRawdataRequest) (*DownloadRawdataResponse, error)
 	mustEmbedUnimplementedRawdataServer()
 }
 
@@ -63,9 +52,6 @@ type UnimplementedRawdataServer struct {
 
 func (UnimplementedRawdataServer) GetRawdata(context.Context, *GetRawdataRequest) (*GetRawdataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRawdata not implemented")
-}
-func (UnimplementedRawdataServer) DownloadRawdata(context.Context, *DownloadRawdataRequest) (*DownloadRawdataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DownloadRawdata not implemented")
 }
 func (UnimplementedRawdataServer) mustEmbedUnimplementedRawdataServer() {}
 
@@ -98,24 +84,6 @@ func _Rawdata_GetRawdata_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Rawdata_DownloadRawdata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DownloadRawdataRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RawdataServer).DownloadRawdata(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.core.v1.Rawdata/DownloadRawdata",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RawdataServer).DownloadRawdata(ctx, req.(*DownloadRawdataRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Rawdata_ServiceDesc is the grpc.ServiceDesc for Rawdata service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -126,10 +94,6 @@ var Rawdata_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRawdata",
 			Handler:    _Rawdata_GetRawdata_Handler,
-		},
-		{
-			MethodName: "DownloadRawdata",
-			Handler:    _Rawdata_DownloadRawdata_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

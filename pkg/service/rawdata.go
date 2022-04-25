@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -32,9 +31,6 @@ func NewRawdataService() (*RawdataService, error) {
 }
 
 func (s *RawdataService) GetRawdata(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, error) {
-	for _, filter := range req.Filters {
-		fmt.Println(filter)
-	}
 	if req.StartTime < (time.Now().Unix() - 3600*24*3) {
 		req.StartTime = time.Now().Unix() - 3600*24*3
 	}
@@ -49,13 +45,11 @@ func (s *RawdataService) GetRawdata(ctx context.Context, req *pb.GetRawdataReque
 	if ok {
 		user = getUser(header, user)
 	}
+	// 检查user和实体id的合法性
 
 	resp, err := s.rawdataClient.Query(ctx, req)
 
 	return resp, err
-}
-func (s *RawdataService) DownloadRawdata(ctx context.Context, req *pb.DownloadRawdataRequest) (*pb.DownloadRawdataResponse, error) {
-	return &pb.DownloadRawdataResponse{}, nil
 }
 
 func getUser(header http.Header, oldUser string) string {
