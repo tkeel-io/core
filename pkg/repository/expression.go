@@ -171,8 +171,7 @@ func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) 
 }
 
 func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpressionFunc) {
-	var prefix string
-	r.dao.RangeResource(ctx, rev, prefix, func(kvs []*mvccpb.KeyValue) {
+	r.dao.RangeResource(ctx, rev, fmtExprPrefix, func(kvs []*mvccpb.KeyValue) {
 		var exprs []*Expression
 		valCodec := &defaultExprValueCodec{}
 		for index := range kvs {
@@ -189,8 +188,7 @@ func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpr
 }
 
 func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc) {
-	var prefix string
-	r.dao.WatchResource(ctx, rev, prefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
+	r.dao.WatchResource(ctx, rev, fmtExprPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
 		var expr Expression
 		valCodec := &defaultExprValueCodec{}
 		err := valCodec.Decode(kv.Value, &expr)
