@@ -19,7 +19,7 @@ func (n *Noop) Write(ctx context.Context, req *rawdata.RawDataRequest) error {
 	return nil
 }
 
-func (n *Noop) Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, err) {
+func (n *Noop) Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, error) {
 	return nil, nil
 }
 
