@@ -59,7 +59,7 @@ func (c *Clickhouse) parseOption(metadata resource.Metadata) (*Option, error) {
 
 const CLICKHOUSE_DB = `CREATE DATABASE IF NOT EXISTS %s`
 
-const CLICKHOUSE_RAW_DATA = `CREATE TABLE %s.%s
+const CLICKHOUSE_RAW_DATA = `CREATE TABLE IF NOT EXISTS %s.%s 
 (
     id UUID DEFAULT generateUUIDv4(),
     entity_id String,
