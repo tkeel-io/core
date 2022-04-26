@@ -18,17 +18,26 @@ package mapper
 
 import (
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
+// mapper info.
+type Mapper struct {
+	ID          string
+	TQL         string
+	Name        string
+	Owner       string
+	EntityID    string
+	Description string
+}
+
 type mapper struct {
 	version int64
-	mapper  dao.Mapper
+	mapper  Mapper
 	tqlInst tdtl.TDTL
 }
 
-func NewMapper(mp dao.Mapper, version int64) (Mapper, error) {
+func NewMapper(mp Mapper, version int64) (IMapper, error) {
 	tqlInst, err := tdtl.NewTDTL(mp.TQL, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "construct mapper")
@@ -100,7 +109,7 @@ func (m *mapper) Tentacles() map[string][]Tentacler {
 }
 
 // Copy duplicate a mapper.
-func (m *mapper) Copy() Mapper {
+func (m *mapper) Copy() IMapper {
 	mCopy, _ := NewMapper(m.mapper, m.version)
 	return mCopy
 }

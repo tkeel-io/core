@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -45,7 +44,7 @@ func TestMapper(t *testing.T) {
 
 	for _, tqlInst := range tqlTexts {
 		t.Run(tqlInst.id, func(t *testing.T) {
-			m, err := NewMapper(dao.Mapper{ID: tqlInst.id, TQL: tqlInst.tqlText}, 0)
+			m, err := NewMapper(Mapper{ID: tqlInst.id, TQL: tqlInst.tqlText}, 0)
 			if nil != err {
 				t.Log("error: ", err)
 				return
@@ -77,7 +76,7 @@ func TestMapper(t *testing.T) {
 
 func TestMapper1233(t *testing.T) {
 	tqlText := "insert into x4c1e33a1-6899-4643-a6b3-46cf37950b7f select x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/x4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
-	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
+	mapperIns, err := NewMapper(Mapper{ID: "mapper123", TQL: tqlText}, 0)
 	assert.Nil(t, err)
 	t.Log("id: ", mapperIns.ID())
 	t.Log("target: ", mapperIns.TargetEntity())
@@ -97,7 +96,7 @@ func TestMapper1233(t *testing.T) {
 func TestMapper123(t *testing.T) {
 	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath, aaa.p1, b3a22c80-6afe-44a0-91b7-f1e49f3c962e.temp * 2 as temp2 `
 
-	mapperIns, err := NewMapper(dao.Mapper{ID: "mapper123", TQL: tqlText}, 0)
+	mapperIns, err := NewMapper(Mapper{ID: "mapper123", TQL: tqlText}, 0)
 	assert.Nil(t, err)
 	t.Log("id: ", mapperIns.ID())
 	t.Log("target: ", mapperIns.TargetEntity())

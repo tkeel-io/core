@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/repository"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
@@ -22,7 +22,7 @@ func Test_makePayload(t *testing.T) {
 			v1.MetaOwner:      "admin",
 			v1.MetaSource:     "core",
 			v1.MetaSender:     "device123",
-			v1.MetaEntityType: dao.EntityTypeSubscription,
+			v1.MetaEntityType: repository.EntityTypeSubscription,
 		},
 	}
 
