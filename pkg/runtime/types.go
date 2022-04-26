@@ -2,10 +2,12 @@ package runtime
 
 import (
 	"context"
+	"strings"
 
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/repository"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
+	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -93,6 +95,14 @@ func (s *SubEndpoint) String() string {
 	return s.path + s.deliveryID + s.target
 }
 
+func (e SubEndpoint) WildcardPath() string {
+	wildcardPath := e.path
+	if !strings.HasSuffix(e.path, path.WildcardSome) {
+		wildcardPath = wildcardPath + path.Separator + path.WildcardSome
+	}
+	return wildcardPath
+}
+
 func (s *SubEndpoint) Expression() string {
 	return s.expressionID
 }
@@ -113,6 +123,14 @@ func newEvalEnd(path, target, expressionID string) EvalEndpoint {
 
 func (e EvalEndpoint) ID() string {
 	return e.path + e.target
+}
+
+func (e EvalEndpoint) WildcardPath() string {
+	wildcardPath := e.path
+	if !strings.HasSuffix(e.path, path.WildcardSome) {
+		wildcardPath = wildcardPath + path.Separator + path.WildcardSome
+	}
+	return wildcardPath
 }
 
 func (e *EvalEndpoint) String() string {

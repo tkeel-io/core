@@ -475,7 +475,8 @@ func whichPrefix(targetPath, changePath string) string {
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle tentacle", zfield.Eid(feed.EntityID), zfield.Event(feed.Event))
+	log.L().Debug("handle tentacle", zfield.Eid(feed.EntityID),
+		zap.Any("changes", feed.Changes), zap.String("state", string(feed.State)))
 
 	// 1. 检查 ret.path 和 订阅列表.
 	targets := make(map[string]string)
@@ -504,10 +505,10 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 
 			// select send data.
 			stateIns, _ := NewEntity(feed.EntityID, feed.State)
-			sendVal := stateIns.GetProp(sendPath)
+			sendVal := stateIns.Get(sendPath)
 			if tdtl.Undefined != sendVal.Type() {
 				patches[runtimeID] = &v1.PatchData{
-					Path:     change.Path,
+					Path:     sendPath,
 					Operator: xjson.OpReplace.String(),
 					Value:    sendVal.Raw(),
 				}
@@ -750,12 +751,12 @@ func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
 	if exprOld, exists := r.getExpr(exprInfo.ID); exists {
 		// remove sub-endpoint from sub-tree.
 		for _, item := range exprOld.subEndpoints {
-			r.subTree.Remove(item.path, &item)
+			r.subTree.Remove(item.WildcardPath(), &item)
 		}
 
 		// remove eval-endpoint from eval-tree.
 		for _, item := range exprOld.evalEndpoints {
-			r.evalTree.Remove(item.path, &item)
+			r.evalTree.Remove(item.WildcardPath(), &item)
 		}
 	}
 
@@ -764,11 +765,11 @@ func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
 
 	// mount sub-endpoint to sub-tree.
 	for _, item := range exprInfo.subEndpoints {
-		r.subTree.Add(item.path, &item)
+		r.subTree.Add(item.WildcardPath(), &item)
 	}
 	// mount eval-endpoint to eval-tree.
 	for _, item := range exprInfo.evalEndpoints {
-		r.evalTree.Add(item.path, &item)
+		r.evalTree.Add(item.WildcardPath(), &item)
 	}
 
 	r.initializeExpression(context.TODO(), exprInfo)
@@ -783,12 +784,12 @@ func (r *Runtime) RemoveExpression(exprID string) {
 
 		// remove sub-endpoint from sub-tree.
 		for _, item := range exprInfo.subEndpoints {
-			r.subTree.Remove(item.path, &item)
+			r.subTree.Remove(item.WildcardPath(), &item)
 		}
 
 		// remove eval-endpoint from eval-tree.
 		for _, item := range exprInfo.evalEndpoints {
-			r.evalTree.Remove(item.path, &item)
+			r.evalTree.Remove(item.WildcardPath(), &item)
 		}
 	}
 }

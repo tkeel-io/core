@@ -152,10 +152,6 @@ func (n *Node) watchMetadata() {
 				exprInfo := newExprInfo(&expr)
 				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-
-
-
-					
 					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 				// remove mapper from all runtime.
