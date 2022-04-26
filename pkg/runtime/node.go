@@ -98,7 +98,7 @@ func (n *Node) Start(cfg NodeConf) error {
 	n.expressions = nil
 
 	// watch metadata.
-	n.watchMetadata()
+	go n.watchMetadata()
 	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
 
 	return nil
@@ -152,6 +152,10 @@ func (n *Node) watchMetadata() {
 				exprInfo := newExprInfo(&expr)
 				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+
+
+
+					
 					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 				// remove mapper from all runtime.
