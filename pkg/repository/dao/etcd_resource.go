@@ -96,8 +96,7 @@ func (d *Dao) HasResource(ctx context.Context, res Resource) (has bool, err erro
 
 func (d *Dao) ListResource(ctx context.Context, rev int64, prefix string, decodeFunc DecodeFunc) ([]Resource, error) {
 	opts := make([]clientv3.OpOption, 0)
-	opts = append(opts, clientv3.WithRev(rev),
-		clientv3.WithRange(clientv3.GetPrefixRangeEnd(prefix)))
+	opts = append(opts, clientv3.WithPrefix())
 
 	var count int64
 	var ress []Resource
