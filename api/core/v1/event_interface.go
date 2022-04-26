@@ -43,6 +43,7 @@ const (
 type EventType string
 
 const (
+	ETSync	   EventType = "core.event.Sync"
 	ETCache    EventType = "core.event.Cache"
 	ETEntity   EventType = "core.event.Entity"
 	ETSystem   EventType = "core.event.System"
