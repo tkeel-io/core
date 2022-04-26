@@ -233,7 +233,6 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	}
 	filterString := strings.Join(filters, ",")
 	if filterString != "" {
-		fmt.Println(filterString)
 		querySql = querySql + fmt.Sprintf(` AND hasAny(tag, [%s])`, filterString)
 		countSql = countSql + fmt.Sprintf(` AND hasAny(tag, [%s])`, filterString)
 
@@ -251,22 +250,20 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	offset := (req.PageNum - 1) * req.PageSize
 	querySql = querySql + fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 
-	fmt.Println(querySql)
 	server := c.balance.Select([]*sqlx.DB{})
 
 	countRes := make([]int64, 0)
 	err = server.DB.SelectContext(context.Background(), &countRes, countSql)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error(err.Error())
+		return nil, pb.ErrClickhouse()
 	}
 
 	queryRes := make([]*rawdata.RawData, 0)
 	err = server.DB.SelectContext(context.Background(), &queryRes, querySql)
 	if err != nil {
-		fmt.Println(err.Error())
-	}
-	for _, item := range queryRes {
-		fmt.Println(item.Timestamp)
+		log.Error(err.Error())
+		return nil, pb.ErrClickhouse()
 	}
 	resp = &pb.GetRawdataResponse{
 		Total:    0,
