@@ -26,7 +26,7 @@ func Test_makePayload(t *testing.T) {
 		},
 	}
 
-	bytes, err := makePayload(ev, []Patch{
+	bytes, err := makePayload(ev, "sub123", []Patch{
 		{
 			Op:    xjson.OpMerge,
 			Path:  "properties.temps",
