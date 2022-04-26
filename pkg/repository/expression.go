@@ -68,7 +68,6 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 	}
 }
 
-
 func ListExpressionPrefix(Owner, EntityID string) string {
 	keyString := fmt.Sprintf("%s/%s/%s",
 		ExprPrefix, Owner, EntityID)
@@ -125,7 +124,7 @@ func (r *repo) HasExpression(ctx context.Context, expr Expression) (bool, error)
 
 func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) ([]*Expression, error) {
 	// construct prefix.
-	prefix := ListExpressionPrefix(req.EntityID, req.Owner)
+	prefix := ListExpressionPrefix(req.Owner, req.EntityID)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
 		func(raw []byte) (dao.Resource, error) {
 			var res Expression // escape.
