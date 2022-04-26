@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
-	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
@@ -15,9 +14,9 @@ import (
 )
 
 const (
-	ExprTypeSub   = "sub"
-	ExprTypeEval  = "eval"
-	fmtExprPrefix = "/core/v1/expressions"
+	ExprTypeSub  = "sub"
+	ExprTypeEval = "eval"
+	ExprPrefix   = "/core/v1/expressions"
 )
 
 type ListExprReq struct {
@@ -25,55 +24,7 @@ type ListExprReq struct {
 	EntityID string
 }
 
-type defaultExprCodec struct{}
-
-func (ec *defaultExprCodec) Key() dao.Codec {
-	return &defaultExprKeyCodec{}
-}
-
-func (ec *defaultExprCodec) Value() dao.Codec {
-	return &defaultExprValueCodec{}
-}
-
-type defaultExprKeyCodec struct{}
-type defaultExprValueCodec struct{}
-
-func encodeKey(entityID, owner, path string) string {
-	escapePath := url.PathEscape(path)
-	keyString := fmt.Sprintf("%s/%s/%s/%s",
-		fmtExprPrefix, owner, entityID, escapePath)
-	return keyString
-}
-
-func encodePrefix(entityID, owner string) string {
-	keyString := fmt.Sprintf("%s/%s/%s",
-		fmtExprPrefix, owner, entityID)
-	return keyString
-}
-
-func (dec *defaultExprKeyCodec) Encode(v interface{}) ([]byte, error) {
-	switch val := v.(type) {
-	case *Expression:
-		keyString := encodeKey(val.EntityID, val.Owner, val.Path)
-		return []byte(keyString), nil
-	default:
-		return nil, xerrors.ErrInternal
-	}
-}
-
-func (dec *defaultExprKeyCodec) Decode(raw []byte, v interface{}) error {
-	panic("never use")
-}
-
-func (dec *defaultExprValueCodec) Encode(v interface{}) ([]byte, error) {
-	bytes, err := json.Marshal(v)
-	return bytes, errors.Wrap(err, "encode Expression")
-}
-
-func (dec *defaultExprValueCodec) Decode(raw []byte, v interface{}) error {
-	err := json.Unmarshal(raw, v)
-	return errors.Wrap(err, "decode Expression")
-}
+var _ dao.Resource = (*Expression)(nil)
 
 type Expression struct {
 	// expression identifier.
@@ -104,7 +55,7 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 	}
 
 	identifier := fmt.Sprintf("%s/%s/%s/%s",
-		fmtExprPrefix, owner, entityID, escapePath)
+		ExprPrefix, owner, entityID, escapePath)
 	return &Expression{
 		ID:          identifier,
 		Name:        name,
@@ -117,8 +68,32 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 	}
 }
 
-func (e *Expression) Codec() dao.KVCodec {
-	return &defaultExprCodec{}
+
+func ListExpressionPrefix(Owner, EntityID string) string {
+	keyString := fmt.Sprintf("%s/%s/%s",
+		ExprPrefix, Owner, EntityID)
+	return keyString
+}
+
+func (e *Expression) EncodeKey() ([]byte, error) {
+	escapePath := url.PathEscape(e.Path)
+	keyString := fmt.Sprintf("%s/%s/%s/%s",
+		ExprPrefix, e.Owner, e.EntityID, escapePath)
+	return []byte(keyString), nil
+}
+
+func (e *Expression) Encode() ([]byte, error) {
+	bytes, err := json.Marshal(e)
+	return bytes, errors.Wrap(err, "encode Expression")
+}
+
+func (e *Expression) Decode(bytes []byte) error {
+	err := json.Unmarshal(bytes, e)
+	return errors.Wrap(err, "decode Expression")
+}
+
+func (e *Expression) Prefix() string {
+	return ListExpressionPrefix(e.Owner, e.EntityID)
 }
 
 func (r *repo) PutExpression(ctx context.Context, expr Expression) error {
@@ -138,7 +113,7 @@ func (r *repo) DelExpression(ctx context.Context, expr Expression) error {
 
 func (r *repo) DelExprByEnity(ctx context.Context, expr Expression) error {
 	// construct prefix key.
-	prefix := encodePrefix(expr.EntityID, expr.Owner)
+	prefix := expr.Prefix()
 	err := r.dao.DelResources(ctx, prefix)
 	return errors.Wrap(err, "del expressions repository")
 }
@@ -150,12 +125,11 @@ func (r *repo) HasExpression(ctx context.Context, expr Expression) (bool, error)
 
 func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) ([]*Expression, error) {
 	// construct prefix.
-	prefix := encodePrefix(req.EntityID, req.Owner)
+	prefix := ListExpressionPrefix(req.EntityID, req.Owner)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
 		func(raw []byte) (dao.Resource, error) {
 			var res Expression // escape.
-			valCodec := &defaultExprValueCodec{}
-			err := valCodec.Decode(raw, &res)
+			err := res.Decode(raw)
 			return &res, errors.Wrap(err, "decode expression")
 		})
 
@@ -171,12 +145,11 @@ func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) 
 }
 
 func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpressionFunc) {
-	r.dao.RangeResource(ctx, rev, fmtExprPrefix, func(kvs []*mvccpb.KeyValue) {
+	r.dao.RangeResource(ctx, rev, ExprPrefix, func(kvs []*mvccpb.KeyValue) {
 		var exprs []*Expression
-		valCodec := &defaultExprValueCodec{}
 		for index := range kvs {
 			var expr Expression
-			err := valCodec.Decode(kvs[index].Value, &expr)
+			err := expr.Decode(kvs[index].Value)
 			if nil != err {
 				log.L().Error("")
 				continue
@@ -188,10 +161,9 @@ func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpr
 }
 
 func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc) {
-	r.dao.WatchResource(ctx, rev, fmtExprPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
+	r.dao.WatchResource(ctx, rev, ExprPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
 		var expr Expression
-		valCodec := &defaultExprValueCodec{}
-		err := valCodec.Decode(kv.Value, &expr)
+		err := expr.Decode(kv.Value)
 		if nil != err {
 			log.L().Error("")
 		}

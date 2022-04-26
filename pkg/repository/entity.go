@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -95,63 +94,22 @@ func (e *Entity) JSON() string {
 	return string(bytes)
 }
 
-// --------------------------------- Storage.
-
-type defaultEntityCodec struct {
-}
-
-func (ec *defaultEntityCodec) Key() dao.Codec {
-	return &entityKeyCodec{}
-}
-
-func (ec *defaultEntityCodec) Value() dao.Codec {
-	return &entityValueCodec{}
-}
-
-type entityKeyCodec struct{}
-
-func (ec *entityKeyCodec) Encode(v interface{}) ([]byte, error) {
-	switch val := v.(type) {
-	case *entityResource:
-		return []byte(EntityStorePrefix + "." + val.id), nil
-	default:
-		return nil, xerrors.ErrInternal
-	}
-}
-
-func (ec *entityKeyCodec) Decode(raw []byte, v interface{}) error {
-	// nerver use.
-	return nil
-}
-
-type entityValueCodec struct{}
-
-func (ec *entityValueCodec) Encode(v interface{}) ([]byte, error) {
-	switch val := v.(type) {
-	case *entityResource:
-		return val.data, nil
-	default:
-		return nil, xerrors.ErrInternal
-	}
-}
-
-func (ec *entityValueCodec) Decode(raw []byte, v interface{}) error {
-	switch val := v.(type) {
-	case *entityResource:
-		val.data = raw
-		return nil
-	default:
-		return xerrors.ErrInternal
-	}
-}
-
 type entityResource struct {
 	id   string
 	data []byte
 }
 
-func (e *entityResource) Codec() dao.KVCodec {
-	return &defaultEntityCodec{}
+func (e *entityResource) EncodeKey() ([]byte, error) {
+	return []byte(EntityStorePrefix + "." + e.id), nil
+}
+
+func (e *entityResource) Encode() ([]byte, error) {
+	return e.data, nil
+}
+
+func (e *entityResource) Decode(bytes []byte) error {
+	e.data = bytes
+	return nil
 }
 
 func (r *repo) PutEntity(ctx context.Context, eid string, data []byte) error {

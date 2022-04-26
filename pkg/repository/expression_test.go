@@ -2,47 +2,20 @@ package repository
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/core/pkg/config"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
 var repoIns IRepository
 var testReady bool
 
-func TestMain(m *testing.M) {
-	// create dao instance.
-	daoIns, err := dao.NewMock(context.Background(), config.Metadata{
-		Name: "noop",
-		Properties: []config.Pair{
-			{
-				Key:   "store_name",
-				Value: "core-state",
-			},
-		},
-	}, config.EtcdConfig{
-		Endpoints:   []string{"http://localhost:2x379"},
-		DialTimeout: 3,
-	})
-
-	if nil != err {
-		os.Exit(1)
-	}
-	testReady = true
-	repoIns = New(daoIns)
-
-	os.Exit(m.Run())
-}
-
-func TestNewExpression(t *testing.T) {
-	expr := NewExpression("admin", "device123", "expression001", "temp", "device234.temp", "")
-	assert.Equal(t, encodeKey("device123", "admin", "temp"), expr.ID)
-	t.Log("expressionID: ", expr.ID)
-}
+//func TestNewExpression(t *testing.T) {
+//	expr := NewExpression("admin", "device123", "expression001", "temp", "device234.temp", "")
+//	assert.Equal(t, encodeKey("device123", "admin", "temp"), expr.ID)
+//	t.Log("expressionID: ", expr.ID)
+//}
 
 func TestPutExpression(t *testing.T) {
 	tests := []struct {

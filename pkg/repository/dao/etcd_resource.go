@@ -35,9 +35,9 @@ func (d *Dao) PutResource(ctx context.Context, res Resource) error {
 		bytes []byte
 	)
 
-	if bytes, err = res.Codec().Value().Encode(res); nil != err {
+	if bytes, err = res.Encode(); nil != err {
 		return errors.Wrap(err, "put costume resource")
-	} else if key, err = res.Codec().Key().Encode(res); nil == err {
+	} else if key, err = res.EncodeKey(); nil == err {
 		_, err = d.etcdEndpoint.Put(ctx, string(key), string(bytes))
 	}
 
@@ -51,19 +51,19 @@ func (d *Dao) GetResource(ctx context.Context, res Resource) (Resource, error) {
 		ret *clientv3.GetResponse
 	)
 
-	if key, err = res.Codec().Key().Encode(res); nil != err {
+	if key, err = res.EncodeKey(); nil != err {
 		return res, errors.Wrap(err, "get costume resource")
 	} else if ret, err = d.etcdEndpoint.Get(ctx, string(key)); nil == err {
 		if len(ret.Kvs) == 0 {
 			return res, errors.Wrap(xerrors.ErrResourceNotFound, "get costume resource")
 		}
-		err = res.Codec().Value().Decode(ret.Kvs[0].Value, res)
+		err = res.Decode(ret.Kvs[0].Value)
 	}
 	return res, errors.Wrap(err, "get costume resource")
 }
 
 func (d *Dao) DelResource(ctx context.Context, res Resource) error {
-	key, err := res.Codec().Key().Encode(res)
+	key, err := res.EncodeKey()
 	if nil != err {
 		return errors.Wrap(err, "delete costume resource")
 	}
@@ -81,7 +81,7 @@ func (d *Dao) DelResources(ctx context.Context, prefix string) error {
 func (d *Dao) HasResource(ctx context.Context, res Resource) (has bool, err error) {
 	var key []byte
 	var ret *clientv3.GetResponse
-	if key, err = res.Codec().Key().Encode(res); nil != err {
+	if key, err = res.EncodeKey(); nil != err {
 		return has, errors.Wrap(err, "exists costume resource")
 	}
 

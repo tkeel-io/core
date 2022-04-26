@@ -38,7 +38,9 @@ type RangeResourceFunc func([]*mvccpb.KeyValue)
 type WatchResourceFunc func(EnventType, *mvccpb.KeyValue)
 
 type Resource interface {
-	Codec() KVCodec
+	EncodeKey() ([]byte, error)
+	Encode() ([]byte, error)
+	Decode(bytes []byte) error
 }
 
 type IDao interface {

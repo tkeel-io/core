@@ -31,9 +31,9 @@ func (d *Dao) StoreResource(ctx context.Context, res Resource) error {
 		data []byte
 	)
 
-	if key, err = res.Codec().Key().Encode(res); nil != err {
+	if key, err = res.EncodeKey(); nil != err {
 		return errors.Wrap(err, "dao store put entity")
-	} else if data, err = res.Codec().Value().Encode(res); nil != err {
+	} else if data, err = res.Encode(); nil != err {
 		return errors.Wrap(err, "dao store entity")
 	}
 
@@ -48,7 +48,7 @@ func (d *Dao) GetStoreResource(ctx context.Context, res Resource) (Resource, err
 		item *store.StateItem
 	)
 
-	if key, err = res.Codec().Key().Encode(res); nil != err {
+	if key, err = res.EncodeKey(); nil != err {
 		return res, errors.Wrap(err, "dao store get entity")
 	}
 
@@ -56,13 +56,13 @@ func (d *Dao) GetStoreResource(ctx context.Context, res Resource) (Resource, err
 		if len(item.Value) == 0 {
 			return nil, xerrors.ErrResourceNotFound
 		}
-		err = res.Codec().Value().Decode(item.Value, res)
+		err = res.Decode(item.Value)
 	}
 	return res, errors.Wrap(err, "dao store get entity")
 }
 
 func (d *Dao) RemoveStoreResource(ctx context.Context, res Resource) error {
-	key, err := res.Codec().Key().Encode(res)
+	key, err := res.EncodeKey()
 	if nil != err {
 		return errors.Wrap(err, "dao store get entity")
 	}

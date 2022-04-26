@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-
-	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
 type IRepository interface {
@@ -20,11 +18,4 @@ type IRepository interface {
 	ListExpression(ctx context.Context, rev int64, req *ListExprReq) ([]*Expression, error)
 	RangeExpression(ctx context.Context, rev int64, handler RangeExpressionFunc)
 	WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc)
-	PutCostumeResource(ctx context.Context, expr dao.Resource) error
-	GetCostumeResource(ctx context.Context, expr dao.Resource) (dao.Resource, error)
-	DelCostumeResource(ctx context.Context, expr dao.Resource) error
-	HasCostumeResource(ctx context.Context, expr dao.Resource) (bool, error)
-	ListCostumeResource(ctx context.Context, rev int64, prefix string, decodeFunc dao.DecodeFunc) ([]dao.Resource, error)
-	RangeCostumeResource(ctx context.Context, rev int64, prefix string, handler dao.RangeResourceFunc)
-	WatchCostumeResource(ctx context.Context, rev int64, prefix string, handler dao.WatchResourceFunc)
 }
