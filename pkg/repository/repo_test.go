@@ -30,6 +30,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
+	repoIns = rr
 	os.Exit(m.Run())
 	coreDao.Close()
 }

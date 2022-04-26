@@ -100,7 +100,7 @@ func (n *Node) Start(cfg NodeConf) error {
 	n.expressions = nil
 
 	// watch metadata.
-	n.watchMetadata()
+	go n.watchMetadata()
 	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
 
 	return nil

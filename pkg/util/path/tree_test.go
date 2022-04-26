@@ -37,7 +37,7 @@ func TestTree(t *testing.T) {
 	}{
 		{"1", "a.b.c.r", "a.*|a.b.c.*"},
 		{"2", "a", "a.*|a.x[0].*|a.b.c.*|a.b.c.d.e.*|a.b.c.d.e.f.*|a.b.c.d.e.i.*|a.b.c.d.e.g.*|a.b.c.d.e.i.j.*|a.b.c.d.e.i.j.k.*"},
-		{"1", "b.b.c.r", ""},
+		{"3", "b.b.c.r", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t1 *testing.T) {
@@ -54,8 +54,6 @@ func TestTree(t *testing.T) {
 		})
 	}
 }
-
-
 
 func TestRefTree(t *testing.T) {
 	tr := NewRefTree()

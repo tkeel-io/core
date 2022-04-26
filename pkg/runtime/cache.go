@@ -4,8 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/tdtl"
+	"github.com/tkeel-io/kit/log"
 )
 
 type EntityCache interface {
@@ -28,14 +29,24 @@ func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {
 		return state, nil
 	}
 
-	// load from state store.
-	cc := tdtl.New([]byte(`{"properties":{}}`))
-	cc.Set("id", tdtl.New(id))
-	en, err := NewEntity(id, cc.Raw())
-	if nil == err {
-		// cache entity.
-		ec.entities[id] = en
+	// load from state storage.
+	jsonData, err := ec.repository.GetEntity(context.TODO(), id)
+	if nil != err {
+		log.L().Warn("load entity from state storage",
+			zfield.Eid(id), zfield.Reason(err.Error()))
+		return nil, errors.Wrap(err, "load entity")
 	}
+
+	// create entity instance.
+	en, err := NewEntity(id, jsonData)
+	if nil != err {
+		log.L().Warn("create entity instance",
+			zfield.Eid(id), zfield.Reason(err.Error()))
+		return nil, errors.Wrap(err, "create entity instance")
+	}
+
+	// cache entity.
+	ec.entities[id] = en
 	return en, errors.Wrap(err, "load cache entity")
 }
 
