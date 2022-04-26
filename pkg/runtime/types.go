@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/tkeel-io/core/pkg/mapper"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/repository"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/tdtl"
 )
@@ -61,7 +61,7 @@ type Task func()
 
 type ExpressionInfo struct {
 	// embeded Expression.
-	dao.Expression
+	repository.Expression
 
 	isHere        bool // expression 所属 entity 是否属于当前 runtime.
 	version       int

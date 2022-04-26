@@ -16,6 +16,7 @@ import (
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
@@ -128,7 +129,7 @@ func (n *Node) listMetadata() {
 	repo := n.resourceManager.Repo()
 	n.revision = repo.GetLastRevision(context.Background())
 	log.L().Info("initialize actor manager, mapper loadding...")
-	repo.RangeExpression(ctx, n.revision, func(expressions []dao.Expression) {
+	repo.RangeExpression(ctx, n.revision, func(expressions []*repository.Expression) {
 		// 将mapper加入每一个 runtime.
 		for _, expr := range expressions {
 			log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
@@ -147,10 +148,10 @@ func (n *Node) listMetadata() {
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
 	repo.WatchExpression(context.Background(), n.revision,
-		func(et dao.EnventType, expr dao.Expression) {
+		func(et dao.EnventType, expr repository.Expression) {
 			switch et {
 			case dao.DELETE:
-				exprInfo := newExprInfo(expr)
+				exprInfo := newExprInfo(&expr)
 				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
 					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
@@ -160,7 +161,7 @@ func (n *Node) watchMetadata() {
 					rt.RemoveExpression(exprInfo.ID)
 				}
 			case dao.PUT:
-				exprInfo := newExprInfo(expr)
+				exprInfo := newExprInfo(&expr)
 				log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
 					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
 					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
@@ -346,20 +347,11 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 		return errors.Wrap(err, "remove entity from state search engine")
 	}
 
-	// 3. 删除etcd中的mapper.
-	if err := n.resourceManager.Repo().
-		DelMapperByEntity(ctx, &dao.Mapper{
-			Owner:    en.Owner(),
-			EntityID: en.ID(),
-		}); nil != err {
-		log.L().Error("remove entity, remove mapper by entity",
-			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
-		return errors.Wrap(err, "remove mapper by entity")
-	}
+	// 3. 删除实体相关的 Expression.
 	return nil
 }
 
-func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionInfo, error) {
+func parseExpression(expr repository.Expression, version int) (map[string]*ExpressionInfo, error) {
 	exprIns, err := expression.NewExpr(expr.Expression, nil)
 	if nil != err {
 		return nil, errors.Wrap(err, "parse expression")
@@ -391,11 +383,11 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 			}
 
 			// construct eval endpoint.
-			if dao.ExprTypeEval == expr.Type {
+			if repository.ExprTypeEval == expr.Type {
 				exprInfos[ownerInfo.ID].evalEndpoints =
 					append(exprInfos[ownerInfo.ID].evalEndpoints,
 						newEvalEnd(path, expr.EntityID, expr.ID))
-			} else if dao.ExprTypeSub == expr.Type {
+			} else if repository.ExprTypeSub == expr.Type {
 				exprInfos[ownerInfo.ID].subEndpoints =
 					append(exprInfos[ownerInfo.ID].subEndpoints,
 						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
@@ -407,13 +399,13 @@ func parseExpression(expr dao.Expression, version int) (map[string]*ExpressionIn
 }
 
 // exprKey return unique expression identifier.
-func exprKey(expr dao.Expression) string {
+func exprKey(expr *repository.Expression) string {
 	return expr.EntityID + expr.Path
 }
 
-func newExprInfo(expr dao.Expression) ExpressionInfo {
+func newExprInfo(expr *repository.Expression) ExpressionInfo {
 	return ExpressionInfo{
-		Expression: dao.Expression{
+		Expression: repository.Expression{
 			ID:          expr.ID,
 			Path:        expr.Path,
 			Name:        expr.Name,

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/tkeel-io/core/pkg/repository/dao"
+	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/tdtl"
 )
 
@@ -13,7 +13,7 @@ type IExpression interface {
 	Entities() map[string][]string
 }
 
-func Validate(expr dao.Expression) error {
+func Validate(expr repository.Expression) error {
 	// check path.
 
 	// check expression.
