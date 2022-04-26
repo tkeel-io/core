@@ -208,7 +208,7 @@ func core(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var coreDao *dao.Dao
+	var coreDao dao.IDao
 	if coreDao, err = dao.New(ctx, config.Get().Components.Store, config.Get().Components.Etcd); nil != err {
 		log.Fatal(err)
 	}

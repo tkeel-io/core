@@ -34,7 +34,7 @@ const (
 	WatchKeyDelimiter = "."
 )
 
-type Mapper interface {
+type IMapper interface {
 	// ID returns mapper id.
 	ID() string
 	Name() string
@@ -49,7 +49,7 @@ type Mapper interface {
 	// Tentacles returns tentacles.
 	Tentacles() map[string][]Tentacler
 	// Copy duplicate a mapper.
-	Copy() Mapper
+	Copy() IMapper
 	// Exec excute input returns output.
 	Exec(map[string]tdtl.Node) (map[string]tdtl.Node, error)
 }
@@ -63,7 +63,7 @@ type Tentacler interface {
 	Type() TentacleType
 	String() string
 	// Mapper return mapper.
-	Mapper() Mapper
+	Mapper() IMapper
 	// TargetID returns target id.
 	TargetID() string
 	// Items returns watch keys(watchKey=entityId#propertyKey).

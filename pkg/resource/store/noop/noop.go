@@ -2,9 +2,9 @@ package noop
 
 import (
 	"context"
-	"errors"
 	"os"
 
+	xerrors "github.com/tkeel-io/core/pkg/errors"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/core/pkg/util"
@@ -16,7 +16,7 @@ type noopStore struct {
 }
 
 func (n *noopStore) Get(ctx context.Context, key string) (*store.StateItem, error) {
-	return nil, errors.New("noop store")
+	return nil, xerrors.ErrResourceNotFound
 }
 
 // Set saves the raw data into store using default state options.

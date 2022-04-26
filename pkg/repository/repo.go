@@ -7,10 +7,10 @@ import (
 )
 
 type repo struct {
-	dao *dao.Dao
+	dao dao.IDao
 }
 
-func New(dao *dao.Dao) IRepository {
+func New(dao dao.IDao) IRepository {
 	return &repo{dao: dao}
 }
 

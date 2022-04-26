@@ -1,28 +1,35 @@
 package repository
 
-// import (
-// 	"context"
-// 	"testing"
+import (
+	"context"
+	"os"
+	"testing"
 
-// 	"github.com/tkeel-io/core/pkg/config"
-// 	"github.com/tkeel-io/core/pkg/repository/dao"
-// )
+	"github.com/tkeel-io/core/pkg/config"
+	"github.com/tkeel-io/core/pkg/repository/dao"
+)
 
-// var coreDao *dao.Dao
+var (
+	coreDao dao.IDao
+	rr      *repo
+)
 
-// func TestMain(m *testing.M) {
-// 	var err error
-// 	coreDao, err = dao.New(
-// 		context.Background(),
-// 		config.Metadata{Name: "dapr", Properties: []config.Pair{{Key: "store_name", Value: "core-entity"}}},
-// 		config.EtcdConfig{Endpoints: []string{"http://localhost:2379"}, DialTimeout: 3},
-// 	)
+func TestMain(m *testing.M) {
+	var err error
+	coreDao, err := dao.New(
+		context.Background(),
+		config.Metadata{Name: "noop"},
+		config.EtcdConfig{Endpoints: []string{"http://localhost:2379"}, DialTimeout: 3},
+	)
 
-// 	if nil != err {
-// 		panic(err)
-// 	}
-// }
+	rr = &repo{
+		dao: coreDao,
+	}
 
-// func TestDao_GetEntity(t *testing.T) {
+	if nil != err {
+		panic(err)
+	}
 
-// }
+	os.Exit(m.Run())
+	coreDao.Close()
+}
