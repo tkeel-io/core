@@ -101,8 +101,8 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 			subEnd, _ := node.(*SubEndpoint)
 			exprInfo, has := r.getExpr(subEnd.expressionID)
 			if has && exprInfo.isHere && exprInfo.Type == dao.ExprTypeSub {
-				subPatchs[exprInfo.EntityID] =
-					append(subPatchs[exprInfo.EntityID], patch)
+				// TODO: select target data.
+				subPatchs[exprInfo.EntityID] = append(subPatchs[exprInfo.EntityID], patch)
 			}
 
 			log.L().Debug("expression external sub matched", zfield.Eid(entityID),
