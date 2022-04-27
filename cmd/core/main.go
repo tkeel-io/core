@@ -41,6 +41,7 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
+	_ "github.com/tkeel-io/core/pkg/resource/store/memory"
 	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"

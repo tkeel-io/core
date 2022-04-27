@@ -43,6 +43,6 @@ func NewStore(metadata resource.Metadata) Store {
 		log.L().Error("new Store instance", zap.Error(err),
 			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
 	}
-	storeClient, _ = registeredStores["noop"](metadata.Properties)
+	storeClient, _ = registeredStores["memory"](metadata.Properties)
 	return storeClient
 }
