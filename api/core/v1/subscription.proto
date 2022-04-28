@@ -102,6 +102,9 @@ message SubscriptionObject {
     string target = 4  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "target id"}];
     string topic = 5  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "topic name"}];
     string pubsub_name = 6  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "pubsub name"}];
+
+    string id = 11  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "suscription id"}];
+    string owner = 12  [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "suscription owner"}];
 }
 
 
@@ -154,4 +157,6 @@ message ListSubscriptionResponse {
     int32 count = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "count of the subscriptions"}];
     repeated SubscriptionResponse items = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "subscription items"}];
 }
+
+
 

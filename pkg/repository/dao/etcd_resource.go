@@ -53,11 +53,11 @@ func (d *Dao) GetResource(ctx context.Context, res Resource) (Resource, error) {
 
 	if key, err = res.EncodeKey(); nil != err {
 		return res, errors.Wrap(err, "get costume resource")
-	} else if ret, err = d.etcdEndpoint.Get(ctx, string(key)); nil == err {
+	} else if ret, err = d.etcdEndpoint.Get(ctx, string(key), clientv3.WithPrefix()); nil == err {
 		if len(ret.Kvs) == 0 {
 			return res, errors.Wrap(xerrors.ErrResourceNotFound, "get costume resource")
 		}
-		err = res.Decode(ret.Kvs[0].Value)
+		err = res.Decode(ret.Kvs[0].Key, ret.Kvs[0].Value)
 	}
 	return res, errors.Wrap(err, "get costume resource")
 }
@@ -115,7 +115,7 @@ func (d *Dao) ListResource(ctx context.Context, rev int64, prefix string, decode
 
 		for _, kv := range resp.Kvs {
 			var res Resource
-			if res, err = decodeFunc(kv.Value); nil != err {
+			if res, err = decodeFunc(kv.Key, kv.Value); nil != err {
 				log.L().Error("unmarshal costume resource", zap.Error(err),
 					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
 				return ress, errors.Wrap(err, "unmarshal costume resource")

@@ -6,26 +6,19 @@ package v1
 
 import (
 	context "context"
+	json "encoding/json"
 	go_restful "github.com/emicklei/go-restful"
 	errors "github.com/tkeel-io/kit/errors"
-	result "github.com/tkeel-io/kit/result"
-	protojson "google.golang.org/protobuf/encoding/protojson"
-	anypb "google.golang.org/protobuf/types/known/anypb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	http "net/http"
+	reflect "reflect"
 )
 
 import transportHTTP "github.com/tkeel-io/kit/transport/http"
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the tkeel package it is being compiled against.
-// import package.context.http.anypb.result.protojson.go_restful.errors.emptypb.
-
-var (
-	_ = protojson.MarshalOptions{}
-	_ = anypb.Any{}
-	_ = emptypb.Empty{}
-)
+// import package.context.http.reflect.go_restful.json.errors.emptypb.
 
 type SubscriptionHTTPServer interface {
 	CreateSubscription(context.Context, *CreateSubscriptionRequest) (*SubscriptionResponse, error)
@@ -46,13 +39,11 @@ func newSubscriptionHTTPHandler(s SubscriptionHTTPServer) *SubscriptionHTTPHandl
 func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := CreateSubscriptionRequest{}
 	if err := transportHTTP.GetBody(req, &in.Subscription); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -62,58 +53,33 @@ func (h *SubscriptionHTTPHandler) CreateSubscription(req *go_restful.Request, re
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
-		if httpCode == http.StatusMovedPermanently {
-			resp.Header().Set("Location", tErr.Message)
-		}
-		resp.WriteHeaderAndJson(httpCode,
-			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-	anyOut, err := anypb.New(out)
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	outB, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
-	}.Marshal(&result.Http{
-		Code: errors.Success.Reason,
-		Msg:  "",
-		Data: anyOut,
-	})
+	_, err = resp.Write(result)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
-	}
-	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
-
-	var remain int
-	for {
-		outB = outB[remain:]
-		remain, err = resp.Write(outB)
-		if err != nil {
-			return
-		}
-		if remain == 0 {
-			break
-		}
 	}
 }
 
 func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := DeleteSubscriptionRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -123,58 +89,33 @@ func (h *SubscriptionHTTPHandler) DeleteSubscription(req *go_restful.Request, re
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
-		if httpCode == http.StatusMovedPermanently {
-			resp.Header().Set("Location", tErr.Message)
-		}
-		resp.WriteHeaderAndJson(httpCode,
-			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-	anyOut, err := anypb.New(out)
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	outB, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
-	}.Marshal(&result.Http{
-		Code: errors.Success.Reason,
-		Msg:  "",
-		Data: anyOut,
-	})
+	_, err = resp.Write(result)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
-	}
-	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
-
-	var remain int
-	for {
-		outB = outB[remain:]
-		remain, err = resp.Write(outB)
-		if err != nil {
-			return
-		}
-		if remain == 0 {
-			break
-		}
 	}
 }
 
 func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := GetSubscriptionRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -184,53 +125,29 @@ func (h *SubscriptionHTTPHandler) GetSubscription(req *go_restful.Request, resp 
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
-		if httpCode == http.StatusMovedPermanently {
-			resp.Header().Set("Location", tErr.Message)
-		}
-		resp.WriteHeaderAndJson(httpCode,
-			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-	anyOut, err := anypb.New(out)
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	outB, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
-	}.Marshal(&result.Http{
-		Code: errors.Success.Reason,
-		Msg:  "",
-		Data: anyOut,
-	})
+	_, err = resp.Write(result)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
-	}
-	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
-
-	var remain int
-	for {
-		outB = outB[remain:]
-		remain, err = resp.Write(outB)
-		if err != nil {
-			return
-		}
-		if remain == 0 {
-			break
-		}
 	}
 }
 
 func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := ListSubscriptionRequest{}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -240,63 +157,37 @@ func (h *SubscriptionHTTPHandler) ListSubscription(req *go_restful.Request, resp
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
-		if httpCode == http.StatusMovedPermanently {
-			resp.Header().Set("Location", tErr.Message)
-		}
-		resp.WriteHeaderAndJson(httpCode,
-			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-	anyOut, err := anypb.New(out)
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	outB, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
-	}.Marshal(&result.Http{
-		Code: errors.Success.Reason,
-		Msg:  "",
-		Data: anyOut,
-	})
+	_, err = resp.Write(result)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
-	}
-	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
-
-	var remain int
-	for {
-		outB = outB[remain:]
-		remain, err = resp.Write(outB)
-		if err != nil {
-			return
-		}
-		if remain == 0 {
-			break
-		}
 	}
 }
 
 func (h *SubscriptionHTTPHandler) UpdateSubscription(req *go_restful.Request, resp *go_restful.Response) {
 	in := UpdateSubscriptionRequest{}
 	if err := transportHTTP.GetBody(req, &in.Subscription); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := transportHTTP.GetQuery(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := transportHTTP.GetPathValue(req, &in); err != nil {
-		resp.WriteHeaderAndJson(http.StatusBadRequest,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -306,45 +197,22 @@ func (h *SubscriptionHTTPHandler) UpdateSubscription(req *go_restful.Request, re
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
-		if httpCode == http.StatusMovedPermanently {
-			resp.Header().Set("Location", tErr.Message)
-		}
-		resp.WriteHeaderAndJson(httpCode,
-			result.Set(tErr.Reason, tErr.Message, out), "application/json")
+		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-	anyOut, err := anypb.New(out)
+	if reflect.ValueOf(out).Elem().Type().AssignableTo(reflect.TypeOf(emptypb.Empty{})) {
+		resp.WriteHeader(http.StatusNoContent)
+		return
+	}
+	result, err := json.Marshal(out)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	outB, err := protojson.MarshalOptions{
-		UseProtoNames:   true,
-		EmitUnpopulated: true,
-	}.Marshal(&result.Http{
-		Code: errors.Success.Reason,
-		Msg:  "",
-		Data: anyOut,
-	})
+	_, err = resp.Write(result)
 	if err != nil {
-		resp.WriteHeaderAndJson(http.StatusInternalServerError,
-			result.Set(errors.InternalError.Reason, err.Error(), nil), "application/json")
+		resp.WriteErrorString(http.StatusInternalServerError, err.Error())
 		return
-	}
-	resp.AddHeader(go_restful.HEADER_ContentType, "application/json")
-
-	var remain int
-	for {
-		outB = outB[remain:]
-		remain, err = resp.Write(outB)
-		if err != nil {
-			return
-		}
-		if remain == 0 {
-			break
-		}
 	}
 }
 

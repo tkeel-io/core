@@ -29,14 +29,13 @@ type NodeConf struct {
 
 type Node struct {
 	runtimes        map[string]*Runtime
+	queues          map[string]*xkafka.Pubsub
 	dispatch        dispatch.Dispatcher
 	resourceManager types.ResourceManager
-	expressions     map[string]ExpressionInfo
 	revision        int64
-
-	lock   sync.RWMutex
-	ctx    context.Context
-	cancel context.CancelFunc
+	lock            sync.RWMutex
+	ctx             context.Context
+	cancel          context.CancelFunc
 }
 
 func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher) *Node {
@@ -48,55 +47,87 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 		dispatch:        dispatcher,
 		resourceManager: resourceManager,
 		runtimes:        make(map[string]*Runtime),
-		expressions:     make(map[string]ExpressionInfo),
+		queues:          make(map[string]*xkafka.Pubsub),
 	}
 }
 
+// Start Node
+//1. 创建 KafkaSource & runtime
+//2. list resource
+//3. watch resource
+//4. start KafkaReceived
 func (n *Node) Start(cfg NodeConf) error {
 	log.L().Info("start node...")
 
-	var elapsed util.ElapsedTime
-	n.listMetadata()
+	//1. 创建 KafkaSource & runtime
+	var err error
+	var sourceIns *xkafka.Pubsub
 	for index := range cfg.Sources {
-		var err error
-		var sourceIns *xkafka.Pubsub
 		if sourceIns, err = xkafka.NewKafkaPubsub(cfg.Sources[index]); nil != err {
 			return errors.Wrap(err, "create source instance")
-		} else if err = sourceIns.Received(n.ctx, n); nil != err {
-			return errors.Wrap(err, "consume source")
 		}
-
-		rid := sourceIns.ID()
+		runtimeID := sourceIns.ID()
+		n.queues[runtimeID] = sourceIns
 		// create runtime instance.
 		log.L().Info("create runtime instance",
-			zfield.ID(rid), zfield.Source(cfg.Sources[index]))
-
+			zfield.ID(runtimeID), zfield.Source(cfg.Sources[index]))
 		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
-		rt := NewRuntime(n.ctx, entityResouce, rid, n.dispatch, n.resourceManager.Repo())
-		for _, expr := range n.expressions {
-			exprInfos, err := parseExpression(expr.Expression, 1)
-			if nil != err {
-				log.L().Error("parse expression", zfield.Eid(expr.EntityID),
-					zfield.Expr(expr.Expression.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
-				continue
-			}
-
-			if exprIns, has := exprInfos[rt.ID()]; has {
-				rt.AppendExpression(*exprIns)
-			}
-		}
-
-		n.runtimes[rid] = rt
+		runtime := NewRuntime(n.ctx, entityResouce, runtimeID, n.dispatch, n.resourceManager.Repo())
+		n.runtimes[runtimeID] = runtime
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
 	}
 
-	// release expressions.
-	n.expressions = nil
+	//2. list resource
+	var elapsed util.ElapsedTime
+	n.listMetadata()
 
+	//3. watch resource
+	n.watchMetadata()
+
+	//4. start KafkaReceived
+	for _, queue := range n.queues {
+		if err = queue.Received(n.ctx, n); nil != err {
+			return errors.Wrap(err, "consume source")
+		}
+	}
 	// watch metadata.
-	go n.watchMetadata()
 	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
+	//
+	//for index := range cfg.Sources {
+	//	var err error
+	//	var sourceIns *xkafka.Pubsub
+	//	if sourceIns, err = xkafka.NewKafkaPubsub(cfg.Sources[index]); nil != err {
+	//		return errors.Wrap(err, "create source instance")
+	//	} else if err = sourceIns.Received(n.ctx, n); nil != err {
+	//		return errors.Wrap(err, "consume source")
+	//	}
+	//
+	//	rid := sourceIns.ID()
+	//	// create runtime instance.
+	//	log.L().Info("create runtime instance",
+	//		zfield.ID(rid), zfield.Source(cfg.Sources[index]))
+	//
+	//	entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
+	//	rt := NewRuntime(n.ctx, entityResouce, rid, n.dispatch, n.resourceManager.Repo())
+	//	for _, expr := range n.expressions {
+	//		exprInfos, err := parseExpression(expr.Expression, 1)
+	//		if nil != err {
+	//			log.L().Error("parse expression", zfield.Eid(expr.EntityID),
+	//				zfield.Expr(expr.Expression.Expression), zfield.Desc(expr.Description),
+	//				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+	//			continue
+	//		}
+	//
+	//		if exprIns, has := exprInfos[rt.ID()]; has {
+	//			rt.AppendExpression(*exprIns)
+	//		}
+	//	}
+	//
+	//	n.runtimes[rid] = rt
+	//	placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
+	//}
+	//
+	//
 
 	return nil
 }
@@ -132,17 +163,46 @@ func (n *Node) listMetadata() {
 				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
 
 			// cache for node.
-			n.expressions[exprKey(expr)] = newExprInfo(expr)
+			exprInfo := newExprInfo(expr)
+			exprInfos, err := parseExpression(exprInfo.Expression, 1)
+			if nil != err {
+				log.L().Error("parse expression", zfield.Eid(expr.EntityID),
+					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
+					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+				continue
+			}
+			for runtimeID, exprIns := range exprInfos {
+				runtime, ok := n.runtimes[runtimeID]
+				if ok {
+					runtime.AppendExpression(*exprIns)
+				}
+			}
 		}
 	})
 
+	repo.RangeSubscription(ctx, n.revision, func(subscriptions []*repository.Subscription) {
+		// 将mapper加入每一个 runtime.
+		for _, sub := range subscriptions {
+			log.L().Debug("sync subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+			entityID := sub.SourceEntityID
+			runtimeInfo := placement.Global().Select(entityID)
+			runtime, ok := n.runtimes[runtimeInfo.ID]
+			if ok {
+				_, ok := runtime.entitySubscriptions[entityID]
+				if !ok {
+					runtime.entitySubscriptions[entityID] = make(map[string]*repository.Subscription)
+				}
+				runtime.entitySubscriptions[entityID][sub.ID] = sub
+			}
+		}
+	})
 	log.L().Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
 // watchResource watch resources.
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
-	repo.WatchExpression(context.Background(), n.revision,
+	go repo.WatchExpression(context.Background(), n.revision,
 		func(et dao.EnventType, expr repository.Expression) {
 			switch et {
 			case dao.DELETE:
@@ -174,6 +234,36 @@ func (n *Node) watchMetadata() {
 					if rt, has := n.runtimes[rtID]; has {
 						rt.AppendExpression(*exprItem)
 					}
+				}
+			default:
+				log.L().Error("watch metadata changed, invalid event type")
+			}
+		})
+
+	go repo.WatchSubscription(context.Background(), n.revision,
+		func(et dao.EnventType, sub *repository.Subscription) {
+			switch et {
+			case dao.DELETE:
+				log.L().Debug("sync DELETE Subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+				entityID := sub.SourceEntityID
+				runtimeInfo := placement.Global().Select(entityID)
+				runtime, ok := n.runtimes[runtimeInfo.ID]
+				if ok {
+					if subscription, ok := runtime.entitySubscriptions[sub.SourceEntityID]; ok {
+						delete(subscription, sub.ID)
+					}
+				}
+			case dao.PUT:
+				log.L().Debug("sync PUT Subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+				entityID := sub.SourceEntityID
+				runtimeInfo := placement.Global().Select(entityID)
+				runtime, ok := n.runtimes[runtimeInfo.ID]
+				if ok {
+					_, ok := runtime.entitySubscriptions[entityID]
+					if !ok {
+						runtime.entitySubscriptions[entityID] = make(map[string]*repository.Subscription)
+					}
+					runtime.entitySubscriptions[entityID][sub.ID] = sub
 				}
 			default:
 				log.L().Error("watch metadata changed, invalid event type")

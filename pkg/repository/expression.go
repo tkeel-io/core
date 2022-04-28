@@ -86,7 +86,7 @@ func (e *Expression) Encode() ([]byte, error) {
 	return bytes, errors.Wrap(err, "encode Expression")
 }
 
-func (e *Expression) Decode(bytes []byte) error {
+func (e *Expression) Decode(key, bytes []byte) error {
 	err := json.Unmarshal(bytes, e)
 	return errors.Wrap(err, "decode Expression")
 }
@@ -126,9 +126,9 @@ func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) 
 	// construct prefix.
 	prefix := ListExpressionPrefix(req.Owner, req.EntityID)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
-		func(raw []byte) (dao.Resource, error) {
+		func(key,raw []byte) (dao.Resource, error) {
 			var res Expression // escape.
-			err := res.Decode(raw)
+			err := res.Decode(key,raw)
 			return &res, errors.Wrap(err, "decode expression")
 		})
 
@@ -148,7 +148,7 @@ func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpr
 		var exprs []*Expression
 		for index := range kvs {
 			var expr Expression
-			err := expr.Decode(kvs[index].Value)
+			err := expr.Decode(kvs[index].Key, kvs[index].Value)
 			if nil != err {
 				log.L().Error("")
 				continue
@@ -162,7 +162,7 @@ func (r *repo) RangeExpression(ctx context.Context, rev int64, handler RangeExpr
 func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc) {
 	r.dao.WatchResource(ctx, rev, ExprPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
 		var expr Expression
-		err := expr.Decode(kv.Value)
+		err := expr.Decode(kv.Key, kv.Value)
 		if nil != err {
 			log.L().Error("")
 		}

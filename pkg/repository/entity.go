@@ -107,7 +107,7 @@ func (e *entityResource) Encode() ([]byte, error) {
 	return e.data, nil
 }
 
-func (e *entityResource) Decode(bytes []byte) error {
+func (e *entityResource) Decode(key,bytes []byte) error {
 	e.data = bytes
 	return nil
 }

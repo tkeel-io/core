@@ -56,7 +56,7 @@ func (d *Dao) GetStoreResource(ctx context.Context, res Resource) (Resource, err
 		if len(item.Value) == 0 {
 			return nil, xerrors.ErrResourceNotFound
 		}
-		err = res.Decode(item.Value)
+		err = res.Decode([]byte(item.Key), item.Value)
 	}
 	return res, errors.Wrap(err, "dao store get entity")
 }

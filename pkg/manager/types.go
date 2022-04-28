@@ -36,6 +36,8 @@ var (
 	ErrEntityAreadyExisted = errors.New("entity already existed")
 )
 
+
+
 type APIManager interface {
 	// OnRespond handle message.
 	OnRespond(context.Context, *holder.Response)
@@ -56,6 +58,11 @@ type APIManager interface {
 	RemoveExpression(context.Context, []repository.Expression) error
 	GetExpression(context.Context, repository.Expression) (*repository.Expression, error)
 	ListExpression(context.Context, *Base) ([]*repository.Expression, error)
+
+	// Subscription.
+	CreateSubscription(context.Context, *repository.Subscription) error
+	DeleteSubscription(context.Context, *repository.Subscription) error
+	GetSubscription(context.Context, *repository.Subscription) (*repository.Subscription, error)
 }
 
 type Metadata map[string]string
