@@ -507,8 +507,8 @@ func (r *Runtime) handleInternalSubscribe(ctx context.Context, feed *Feed) *Feed
 			Id:        eventID,
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
-				v1.MetaType:        string(v1.ETCache),
-				v1.MetaBorn:        "handleTentacle",
+				v1.MetaType:        string(v1.ETSync),
+				v1.MetaBorn:        "handleInternalSubscribe",
 				v1.MetaPartitionID: runtimeID,
 				v1.MetaSender:      entityID},
 			Data: &v1.ProtoEvent_SyncData{
