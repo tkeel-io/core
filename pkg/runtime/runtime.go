@@ -868,7 +868,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 				Id:        util.IG().EvID(),
 				Timestamp: time.Now().UnixNano(),
 				Metadata: map[string]string{
-					v1.MetaType:     string(v1.ETCache),
+					v1.MetaType:     string(v1.ETSync),
 					v1.MetaBorn:     "initializeExpression",
 					v1.MetaEntityID: expr.EntityID,
 					v1.MetaSender:   entityID},
