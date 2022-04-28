@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/core/pkg/mapper"
+	"github.com/tkeel-io/core/pkg/repository"
 )
 
 func TestEntity_GetEntity(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_checkTQL(t *testing.T) {
 	}, {
 		Name:   "test2",
 		TQL:    "insert into sub123 select device123.*",
-		Expect: "insert into sub123 select device123.*",
+		Expect: "insert into sub123 select device123.properties.*",
 	}}
 
 	for index := range mappers {
@@ -48,6 +49,34 @@ func Test_checkTQL(t *testing.T) {
 			err := checkMapper(mp)
 			assert.Nil(t, err)
 			assert.Equal(t, mappers[index].Expect, mp.TQL)
+		})
+	}
+}
+
+func Test_checkExpression(t *testing.T) {
+	tests := []struct {
+		Name   string
+		Expr   repository.Expression
+		Expect string
+	}{{
+		Name: "test1",
+		Expr: repository.Expression{
+			Expression: "dev123.metrics.cpu_used",
+		},
+		Expect: "dev123.properties.metrics.cpu_used",
+	}, {
+		Name: "test2",
+		Expr: repository.Expression{
+			Expression: "dev123.*",
+		},
+		Expect: "dev123.properties.*",
+	}}
+
+	for index := range tests {
+		t.Run(tests[index].Name, func(t *testing.T) {
+			err := checkExpression(&tests[index].Expr)
+			assert.Nil(t, err)
+			assert.Equal(t, tests[index].Expect, tests[index].Expr.Expression)
 		})
 	}
 }

@@ -3,12 +3,14 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"sort"
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
@@ -92,26 +94,45 @@ func (r *Runtime) handleSubscribePublish(ctx context.Context, subID string, feed
 func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle external subscribe", zfield.Eid(feed.EntityID), zfield.Event(feed.Event))
 
+	ev, _ := feed.Event.(v1.SyncEvent)
+
 	// 1. 检查 ret.path 和 订阅列表.
-	subPatchs := make(map[string][]Patch)
+	subPaths := make(map[string][]string)
 	entityID := feed.EntityID
-	for _, patch := range feed.Patches {
+	for _, pathStr := range ev.SyncData().Paths {
 		for _, node := range r.subTree.
-			MatchPrefix(path.FmtWatchKey(entityID, patch.Path)) {
+			MatchPrefix(path.FmtWatchKey(entityID, pathStr)) {
 			subEnd, _ := node.(*SubEndpoint)
 			exprInfo, has := r.getExpr(subEnd.expressionID)
 			if has && exprInfo.isHere && exprInfo.Type == repository.ExprTypeSub {
-				// TODO: select target data.
-				subPatchs[exprInfo.EntityID] = append(subPatchs[exprInfo.EntityID], patch)
+				subPaths[exprInfo.EntityID] =
+					append(subPaths[exprInfo.EntityID], mergePath(subEnd.path, pathStr))
 			}
 
 			log.L().Debug("expression external sub matched", zfield.Eid(entityID),
-				zfield.Path(patch.Path), zfield.Type(exprInfo.Type), zap.Bool("is_here", exprInfo.isHere),
+				zfield.Path(pathStr), zfield.Type(exprInfo.Type), zap.Bool("is_here", exprInfo.isHere),
 				zfield.Target(subEnd.target), zfield.Path(subEnd.path), zfield.ID(subEnd.deliveryID), zfield.Expr(subEnd.Expression()))
 		}
 	}
 
-	for subID, patchs := range subPatchs {
+	for subID, paths := range subPaths {
+		ss := util.Unique(sort.StringSlice(paths))
+		patchs := make([]Patch, 0)
+
+		stateIns, _ := NewEntity(feed.EntityID, feed.State)
+		for _, pathStr := range ss {
+			val := stateIns.Get(pathStr)
+			if val.Error() != nil || val.Type() == tdtl.Undefined {
+				log.L().Error("select subscribe data", zap.Error(val.Error()))
+			}
+
+			patchs = append(patchs, Patch{
+				Op:    xjson.OpReplace,
+				Path:  pathStr,
+				Value: tdtl.New(val.Raw()),
+			})
+		}
+
 		feedCopy := feed.Copy()
 		feedCopy.Patches = patchs
 		r.handleSubscribePublish(ctx, subID, feedCopy)

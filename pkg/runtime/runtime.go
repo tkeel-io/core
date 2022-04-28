@@ -133,7 +133,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				&handlerImpl{fn: r.handleRawData}},
 			execFunc: state,
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},
+				&handlerImpl{fn: r.handleInternalSubscribe},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: r.handlePersistent},
 				&handlerImpl{fn: r.handleTemplate}}}
@@ -144,17 +144,17 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			State:    state.Raw(),
 			EntityID: ev.Entity(),
 			Patches:  conv(e.Patches())}
-	case v1.ETCache:
-		sender := ev.Attr(v1.MetaSender)
-		// load cache.
-		state, err := r.enCache.Load(ctx, sender)
+	case v1.ETSync:
+		e, _ := ev.(v1.SyncEvent)
+		syncData := e.SyncData()
+		sender := e.Attr(v1.MetaSender)
+		state, err := r.enCache.LoadFrom(ctx, sender, syncData.State)
 		if nil != err {
 			log.L().Error("load cache entity", zfield.Header(ev.Attributes()),
 				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
 			state = DefaultEntity(sender)
 		}
 
-		e, _ := ev.(v1.PatchEvent)
 		execer := &Execer{
 			state:     state,
 			execFunc:  state,
@@ -165,7 +165,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			Event:    ev,
 			State:    state.Raw(),
 			EntityID: sender,
-			Patches:  conv(e.Patches())}
+			Patches:  convFrom(syncData)}
 	default:
 		return &Execer{}, &Feed{
 			Event:    ev,
@@ -206,7 +206,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			preFuncs: []Handler{},
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},
+				&handlerImpl{fn: r.handleInternalSubscribe},
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.L().Info("create entity successed", zfield.Eid(ev.Entity()),
@@ -298,7 +298,6 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 					return feed
 				}}},
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.L().Info("delete entity successed", zfield.Eid(ev.Entity()),
 						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
@@ -464,6 +463,10 @@ func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression
 func mergePath(subPath, changePath string) string {
 	// subPath format: entity_id.property_key
 	seg2 := strings.SplitN(subPath, ".", 2)
+	if seg2[1] == path.WildcardSome {
+		return FieldProperties
+	}
+
 	return path.MergePath(seg2[1], changePath)
 }
 
@@ -474,56 +477,33 @@ func whichPrefix(targetPath, changePath string) string {
 	return targetPath
 }
 
-func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
+func (r *Runtime) handleInternalSubscribe(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle tentacle", zfield.Eid(feed.EntityID),
 		zap.Any("changes", feed.Changes), zap.String("state", string(feed.State)))
 
 	// 1. 检查 ret.path 和 订阅列表.
-	targets := make(map[string]string)
 	entityID := feed.EntityID
-	var patches = make(map[string]*v1.PatchData)
+	changePaths := make([]string, 0)
+	targets := make(map[string]struct{})
 	for _, change := range feed.Changes {
+		changePaths = append(changePaths, change.Path)
 		for _, node := range r.subTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			subEnd, _ := node.(*SubEndpoint)
-			subPath := mergePath(subEnd.path, change.Path)
-			targets[subEnd.deliveryID] = whichPrefix(targets[subEnd.deliveryID], subPath)
+			targets[subEnd.deliveryID] = struct{}{}
 			log.L().Debug("expression sub matched", zfield.Eid(entityID), zfield.Path(change.Path),
 				zfield.Target(subEnd.target), zfield.Path(subEnd.path), zfield.ID(subEnd.deliveryID), zfield.Expr(subEnd.Expression()))
-		}
-
-		// TODO: 提到for外存在优化空间.
-		for runtimeID, sendPath := range targets {
-			if sendPath == change.Path {
-				patches[runtimeID] = &v1.PatchData{
-					Path:     change.Path,
-					Operator: xjson.OpReplace.String(),
-					Value:    change.Value.Raw(),
-				}
-				continue
-			}
-
-			// select send data.
-			stateIns, _ := NewEntity(feed.EntityID, feed.State)
-			sendVal := stateIns.Get(sendPath)
-			if tdtl.Undefined != sendVal.Type() {
-				patches[runtimeID] = &v1.PatchData{
-					Path:     sendPath,
-					Operator: xjson.OpReplace.String(),
-					Value:    sendVal.Raw(),
-				}
-			}
 		}
 	}
 
 	// 2. dispatch.send()
-	for runtimeID, sendData := range patches {
+	for runtimeID, _ := range targets {
 		eventID := util.IG().EvID()
 		log.L().Debug("republish event", zfield.ID(r.id), zfield.RID(r.id),
-			zfield.EvID(eventID), zfield.Target(runtimeID), zfield.Value(sendData))
+			zfield.EvID(eventID), zfield.Target(runtimeID), zfield.Value(feed.State))
 
 		// dispatch cache event.
-		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
+		err := r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
 			Id:        eventID,
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
@@ -531,11 +511,18 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				v1.MetaBorn:        "handleTentacle",
 				v1.MetaPartitionID: runtimeID,
 				v1.MetaSender:      entityID},
-			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{sendData},
-				}},
+			Data: &v1.ProtoEvent_SyncData{
+				SyncData: &v1.SyncData{
+					State: feed.State,
+					Paths: changePaths,
+				},
+			},
 		})
+
+		if nil != err {
+			log.L().Error("republish event", zap.Error(err), zfield.ID(r.id), zfield.RID(r.id),
+				zfield.EvID(eventID), zfield.Target(runtimeID), zfield.Value(feed.State))
+		}
 	}
 
 	return feed
@@ -932,6 +919,19 @@ func conv(patches []*v1.PatchData) []Patch {
 			Op:    xjson.NewPatchOp(patch.Operator),
 			Path:  patch.Path,
 			Value: tdtl.New(patch.Value),
+		})
+	}
+	return res
+}
+
+func convFrom(syncData *v1.SyncData) []Patch {
+	en, _ := NewEntity("", syncData.State)
+	res := make([]Patch, 0)
+	for _, pathStr := range syncData.Paths {
+		res = append(res, Patch{
+			Op:    xjson.OpReplace,
+			Path:  pathStr,
+			Value: tdtl.New(en.Get(pathStr).Raw()),
 		})
 	}
 	return res

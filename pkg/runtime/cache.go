@@ -11,6 +11,7 @@ import (
 
 type EntityCache interface {
 	Load(ctx context.Context, id string) (Entity, error)
+	LoadFrom(ctx context.Context, id string, state []byte) (Entity, error)
 	Snapshot() error
 }
 
@@ -22,6 +23,20 @@ type eCache struct {
 func NewCache(repo repository.IRepository) EntityCache {
 	return &eCache{repository: repo,
 		entities: make(map[string]Entity)}
+}
+
+func (ec *eCache) LoadFrom(ctx context.Context, id string, state []byte) (Entity, error) {
+	// create entity instance.
+	en, err := NewEntity(id, state)
+	if nil != err {
+		log.L().Warn("create entity instance",
+			zfield.Eid(id), zfield.Reason(err.Error()))
+		return nil, errors.Wrap(err, "create entity instance")
+	}
+
+	// cache entity.
+	ec.entities[id] = en
+	return en, nil
 }
 
 func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {

@@ -194,3 +194,13 @@ type SystemEvent interface {
 func (e *ProtoEvent) Action() *SystemData {
 	return e.GetSystemData()
 }
+
+
+type SyncEvent interface {
+	Event
+	SyncData() *SyncData
+}
+
+func (e *ProtoEvent) SyncData() *SyncData {
+	return e.GetSyncData()
+}

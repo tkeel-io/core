@@ -42,6 +42,7 @@ message ProtoEvent {
     string callback = 3;
     map<string, string> metadata = 4;
     oneof data {
+        SyncData sync_data = 7;
         bytes raw_data = 8;
         PatchDatas patches = 9;
         SystemData system_data = 10;
