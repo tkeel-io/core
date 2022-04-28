@@ -81,7 +81,7 @@ func (n *Node) flushRawData(ctx context.Context, en Entity) (err error) {
 		EntityID:  en.ID(),
 		Path:      "rawData",
 		Values:    string(raw.Raw()),
-		Timestamp: time.UnixMicro(ts / 1e3),
+		Timestamp: time.UnixMilli(ts),
 	})
 	n.resourceManager.RawData().Write(context.Background(), req)
 	return nil
