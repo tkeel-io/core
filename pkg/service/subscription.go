@@ -99,9 +99,15 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 	log.L().Debug("CreateSubscription", zap.Any("[+]req.Subscription", req.Subscription))
 	out = &pb.SubscriptionResponse{}
+	if req.Id == "" {
+		req.Id = util.UUID("sub")
+	}
 	sub, err := makeSubscription(req.Subscription)
 	if err != nil {
 		return out, errors.Wrap(err, "update subscription")
+	}
+	if sub.ID == "" {
+		sub.ID = req.Id
 	}
 	if sub.Owner == "" {
 		sub.Owner = req.Owner
@@ -129,9 +135,15 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	log.L().Debug("UpdateSubscription", zap.Any("[+]req.Subscription", req.Subscription))
 
 	out = &pb.SubscriptionResponse{}
+	if req.Id == "" {
+		req.Id = util.UUID("sub")
+	}
 	sub, err := makeSubscription(req.Subscription)
 	if err != nil {
 		return out, errors.Wrap(err, "update subscription")
+	}
+	if sub.ID == "" {
+		sub.ID = req.Id
 	}
 	if sub.Owner == "" {
 		sub.Owner = req.Owner
