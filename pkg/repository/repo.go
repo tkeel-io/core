@@ -6,6 +6,8 @@ import (
 	"github.com/tkeel-io/core/pkg/repository/dao"
 )
 
+var _ IRepository = (*repo)(nil)
+
 type repo struct {
 	dao dao.IDao
 }

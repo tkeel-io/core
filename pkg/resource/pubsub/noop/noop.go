@@ -19,12 +19,12 @@ func (d *noopPubsub) ID() string {
 }
 
 func (d *noopPubsub) Send(ctx context.Context, event v1.Event) error {
-	log.L().Debug("pubsub.noop send", zfield.Message(event), zfield.ID(d.id))
+	log.L().Debug("[+]pubsub.noop send", zfield.Message(event), zfield.ID(d.id))
 	return nil
 }
 
 func (d *noopPubsub) Received(ctx context.Context, receiver pubsub.EventHandler) error {
-	log.L().Info("pubsub.noop start receive message", zfield.ID(d.id))
+	log.L().Info("[+]pubsub.noop start receive message", zfield.ID(d.id))
 	return nil
 }
 

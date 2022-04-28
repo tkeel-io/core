@@ -52,10 +52,10 @@ func ListSchemaPrefix(Owner, EntityID string) string {
 }
 
 func (s *Schema) EncodeKey() ([]byte, error) {
-	if s.Owner == ""{
+	if s.Owner == "" {
 		return nil, errors.Errorf("Schema Owner is empty")
 	}
-	if s.ID == ""{
+	if s.ID == "" {
 		return nil, errors.Errorf("Schema ID is empty")
 	}
 
@@ -69,7 +69,7 @@ func (s *Schema) Encode() ([]byte, error) {
 	return bytes, errors.Wrap(err, "encode Schema")
 }
 
-func (s *Schema) Decode(bytes []byte) error {
+func (s *Schema) Decode(key, bytes []byte) error {
 	err := json.Unmarshal(bytes, s)
 	return errors.Wrap(err, "decode Schema")
 }
@@ -98,9 +98,9 @@ func (r *repo) ListSchema(ctx context.Context, rev int64, req *ListSchemaReq) ([
 	// construct prefix.
 	prefix := ListSchemaPrefix(req.EntityID, req.Owner)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
-		func(raw []byte) (dao.Resource, error) {
+		func(key, raw []byte) (dao.Resource, error) {
 			var res Schema // escape.
-			err := res.Decode(raw)
+			err := res.Decode(key, raw)
 			return &res, errors.Wrap(err, "decode expression")
 		})
 
@@ -120,7 +120,7 @@ func (r *repo) RangeSchema(ctx context.Context, rev int64, handler RangeSchemaFu
 		var exprs []*Schema
 		for index := range kvs {
 			var expr Schema
-			err := expr.Decode(kvs[index].Value)
+			err := expr.Decode(kvs[index].Key, kvs[index].Value)
 			if nil != err {
 				log.L().Error("")
 				continue
@@ -134,7 +134,7 @@ func (r *repo) RangeSchema(ctx context.Context, rev int64, handler RangeSchemaFu
 func (r *repo) WatchSchema(ctx context.Context, rev int64, handler WatchSchemaFunc) {
 	r.dao.WatchResource(ctx, rev, SchemaPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
 		var expr Schema
-		err := expr.Decode(kv.Value)
+		err := expr.Decode(kv.Key, kv.Value)
 		if nil != err {
 			log.L().Error("")
 		}

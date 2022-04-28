@@ -555,6 +555,22 @@ func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]*repositor
 	return exprs, nil
 }
 
+///////////
+
+func (m *apiManager) CreateSubscription(ctx context.Context, subscription *repository.Subscription) error {
+	return m.entityRepo.PutSubscription(ctx, subscription)
+}
+
+func (m *apiManager) DeleteSubscription(ctx context.Context, subscription *repository.Subscription) error {
+	return m.entityRepo.DelSubscription(ctx, subscription)
+}
+
+func (m *apiManager) GetSubscription(ctx context.Context, subscription *repository.Subscription) (*repository.Subscription, error) {
+	return m.entityRepo.GetSubscription(ctx, subscription)
+}
+
+//////////////
+
 func convExprs(mp mapper.Mapper) []repository.Expression {
 	segs := strings.SplitN(mp.TQL, "select", 2)
 	arr := strings.Split(segs[1], ",")

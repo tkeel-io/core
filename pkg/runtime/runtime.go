@@ -49,6 +49,8 @@ type Runtime struct {
 	expressions     map[string]ExpressionInfo
 	repository      repository.IRepository
 	entityResourcer EntityResource
+	// map[entityID][SubscriptionID]Subscription
+	entitySubscriptions map[string]map[string]*repository.Subscription
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -56,22 +58,23 @@ type Runtime struct {
 	cancel context.CancelFunc
 }
 
-func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatcher dispatch.Dispatcher, repository repository.IRepository) *Runtime {
+func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatcher dispatch.Dispatcher, repo repository.IRepository) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
-		id:              id,
-		enCache:         NewCache(repository),
-		entities:        map[string]Entity{},
-		expressions:     map[string]ExpressionInfo{},
-		entityResourcer: ercFuncs,
-		dispatcher:      dispatcher,
-		repository:      repository,
-		subTree:         path.NewRefTree(),
-		evalTree:        path.New(),
-		lock:            sync.RWMutex{},
-		mlock:           sync.RWMutex{},
-		cancel:          cancel,
-		ctx:             ctx,
+		id:                  id,
+		enCache:             NewCache(repo),
+		entities:            map[string]Entity{},
+		expressions:         map[string]ExpressionInfo{},
+		entitySubscriptions: make(map[string]map[string]*repository.Subscription),
+		entityResourcer:     ercFuncs,
+		dispatcher:          dispatcher,
+		repository:          repo,
+		subTree:             path.NewRefTree(),
+		evalTree:            path.New(),
+		lock:                sync.RWMutex{},
+		mlock:               sync.RWMutex{},
+		cancel:              cancel,
+		ctx:                 ctx,
 	}
 }
 
@@ -130,13 +133,14 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		execer := &Execer{
 			state: state,
 			preFuncs: []Handler{
-				&handlerImpl{fn: r.handleRawData}},
+				&handlerImpl{fn: r.handleRawData}}, //新增了 Patches
 			execFunc: state,
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},
-				&handlerImpl{fn: r.handleComputed},
-				&handlerImpl{fn: r.handlePersistent},
-				&handlerImpl{fn: r.handleTemplate}}}
+				&handlerImpl{fn: r.handleTentacle},   //无变化
+				&handlerImpl{fn: r.handleComputed},   //无变化
+				&handlerImpl{fn: r.handlePersistent}, //无变化
+				&handlerImpl{fn: r.handleSubscribe},  //
+				&handlerImpl{fn: r.handleTemplate}}} //
 
 		return execer, &Feed{
 			Err:      err,
@@ -158,7 +162,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		execer := &Execer{
 			state:     state,
 			execFunc:  state,
-			preFuncs:  []Handler{&handlerImpl{fn: r.handleSubscribe}},
+			preFuncs:  []Handler{},
 			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}}}
 		return execer, &Feed{
 			Err:      err,
@@ -207,6 +211,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
+				&handlerImpl{fn: r.handleSubscribe},  //
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.L().Info("create entity successed", zfield.Eid(ev.Entity()),

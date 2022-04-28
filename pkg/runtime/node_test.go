@@ -3,6 +3,8 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/tdtl"
 	"net/url"
 	"testing"
 )
@@ -139,4 +141,21 @@ func TestNode_flushRawData(t *testing.T) {
 
 func Test_parseExpression(t *testing.T) {
 
+}
+
+
+func TestTDTL(t *testing.T) {
+	tqlString := `insert into entity3 
+	select entity4.*,entity1.property1, entity1.property2`
+
+	tqlInst, err := tdtl.NewTDTL(tqlString, nil)
+	assert.Nil(t, err)
+
+	t.Log(err)
+	t.Log(tqlString)
+	t.Log("target: ", tqlInst.Target())
+	t.Log("sources: ", tqlInst.Entities())
+	for k, tentacle := range tqlInst.Fields() {
+		t.Log("tentacle: ", k, tentacle)
+	}
 }

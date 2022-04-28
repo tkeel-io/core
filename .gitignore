@@ -13,8 +13,11 @@
 
 bin/
 build/
+tests/
+tests/
 .devcontainer/
 /dist
+node_modules/
 
 # Binary builded
 bin/*
