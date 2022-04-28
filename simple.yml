@@ -28,6 +28,8 @@ components:
   time_series:
     name: noop
   search_engine: noop://admin:admin@127.0.0.1:9200"
+  rawdata:
+    name: noop
 dispatcher:
   id: dispatcher0
   enabled: true

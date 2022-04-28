@@ -203,6 +203,7 @@ func (n *Node) getGlobalData(en Entity) (res []byte) {
 	}
 	return globalData.GetRaw()
 }
+
 func parseExpression(expr repository.Expression, version int) (map[string]*ExpressionInfo, error) {
 	exprIns, err := expression.NewExpr(expr.Expression, nil)
 	if nil != err {

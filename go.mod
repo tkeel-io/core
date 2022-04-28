@@ -41,6 +41,12 @@ require (
 require go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 
 require (
+	github.com/jmoiron/sqlx v1.3.5
+	github.com/mailru/go-clickhouse v1.8.0
+	github.com/valyala/fastrand v1.1.0
+)
+
+require (
 	github.com/DataDog/zstd v1.4.6-0.20210211175136-c6db21d202f4 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211026222012-6af4c774c47b // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect

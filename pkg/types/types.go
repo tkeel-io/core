@@ -5,6 +5,7 @@ import (
 
 	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
@@ -13,6 +14,7 @@ type ResourceManager interface {
 	Search() *search.Service
 	TSDB() tseries.TimeSerier
 	Repo() repository.IRepository
+	RawData() rawdata.RawDataService
 }
 
 type Republisher interface {
