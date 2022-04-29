@@ -7,14 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Get(t *testing.T) {
-	ns := &memStore{}
-	_, err := ns.Get(context.Background(), "device123")
-	assert.NotNil(t, err, "noop GET errors")
-}
-
-func Test_Set(t *testing.T) {
-	ns := &memStore{}
-	err := ns.Set(context.Background(), "device123", []byte(""))
-	assert.Nil(t, err, "noop set")
+func Test_MemStore(t *testing.T) {
+	val := []byte("{}")
+	ns, err := initStore(nil)
+	assert.Nil(t, err)
+	ret, err := ns.Get(context.Background(), "entity123")
+	assert.Nil(t, ret)
+	assert.NotNil(t, err)
+	err = ns.Set(context.Background(), "entity123", []byte("{}"))
+	assert.Nil(t, err)
+	ret, err = ns.Get(context.Background(), "entity123")
+	assert.Equal(t, ret.Value, val)
+	assert.Nil(t, err)
+	err = ns.Del(context.Background(), "entity123")
+	assert.Nil(t, err)
+	ret, err = ns.Get(context.Background(), "entity123")
+	assert.NotNil(t, err)
+	assert.Nil(t, ret)
 }

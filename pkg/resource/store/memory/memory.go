@@ -50,11 +50,13 @@ func (n *memStore) Del(ctx context.Context, key string) error {
 	return nil
 }
 
+func initStore(properties map[string]interface{}) (store.Store, error) {
+	id := util.UUID("snoop")
+	log.L().Info("create store.noop instance", zfield.ID(id))
+	return &memStore{id: id, store: map[string]*store.StateItem{}}, nil
+}
+
 func init() {
 	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.memory> successful")
-	store.Register("memory", func(properties map[string]interface{}) (store.Store, error) {
-		id := util.UUID("snoop")
-		log.L().Info("create store.noop instance", zfield.ID(id))
-		return &memStore{id: id, store: map[string]*store.StateItem{}}, nil
-	})
+	store.Register("memory", initStore)
 }
