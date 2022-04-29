@@ -730,6 +730,13 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
 				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
 
+
+			if !json.Valid(bytes){
+				log.L().Debug("RawData Json Valid Fail", zfield.Eid(feed.EntityID),
+					zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+				continue
+			}
+
 			if prefix == rawDataTelemetryType {
 				bytes = adjustTSData(bytes)
 			}
