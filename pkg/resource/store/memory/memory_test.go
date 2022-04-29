@@ -1,4 +1,4 @@
-package noop
+package memory
 
 import (
 	"context"
