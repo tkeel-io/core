@@ -56,7 +56,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// TODO.
 
 	// 2.3 flush timeseries data.
-	flushData, err := n.makeTimeSeries(ctx, en)
+	flushData, err := n.makeTimeSeriesData(ctx, en)
 	if nil != err {
 		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	}
@@ -100,7 +100,7 @@ func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.RawDataRequ
 	return req, nil
 }
 
-func (n *Node) makeTimeSeries(ctx context.Context, en Entity) (*tseries.TSeriesRequest, error) {
+func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity) (*tseries.TSeriesRequest, error) {
 	tsData := en.GetProp("telemetry")
 	var flushData []*tseries.TSeriesData
 	log.Info("tsData: ", tsData)
