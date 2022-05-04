@@ -9,11 +9,10 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type daprMetadata struct {
@@ -24,12 +23,12 @@ type daprMetadata struct {
 func New(id, urlText string) (pubsub.Pubsub, error) {
 	daprMeta, err := parseURL(urlText)
 	if nil != err {
-		log.Error("parse url configuration", zap.Error(err), zfield.URL(urlText))
+		log.Error("parse url configuration", logf.Error(err), logf.URL(urlText))
 		return nil, errors.Wrap(err, "parse url")
 	}
 
 	pid := util.UUID("pubsub.dapr")
-	log.L().Info("create pubsub.dapr instance", zfield.ID(pid))
+	log.L().Info("create pubsub.dapr instance", logf.ID(pid))
 
 	return &daprPubsub{
 		id:         pid,
@@ -53,7 +52,7 @@ func (d *daprPubsub) Send(ctx context.Context, event v1.Event) error {
 }
 
 func (d *daprPubsub) Received(ctx context.Context, handler pubsub.EventHandler) error {
-	log.L().Debug("pubsub.dapr start receive message", zfield.ID(d.id))
+	log.L().Debug("pubsub.dapr start receive message", logf.ID(d.id))
 	Register(&Consumer{id: d.id, handler: handler})
 	return errors.Wrap(nil, "register message handler")
 }
@@ -63,7 +62,7 @@ func (d *daprPubsub) Commit(v interface{}) error {
 }
 
 func (d *daprPubsub) Close() error {
-	log.L().Debug("pubsub.dapr close", zfield.ID(d.id))
+	log.L().Debug("pubsub.dapr close", logf.ID(d.id))
 	Unregister(&Consumer{id: d.id})
 	return errors.Wrap(nil, "unregister message handler")
 }

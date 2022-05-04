@@ -11,7 +11,7 @@ import (
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -21,7 +21,6 @@ import (
 	xkafka "github.com/tkeel-io/core/pkg/util/kafka"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"go.uber.org/zap"
 )
 
 type NodeConf struct {
@@ -71,7 +70,7 @@ func (n *Node) Start(cfg NodeConf) error {
 		n.queues[runtimeID] = sourceIns
 		// create runtime instance.
 		log.L().Info("create runtime instance",
-			zfield.ID(runtimeID), zfield.Source(cfg.Sources[index]))
+			logf.ID(runtimeID), logf.Source(cfg.Sources[index]))
 		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
 		runtime := NewRuntime(n.ctx, entityResouce, runtimeID, n.dispatch, n.resourceManager.Repo())
 		n.runtimes[runtimeID] = runtime
@@ -92,7 +91,7 @@ func (n *Node) Start(cfg NodeConf) error {
 		}
 	}
 	// watch metadata.
-	log.L().Debug("start node completed", zfield.Elapsedms(elapsed.ElapsedMilli()))
+	log.L().Debug("start node completed", logf.Elapsedms(elapsed.ElapsedMilli()))
 	//
 	//for index := range cfg.Sources {
 	//	var err error
@@ -106,16 +105,16 @@ func (n *Node) Start(cfg NodeConf) error {
 	//	rid := sourceIns.ID()
 	//	// create runtime instance.
 	//	log.L().Info("create runtime instance",
-	//		zfield.ID(rid), zfield.Source(cfg.Sources[index]))
+	//		logf.ID(rid), logf.Source(cfg.Sources[index]))
 	//
 	//	entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
 	//	rt := NewRuntime(n.ctx, entityResouce, rid, n.dispatch, n.resourceManager.Repo())
 	//	for _, expr := range n.expressions {
 	//		exprInfos, err := parseExpression(expr.Expression, 1)
 	//		if nil != err {
-	//			log.L().Error("parse expression", zfield.Eid(expr.EntityID),
-	//				zfield.Expr(expr.Expression.Expression), zfield.Desc(expr.Description),
-	//				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+	//			log.L().Error("parse expression", logf.Eid(expr.EntityID),
+	//				logf.Expr(expr.Expression.Expression), logf.Desc(expr.Description),
+	//				logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name), logf.Error(err))
 	//			continue
 	//		}
 	//
@@ -136,8 +135,8 @@ func (n *Node) Start(cfg NodeConf) error {
 func (n *Node) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
 	rid := msg.Topic
 	if _, has := n.runtimes[rid]; !has {
-		log.L().Error("runtime instance not exists.", zfield.ID(rid),
-			zap.Any("header", msg.Headers), zfield.Message(string(msg.Value)))
+		log.L().Error("runtime instance not exists.", logf.ID(rid),
+			logf.Any("header", msg.Headers), logf.Message(string(msg.Value)))
 		return xerrors.ErrRuntimeNotExists
 	}
 
@@ -159,17 +158,17 @@ func (n *Node) listMetadata() {
 	repo.RangeExpression(ctx, n.revision, func(expressions []*repository.Expression) {
 		// 将mapper加入每一个 runtime.
 		for _, expr := range expressions {
-			log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
-				zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-				zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+			log.L().Debug("sync expression", logf.Eid(expr.EntityID),
+				logf.Expr(expr.Expression), logf.Desc(expr.Description),
+				logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name))
 
 			// cache for node.
 			exprInfo := newExprInfo(expr)
 			exprInfos, err := parseExpression(exprInfo.Expression, 1)
 			if nil != err {
-				log.L().Error("parse expression", zfield.Eid(expr.EntityID),
-					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+				log.L().Error("parse expression", logf.Eid(expr.EntityID),
+					logf.Expr(expr.Expression), logf.Desc(expr.Description),
+					logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name), logf.Error(err))
 				continue
 			}
 			for runtimeID, exprIns := range exprInfos {
@@ -184,7 +183,7 @@ func (n *Node) listMetadata() {
 	repo.RangeSubscription(ctx, n.revision, func(subscriptions []*repository.Subscription) {
 		// 将mapper加入每一个 runtime.
 		for _, sub := range subscriptions {
-			log.L().Debug("sync subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+			log.L().Debug("sync subscription", logf.String("subID", sub.ID), logf.Owner(sub.Owner))
 			entityID := sub.SourceEntityID
 			runtimeInfo := placement.Global().Select(entityID)
 			runtime, ok := n.runtimes[runtimeInfo.ID]
@@ -197,7 +196,7 @@ func (n *Node) listMetadata() {
 			}
 		}
 	})
-	log.L().Debug("runtime.Environment initialized", zfield.Elapsedms(elapsedTime.ElapsedMilli()))
+	log.L().Debug("runtime.Environment initialized", logf.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
 // watchResource watch resources.
@@ -208,9 +207,9 @@ func (n *Node) watchMetadata() {
 			switch et {
 			case dao.DELETE:
 				exprInfo := newExprInfo(&expr)
-				log.L().Debug("sync DELETE expression", zfield.Eid(expr.EntityID),
-					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+				log.L().Debug("sync DELETE expression", logf.Eid(expr.EntityID),
+					logf.Expr(expr.Expression), logf.Desc(expr.Description),
+					logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name))
 
 				// remove mapper from all runtime.
 				for _, rt := range n.runtimes {
@@ -218,15 +217,15 @@ func (n *Node) watchMetadata() {
 				}
 			case dao.PUT:
 				exprInfo := newExprInfo(&expr)
-				log.L().Debug("sync expression", zfield.Eid(expr.EntityID),
-					zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-					zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name))
+				log.L().Debug("sync expression", logf.Eid(expr.EntityID),
+					logf.Expr(expr.Expression), logf.Desc(expr.Description),
+					logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name))
 
 				exprInfos, err := parseExpression(exprInfo.Expression, 0)
 				if nil != err {
-					log.L().Error("parse expression", zfield.Eid(expr.EntityID),
-						zfield.Expr(expr.Expression), zfield.Desc(expr.Description),
-						zfield.Mid(expr.Path), zfield.Owner(expr.Owner), zfield.Name(expr.Name), zap.Error(err))
+					log.L().Error("parse expression", logf.Eid(expr.EntityID),
+						logf.Expr(expr.Expression), logf.Desc(expr.Description),
+						logf.Mid(expr.Path), logf.Owner(expr.Owner), logf.Name(expr.Name), logf.Error(err))
 					return
 				}
 
@@ -245,7 +244,7 @@ func (n *Node) watchMetadata() {
 		func(et dao.EnventType, sub *repository.Subscription) {
 			switch et {
 			case dao.DELETE:
-				log.L().Debug("sync DELETE Subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+				log.L().Debug("sync DELETE Subscription", logf.String("subID", sub.ID), logf.Owner(sub.Owner))
 				entityID := sub.SourceEntityID
 				runtimeInfo := placement.Global().Select(entityID)
 				runtime, ok := n.runtimes[runtimeInfo.ID]
@@ -255,7 +254,7 @@ func (n *Node) watchMetadata() {
 					}
 				}
 			case dao.PUT:
-				log.L().Debug("sync PUT Subscription", zap.String("subID", sub.ID), zfield.Owner(sub.Owner))
+				log.L().Debug("sync PUT Subscription", logf.String("subID", sub.ID), logf.Owner(sub.Owner))
 				entityID := sub.SourceEntityID
 				runtimeInfo := placement.Global().Select(entityID)
 				runtime, ok := n.runtimes[runtimeInfo.ID]

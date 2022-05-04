@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/core/pkg/util"
@@ -92,7 +92,7 @@ func (d *dispatcher) initUpstream(ctx context.Context, streams []string) error {
 
 	// start received.
 	for id, stream := range d.upstreams {
-		log.L().Info("start pubsub", zfield.Eid(id))
+		log.L().Info("start pubsub", logf.Eid(id))
 		stream.Received(d.ctx, d.dispatch)
 	}
 

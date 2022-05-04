@@ -1,11 +1,11 @@
 package dapr
 
 import (
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"sync"
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 /*
@@ -32,7 +32,7 @@ func (p *daprClientPool) setup() {
 	// TODO: !!! daprSDK.NewClient() 可能返回 (nil, nil).
 	var err error
 	if p.client, err = daprSDK.NewClient(); nil != err {
-		log.L().Error("setup client pool", zap.Error(err))
+		log.L().Error("setup client pool", logf.Error(err))
 	}
 }
 

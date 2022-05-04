@@ -19,7 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
-	logf "github.com/tkeel-io/core/pkg/logger"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"os"
 	"os/signal"
 	"strconv"
@@ -55,7 +55,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	_ "github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/core/pkg/version"
-	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 	"github.com/tkeel-io/kit/app"
@@ -320,7 +319,7 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	// default rawdata
 	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
 	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
-		log.L().Error("initialize rawdata server", zap.Error(err))
+		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
 	return types.NewResources(search.GlobalService, tsdbClient, rawdataClient, coreRepo)
 }
@@ -329,7 +328,7 @@ func loadDispatcher(ctx context.Context) error {
 	log.L().Info("load dispatcher...")
 	dispatcher := dispatch.New(ctx)
 	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
-		log.L().Error("run dispatcher", zap.Error(err), logf.ID(config.Get().Dispatcher.ID))
+		log.L().Error("run dispatcher", logf.Error(err), logf.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 

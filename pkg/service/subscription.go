@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/util"
@@ -93,7 +93,7 @@ func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (o
 
 func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.CreateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -128,7 +128,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.UpdateSubscriptionRequest) (out *pb.SubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -184,7 +184,7 @@ func makeSubscription(subObj *pb.SubscriptionObject) (*repository.Subscription, 
 
 func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.DeleteSubscriptionRequest) (out *pb.DeleteSubscriptionResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 

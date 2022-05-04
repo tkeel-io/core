@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 	daprSDK "github.com/dapr/go-sdk/client"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
 )
@@ -21,7 +21,7 @@ const (
 )
 
 func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle external subscribe", zfield.Eid(feed.EntityID), zfield.Event(feed.Event))
+	log.L().Debug("handle external subscribe", logf.Eid(feed.EntityID), logf.Event(feed.Event))
 
 	entityID := feed.EntityID
 	state := feed.State
@@ -30,8 +30,8 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 			ctOpts := daprSDK.PublishEventWithContentType("application/json")
 			err := dapr.Get().Select().PublishEvent(ctx, sub.PubsubName, sub.Topic, state, ctOpts)
 			if nil != err {
-				log.L().Error("publish message via dapr", zfield.ID(sub.ID),
-					zfield.Eid(entityID), zfield.Topic(sub.Topic), zfield.Pubsub(sub.PubsubName), zfield.Mode(sub.Mode))
+				log.L().Error("publish message via dapr", logf.ID(sub.ID),
+					logf.Eid(entityID), logf.Topic(sub.Topic), logf.Pubsub(sub.PubsubName), logf.Mode(sub.Mode))
 				return feed
 			}
 		}

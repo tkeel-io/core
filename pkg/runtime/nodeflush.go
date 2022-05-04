@@ -24,7 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
@@ -32,11 +32,11 @@ import (
 )
 
 func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
-	log.L().Debug("flush entity", zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
 
 	// 1. flush state.
 	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
-		log.L().Error("flush entity state storage", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity state storage", zap.Error(err), logf.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into state storage")
 	}
 
@@ -44,7 +44,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// 2.1 flush search global data.
 	globalData := n.getGlobalData(en)
 	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
-		log.L().Error("flush entity search engine", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity search engine", zap.Error(err), logf.Eid(en.ID()))
 		//			return errors.Wrap(err, "flush entity into search engine")
 	}
 
@@ -53,12 +53,12 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 
 	// 3. flush timeseries data.
 	if err := n.flushTimeSeries(ctx, en); nil != err {
-		log.L().Error("flush entity timeseries database", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity timeseries database", zap.Error(err), logf.Eid(en.ID()))
 	}
 
 	// 4. flush raw data.
 	if err := n.flushRawData(ctx, en); nil != err {
-		log.L().Error("flush entity rawData", zap.Error(err), zfield.Eid(en.ID()))
+		log.L().Error("flush entity rawData", zap.Error(err), logf.Eid(en.ID()))
 	}
 	return nil
 }
@@ -143,8 +143,8 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 	defer func() {
 		if nil != err {
 			if innerErr := n.FlushEntity(ctx, en); nil != innerErr {
-				log.L().Error("remove entity failed, recover entity state failed", zfield.Eid(en.ID()),
-					zfield.Reason(err.Error()), zap.Error(innerErr), zfield.Value(string(en.Raw())))
+				log.L().Error("remove entity failed, recover entity state failed", logf.Eid(en.ID()),
+					logf.Reason(err.Error()), zap.Error(innerErr), logf.Value(string(en.Raw())))
 			}
 		}
 	}()
@@ -153,7 +153,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 	if err := n.resourceManager.Repo().
 		DelEntity(ctx, en.ID()); nil != err {
 		log.L().Error("remove entity from state storage",
-			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+			zap.Error(err), logf.Eid(en.ID()), logf.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove entity from state storage")
 	}
 
@@ -165,7 +165,7 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
 			Source: en.Source(),
 		}); nil != err {
 		log.L().Error("remove entity from state search engine",
-			zap.Error(err), zfield.Eid(en.ID()), zfield.Value(string(en.Raw())))
+			zap.Error(err), logf.Eid(en.ID()), logf.Value(string(en.Raw())))
 		return errors.Wrap(err, "remove entity from state search engine")
 	}
 

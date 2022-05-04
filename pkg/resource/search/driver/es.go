@@ -28,7 +28,7 @@ import (
 	"github.com/goinggo/mapstructure"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"go.uber.org/zap"
 
 	"github.com/olivere/elastic/v7"
@@ -55,7 +55,7 @@ type ESClient struct {
 func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error) {
 	var cfg ESConfig
 	if err := mapstructure.Decode(cfgJSON, &cfg); nil != err {
-		log.L().Error("decode elasticsearch configuration", zap.Error(err), zfield.Value(cfgJSON))
+		log.L().Error("decode elasticsearch configuration", zap.Error(err), logf.Value(cfgJSON))
 		return nil, errors.Wrap(err, "decode elasticsearch configuration")
 	}
 
@@ -82,7 +82,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 		return nil, errors.Wrap(err, "ping elasticsearch cluster")
 	}
 
-	log.L().Info("use ElasticsearchDriver version:", zfield.Value(info.Version.Number))
+	log.L().Info("use ElasticsearchDriver version:", logf.Value(info.Version.Number))
 	client.Index().Index(EntityIndex).Id("core_init").BodyString(`{"id":"core_init"}`).Do(context.Background())
 	// 1. 检查索引是否存在 2. 字段是否符合要求 3. 创建索引
 	client.PutMapping().Index(EntityIndex).BodyString(`{"properties":{"sysField":{"properties":{"_subscribeAddr":{"type":"text", "fields":{"keyword":{"type":"keyword", "ignore_above":4096}}}}}}}`).Do(context.Background())

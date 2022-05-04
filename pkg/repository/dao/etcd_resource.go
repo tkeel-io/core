@@ -21,11 +21,10 @@ import (
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/zap"
 )
 
 func (d *Dao) PutResource(ctx context.Context, res Resource) error {
@@ -104,20 +103,20 @@ func (d *Dao) ListResource(ctx context.Context, rev int64, prefix string, decode
 	for {
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
-			log.L().Error("list costume resource", zap.Error(err), zfield.Prefix(prefix),
-				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
+			log.L().Error("list costume resource", logf.Error(err), logf.Prefix(prefix),
+				logf.Count(count), logf.Elapsedms(elapsedTime.ElapsedMilli()))
 			return ress, errors.Wrap(err, "list costume resource")
 		} else if len(resp.Kvs) == 0 {
-			log.L().Info("list costume resource", zfield.Prefix(prefix),
-				zfield.Count(count), zfield.Elapsedms(elapsedTime.ElapsedMilli()))
+			log.L().Info("list costume resource", logf.Prefix(prefix),
+				logf.Count(count), logf.Elapsedms(elapsedTime.ElapsedMilli()))
 			return ress, nil
 		}
 
 		for _, kv := range resp.Kvs {
 			var res Resource
 			if res, err = decodeFunc(kv.Key, kv.Value); nil != err {
-				log.L().Error("unmarshal costume resource", zap.Error(err),
-					zfield.Key(string(kv.Key)), zfield.Value(string(kv.Value)))
+				log.L().Error("unmarshal costume resource", logf.Error(err),
+					logf.Key(string(kv.Key)), logf.Value(string(kv.Value)))
 				return ress, errors.Wrap(err, "unmarshal costume resource")
 			}
 			ress = append(ress, res)
@@ -151,15 +150,15 @@ func (d *Dao) RangeResource(ctx context.Context, rev int64, prefix string, handl
 		resp, err := d.etcdEndpoint.Get(ctx, prefix, opts...)
 		if err != nil {
 			log.L().Error("range costume resource failure",
-				zap.Error(err), zfield.Prefix(prefix),
-				zfield.Elapsedms(elapsedTime.ElapsedMilli()),
-				zfield.Count(count), zap.Int64("failure", countFailure))
+				logf.Error(err), logf.Prefix(prefix),
+				logf.Elapsedms(elapsedTime.ElapsedMilli()),
+				logf.Count(count), logf.Int64("failure", countFailure))
 			return
 		} else if len(resp.Kvs) == 0 {
 			log.L().Info("range costume resource completed",
-				zap.Int64("failure", countFailure),
-				zfield.Prefix(prefix), zfield.Count(count),
-				zfield.Elapsedms(elapsedTime.ElapsedMilli()))
+				logf.Int64("failure", countFailure),
+				logf.Prefix(prefix), logf.Count(count),
+				logf.Elapsedms(elapsedTime.ElapsedMilli()))
 			return
 		}
 
@@ -200,7 +199,7 @@ func (d *Dao) WatchResource(ctx context.Context, rev int64, prefix string, handl
 				case DELETE:
 					handler(EnventType(ev.Type), ev.Kv)
 				default:
-					log.L().Debug("catch event, invalid event type", zap.Any("event_type", ev.Type))
+					log.L().Debug("catch event, invalid event type", logf.Any("event_type", ev.Type))
 					continue
 				}
 			}

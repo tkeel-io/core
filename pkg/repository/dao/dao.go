@@ -23,7 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/config"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/kit/log"
@@ -92,13 +92,13 @@ func (d *Dao) GetLastRevision(ctx context.Context) int64 {
 
 	rev := int64(0)
 	for _, node := range res.Members {
-		log.L().Info("etcd node information", zfield.Name(node.Name),
-			zfield.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", node.ClientURLs))
+		log.L().Info("etcd node information", logf.Name(node.Name),
+			logf.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", node.ClientURLs))
 		for _, url := range node.ClientURLs {
 			resp, err := d.etcdEndpoint.Status(ctx, url)
 			if err != nil {
-				log.L().Warn("query etcd node status", zfield.Name(node.Name),
-					zap.Error(err), zfield.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", url))
+				log.L().Warn("query etcd node status", logf.Name(node.Name),
+					zap.Error(err), logf.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", url))
 				continue
 			}
 			if resp.Header.Revision == 0 {

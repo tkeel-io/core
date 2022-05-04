@@ -23,13 +23,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"go.uber.org/zap"
 )
 
 type TopicService struct {
@@ -62,14 +61,14 @@ func (s *TopicService) Init(apiManager apim.APIManager) {
 }
 
 func (s *TopicService) TopicEventHandler(ctx context.Context, req *pb.TopicEventRequest) (out *pb.TopicEventResponse, err error) {
-	log.L().Debug("received event", zfield.ReqID(req.Meta.Id),
-		zfield.Type(req.Meta.Type), zfield.Source(req.Meta.Source),
-		zfield.Topic(req.Meta.Topic), zfield.Pubsub(req.Meta.Pubsubname))
+	log.L().Debug("received event", logf.ReqID(req.Meta.Id),
+		logf.Type(req.Meta.Type), logf.Source(req.Meta.Source),
+		logf.Topic(req.Meta.Topic), logf.Pubsub(req.Meta.Pubsubname))
 
 	var payload []byte
 	// set event payload.
 	if payload, _, err = collectjs.Get(req.RawData, "data.rawData"); nil != err {
-		log.L().Warn("get event payload", zap.String("id", req.Meta.Id), zap.Any("event", req), zfield.Reason(err.Error()))
+		log.L().Warn("get event payload", logf.String("id", req.Meta.Id), logf.Any("event", req), logf.Reason(err.Error()))
 		return &pb.TopicEventResponse{Status: SubscriptionResponseStatusDrop}, errors.Wrap(err, "get event payload")
 	}
 

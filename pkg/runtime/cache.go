@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/kit/log"
 )
@@ -33,7 +33,7 @@ func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {
 	jsonData, err := ec.repository.GetEntity(context.TODO(), id)
 	if nil != err {
 		log.L().Warn("load entity from state storage",
-			zfield.Eid(id), zfield.Reason(err.Error()))
+			logf.Eid(id), logf.Reason(err.Error()))
 		return nil, errors.Wrap(err, "load entity")
 	}
 
@@ -41,7 +41,7 @@ func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {
 	en, err := NewEntity(id, jsonData)
 	if nil != err {
 		log.L().Warn("create entity instance",
-			zfield.Eid(id), zfield.Reason(err.Error()))
+			logf.Eid(id), logf.Reason(err.Error()))
 		return nil, errors.Wrap(err, "create entity instance")
 	}
 

@@ -6,15 +6,14 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRequest) (out *pb.AppendMapperResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.EntityId))
+		log.L().Warn("service not ready", logf.Eid(req.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -36,7 +35,7 @@ func (s *EntityService) AppendMapper(ctx context.Context, req *pb.AppendMapperRe
 
 	// append mapper.
 	if err = s.apiManager.AppendMapper(ctx, &mp); nil != err {
-		log.L().Error("append mapper", zfield.Eid(req.EntityId), zap.Error(err))
+		log.L().Error("append mapper", logf.Eid(req.EntityId), logf.Error(err))
 		return
 	}
 

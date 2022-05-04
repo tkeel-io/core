@@ -10,13 +10,12 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"github.com/tkeel-io/tdtl/pkg/json/jsonparser"
-	"go.uber.org/zap"
 )
 
 // some persistent field enumerate.
@@ -86,8 +85,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 			var err error
 			mval := cc.Get(patch.Path).Merge(patch.Value)
 			if err = mval.Error(); tdtl.Object != mval.Type() {
-				log.Error("patch merge", zfield.Eid(e.id), zap.Error(err),
-					zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
+				log.Error("patch merge", logf.Eid(e.id), logf.Error(err),
+					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 				err = xerrors.ErrInternal
 			}
 
@@ -105,8 +104,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 			pcIns := v1.PathConstructor(pc)
 			patchVal, patchPath, err := e.pathConstructor(pcIns, e.state.Raw(), patch.Value.Raw(), patch.Path)
 			if nil != err {
-				log.L().Error("update entity", zfield.Eid(e.id), zap.Error(err),
-					zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
+				log.L().Error("update entity", logf.Eid(e.id), logf.Error(err),
+					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 				// in.Patches 处理完毕，丢弃.
 				feed.Err = err
 				feed.Patches = []Patch{}
@@ -119,8 +118,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		}
 
 		if nil != cc.Error() {
-			log.L().Error("update entity", zfield.Eid(e.id), zap.Error(cc.Error()),
-				zap.Any("patches", feed.Patches), zfield.Event(feed.Event))
+			log.L().Error("update entity", logf.Eid(e.id), logf.Error(cc.Error()),
+				logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 			break
 		}
 
@@ -141,8 +140,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		e.state = *cc
 		e.Update()
 	} else {
-		log.L().Error("update entity", zap.Error(cc.Error()), zfield.Eid(e.id),
-			zfield.Event(feed.Event), zfield.Value(feed.Patches))
+		log.L().Error("update entity", logf.Error(cc.Error()), logf.Eid(e.id),
+			logf.Event(feed.Event), logf.Value(feed.Patches))
 	}
 
 	// in.Patches 处理完毕，丢弃.

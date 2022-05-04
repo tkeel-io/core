@@ -5,10 +5,9 @@ import (
 	"net/url"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type EventHandler func(context.Context, v1.Event) error
@@ -61,7 +60,7 @@ func NewPubsub(id string, urlText string) Pubsub {
 	// parse url.
 	urlIns, err := url.Parse(urlText)
 	if nil != err {
-		log.L().Error("parse url", zap.Error(err), zfield.URL(urlText))
+		log.L().Error("parse url", logf.Error(err), logf.URL(urlText))
 		return pubsubClient
 	}
 
@@ -71,7 +70,7 @@ func NewPubsub(id string, urlText string) Pubsub {
 		if pubsubClient0, err = generator(id, urlText); nil == err {
 			return pubsubClient0
 		}
-		log.L().Error("new Pubsub instance", zap.Error(err), zfield.URL(urlText))
+		log.L().Error("new Pubsub instance", logf.Error(err), logf.URL(urlText))
 	}
 
 	return pubsubClient
