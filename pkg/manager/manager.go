@@ -38,7 +38,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"go.uber.org/zap"
 )
 
 const respondFmt = "http://%s:%d/v1/respond"
@@ -148,7 +147,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.L().Error("create entity", logf.Eid(en.ID), logf.ReqID(reqID),
-			zap.Error(xerrors.New(resp.ErrCode)), logf.Base(en.JSON()))
+			logf.Error(xerrors.New(resp.ErrCode)), logf.Base(en.JSON()))
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
@@ -158,7 +157,7 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
 		log.L().Error("create entity, decode response", logf.ReqID(reqID),
-			zap.Error(err), logf.Eid(en.ID), logf.Base(en.JSON()))
+			logf.Error(err), logf.Eid(en.ID), logf.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity, decode response")
 	}
 
@@ -197,7 +196,7 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 		}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("patch entity, dispatch event",
-			zap.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
+			logf.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
 		return out, raw, errors.Wrap(err, "patch entity, dispatch event")
 	}
 
@@ -208,14 +207,14 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.L().Error("patch entity", logf.Eid(en.ID),
-			zap.Error(xerrors.New(resp.ErrCode)), logf.Base(en.JSON()))
+			logf.Error(xerrors.New(resp.ErrCode)), logf.Base(en.JSON()))
 		return out, raw, xerrors.New(resp.ErrCode)
 	}
 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
 		log.L().Error("patch entity, decode response",
-			logf.ReqID(reqID), zap.Error(err), logf.Eid(en.ID),
+			logf.ReqID(reqID), logf.Error(err), logf.Eid(en.ID),
 			logf.Base(en.JSON()), logf.Entity(string(resp.Data)))
 		return out, raw, errors.Wrap(err, "patch entity, decode response")
 	}
@@ -253,7 +252,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 		}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("get entity, dispatch event",
-			zap.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
+			logf.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
 		return nil, errors.Wrap(err, "get entity, dispatch event")
 	}
 
@@ -264,7 +263,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 	resp := respWaiter.Wait()
 	if resp.Status != types.StatusOK {
 		log.L().Error("get entity", logf.Eid(en.ID),
-			logf.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
+			logf.ReqID(reqID), logf.Error(xerrors.New(resp.ErrCode)))
 		return nil, xerrors.New(resp.ErrCode)
 	}
 
@@ -274,7 +273,7 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 	var baseRet BaseRet
 	if err = json.Unmarshal(resp.Data, &baseRet); nil != err {
 		log.L().Error("get entity, decode response", logf.ReqID(reqID),
-			zap.Error(err), logf.Eid(en.ID), logf.Base(en.JSON()))
+			logf.Error(err), logf.Eid(en.ID), logf.Base(en.JSON()))
 		return nil, errors.Wrap(err, "create entity, decode response")
 	}
 
@@ -308,7 +307,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 		}}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("delete entity, dispatch event",
-			zap.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
+			logf.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))
 		return errors.Wrap(err, "delete entity, dispatch event")
 	}
 
@@ -319,7 +318,7 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 
 	if resp := respWaiter.Wait(); resp.Status != types.StatusOK {
 		log.L().Error("delete entity", logf.Eid(en.ID),
-			logf.ReqID(reqID), zap.Error(xerrors.New(resp.ErrCode)))
+			logf.ReqID(reqID), logf.Error(xerrors.New(resp.ErrCode)))
 		return xerrors.New(resp.ErrCode)
 	}
 
@@ -337,14 +336,14 @@ func (m *apiManager) AppendMapper(ctx context.Context, mp *mapper.Mapper) error 
 	{
 		// check mapper.
 		if err := checkMapper(mp); nil != err {
-			log.L().Error("append mapper", logf.Eid(mp.EntityID), zap.Error(err))
+			log.L().Error("append mapper", logf.Eid(mp.EntityID), logf.Error(err))
 			return errors.Wrap(err, "check mapper")
 		}
 	}
 
 	exprs := convExprs(*mp)
 	if err := m.appendExpression(ctx, exprs); nil != err {
-		log.L().Error("append mapper", zap.Error(err),
+		log.L().Error("append mapper", logf.Error(err),
 			logf.ID(mp.ID), logf.Eid(mp.EntityID))
 	}
 
@@ -359,7 +358,7 @@ func (m *apiManager) AppendMapperZ(ctx context.Context, mp *mapper.Mapper) error
 	var err error
 	exprs := convExprs(*mp)
 	if err = m.appendExpression(ctx, exprs); nil != err {
-		log.L().Error("append mapper", zap.Error(err),
+		log.L().Error("append mapper", logf.Error(err),
 			logf.ID(mp.ID), logf.Eid(mp.EntityID))
 	}
 
@@ -380,7 +379,7 @@ func checkMapper(m *mapper.Mapper) error {
 	// check tql parse.
 	tdtlIns, err := tdtl.NewTDTL(m.TQL, nil)
 	if nil != err {
-		log.L().Error("check mapper", zap.Error(err), logf.TQL(m.TQL))
+		log.L().Error("check mapper", logf.Error(err), logf.TQL(m.TQL))
 		return errors.Wrap(err, "parse TQL")
 	}
 
@@ -414,7 +413,7 @@ func checkMapper(m *mapper.Mapper) error {
 	// check tql parse.
 	_, err = tdtl.NewTDTL(m.TQL, nil)
 	if nil != err {
-		log.L().Error("check mapper", zap.Error(err), logf.TQL(m.TQL))
+		log.L().Error("check mapper", logf.Error(err), logf.TQL(m.TQL))
 		return errors.Wrap(xerrors.ErrInternal, "parse TQL")
 	}
 
@@ -431,7 +430,7 @@ func checkExpression(expr *repository.Expression) error {
 
 	exprIns, err := expression.NewExpr(expr.Expression, nil)
 	if nil != err {
-		log.L().Error("check expression", logf.Path(expr.Path), zap.Error(err),
+		log.L().Error("check expression", logf.Path(expr.Path), logf.Error(err),
 			logf.Eid(expr.EntityID), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 		return errors.Wrap(err, "invalid expression")
 	}
@@ -462,7 +461,7 @@ func checkExpression(expr *repository.Expression) error {
 	// check tql parse.
 	_, err = expression.NewExpr(expr.Expression, nil)
 	if nil != err {
-		log.L().Error("check expression", zap.Error(err), logf.Expr(expr.Expression))
+		log.L().Error("check expression", logf.Error(err), logf.Expr(expr.Expression))
 		return errors.Wrap(xerrors.ErrInternal, "preparse expression")
 	}
 
@@ -501,7 +500,7 @@ func (m *apiManager) appendExpression(ctx context.Context, exprs []repository.Ex
 			logf.Eid(expr.EntityID), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 		if err := m.entityRepo.PutExpression(ctx, expr); nil != err {
 			log.L().Error("append expression", logf.Eid(expr.EntityID),
-				zap.Error(err), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
+				logf.Error(err), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 			return errors.Wrap(err, "append expression")
 		}
 	}
@@ -518,7 +517,7 @@ func (m *apiManager) RemoveExpression(ctx context.Context, exprs []repository.Ex
 			logf.Path(exprs[index].Path),
 			logf.Expr(exprs[index].Expression))
 		if err := m.entityRepo.DelExpression(ctx, exprs[index]); nil != err {
-			log.L().Error("delete expression", zap.Error(err), logf.Path(exprs[index].Path),
+			log.L().Error("delete expression", logf.Error(err), logf.Path(exprs[index].Path),
 				logf.Eid(exprs[index].EntityID), logf.Owner(exprs[index].Owner), logf.Expr(exprs[index].Expression))
 			return errors.Wrap(err, "delete expression")
 		}
@@ -530,7 +529,7 @@ func (m *apiManager) GetExpression(ctx context.Context, expr repository.Expressi
 	// get expression.
 	expr, err := m.entityRepo.GetExpression(ctx, expr)
 	if nil != err {
-		log.L().Error("get expression", zap.Error(err), logf.Path(expr.Path),
+		log.L().Error("get expression", logf.Error(err), logf.Path(expr.Path),
 			logf.Eid(expr.EntityID), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 		return nil, errors.Wrap(err, "get expression")
 	}
@@ -547,7 +546,7 @@ func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]*repositor
 			Owner:    en.Owner,
 			EntityID: en.ID,
 		}); nil != err {
-		log.L().Error("list expression", zap.Error(err),
+		log.L().Error("list expression", logf.Error(err),
 			logf.Eid(en.ID), logf.Owner(en.Owner))
 		return exprs, errors.Wrap(err, "list expression")
 	}

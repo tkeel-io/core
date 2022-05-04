@@ -3,6 +3,7 @@ package transport
 import (
 	"bytes"
 	"context"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -12,9 +13,7 @@ import (
 
 	"github.com/panjf2000/ants/v2"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 var (
@@ -51,7 +50,7 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 	if !tm.inited {
 		p, err := ants.NewPool(4000)
 		if err != nil {
-			log.L().Error("Init httpTransmitter Error", zap.Error(err))
+			log.L().Error("Init httpTransmitter Error", logf.Error(err))
 			return xerrors.ErrInvalidHTTPInited
 		}
 		tm.coroutines = p
@@ -61,8 +60,8 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 	// check request.
 	if req.Address == "" {
 		log.L().Error("empty target address",
-			zfield.ID(req.PackageID), zfield.Method(req.Method),
-			zfield.Header(req.Header), zfield.Addr(req.Address), zfield.Payload(req.Payload))
+			logf.ID(req.PackageID), logf.Method(req.Method),
+			logf.Header(req.Header), logf.Addr(req.Address), logf.Payload(req.Payload))
 		return xerrors.ErrInvalidHTTPRequest
 	}
 
@@ -73,8 +72,8 @@ func (tm *httpTransmitter) Do(ctx context.Context, req *Request) error {
 
 func (tm *httpTransmitter) process(in *Request) {
 	log.L().Debug("delive message through http.Transport",
-		zfield.ID(in.PackageID), zfield.Method(in.Method),
-		zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
+		logf.ID(in.PackageID), logf.Method(in.Method),
+		logf.Header(in.Header), logf.Addr(in.Address), logf.Payload(in.Payload))
 
 	httpReq, _ := http.NewRequest(in.Method, in.Address, bytes.NewBuffer(in.Payload))
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -88,14 +87,14 @@ func (tm *httpTransmitter) process(in *Request) {
 	httpCli := clients[httpIndex%maxConnect]
 	rsp, err := httpCli.Do(httpReq)
 	if nil != err {
-		log.L().Error("do http request", zap.Error(err),
-			zfield.ID(in.PackageID), zfield.Method(in.Method),
-			zfield.Header(in.Header), zfield.Addr(in.Address), zfield.Payload(in.Payload))
+		log.L().Error("do http request", logf.Error(err),
+			logf.ID(in.PackageID), logf.Method(in.Method),
+			logf.Header(in.Header), logf.Addr(in.Address), logf.Payload(in.Payload))
 		return
 	}
 
-	log.L().Debug("process request completed", zfield.ID(in.PackageID),
-		zfield.Status(rsp.Status), zap.Int("status_code", rsp.StatusCode))
+	log.L().Debug("process request completed", logf.ID(in.PackageID),
+		logf.Status(rsp.Status), logf.Int("status_code", rsp.StatusCode))
 
 	defer rsp.Body.Close()
 	io.Copy(ioutil.Discard, rsp.Body)

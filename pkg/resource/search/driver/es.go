@@ -29,7 +29,6 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/logfield"
-	"go.uber.org/zap"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
@@ -55,7 +54,7 @@ type ESClient struct {
 func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error) {
 	var cfg ESConfig
 	if err := mapstructure.Decode(cfgJSON, &cfg); nil != err {
-		log.L().Error("decode elasticsearch configuration", zap.Error(err), logf.Value(cfgJSON))
+		log.L().Error("decode elasticsearch configuration", logf.Error(err), logf.Value(cfgJSON))
 		return nil, errors.Wrap(err, "decode elasticsearch configuration")
 	}
 
@@ -78,7 +77,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 
 	info, _, err := client.Ping(cfg.Endpoints[0]).Do(context.Background())
 	if nil != err {
-		log.L().Error("ping elasticsearch cluster", zap.Error(err))
+		log.L().Error("ping elasticsearch cluster", logf.Error(err))
 		return nil, errors.Wrap(err, "ping elasticsearch cluster")
 	}
 

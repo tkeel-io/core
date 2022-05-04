@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"math/rand"
 	"sort"
 	"strings"
@@ -16,7 +17,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 // Influx allows writing to InfluxDB.
@@ -63,7 +63,7 @@ func (i *Influx) Init(metadata resource.Metadata) error {
 		return ErrInfluxRequiredBucket
 	}
 
-	log.L().Info("initialize timeseries.Influxdb", zap.String("url", i.cfg.URL))
+	log.L().Info("initialize timeseries.Influxdb", logf.String("url", i.cfg.URL))
 
 	client := influxdb2.NewClient(i.cfg.URL, i.cfg.Token)
 	i.client = client
@@ -141,7 +141,7 @@ func (i *Influx) WriteData(req *pb.GetTSDataRequest) {
 	}
 	err := i.writeAPI.WriteRecord(context.Background(), points...)
 	if err != nil {
-		log.L().Error("write record", zap.Error(err))
+		log.L().Error("write record", logf.Error(err))
 	}
 }
 
@@ -184,7 +184,7 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 			// Notice when group key has changed
 			if result.TableChanged() {
 				log.L().Info("Notice when group key has changed ",
-					zap.String("table", result.TableMetadata().String()))
+					logf.String("table", result.TableMetadata().String()))
 			}
 			_, ok := resultPoints[result.Record().Time()]
 			if !ok {
@@ -196,10 +196,10 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 		}
 		// check for an error
 		if result.Err() != nil {
-			log.L().Error("quer influx database", zap.Error(err))
+			log.L().Error("quer influx database", logf.Error(err))
 		}
 	} else {
-		log.L().Error("quer influx database", zap.Error(err))
+		log.L().Error("quer influx database", logf.Error(err))
 	}
 
 	for k, v := range resultPoints {

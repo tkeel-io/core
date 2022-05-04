@@ -19,11 +19,11 @@ package batchqueue
 import (
 	"context"
 	"errors"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"sync"
 	"time"
 
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type sinkBatchState int
@@ -259,7 +259,7 @@ func (p *batchSink) internalClose(req *closeRequest) {
 }
 
 func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
-	log.L().Debug("Response receipt", zap.Uint64("sequence_id", item.sequenceID))
+	log.L().Debug("Response receipt", logf.Uint64("sequence_id", item.sequenceID))
 	item.status = processIdle
 	item.err = err
 	p.sendCnt -= int64(len(item.batchData))
@@ -272,8 +272,8 @@ func (p *batchSink) callbackReceipt(item *pendingItem, err error) {
 		}
 		if pi.status == processInProgress {
 			log.L().Debug("Response receipt unexpected",
-				zap.Any("pendingSequenceId", pi.sequenceID),
-				zap.Any("responseSequenceId", item.sequenceID))
+				logf.Any("pendingSequenceId", pi.sequenceID),
+				logf.Any("responseSequenceId", item.sequenceID))
 			break
 		}
 

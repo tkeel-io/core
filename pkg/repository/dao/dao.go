@@ -28,7 +28,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/kit/log"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/zap"
 )
 
 type Dao struct {
@@ -86,19 +85,19 @@ func (d *Dao) GetLastRevision(ctx context.Context) int64 {
 	defer cancel()
 
 	if res, err = d.etcdEndpoint.MemberList(ctx); err != nil {
-		log.L().Error("query etcd cluster member", zap.Error(err))
+		log.L().Error("query etcd cluster member", logf.Error(err))
 		return 0
 	}
 
 	rev := int64(0)
 	for _, node := range res.Members {
 		log.L().Info("etcd node information", logf.Name(node.Name),
-			logf.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", node.ClientURLs))
+			logf.ID(fmt.Sprintf("%v", node.ID)), logf.Any("URL", node.ClientURLs))
 		for _, url := range node.ClientURLs {
 			resp, err := d.etcdEndpoint.Status(ctx, url)
 			if err != nil {
 				log.L().Warn("query etcd node status", logf.Name(node.Name),
-					zap.Error(err), logf.ID(fmt.Sprintf("%v", node.ID)), zap.Any("URL", url))
+					logf.Error(err), logf.ID(fmt.Sprintf("%v", node.ID)), logf.Any("URL", url))
 				continue
 			}
 			if resp.Header.Revision == 0 {

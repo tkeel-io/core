@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"strings"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type Clickhouse struct {
@@ -83,11 +83,11 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 		log.Info("clickhouse init " + v)
 		db, err := sqlx.Open("clickhouse", v)
 		if err != nil {
-			log.Error("open clickhouse", zap.Any("error", err))
+			log.Error("open clickhouse", logf.Any("error", err))
 			return err
 		}
 		if err = db.PingContext(context.Background()); err != nil {
-			log.Error("ping clickhouse", zap.Any("error", err))
+			log.Error("ping clickhouse", logf.Any("error", err))
 			return err
 		}
 		_, err = db.Exec(fmt.Sprintf(CLICKHOUSE_DB, opt.DbName))
@@ -100,7 +100,7 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 			log.Warn(err.Error())
 		}
 		if _, err = db.Query(fmt.Sprintf("desc %s.%s;", opt.DbName, opt.Table)); err != nil {
-			log.Error("check chronus table", zap.Any("error", err))
+			log.Error("check chronus table", logf.Any("error", err))
 			return err
 		}
 		db.SetConnMaxLifetime(30 * time.Second)
@@ -127,7 +127,7 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.RawDataRequest) (er
 		data := new(execNode)
 
 		//fmt.Println(string(message.Data()))
-		log.L().Info("Invoke", zap.Any("messages", string(rawData.Bytes())))
+		log.L().Info("Invoke", logf.Any("messages", string(rawData.Bytes())))
 		//jsonCtx := utils.NewJSONContext(string(message.Data()))
 
 		data.fields = []string{"tag", "entity_id", "timestamp", "values", "path"}
@@ -136,9 +136,9 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.RawDataRequest) (er
 			rows = append(rows, data)
 		} else {
 			log.L().Warn("rows is empty",
-				zap.Any("args", data.args),
-				zap.Any("fields", data.fields),
-				zap.Any("option", c.option),
+				logf.Any("args", data.args),
+				logf.Any("fields", data.fields),
+				logf.Any("option", c.option),
 			)
 		}
 	}
@@ -150,9 +150,9 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.RawDataRequest) (er
 		}
 		if tx, err = server.DB.BeginTx(ctx, nil); err != nil {
 			log.L().Error("pre URL error",
-				zap.String("preURL", preURL),
-				zap.Any("row", rows[0]),
-				zap.String("error", err.Error()))
+				logf.String("preURL", preURL),
+				logf.Any("row", rows[0]),
+				logf.String("error", err.Error()))
 			return err
 		}
 		defer func() {
@@ -163,21 +163,21 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.RawDataRequest) (er
 		stmt, err := tx.Prepare(preURL)
 		if err != nil {
 			log.L().Error("pre URL error",
-				zap.String("preURL", preURL),
-				zap.String("error", err.Error()))
+				logf.String("preURL", preURL),
+				logf.String("error", err.Error()))
 			return err
 		}
 		for _, row := range rows {
 			log.L().Debug("preURL",
-				zap.Int64("ts", row.ts),
-				zap.Any("args", row.args),
-				zap.String("preURL", preURL))
+				logf.Int64("ts", row.ts),
+				logf.Any("args", row.args),
+				logf.String("preURL", preURL))
 			if _, err := stmt.Exec(row.args...); err != nil {
 				log.L().Error("db Exec error",
-					zap.String("preURL", preURL),
-					zap.Any("args", row.args),
-					zap.Any("fields", row.fields),
-					zap.String("error", err.Error()))
+					logf.String("preURL", preURL),
+					logf.Any("args", row.args),
+					logf.Any("fields", row.fields),
+					logf.String("error", err.Error()))
 				return err
 			}
 		}
@@ -185,11 +185,11 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.RawDataRequest) (er
 		if err != nil {
 			row := rows[0]
 			log.L().Error("tx Commit error",
-				zap.Int64("ts", row.ts),
-				zap.Any("args", row.args),
-				zap.Any("fields", row.fields),
-				zap.String("preURL", preURL),
-				zap.String("error", err.Error()))
+				logf.Int64("ts", row.ts),
+				logf.Any("args", row.args),
+				logf.Any("fields", row.fields),
+				logf.String("preURL", preURL),
+				logf.String("error", err.Error()))
 			return err
 		}
 		_ = stmt.Close()

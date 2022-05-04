@@ -24,7 +24,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"go.uber.org/zap"
 )
 
 const (
@@ -733,7 +732,7 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 
 			if !json.Valid(bytes){
 				log.L().Debug("RawData Json Valid Fail", logf.Eid(feed.EntityID),
-					zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+					logf.Any("raw", patch.Value.String()), logf.String("value", string(bytes)))
 				continue
 			}
 
@@ -862,7 +861,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			var state Entity
 			item := mapper.NewWatchKey(subEnd.path)
 			if state, err = r.LoadEntity(item.EntityID); nil != err {
-				log.L().Warn("load entity", zap.Error(err), logf.Eid(item.EntityID))
+				log.L().Warn("load entity", logf.Error(err), logf.Eid(item.EntityID))
 				continue
 			}
 
@@ -875,7 +874,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			}
 
 			if val = state.Get(path); nil != val.Error() {
-				log.L().Warn("get entity property", zap.Error(val.Error()), logf.Eid(item.EntityID))
+				log.L().Warn("get entity property", logf.Error(val.Error()), logf.Eid(item.EntityID))
 				continue
 			}
 

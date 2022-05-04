@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/base64"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"net/http"
 	"net/url"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type RawdataService struct {
@@ -23,7 +23,7 @@ type RawdataService struct {
 func NewRawdataService() (*RawdataService, error) {
 	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
 	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
-		log.L().Error("initialize rawdata server", zap.Error(err))
+		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
 	return &RawdataService{
 		rawdataClient: rawdataClient,
@@ -54,14 +54,14 @@ func (s *RawdataService) GetRawdata(ctx context.Context, req *pb.GetRawdataReque
 
 func getUser(header http.Header, oldUser string) string {
 	auth := header.Get("X-Tkeel-Auth")
-	log.L().Info("user: ", zap.String("auth", auth))
+	log.L().Info("user: ", logf.String("auth", auth))
 	if bytes, err := base64.StdEncoding.DecodeString(auth); err == nil {
 		urlquery, err1 := url.ParseQuery(string(bytes))
 		if err1 == nil {
 			return urlquery.Get("user")
 		}
 	} else {
-		log.L().Error("auth error", zap.Error(err))
+		log.L().Error("auth error", logf.Error(err))
 	}
 	return oldUser
 }

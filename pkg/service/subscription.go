@@ -29,7 +29,6 @@ import (
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 )
 
 const SMTypeSubscription = "SUBSCRIPTION"
@@ -97,7 +96,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("CreateSubscription", zap.Any("[+]req.Subscription", req.Subscription))
+	log.L().Debug("CreateSubscription", logf.Any("[+]req.Subscription", req.Subscription))
 	out = &pb.SubscriptionResponse{}
 	if req.Id == "" {
 		req.Id = util.UUID("sub")
@@ -122,7 +121,7 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 			Id: sub.ID,
 		},
 	}
-	log.L().Debug("CreateSubscription", zap.Any("[+]sub", sub), zap.Error(err))
+	log.L().Debug("CreateSubscription", logf.Any("[+]sub", sub), logf.Error(err))
 	return out, errors.Wrap(err, "create subscription")
 }
 
@@ -132,7 +131,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("UpdateSubscription", zap.Any("[+]req.Subscription", req.Subscription))
+	log.L().Debug("UpdateSubscription", logf.Any("[+]req.Subscription", req.Subscription))
 
 	out = &pb.SubscriptionResponse{}
 	if req.Id == "" {
@@ -151,7 +150,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 
 	err = s.apiManager.CreateSubscription(ctx, sub)
 
-	log.L().Debug("UpdateSubscription", zap.Any("[+]sub", sub), zap.Error(err))
+	log.L().Debug("UpdateSubscription", logf.Any("[+]sub", sub), logf.Error(err))
 	return out, errors.Wrap(err, "update subscription")
 }
 
@@ -188,7 +187,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	log.L().Debug("DeleteSubscription", zap.Any("[+]req.Subscription", req))
+	log.L().Debug("DeleteSubscription", logf.Any("[+]req.Subscription", req))
 	var sub = new(repository.Subscription)
 	if req.Id == "" {
 		req.Id = util.UUID("sub")
@@ -203,7 +202,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	}
 	err = s.apiManager.DeleteSubscription(ctx, sub)
 
-	log.L().Debug("DeleteSubscription", zap.Any("[+]sub", sub), zap.Error(err))
+	log.L().Debug("DeleteSubscription", logf.Any("[+]sub", sub), logf.Error(err))
 	out = &pb.DeleteSubscriptionResponse{Id: req.Id, Status: "ok"}
 	return out, nil
 }
