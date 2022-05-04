@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -278,6 +279,13 @@ func (n *Node) getGlobalData(en Entity) (res []byte) {
 	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
 	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
 	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+
+	byt,err := json.Marshal(string(en.Raw()))
+	if err!=nil{
+		log.L().Error("json marshal error")
+	}
+	globalData.Set(FieldEntitySource, byt)
 
 	sysField := en.GetProp("sysField")
 	if sysField.Type() != tdtl.Null {
