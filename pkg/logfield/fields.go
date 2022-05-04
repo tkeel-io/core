@@ -1,11 +1,11 @@
-package logger
+package logf
 
 import (
 	"encoding/json"
+	"go.uber.org/zap"
 	"time"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"go.uber.org/zap"
 )
 
 // Eid returns enitty id field.

@@ -5,10 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/pubsub"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 // 场景：
@@ -51,6 +50,6 @@ type Consumer struct {
 }
 
 var defaultConsumer = &Consumer{id: "defaultConsumer", handler: func(ctx context.Context, e v1.Event) error {
-	log.L().Warn("empty cluster consumer", zfield.ID(e.ID()), zap.Any("event", e))
+	log.L().Warn("empty cluster consumer", logf.ID(e.ID()), logf.Any("event", e))
 	return nil
 }}

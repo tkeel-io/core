@@ -26,11 +26,10 @@ package config
 
 import (
 	"errors"
+	"github.com/tkeel-io/kit/log"
 	"io/fs"
 	"os"
 	"strings"
-
-	"github.com/tkeel-io/core/pkg/logger"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -62,11 +61,11 @@ type Proxy struct {
 }
 
 type Components struct {
+	SearchEngine string     `yaml:"search" mapstructure:"search"`
 	Etcd         EtcdConfig `yaml:"etcd" mapstructure:"etcd"`
 	Store        Metadata   `yaml:"store" mapstructure:"store"`
 	TimeSeries   Metadata   `yaml:"time_series" mapstructure:"time_series"`
 	RawData      Metadata   `yaml:"rawdata" mapstructure:"rawdata"`
-	SearchEngine string     `yaml:"search_engine" mapstructure:"search_engine"`
 }
 
 type Pair struct {
@@ -147,7 +146,7 @@ func writeDefault(cfgFile string) {
 
 	if err := viper.WriteConfigAs(cfgFile); nil != err {
 		// TODO add write failed handler and remove logger info in this package.
-		logger.FailureStatusEvent(os.Stderr, err.Error())
+		log.FailureStatusEvent(os.Stderr, err.Error())
 	}
 }
 

@@ -2,12 +2,12 @@ package noop
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/logfield"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 type noop struct{}
@@ -22,7 +22,7 @@ func (n *noop) Init(meta resource.Metadata) error {
 }
 
 func (n *noop) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
-	log.L().Debug("insert time series data, noop.", zap.Any("data", req.Data), zap.Any("metadata", req.Metadata))
+	log.L().Debug("insert time series data, noop.", logf.Any("data", req.Data), logf.Any("metadata", req.Metadata))
 	return &tseries.TSeriesResponse{}, nil
 }
 func (n *noop) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {

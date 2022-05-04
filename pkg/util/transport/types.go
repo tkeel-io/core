@@ -2,9 +2,9 @@ package transport
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 var factory = make(map[TransType]Generator)
@@ -47,7 +47,7 @@ func New(typ TransType) Transmitter {
 		if trans, err = generator(); nil == err {
 			return trans
 		}
-		log.L().Error("new Transmitter instance", zap.Error(err), zap.String("type", typ.String()))
+		log.L().Error("new Transmitter instance", logf.Error(err), logf.String("type", typ.String()))
 	}
 	trans, _ = factory["noop"]()
 	return trans

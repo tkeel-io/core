@@ -9,9 +9,8 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/core/pkg/util/dapr"
-	"go.uber.org/zap"
 
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
@@ -29,8 +28,8 @@ type daprStore struct {
 func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, error) {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.L().Error("nil connection", zfield.Key(key),
-			zap.String("store_name", d.storeName), zfield.ID(d.id))
+		log.L().Error("nil connection", logf.Key(key),
+			logf.String("store_name", d.storeName), logf.ID(d.id))
 		return nil, errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
 
@@ -55,9 +54,9 @@ func (d *daprStore) Get(ctx context.Context, key string) (*store.StateItem, erro
 func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.L().Error("nil connection", zfield.Key(key),
-			zap.String("store_name", d.storeName),
-			zfield.ID(d.id), zap.String("data", string(data)))
+		log.L().Error("nil connection", logf.Key(key),
+			logf.String("store_name", d.storeName),
+			logf.ID(d.id), logf.String("data", string(data)))
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
 	return errors.Wrap(conn.SaveState(ctx, d.storeName, key, data), "dapr store set")
@@ -66,15 +65,15 @@ func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 func (d *daprStore) Del(ctx context.Context, key string) error {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
-		log.L().Error("nil connection", zfield.Key(key),
-			zap.String("store_name", d.storeName), zfield.ID(d.id))
+		log.L().Error("nil connection", logf.Key(key),
+			logf.String("store_name", d.storeName), logf.ID(d.id))
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
 	return errors.Wrap(conn.DeleteState(ctx, d.storeName, key), "dapr store del")
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.dapr> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Resource<state.dapr> successful")
 	store.Register("dapr", func(properties map[string]interface{}) (store.Store, error) {
 		var daprMeta daprMetadata
 		if err := mapstructure.Decode(properties, &daprMeta); nil != err {
@@ -82,7 +81,7 @@ func init() {
 		}
 
 		id := util.UUID("sdapr")
-		log.L().Info("create store.dapr instance", zfield.ID(id))
+		log.L().Info("create store.dapr instance", logf.ID(id))
 
 		return &daprStore{
 			id:        id,

@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"os"
 	"os/signal"
 	"strconv"
@@ -30,7 +31,6 @@ import (
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
-	"github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -55,7 +55,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util/discovery"
 	_ "github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/core/pkg/version"
-	"go.uber.org/zap"
 
 	"github.com/spf13/cobra"
 	"github.com/tkeel-io/kit/app"
@@ -131,10 +130,10 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
-	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
+	log.InfoStatusEvent(os.Stdout, "loading configuration...")
 
 	config.Init(_cfgFile)
-	logger.InfoStatusEvent(os.Stdout, "configuration loaded")
+	log.InfoStatusEvent(os.Stdout, "configuration loaded")
 
 	// init gllbal placement.
 	placement.Initialize()
@@ -320,7 +319,7 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	// default rawdata
 	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
 	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
-		log.L().Error("initialize rawdata server", zap.Error(err))
+		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
 	return types.NewResources(search.GlobalService, tsdbClient, rawdataClient, coreRepo)
 }
@@ -329,7 +328,7 @@ func loadDispatcher(ctx context.Context) error {
 	log.L().Info("load dispatcher...")
 	dispatcher := dispatch.New(ctx)
 	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
-		log.L().Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
+		log.L().Error("run dispatcher", logf.Error(err), logf.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 

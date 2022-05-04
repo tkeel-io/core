@@ -16,12 +16,11 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/tkeel-io/kit/log"
@@ -41,7 +40,7 @@ type TSService struct {
 func NewTSService() (*TSService, error) {
 	tseriesClient := tseries.NewTimeSerier(config.Get().Components.TimeSeries.Name)
 	if err := tseriesClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries)); nil != err {
-		log.L().Error("initialize time series", zap.Error(err))
+		log.L().Error("initialize time series", logf.Error(err))
 		return nil, errors.Wrap(err, "init ts service")
 	}
 
@@ -101,14 +100,14 @@ func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*p
 	header, ok := h.(http.Header)
 	if ok {
 		auth := header.Get("X-Tkeel-Auth")
-		log.L().Info("user: ", zap.String("auth", auth))
+		log.L().Info("user: ", logf.String("auth", auth))
 		if bytes, err := base64.StdEncoding.DecodeString(auth); err == nil {
 			urlquery, err1 := url.ParseQuery(string(bytes))
 			if err1 == nil {
 				user = urlquery.Get("user")
 			}
 		} else {
-			log.L().Error("auth error", zap.Error(err))
+			log.L().Error("auth error", logf.Error(err))
 		}
 	}
 	resp := &pb.GetTSDataResponse{}
@@ -215,10 +214,10 @@ func Entity2EntityResponse(base *apim.BaseRet) (out *pb.EntityResponse, err erro
 
 	out = &pb.EntityResponse{}
 	if out.Properties, err = structpb.NewValue(base.Properties); nil != err {
-		log.L().Error("convert entity properties", zap.Error(err), zfield.ID(base.ID))
+		log.L().Error("convert entity properties", logf.Error(err), logf.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity properties")
 	} else if out.Configs, err = structpb.NewValue(base.Scheme); nil != err {
-		log.L().Error("convert entity scheme.", zap.Error(err), zfield.ID(base.ID))
+		log.L().Error("convert entity scheme.", logf.Error(err), logf.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity scheme")
 	}
 
@@ -283,13 +282,13 @@ func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 
 			var baseRet *apim.BaseRet
 			if baseRet, err = s.apiManager.GetEntity(ctx, entityBase); nil != err {
-				log.L().Error("get entity", zfield.Eid(entityBase.ID), zap.Error(err))
+				log.L().Error("get entity", logf.Eid(entityBase.ID), logf.Error(err))
 				continue
 			}
 
 			var entity *pb.EntityResponse
 			if entity, err = Entity2EntityResponse(baseRet); nil != err {
-				log.Error("patch entity failed.", zfield.Eid(v), zap.Error(err))
+				log.Error("patch entity failed.", logf.Eid(v), logf.Error(err))
 			} else {
 				resp.Items = append(resp.Items, entity)
 			}

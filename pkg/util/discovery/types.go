@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/zap"
 )
 
 const (
@@ -70,15 +69,15 @@ type Discovery struct {
 
 func New(cfg Config) (*Discovery, error) {
 	log.L().Info("connect on discovery cluster",
-		zfield.Endpoints(cfg.Endpoints), zap.Int64("dial_timeout", cfg.DialTimeout))
+		logf.Endpoints(cfg.Endpoints), logf.Int64("dial_timeout", cfg.DialTimeout))
 	discoveryEnd, err := clientv3.New(clientv3.Config{
 		Endpoints:   cfg.Endpoints,
 		DialTimeout: time.Duration(cfg.DialTimeout) * time.Second,
 	})
 
 	if nil != err {
-		log.L().Error("connect on discovery cluster", zap.Error(err),
-			zfield.Endpoints(cfg.Endpoints), zap.Int64("dial_timeout", cfg.DialTimeout))
+		log.L().Error("connect on discovery cluster", logf.Error(err),
+			logf.Endpoints(cfg.Endpoints), logf.Int64("dial_timeout", cfg.DialTimeout))
 		return nil, errors.Wrap(err, "connect Discovery Endpoint")
 	}
 

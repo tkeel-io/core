@@ -2,10 +2,10 @@ package path
 
 import (
 	"fmt"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"strings"
 	"sync"
 
-	zfield "github.com/tkeel-io/core/pkg/logger"
 	"github.com/tkeel-io/kit/log"
 )
 
@@ -60,7 +60,7 @@ func (t *Tree) Add(path string, value Node) bool {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	log.L().Debug("tree add path", zfield.Path(path), zfield.Value(value))
+	log.L().Debug("tree add path", logf.Path(path), logf.Value(value))
 	return t.add(value, 0, strings.Split(fmtPath(path), t.Separator), t.root)
 }
 
@@ -157,7 +157,7 @@ func (t *Tree) Empty(path string) bool {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	log.L().Debug("tree remove path", zfield.Path(path))
+	log.L().Debug("tree remove path", logf.Path(path))
 	return t.remove(nil, 0, strings.Split(fmtPath(path), t.Separator), t.root)
 }
 

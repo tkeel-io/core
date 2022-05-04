@@ -2,10 +2,10 @@ package store
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 // StateItem represents a single state item.
@@ -40,8 +40,8 @@ func NewStore(metadata resource.Metadata) Store {
 		if storeClient, err = generator(metadata.Properties); nil == err {
 			return storeClient
 		}
-		log.L().Error("new Store instance", zap.Error(err),
-			zap.String("name", metadata.Name), zap.Any("properties", metadata.Properties))
+		log.L().Error("new Store instance", logf.Error(err),
+			logf.String("name", metadata.Name), logf.Any("properties", metadata.Properties))
 	}
 	storeClient, _ = registeredStores["noop"](metadata.Properties)
 	return storeClient

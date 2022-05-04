@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"net/url"
 	"strings"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/search/driver"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -22,7 +22,7 @@ func Init(urlText string) error {
 	meta, err := parseConfig(urlText)
 	if nil != err {
 		log.L().Error("parse default search engine configuration",
-			zap.Error(err), zap.String("url", urlText))
+			logf.Error(err), logf.String("url", urlText))
 		return errors.Wrap(err, "initialize SearchEngine")
 	}
 	// register default(user set) search engine.
@@ -32,7 +32,7 @@ func Init(urlText string) error {
 		searchIns, err := driverIns(meta.Properties)
 		if nil != err {
 			log.L().Error("new search engine instance",
-				zap.Error(err), zap.String("url", urlText))
+				logf.Error(err), logf.String("url", urlText))
 			return errors.Wrap(err, "new search engine instances")
 		}
 		defaultRegistered = map[driver.Type]driver.SearchEngine{

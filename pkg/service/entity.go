@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/scheme"
@@ -35,7 +35,6 @@ import (
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
-	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -90,7 +89,7 @@ func (s *EntityService) Init(apiManager apim.APIManager, searchClient pb.SearchH
 
 func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -105,21 +104,21 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 	switch properties.(type) {
 	case map[string]interface{}:
 		if entity.Properties, err = json.Marshal(properties); nil != err {
-			log.L().Error("create entity, invalid params", zfield.Reason(err.Error()),
-				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			log.L().Error("create entity, invalid params", logf.Reason(err.Error()),
+				logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
-		log.L().Warn("create entity, empty params", zfield.Eid(req.Id))
+		log.L().Warn("create entity, empty params", logf.Eid(req.Id))
 	default:
 		log.L().Error("create entity, but invalid params",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidEntityParams))
 		return out, xerrors.ErrInvalidEntityParams
 	}
 
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.CreateEntity(ctx, entity); nil != err {
-		log.L().Error("create entity failed", zfield.Eid(req.Id), zap.Error(err))
+		log.L().Error("create entity failed", logf.Eid(req.Id), logf.Error(err))
 		return out, errors.Wrap(err, "create entity failed")
 	}
 
@@ -132,7 +131,7 @@ func (s *EntityService) CreateEntity(ctx context.Context, req *pb.CreateEntityRe
 
 func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -145,16 +144,16 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	patches := []*pb.PatchData{}
 
 	log.L().Debug("update entity",
-		zfield.Eid(req.Id), zfield.Owner(entity.Owner),
-		zfield.Template(req.TemplateId), zfield.Desc(req.Description),
-		zap.Any("scheme", req.Configs), zap.Any("properties", req.Properties))
+		logf.Eid(req.Id), logf.Owner(entity.Owner),
+		logf.Template(req.TemplateId), logf.Desc(req.Description),
+		logf.Any("scheme", req.Configs), logf.Any("properties", req.Properties))
 
 	properties := req.Properties.AsInterface()
 	switch properties.(type) {
 	case map[string]interface{}:
 		if entity.Properties, err = json.Marshal(properties); nil != err {
-			log.L().Error("create entity, invalid params", zfield.Reason(err.Error()),
-				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			log.L().Error("create entity, invalid params", logf.Reason(err.Error()),
+				logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
 
@@ -168,7 +167,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	case nil:
 	default:
 		log.L().Error("update entity failed.",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+			logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
@@ -193,8 +192,8 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	switch schemeVal.(type) {
 	case map[string]interface{}:
 		if entity.Scheme, err = json.Marshal(schemeVal); nil != err {
-			log.L().Error("update entity, invalid params", zfield.Reason(err.Error()),
-				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+			log.L().Error("update entity, invalid params", logf.Reason(err.Error()),
+				logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "update entity")
 		}
 
@@ -208,13 +207,13 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 	case nil:
 	default:
 		log.L().Error("update entity failed.",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+			logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("update entity failed.", zfield.Eid(req.Id), zap.Error(err))
+		log.L().Error("update entity failed.", logf.Eid(req.Id), logf.Error(err))
 		return out, errors.Wrap(err, "update entity failed")
 	}
 
@@ -226,7 +225,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 
 func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -239,7 +238,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 
 	var baseRet *apim.BaseRet
 	if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-		log.L().Error("get entity", zfield.Eid(req.Id), zap.Error(err))
+		log.L().Error("get entity", logf.Eid(req.Id), logf.Error(err))
 		return out, errors.Wrap(err, "get entity")
 	}
 
@@ -249,7 +248,7 @@ func (s *EntityService) GetEntity(ctx context.Context, req *pb.GetEntityRequest)
 
 func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRequest) (out *pb.DeleteEntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -262,7 +261,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 
 	// delete entity.
 	if err = s.apiManager.DeleteEntity(ctx, entity); nil != err {
-		log.L().Error("delete entity", zap.Error(err), zfield.ID(req.Id))
+		log.L().Error("delete entity", logf.Error(err), logf.ID(req.Id))
 		return nil, errors.Wrap(err, "delete entity")
 	}
 
@@ -271,7 +270,7 @@ func (s *EntityService) DeleteEntity(ctx context.Context, req *pb.DeleteEntityRe
 
 func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -286,16 +285,16 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 	case map[string]interface{}:
 		if entity.Properties, err = json.Marshal(properties); nil != err {
 			log.L().Error("create entity, but invalid params",
-				zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidEntityParams))
+				logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidEntityParams))
 			return out, errors.Wrap(err, "create entity")
 		}
 	case nil:
 		log.L().Error("update entity failed.",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+			logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	default:
 		log.L().Error("update entity failed.",
-			zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+			logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
@@ -307,7 +306,7 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("update entity properties.", zfield.Eid(req.Id), zap.Error(err))
+		log.L().Error("update entity properties.", logf.Eid(req.Id), logf.Error(err))
 		return out, errors.Wrap(err, "update entity properties")
 	}
 
@@ -317,7 +316,7 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 
 func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.Id))
+		log.L().Warn("service not ready", logf.Eid(req.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -335,17 +334,17 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 		var data []byte
 		patchData := make([]PatchData, 0)
 		if data, err = json.Marshal(params); nil != err {
-			log.L().Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
+			log.L().Error("patch entity properties.", logf.Eid(req.Id), logf.Error(err))
 			return nil, errors.Wrap(err, "json marshal patch data")
 		} else if err = json.Unmarshal(data, &patchData); nil != err {
-			log.L().Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
+			log.L().Error("patch entity properties.", logf.Eid(req.Id), logf.Error(err))
 			return nil, errors.Wrap(err, "json unmarshal patch data")
 		}
 
 		for index := range patchData {
 			var bytes []byte
 			if err = checkPatchData(patchData[index]); nil != err {
-				log.L().Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
+				log.L().Error("patch entity properties.", logf.Eid(req.Id), logf.Error(err))
 				return nil, errors.Wrap(err, "patch entity properties")
 			} else if bytes, err = json.Marshal(patchData[index].Value); nil != err {
 				return nil, errors.Wrap(err, "encode property")
@@ -358,20 +357,20 @@ func (s *EntityService) PatchEntityProps(ctx context.Context, req *pb.PatchEntit
 			})
 		}
 	default:
-		log.L().Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.L().Error("patch entity properties.", logf.Eid(req.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
 	var rawEntity []byte
 	var baseRet *apim.BaseRet
 	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("patch entity properties.", zfield.Eid(req.Id), zap.Error(err))
+		log.L().Error("patch entity properties.", logf.Eid(req.Id), logf.Error(err))
 		return nil, errors.Wrap(err, "patch entity properties")
 	}
 
 	// clip copy properties.
 	if properties, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
-		log.L().Warn("patch entity properties.", zfield.Eid(req.Id), zfield.Reason(err.Error()))
+		log.L().Warn("patch entity properties.", logf.Eid(req.Id), logf.Reason(err.Error()))
 	} else if cpflag {
 		baseRet.Properties = properties
 	}
@@ -395,7 +394,7 @@ func checkPatchData(patchData PatchData) error {
 
 func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -417,13 +416,13 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 	var baseRet *apim.BaseRet
 	// get entity from entity manager.
 	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, nil); nil != err {
-		log.L().Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("patch entity failed.", logf.Eid(in.Id), logf.Error(err))
 		return out, errors.Wrap(err, "get entity properties")
 	}
 
 	// clip copy properties.
 	if props, cpflag, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
-		log.L().Warn("patch entity properties.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
+		log.L().Warn("patch entity properties.", logf.Eid(in.Id), logf.Reason(innerErr.Error()))
 	} else if cpflag {
 		baseRet.Properties = props
 	}
@@ -435,7 +434,7 @@ func (s *EntityService) GetEntityProps(ctx context.Context, in *pb.GetEntityProp
 
 func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEntityPropsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -448,7 +447,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 
 	var propertyKeys []string
 	if propertyKeys = strings.Split(strings.TrimSpace(in.PropertyKeys), ","); len(propertyKeys) == 0 {
-		log.L().Error("remove entity properties, empty property ids.", zfield.Eid(in.Id))
+		log.L().Error("remove entity properties, empty property ids.", logf.Eid(in.Id))
 		return out, xerrors.ErrInvalidRequest
 	}
 
@@ -463,7 +462,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 	var baseRet *apim.BaseRet
 	// get entity from entity manager.
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("patch entity failed.", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("patch entity failed.", logf.Eid(in.Id), logf.Error(err))
 		return out, errors.Wrap(err, "remove entity properties")
 	}
 
@@ -474,7 +473,7 @@ func (s *EntityService) RemoveEntityProps(ctx context.Context, in *pb.RemoveEnti
 // SetConfigs set entity configs.
 func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEntityConfigsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -490,15 +489,15 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 	case []interface{}:
 		var configs map[string]*scheme.Config
 		if configs, err = parseSchemeFrom(param); nil != err {
-			log.L().Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
+			log.L().Error("update entity scheme", logf.Eid(in.Id), logf.Error(err))
 			return out, err
 		} else if entity.Scheme, err = json.Marshal(configs); nil != err {
-			log.L().Error("encode entity scheme", zfield.Eid(in.Id), zap.Error(err))
+			log.L().Error("encode entity scheme", logf.Eid(in.Id), logf.Error(err))
 			return out, errors.Wrap(err, "encode scheme")
 		}
 	default:
 		log.L().Error("update entity scheme.",
-			zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
+			logf.Eid(in.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
@@ -511,7 +510,7 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 	// set entity configs.
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("update entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("update entity scheme", logf.Eid(in.Id), logf.Error(err))
 		return out, errors.Wrap(err, "update entity scheme")
 	}
 
@@ -521,7 +520,7 @@ func (s *EntityService) UpdateEntityConfigs(ctx context.Context, in *pb.UpdateEn
 
 func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEntityConfigsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -539,13 +538,13 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 		patchData := make([]PatchData, 0)
 		data, _ := json.Marshal(patchDatas)
 		if err = json.Unmarshal(data, &patchData); nil != err {
-			log.L().Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
+			log.L().Error("patch entity scheme", logf.Eid(in.Id), logf.Error(err))
 			return nil, errors.Wrap(err, "json unmarshal request")
 		}
 
 		for index := range patchData {
 			if err = checkPatchData(patchData[index]); nil != err {
-				log.L().Error("check entity scheme.", zfield.Eid(in.Id), zap.Error(err))
+				log.L().Error("check entity scheme.", logf.Eid(in.Id), logf.Error(err))
 				return nil, errors.Wrap(err, "patch entity scheme")
 			}
 
@@ -553,14 +552,14 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 			switch value := patchData[index].Value.(type) {
 			case map[string]interface{}:
 				if cfg, err = scheme.ParseConfigFrom(value); nil != err {
-					log.L().Error("check entity scheme.", zfield.Eid(in.Id), zap.Error(err))
+					log.L().Error("check entity scheme.", logf.Eid(in.Id), logf.Error(err))
 					return out, errors.Wrap(err, "parse entity scheme")
 				}
 			}
 
 			var bytes []byte
 			if bytes, err = json.Marshal(cfg); nil != err {
-				log.L().Error("json marshal", zap.Error(err), zfield.Eid(in.Id))
+				log.L().Error("json marshal", logf.Error(err), logf.Eid(in.Id))
 				return nil, errors.Wrap(err, "patch entity scheme")
 			}
 			patches = append(patches, &pb.PatchData{
@@ -571,10 +570,10 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 		}
 
 	case nil:
-		log.L().Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.L().Error("patch entity scheme", logf.Eid(in.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	default:
-		log.L().Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(xerrors.ErrInvalidRequest))
+		log.L().Error("patch entity scheme", logf.Eid(in.Id), logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 
@@ -582,13 +581,13 @@ func (s *EntityService) PatchEntityConfigs(ctx context.Context, in *pb.PatchEnti
 	var baseRet *apim.BaseRet
 	opts := []apim.Option{apim.NewPathConstructorOption(pb.PCScheme)}
 	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, patches, opts...); nil != err {
-		log.L().Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("patch entity scheme", logf.Eid(in.Id), logf.Error(err))
 		return nil, errors.Wrap(err, "patch entity scheme")
 	}
 
 	// clip copy scheme.
 	if scheme, cpflag, innerErr := CopyFrom(rawEntity, patches...); nil != innerErr {
-		log.L().Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
+		log.L().Warn("patch entity scheme.", logf.Eid(in.Id), logf.Reason(innerErr.Error()))
 	} else if cpflag {
 		baseRet.Scheme = make(map[string]interface{})
 		for path, schemeValue := range scheme {
@@ -608,7 +607,7 @@ func (s *EntityService) PatchEntityConfigsZ(ctx context.Context, req *pb.PatchEn
 // QueryConfigs query entity configs.
 func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityConfigsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -630,14 +629,14 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 	var rawEntity []byte
 	var baseRet *apim.BaseRet
 	if baseRet, rawEntity, err = s.apiManager.PatchEntity(ctx, entity, nil); nil != err {
-		log.L().Error("query entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("query entity scheme", logf.Eid(in.Id), logf.Error(err))
 		return nil, errors.Wrap(err, "get entity scheme")
 	}
 
 	if len(propKeys) > 0 {
 		// clip copy properties.
 		if scheme, cpflag, innerErr := CopyFrom2(rawEntity, propKeys...); nil != innerErr {
-			log.L().Warn("patch entity scheme.", zfield.Eid(in.Id), zfield.Reason(innerErr.Error()))
+			log.L().Warn("patch entity scheme.", logf.Eid(in.Id), logf.Reason(innerErr.Error()))
 		} else if cpflag {
 			baseRet.Scheme = make(map[string]interface{})
 			for path, schemeValue := range scheme {
@@ -655,7 +654,7 @@ func (s *EntityService) GetEntityConfigs(ctx context.Context, in *pb.GetEntityCo
 // RemoveConfigs remove entity configs.
 func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEntityConfigsRequest) (out *pb.EntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.Id))
+		log.L().Warn("service not ready", logf.Eid(in.Id))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -678,7 +677,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 
 	var baseRet *apim.BaseRet
 	if baseRet, _, err = s.apiManager.PatchEntity(ctx, entity, patches); nil != err {
-		log.L().Error("patch entity scheme", zfield.Eid(in.Id), zap.Error(err))
+		log.L().Error("patch entity scheme", logf.Eid(in.Id), logf.Error(err))
 		return nil, errors.Wrap(err, "patch entity scheme")
 	}
 
@@ -688,7 +687,7 @@ func (s *EntityService) RemoveEntityConfigs(ctx context.Context, in *pb.RemoveEn
 
 func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityRequest) (out *pb.ListEntityResponse, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Owner(req.Owner))
+		log.L().Warn("service not ready", logf.Owner(req.Owner))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -702,7 +701,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 
 	var resp *pb.SearchResponse
 	if resp, err = s.searchClient.Search(ctx, searchReq); err != nil {
-		log.L().Error("list entity.", zap.Error(err))
+		log.L().Error("list entity.", logf.Error(err))
 		return out, errors.Wrap(err, "list entity")
 	}
 
@@ -719,7 +718,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			var baseRet apim.BaseRet
 			if err = json.Unmarshal([]byte(state), &baseRet); nil != err {
 				log.L().Error("get entity, decode response",
-					zap.Error(err), zfield.Eid(entityID), zfield.Entity(state))
+					logf.Error(err), logf.Eid(entityID), logf.Entity(state))
 				continue
 			}
 
@@ -729,7 +728,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	}
 
 	if err != nil {
-		log.L().Error("list apim failed", zap.Error(err))
+		log.L().Error("list apim failed", logf.Error(err))
 		// return out, errors.Wrap(err, "entity search failed")
 	}
 	return out, nil
@@ -753,10 +752,10 @@ func parseSchemeFrom(data interface{}) (out map[string]*scheme.Config, err error
 			return out, xerrors.ErrInvalidRequest
 		}
 	case nil:
-		log.L().Error("set entity configs.", zap.Error(xerrors.ErrInvalidRequest))
+		log.L().Error("set entity configs.", logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	default:
-		log.L().Error("set entity configs.", zap.Error(xerrors.ErrInvalidRequest))
+		log.L().Error("set entity configs.", logf.Error(xerrors.ErrInvalidRequest))
 		return nil, xerrors.ErrInvalidRequest
 	}
 	return out, errors.Wrap(err, "parse entity config")
@@ -789,10 +788,10 @@ func (s *EntityService) makeResponse(base *apim.BaseRet) (out *pb.EntityResponse
 
 	out = &pb.EntityResponse{}
 	if out.Properties, err = structpb.NewValue(base.Properties); nil != err {
-		log.L().Error("convert entity properties", zap.Error(err), zfield.ID(base.ID))
+		log.L().Error("convert entity properties", logf.Error(err), logf.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity properties")
 	} else if out.Configs, err = structpb.NewValue(base.Scheme); nil != err {
-		log.L().Error("convert entity scheme.", zap.Error(err), zfield.ID(base.ID))
+		log.L().Error("convert entity scheme.", logf.Error(err), logf.ID(base.ID))
 		return out, errors.Wrap(err, "convert entity scheme")
 	}
 
@@ -869,10 +868,10 @@ func (s *EntityService) onTemplateChanged(ctx context.Context, en *Entity) error
 		Description: "mapper instance to sync scheme",
 	}
 
-	log.L().Info("onTemplateChanged", zfield.Eid(en.ID), zfield.ID(mp.ID), zfield.TQL(mp.TQL))
+	log.L().Info("onTemplateChanged", logf.Eid(en.ID), logf.ID(mp.ID), logf.TQL(mp.TQL))
 
 	if err := s.apiManager.AppendMapperZ(ctx, mp); nil != err {
-		log.L().Error("create template mapper", zap.Error(err), zfield.Eid(en.ID))
+		log.L().Error("create template mapper", logf.Error(err), logf.Eid(en.ID))
 		return errors.Wrap(err, "create template mapper")
 	}
 

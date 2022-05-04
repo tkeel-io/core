@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/types"
 	"github.com/tkeel-io/kit/log"
 )
@@ -79,10 +79,10 @@ func (h *holder) OnRespond(resp *Response) {
 	h.lock.Unlock()
 
 	log.L().Debug("received response",
-		zfield.ReqID(resp.ID), zfield.Status(resp.Status.String()))
+		logf.ReqID(resp.ID), logf.Status(resp.Status.String()))
 
 	if nil == waitCh {
-		log.L().Warn("request terminated, user cancel or timeout", zfield.ReqID(resp.ID))
+		log.L().Warn("request terminated, user cancel or timeout", logf.ReqID(resp.ID))
 		return
 	}
 

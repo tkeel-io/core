@@ -7,16 +7,15 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/kit/log"
-	"go.uber.org/zap"
 )
 
 func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpressionReq) (out *pb.AppendExpressionResp, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.EntityId))
+		log.L().Warn("service not ready", logf.Eid(req.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -26,8 +25,8 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 		Source: req.Source}
 	parseHeaderFrom(ctx, &en)
 
-	log.L().Debug("append expression", zfield.Owner(req.Owner),
-		zfield.Eid(req.EntityId), zfield.Value(req.Expressions))
+	log.L().Debug("append expression", logf.Owner(req.Owner),
+		logf.Eid(req.EntityId), logf.Value(req.Expressions))
 
 	// append expressions.
 	expressions := make([]repository.Expression, len(req.Expressions.Expressions))
@@ -39,7 +38,7 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 
 	if err = s.apiManager.AppendExpression(ctx, expressions); nil != err {
 		log.L().Error("append expressions",
-			zfield.Eid(req.EntityId), zfield.Owner(req.Owner), zap.Error(err))
+			logf.Eid(req.EntityId), logf.Owner(req.Owner), logf.Error(err))
 	}
 
 	return &pb.AppendExpressionResp{
@@ -51,7 +50,7 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 
 func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpressionReq) (out *pb.RemoveExpressionResp, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(req.EntityId))
+		log.L().Warn("service not ready", logf.Eid(req.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -61,8 +60,8 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 		Source: req.Source}
 	parseHeaderFrom(ctx, &en)
 
-	log.L().Debug("remove expression", zfield.Owner(en.Owner),
-		zfield.Eid(en.ID), zfield.Path(req.Paths))
+	log.L().Debug("remove expression", logf.Owner(en.Owner),
+		logf.Eid(en.ID), logf.Path(req.Paths))
 
 	paths := []string{}
 	if pathText := strings.TrimSpace(req.Paths); len(pathText) > 0 {
@@ -81,7 +80,7 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 
 	if err = s.apiManager.RemoveExpression(ctx, exprs); nil != err {
 		log.L().Error("remove expressions",
-			zfield.Owner(en.Owner), zfield.Eid(en.ID), zfield.Path(req.Paths))
+			logf.Owner(en.Owner), logf.Eid(en.ID), logf.Path(req.Paths))
 		return nil, errors.Wrap(err, "remove expressions")
 	}
 
@@ -94,7 +93,7 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 
 func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionReq) (out *pb.GetExpressionResp, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.EntityId))
+		log.L().Warn("service not ready", logf.Eid(in.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -111,8 +110,8 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 			Owner:    en.Owner,
 			EntityID: en.ID,
 		}); nil != err {
-		log.L().Error("get expression", zap.Error(err),
-			zfield.Eid(in.EntityId), zfield.Owner(en.Owner), zfield.Path(in.Path))
+		log.L().Error("get expression", logf.Error(err),
+			logf.Eid(in.EntityId), logf.Owner(en.Owner), logf.Path(in.Path))
 		return nil, errors.Wrap(err, "get expression")
 	}
 
@@ -125,7 +124,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 
 func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressionReq) (out *pb.ListExpressionResp, err error) {
 	if !s.inited.Load() {
-		log.L().Warn("service not ready", zfield.Eid(in.EntityId))
+		log.L().Warn("service not ready", logf.Eid(in.EntityId))
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
@@ -141,8 +140,8 @@ func (s *EntityService) ListExpression(ctx context.Context, in *pb.ListExpressio
 			ID:    en.ID,
 			Owner: en.Owner,
 		}); nil != err {
-		log.L().Error("list expressions", zap.Error(err),
-			zfield.Eid(en.ID), zfield.Owner(en.Owner))
+		log.L().Error("list expressions", logf.Error(err),
+			logf.Eid(en.ID), logf.Owner(en.Owner))
 		return nil, errors.Wrap(err, "list expressions")
 	}
 

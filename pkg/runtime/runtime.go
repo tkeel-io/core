@@ -14,7 +14,7 @@ import (
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	zfield "github.com/tkeel-io/core/pkg/logger"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -24,7 +24,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"go.uber.org/zap"
 )
 
 const (
@@ -86,8 +85,8 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	var err error
 	var ev v1.ProtoEvent
 	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
-		log.L().Error("decode Event", zap.Error(err),
-			zfield.Message(string(msg.Value)), zfield.RID(r.id))
+		log.L().Error("decode Event", logf.Error(err),
+			logf.Message(string(msg.Value)), logf.RID(r.id))
 		return
 	}
 
@@ -95,8 +94,8 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 }
 
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
-	log.L().Debug("handle event", zfield.RID(r.id),
-		zfield.Event(event), zfield.EvID(event.ID()))
+	log.L().Debug("handle event", logf.RID(r.id),
+		logf.Event(event), logf.EvID(event.ID()))
 
 	execer, feed := r.PrepareEvent(ctx, event)
 	feed = execer.Exec(ctx, feed)
@@ -104,16 +103,16 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 	// call callback once.
 	r.handleCallback(ctx, feed)
 	if nil != feed.Err {
-		log.Error("handle event", zap.Error(feed.Err),
-			zfield.ID(event.ID()), zfield.Eid(event.Entity()), zfield.Event(event))
+		log.Error("handle event", logf.Error(feed.Err),
+			logf.ID(event.ID()), logf.Eid(event.Entity()), logf.Event(event))
 	}
 
 	return nil
 }
 
 func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
-	log.L().Info("prepare event", zfield.RID(r.id),
-		zfield.ID(ev.ID()), zfield.Eid(ev.Entity()))
+	log.L().Info("prepare event", logf.RID(r.id),
+		logf.ID(ev.ID()), logf.Eid(ev.Entity()))
 
 	switch ev.Type() {
 	case v1.ETSystem:
@@ -125,8 +124,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		e, _ := ev.(v1.PatchEvent)
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
-			log.L().Error("load entity", zfield.Eid(ev.Entity()),
-				zap.Error(err), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+			log.L().Error("load entity", logf.Eid(ev.Entity()),
+				logf.Error(err), logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 			state = DefaultEntity(ev.Entity())
 		}
 
@@ -153,8 +152,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		// load cache.
 		state, err := r.enCache.Load(ctx, sender)
 		if nil != err {
-			log.L().Error("load cache entity", zfield.Header(ev.Attributes()),
-				zfield.Eid(ev.Entity()), zfield.ID(ev.ID()), zfield.Sender(sender))
+			log.L().Error("load cache entity", logf.Header(ev.Attributes()),
+				logf.Eid(ev.Entity()), logf.ID(ev.ID()), logf.Sender(sender))
 			state = DefaultEntity(sender)
 		}
 
@@ -187,7 +186,7 @@ func (r *Runtime) loadTemplate(tid string) (tdtl.Node, error) {
 
 	ten, err := r.LoadEntity(tid)
 	if nil != err {
-		log.L().Error("load template", zap.Error(err), zfield.Eid(tid))
+		log.L().Error("load template", logf.Error(err), logf.Eid(tid))
 		return nil, errors.Wrap(err, "load template")
 	}
 
@@ -196,14 +195,14 @@ func (r *Runtime) loadTemplate(tid string) (tdtl.Node, error) {
 
 // 处理实体生命周期.
 func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Execer, *Feed) {
-	log.L().Info("prepare system event", zfield.ID(event.ID()), zfield.Header(event.Attributes()))
+	log.L().Info("prepare system event", logf.ID(event.ID()), logf.Header(event.Attributes()))
 	ev, _ := event.(v1.SystemEvent)
 	action := ev.Action()
 	operator := action.Operator
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
-		log.L().Info("create entity", zfield.Eid(ev.Entity()),
-			zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+		log.L().Info("create entity", logf.Eid(ev.Entity()),
+			logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 
 		execer := &Execer{
 			state:    DefaultEntity(ev.Entity()),
@@ -214,8 +213,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 				&handlerImpl{fn: r.handleSubscribe},  //
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-					log.L().Info("create entity successed", zfield.Eid(ev.Entity()),
-						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()), zfield.Value(string(action.Data)))
+					log.L().Info("create entity successed", logf.Eid(ev.Entity()),
+						logf.ID(ev.ID()), logf.Header(ev.Attributes()), logf.Value(string(action.Data)))
 					return feed
 				}},
 			}}
@@ -231,8 +230,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 		// new entity.
 		state, err := NewEntity(ev.Entity(), action.GetData())
 		if nil != err {
-			log.L().Error("create entity", zfield.Eid(ev.Entity()),
-				zfield.Value(string(action.GetData())), zap.Error(err))
+			log.L().Error("create entity", logf.Eid(ev.Entity()),
+				logf.Value(string(action.GetData())), logf.Error(err))
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
@@ -242,8 +241,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 		var scheme tdtl.Node
 		templateID := state.Get(FieldTemplate).String()
 		if scheme, err = r.loadTemplate(templateID); nil != err {
-			log.L().Error("load template", zap.Error(err),
-				zfield.Eid(ev.Entity()), zfield.Template(templateID))
+			log.L().Error("load template", logf.Error(err),
+				logf.Eid(ev.Entity()), logf.Template(templateID))
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
@@ -281,8 +280,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 						State:    state.Raw(),
 						EntityID: ev.Entity()}
 			}
-			log.L().Error("delete entity", zfield.Eid(ev.Entity()),
-				zfield.Value(string(action.GetData())), zap.Error(err))
+			log.L().Error("delete entity", logf.Eid(ev.Entity()),
+				logf.Value(string(action.GetData())), logf.Error(err))
 		}
 
 		execer := &Execer{
@@ -291,8 +290,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			preFuncs: []Handler{
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
 					if innerErr := r.entityResourcer.RemoveHandler(ctx, state); nil != innerErr {
-						log.L().Error("delete entity failure", zfield.Eid(ev.Entity()),
-							zap.Error(innerErr), zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+						log.L().Error("delete entity failure", logf.Eid(ev.Entity()),
+							logf.Error(innerErr), logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 						feed.Err = innerErr
 						return feed
 					}
@@ -305,8 +304,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-					log.L().Info("delete entity successed", zfield.Eid(ev.Entity()),
-						zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+					log.L().Info("delete entity successed", logf.Eid(ev.Entity()),
+						logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 					return feed
 				}}},
 		}
@@ -323,8 +322,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 				execFunc: DefaultEntity(ev.Entity()),
 				postFuncs: []Handler{
 					&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
-						log.L().Error("event type not support", zfield.Eid(ev.Entity()),
-							zfield.ID(ev.ID()), zfield.Header(ev.Attributes()))
+						log.L().Error("event type not support", logf.Eid(ev.Entity()),
+							logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 						return feed
 					}}}}, &Feed{
 				Event:    ev,
@@ -334,7 +333,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 }
 
 func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle computed", zfield.Eid(feed.EntityID))
+	log.L().Debug("handle computed", logf.Eid(feed.EntityID))
 	// 1. 检查 ret.path 和 订阅列表.
 	entityID := feed.EntityID
 	expressions := make(map[string]ExpressionInfo)
@@ -358,18 +357,18 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 		}
 
 		log.L().Debug("eval expression",
-			zfield.Eid(entityID), zfield.Mid(id),
-			zfield.Expr(expr.Expression.Expression))
+			logf.Eid(entityID), logf.Mid(id),
+			logf.Expr(expr.Expression.Expression))
 		result, err := r.evalExpression(ctx, expr.Expression)
 		if nil != err {
 			log.L().Error("eval expression",
-				zfield.Eid(entityID), zfield.Mid(id),
-				zfield.Expr(expr.Expression.Expression))
+				logf.Eid(entityID), logf.Mid(id),
+				logf.Expr(expr.Expression.Expression))
 			continue
 		} else if nil == result {
 			log.L().Warn("eval expression, empty result.",
-				zfield.Eid(entityID), zfield.Mid(id),
-				zfield.Expr(expr.Expression.Expression))
+				logf.Eid(entityID), logf.Mid(id),
+				logf.Expr(expr.Expression.Expression))
 			continue
 		}
 
@@ -409,8 +408,8 @@ func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression
 	)
 
 	if exprInfo, has = r.getExpr(expr.ID); !has {
-		log.L().Error("expression not exsists", zfield.ID(expr.ID),
-			zfield.Eid(expr.EntityID), zfield.Expr(expr.Expression))
+		log.L().Error("expression not exsists", logf.ID(expr.ID),
+			logf.Eid(expr.EntityID), logf.Expr(expr.Expression))
 		return nil, xerrors.ErrExpressionNotFound
 	}
 
@@ -434,32 +433,32 @@ func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression
 	// ignore empty input.
 	if len(in) == 0 {
 		log.L().Warn("ignore empty input",
-			zfield.ID(expr.ID), zfield.Expr(expr.Expression))
+			logf.ID(expr.ID), logf.Expr(expr.Expression))
 		return nil, nil
 	}
 
 	exprIns, err := expression.NewExpr(exprInfo.Expression.Expression, nil)
 	if nil != err {
 		log.L().Error("parse expression",
-			zfield.Eid(expr.EntityID), zap.Error(err))
+			logf.Eid(expr.EntityID), logf.Error(err))
 		return nil, errors.Wrap(err, "parse expression")
 	}
 
 	// eval expression.
 	var out tdtl.Node
 	if out, err = exprIns.Eval(ctx, in); nil != err {
-		log.L().Error("eval expression", zfield.Input(in),
-			zfield.ID(expr.ID), zfield.Eid(expr.EntityID), zfield.Output(out.String()))
+		log.L().Error("eval expression", logf.Input(in),
+			logf.ID(expr.ID), logf.Eid(expr.EntityID), logf.Output(out.String()))
 		return nil, errors.Wrap(err, "eval expression")
 	}
 
-	log.L().Debug("eval expression", zfield.ID(expr.ID),
-		zfield.Eid(expr.EntityID), zfield.Input(in), zfield.Output(out))
+	log.L().Debug("eval expression", logf.ID(expr.ID),
+		logf.Eid(expr.EntityID), logf.Input(in), logf.Output(out))
 
 	// clean nil feed.
 	if out.Type() == tdtl.Null || out.Type() == tdtl.Undefined {
-		log.L().Warn("invalid eval result", zfield.Eid(expr.EntityID),
-			zap.Any("value", out.String()), zfield.ID(expr.ID), zfield.Expr(expr.Expression))
+		log.L().Warn("invalid eval result", logf.Eid(expr.EntityID),
+			logf.Any("value", out.String()), logf.ID(expr.ID), logf.Expr(expr.Expression))
 		return nil, xerrors.ErrInvalidParam
 	}
 
@@ -480,8 +479,8 @@ func whichPrefix(targetPath, changePath string) string {
 }
 
 func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle tentacle", zfield.Eid(feed.EntityID),
-		zap.Any("changes", feed.Changes), zap.String("state", string(feed.State)))
+	log.L().Debug("handle tentacle", logf.Eid(feed.EntityID),
+		logf.Any("changes", feed.Changes), logf.String("state", string(feed.State)))
 
 	// 1. 检查 ret.path 和 订阅列表.
 	targets := make(map[string]string)
@@ -493,8 +492,8 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 			subEnd, _ := node.(*SubEndpoint)
 			subPath := mergePath(subEnd.path, change.Path)
 			targets[subEnd.deliveryID] = whichPrefix(targets[subEnd.deliveryID], subPath)
-			log.L().Debug("expression sub matched", zfield.Eid(entityID), zfield.Path(change.Path),
-				zfield.Target(subEnd.target), zfield.Path(subEnd.path), zfield.ID(subEnd.deliveryID), zfield.Expr(subEnd.Expression()))
+			log.L().Debug("expression sub matched", logf.Eid(entityID), logf.Path(change.Path),
+				logf.Target(subEnd.target), logf.Path(subEnd.path), logf.ID(subEnd.deliveryID), logf.Expr(subEnd.Expression()))
 		}
 
 		// TODO: 提到for外存在优化空间.
@@ -524,8 +523,8 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	// 2. dispatch.send()
 	for runtimeID, sendData := range patches {
 		eventID := util.IG().EvID()
-		log.L().Debug("republish event", zfield.ID(r.id), zfield.RID(r.id),
-			zfield.EvID(eventID), zfield.Target(runtimeID), zfield.Value(sendData))
+		log.L().Debug("republish event", logf.ID(r.id), logf.RID(r.id),
+			logf.EvID(eventID), logf.Target(runtimeID), logf.Value(sendData))
 
 		// dispatch cache event.
 		r.dispatcher.Dispatch(ctx, &v1.ProtoEvent{
@@ -549,8 +548,8 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	var err error
 	event := feed.Event
-	log.L().Debug("handle event callback.", zfield.ID(event.ID()),
-		zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+	log.L().Debug("handle event callback.", logf.ID(event.ID()),
+		logf.Eid(event.Entity()), logf.Header(event.Attributes()))
 
 	if event.CallbackAddr() != "" {
 		if feed.Err == nil {
@@ -583,15 +582,15 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 	}
 
 	if nil != err {
-		log.L().Error("handle event, callback.", zfield.ID(event.ID()),
-			zap.Error(err), zfield.Eid(event.Entity()), zfield.Header(event.Attributes()))
+		log.L().Error("handle event, callback.", logf.ID(event.ID()),
+			logf.Error(err), logf.Eid(event.Entity()), logf.Header(event.Attributes()))
 	}
 
 	return errors.Wrap(err, "handle callback")
 }
 
 func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle persistent", zfield.Eid(feed.EntityID))
+	log.L().Debug("handle persistent", logf.Eid(feed.EntityID))
 	en, ok := r.entities[feed.EntityID]
 	if !ok {
 		// entity has been deleted.
@@ -602,11 +601,11 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle template", zfield.Eid(feed.EntityID))
+	log.L().Debug("handle template", logf.Eid(feed.EntityID))
 	for index := range feed.Changes {
 		if FieldTemplate == feed.Changes[index].Path {
-			log.Info("entity template changed", zfield.Eid(feed.EntityID),
-				zfield.Template(feed.Changes[index].Value.String()))
+			log.Info("entity template changed", logf.Eid(feed.EntityID),
+				logf.Template(feed.Changes[index].Value.String()))
 			feed.Err = r.onTemplateChanged(ctx,
 				feed.EntityID, feed.Changes[index].Value.String())
 			break
@@ -616,12 +615,12 @@ func (r *Runtime) handleTemplate(ctx context.Context, feed *Feed) *Feed {
 }
 
 func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID string) error {
-	log.L().Debug("entity template changed", zfield.Eid(entityID), zfield.Template(templateID))
+	log.L().Debug("entity template changed", logf.Eid(entityID), logf.Template(templateID))
 	// load template entity.
 	templateIns, err := r.LoadEntity(templateID)
 	if nil != err {
-		log.L().Error("onTemplateChanged", zap.Error(err),
-			zfield.Eid(entityID), zfield.Template(templateID))
+		log.L().Error("onTemplateChanged", logf.Error(err),
+			logf.Eid(entityID), logf.Template(templateID))
 		return errors.Wrap(err, "On Template Changed")
 	}
 
@@ -702,12 +701,12 @@ dataType2:
 		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
 		return
 	}
-	log.Error("ts data adjust error", zap.Error(err))
+	log.Error("ts data adjust error", logf.Error(err))
 	return dataAdjust
 }
 
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
-	log.L().Debug("handle RawData", zfield.Eid(feed.EntityID))
+	log.L().Debug("handle RawData", logf.Eid(feed.EntityID))
 
 	// match properties.rawData.
 	for _, patch := range feed.Patches {
@@ -722,18 +721,18 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			values := patch.Value.Get("values").String()
 			bytes, err := base64.StdEncoding.DecodeString(values)
 			if nil != err {
-				log.L().Warn("attempt extract RawData", zfield.Eid(feed.EntityID),
-					zfield.Reason(err.Error()), zfield.Value(patch.Value.String()))
+				log.L().Warn("attempt extract RawData", logf.Eid(feed.EntityID),
+					logf.Reason(err.Error()), logf.Value(patch.Value.String()))
 				return feed
 			}
 
-			log.L().Debug("extract RawData successful", zfield.Eid(feed.EntityID),
-				zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+			log.L().Debug("extract RawData successful", logf.Eid(feed.EntityID),
+				logf.Any("raw", patch.Value.String()), logf.String("value", string(bytes)))
 
 
 			if !json.Valid(bytes){
-				log.L().Debug("RawData Json Valid Fail", zfield.Eid(feed.EntityID),
-					zap.Any("raw", patch.Value.String()), zap.String("value", string(bytes)))
+				log.L().Debug("RawData Json Valid Fail", logf.Eid(feed.EntityID),
+					logf.Any("raw", patch.Value.String()), logf.String("value", string(bytes)))
 				continue
 			}
 
@@ -756,8 +755,8 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 
 func (r *Runtime) AppendExpression(exprInfo ExpressionInfo) {
 	log.L().Debug("append expression into runtime",
-		zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
-		zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
+		logf.ID(exprInfo.ID), logf.Eid(exprInfo.EntityID),
+		logf.Owner(exprInfo.Owner), logf.Expr(exprInfo.Expression.Expression))
 
 	// remove expression if exists.
 	if exprOld, exists := r.getExpr(exprInfo.ID); exists {
@@ -791,8 +790,8 @@ func (r *Runtime) RemoveExpression(exprID string) {
 	// remove expression if exists.
 	if exprInfo, exists := r.getExpr(exprID); exists {
 		log.L().Debug("remove expression from runtime",
-			zfield.ID(exprInfo.ID), zfield.Eid(exprInfo.EntityID),
-			zfield.Owner(exprInfo.Owner), zfield.Expr(exprInfo.Expression.Expression))
+			logf.ID(exprInfo.ID), logf.Eid(exprInfo.EntityID),
+			logf.Owner(exprInfo.Owner), logf.Expr(exprInfo.Expression.Expression))
 
 		// remove sub-endpoint from sub-tree.
 		for _, item := range exprInfo.subEndpoints {
@@ -811,8 +810,8 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 		return
 	}
 
-	log.L().Info("initialize expression", zfield.ID(r.id),
-		zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Value(expr.Expression))
+	log.L().Info("initialize expression", logf.ID(r.id),
+		logf.Eid(expr.EntityID), logf.ID(expr.ID), logf.Value(expr.Expression))
 
 	if len(expr.evalEndpoints) > 0 {
 		// TODO: 解决 Cache 消息 先于 mapper 初始化, 需要深入思考原因.
@@ -820,18 +819,18 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 		result, err := r.evalExpression(ctx, expr.Expression)
 		if nil != err {
 			log.L().Error("eval expression",
-				zfield.Eid(expr.EntityID), zfield.ID(expr.ID),
-				zfield.Expr(expr.Expression.Expression))
+				logf.Eid(expr.EntityID), logf.ID(expr.ID),
+				logf.Expr(expr.Expression.Expression))
 			return
 		} else if nil == result {
 			log.L().Warn("eval expression, empty result.",
-				zfield.Eid(expr.EntityID), zfield.ID(expr.ID),
-				zfield.Expr(expr.Expression.Expression))
+				logf.Eid(expr.EntityID), logf.ID(expr.ID),
+				logf.Expr(expr.Expression.Expression))
 			return
 		}
 
-		log.L().Debug("eval expression", zfield.Expr(expr.Expression.Expression),
-			zfield.Eid(expr.EntityID), zfield.ID(expr.ID), zfield.Owner(expr.Owner))
+		log.L().Debug("eval expression", logf.Expr(expr.Expression.Expression),
+			logf.Eid(expr.EntityID), logf.ID(expr.ID), logf.Owner(expr.Owner))
 
 		patches = append(
 			patches,
@@ -862,7 +861,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			var state Entity
 			item := mapper.NewWatchKey(subEnd.path)
 			if state, err = r.LoadEntity(item.EntityID); nil != err {
-				log.L().Warn("load entity", zap.Error(err), zfield.Eid(item.EntityID))
+				log.L().Warn("load entity", logf.Error(err), logf.Eid(item.EntityID))
 				continue
 			}
 
@@ -875,7 +874,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			}
 
 			if val = state.Get(path); nil != val.Error() {
-				log.L().Warn("get entity property", zap.Error(val.Error()), zfield.Eid(item.EntityID))
+				log.L().Warn("get entity property", logf.Error(val.Error()), logf.Eid(item.EntityID))
 				continue
 			}
 
@@ -918,7 +917,7 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	jsonData, err := r.repository.GetEntity(context.TODO(), id)
 	if nil != err {
 		log.L().Warn("load entity from state storage",
-			zfield.Eid(id), zfield.Reason(err.Error()))
+			logf.Eid(id), logf.Reason(err.Error()))
 		return nil, errors.Wrap(err, "load entity")
 	}
 
@@ -926,7 +925,7 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 	en, err := NewEntity(id, jsonData)
 	if nil != err {
 		log.L().Warn("create entity instance",
-			zfield.Eid(id), zfield.Reason(err.Error()))
+			logf.Eid(id), logf.Reason(err.Error()))
 		return nil, errors.Wrap(err, "create entity instance")
 	}
 

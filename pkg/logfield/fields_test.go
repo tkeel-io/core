@@ -1,4 +1,4 @@
-package logger
+package logf
 
 import (
 	"testing"
