@@ -271,35 +271,6 @@ func (n *Node) watchMetadata() {
 		})
 }
 
-func (n *Node) getGlobalData(en Entity) (res []byte) {
-	globalData := collectjs.ByteNew([]byte(`{}`))
-	globalData.Set(FieldID, en.Get(FieldID).Raw())
-	globalData.Set(FieldType, en.Get(FieldType).Raw())
-	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
-	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
-	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
-
-	byt,err := json.Marshal(string(en.Raw()))
-	if err!=nil{
-		log.L().Error("json marshal error")
-	}
-	globalData.Set(FieldEntitySource, byt)
-
-	sysField := en.GetProp("sysField")
-	if sysField.Type() != tdtl.Null {
-		globalData.Set("sysField", sysField.Raw())
-	}
-	basicInfo := en.GetProp("basicInfo")
-	if basicInfo.Type() != tdtl.Null {
-		globalData.Set("basicInfo", basicInfo.Raw())
-	}
-	connectInfo := en.GetProp("connectInfo")
-	if connectInfo.Type() != tdtl.Null {
-		globalData.Set("connectInfo", connectInfo.Raw())
-	}
-	return globalData.GetRaw()
-}
-
 func parseExpression(expr repository.Expression, version int) (map[string]*ExpressionInfo, error) {
 	exprIns, err := expression.NewExpr(expr.Expression, nil)
 	if nil != err {

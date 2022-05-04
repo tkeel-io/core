@@ -19,6 +19,8 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/tdtl"
 	"strconv"
 	"time"
 
@@ -39,9 +41,12 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 		return errors.Wrap(err, "flush entity into state storage")
 	}
 
-	// 2. flush search engine data.
+	// 2. flush data.
 	// 2.1 flush search global data.
-	globalData := n.getGlobalData(en)
+	globalData, err := n.makeSearchData(en)
+	if nil != err {
+		log.L().Error("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
+	}
 	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
 		log.L().Error("flush entity search engine", logf.Error(err), logf.Eid(en.ID()))
 		//			return errors.Wrap(err, "flush entity into search engine")
@@ -50,19 +55,29 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// 2.2 flush search model data.
 	// TODO.
 
-	// 3. flush timeseries data.
-	if err := n.flushTimeSeries(ctx, en); nil != err {
+	// 2.3 flush timeseries data.
+	flushData, err := n.makeTimeSeries(ctx, en)
+	if nil != err {
+		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
+	}
+	if _, err := n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 		log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
+		//			return errors.Wrap(err, "flush entity into search engine")
 	}
 
-	// 4. flush raw data.
-	if err := n.flushRawData(ctx, en); nil != err {
+	// 2.4 flush raw data.
+	rawData, err := n.makeRawData(ctx, en)
+	if nil != err {
+		log.L().Error("make RawData error", logf.Error(err), logf.Eid(en.ID()))
+	}
+	if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
 		log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
 	}
+
 	return nil
 }
 
-func (n *Node) flushRawData(ctx context.Context, en Entity) (err error) {
+func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.RawDataRequest, error) {
 	req := &rawdata.RawDataRequest{}
 	req.Metadata = make(map[string]string)
 	raw := en.GetProp("rawData")
@@ -74,7 +89,7 @@ func (n *Node) flushRawData(ctx context.Context, en Entity) (err error) {
 	tsStr := en.GetProp("rawData.ts").String()
 	ts, err := strconv.ParseInt(tsStr, 10, 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Data = append(req.Data, &rawdata.RawData{
 		EntityID:  en.ID(),
@@ -82,20 +97,19 @@ func (n *Node) flushRawData(ctx context.Context, en Entity) (err error) {
 		Values:    string(raw.Raw()),
 		Timestamp: time.UnixMilli(ts),
 	})
-	n.resourceManager.RawData().Write(context.Background(), req)
-	return nil
+	return req, nil
 }
 
-func (n *Node) flushTimeSeries(ctx context.Context, en Entity) (err error) {
+func (n *Node) makeTimeSeries(ctx context.Context, en Entity) (*tseries.TSeriesRequest, error) {
 	tsData := en.GetProp("telemetry")
 	var flushData []*tseries.TSeriesData
 	log.Info("tsData: ", tsData)
 	var res interface{}
 
-	err = json.Unmarshal(tsData.Raw(), &res)
+	err := json.Unmarshal(tsData.Raw(), &res)
 	if nil != err {
 		log.L().Warn("parse json type", logf.Error(err))
-		return
+		return nil, errors.Wrap(err, "write ts db error")
 	}
 	tss, ok := res.(map[string]interface{})
 	if ok {
@@ -128,11 +142,39 @@ func (n *Node) flushTimeSeries(ctx context.Context, en Entity) (err error) {
 			}
 		}
 	}
-	_, err = n.resourceManager.TSDB().Write(ctx, &tseries.TSeriesRequest{
+	return &tseries.TSeriesRequest{
 		Data:     flushData,
 		Metadata: map[string]string{},
-	})
-	return errors.Wrap(err, "write ts db error")
+	}, errors.Wrap(err, "write ts db error")
+}
+
+func (n *Node) makeSearchData(en Entity) ([]byte, error) {
+	globalData := collectjs.ByteNew([]byte(`{}`))
+	globalData.Set(FieldID, en.Get(FieldID).Raw())
+	globalData.Set(FieldType, en.Get(FieldType).Raw())
+	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
+	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
+	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+
+	byt, err := json.Marshal(string(en.Raw()))
+	if err != nil {
+		log.L().Error("json marshal error")
+	}
+	globalData.Set(FieldEntitySource, byt)
+
+	sysField := en.GetProp("sysField")
+	if sysField.Type() != tdtl.Null {
+		globalData.Set("sysField", sysField.Raw())
+	}
+	basicInfo := en.GetProp("basicInfo")
+	if basicInfo.Type() != tdtl.Null {
+		globalData.Set("basicInfo", basicInfo.Raw())
+	}
+	connectInfo := en.GetProp("connectInfo")
+	if connectInfo.Type() != tdtl.Null {
+		globalData.Set("connectInfo", connectInfo.Raw())
+	}
+	return globalData.GetRaw(), nil
 }
 
 func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
