@@ -2,7 +2,7 @@ package store
 
 import (
 	"context"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/kit/log"

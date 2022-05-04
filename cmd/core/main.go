@@ -19,7 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"os"
 	"os/signal"
 	"strconv"

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"strings"
 	"time"
 

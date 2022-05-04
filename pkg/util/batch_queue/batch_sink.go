@@ -19,7 +19,7 @@ package batchqueue
 import (
 	"context"
 	"errors"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"sync"
 	"time"
 

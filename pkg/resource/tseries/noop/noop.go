@@ -2,7 +2,7 @@ package noop
 
 import (
 	"context"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"

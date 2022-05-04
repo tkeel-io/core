@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"encoding/base64"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"net/http"
 	"net/url"
 	"time"

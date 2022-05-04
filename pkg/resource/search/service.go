@@ -2,7 +2,7 @@ package search
 
 import (
 	"context"
-	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/logfield"
 	"net/url"
 	"strings"
 
