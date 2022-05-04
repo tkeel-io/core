@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/tkeel-io/core/pkg/runtime"
 	"net/http"
 	"strings"
 
@@ -712,19 +713,17 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
-			var entity = new(Entity)
-			entity.ID = interface2string(kv["id"])
-			entity.Source = interface2string(kv["source"])
-			entity.Owner = interface2string(kv["owner"])
-			entity.Type = interface2string(kv["type"])
-
-			var baseRet *apim.BaseRet
-			if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-				log.L().Error("get entity failed.", zfield.Eid(interface2string(kv["id"])), zap.Error(err))
+			state := interface2string(kv[runtime.FieldEntitySource])
+			entityID := interface2string(kv["id"])
+			//var entity = runtime.NewEntity(entityID, []byte(state))
+			var baseRet apim.BaseRet
+			if err = json.Unmarshal([]byte(state), &baseRet); nil != err {
+				log.L().Error("get entity, decode response",
+					zap.Error(err), zfield.Eid(entityID), zfield.Entity(state))
 				continue
 			}
 
-			entityItem, _ := s.makeResponse(baseRet)
+			entityItem, _ := s.makeResponse(&baseRet)
 			out.Items = append(out.Items, entityItem)
 		}
 	}
