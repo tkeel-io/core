@@ -21,17 +21,18 @@ import (
 
 // some persistent field enumerate.
 const (
-	FieldID          string = "id"
-	FieldType        string = "type"
-	FieldOwner       string = "owner"
-	FieldSource      string = "source"
-	FieldVersion     string = "version"
-	FieldLastTime    string = "last_time"
-	FieldTemplate    string = "template_id"
-	FieldScheme      string = "scheme"
-	FieldDescription string = "description"
-	FieldProperties  string = "properties"
-	FieldRawData     string = "properties.rawData"
+	FieldID           string = "id"
+	FieldType         string = "type"
+	FieldOwner        string = "owner"
+	FieldSource       string = "source"
+	FieldVersion      string = "version"
+	FieldLastTime     string = "last_time"
+	FieldTemplate     string = "template_id"
+	FieldScheme       string = "scheme"
+	FieldDescription  string = "description"
+	FieldProperties   string = "properties"
+	FieldRawData      string = "properties.rawData"
+	FieldEntitySource string = "entity_source"
 )
 
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
