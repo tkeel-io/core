@@ -21,7 +21,7 @@ func (t *noopTransmitter) Close() error {
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Transmitter<noop> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Transmitter<noop> successful")
 	Register(TransTypeNOOP, func() (Transmitter, error) {
 		return &noopTransmitter{}, nil
 	})

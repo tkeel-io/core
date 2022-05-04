@@ -74,7 +74,7 @@ func (d *daprStore) Del(ctx context.Context, key string) error {
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<state.dapr> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Resource<state.dapr> successful")
 	store.Register("dapr", func(properties map[string]interface{}) (store.Store, error) {
 		var daprMeta daprMetadata
 		if err := mapstructure.Decode(properties, &daprMeta); nil != err {

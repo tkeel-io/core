@@ -69,7 +69,7 @@ func (d *daprPubsub) Close() error {
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.dapr> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.dapr> successful")
 	pubsub.Register("dapr", func(id string, urlText string) (pubsub.Pubsub, error) {
 		pubsubIns, err := New(id, urlText)
 		return pubsubIns, errors.Wrap(err, "new pubsub.dapr instance")

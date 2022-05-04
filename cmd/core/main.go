@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	logf "github.com/tkeel-io/core/pkg/logger"
 	"os"
 	"os/signal"
 	"strconv"
@@ -30,7 +31,6 @@ import (
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
-	"github.com/tkeel-io/core/pkg/logger"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -131,10 +131,10 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
-	logger.InfoStatusEvent(os.Stdout, "loading configuration...")
+	log.InfoStatusEvent(os.Stdout, "loading configuration...")
 
 	config.Init(_cfgFile)
-	logger.InfoStatusEvent(os.Stdout, "configuration loaded")
+	log.InfoStatusEvent(os.Stdout, "configuration loaded")
 
 	// init gllbal placement.
 	placement.Initialize()
@@ -329,7 +329,7 @@ func loadDispatcher(ctx context.Context) error {
 	log.L().Info("load dispatcher...")
 	dispatcher := dispatch.New(ctx)
 	if err := dispatcher.Start(ctx, config.Get().Dispatcher); nil != err {
-		log.L().Error("run dispatcher", zap.Error(err), logger.ID(config.Get().Dispatcher.ID))
+		log.L().Error("run dispatcher", zap.Error(err), logf.ID(config.Get().Dispatcher.ID))
 		return errors.Wrap(err, "start dispatcher")
 	}
 

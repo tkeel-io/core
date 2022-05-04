@@ -190,7 +190,7 @@ func (consumer *kafkaConsumer) Setup(sarama.ConsumerGroupSession) error {
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.kafka> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Resource<pubsub.kafka> successful")
 	pubsub.Register("kafka", func(id string, urlText string) (pubsub.Pubsub, error) {
 		log.L().Info("create pubsub.kafka instance", zfield.ID(id), zfield.URL(urlText))
 

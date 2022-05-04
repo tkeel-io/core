@@ -109,7 +109,7 @@ func (tm *httpTransmitter) Close() error {
 }
 
 func init() {
-	zfield.SuccessStatusEvent(os.Stdout, "Register Transmitter<http> successful")
+	log.SuccessStatusEvent(os.Stdout, "Register Transmitter<http> successful")
 	Register(TransTypeHTTP, func() (Transmitter, error) {
 		return &httpTransmitter{}, nil
 	})
