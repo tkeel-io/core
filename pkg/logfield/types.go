@@ -29,6 +29,7 @@ var (
 	Int           = zap.Int
 	Int32         = zap.Int32
 	Int64         = zap.Int64
+	Uint64        = zap.Uint64
 	Bool          = zap.Bool
 	ByteString    = zap.ByteString
 	Time          = zap.Time
