@@ -19,14 +19,15 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"github.com/tkeel-io/collectjs"
-	"github.com/tkeel-io/tdtl"
 	"strconv"
 	"time"
 
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/tdtl"
+
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
@@ -46,10 +47,11 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	globalData, err := n.makeSearchData(en)
 	if nil != err {
 		log.L().Error("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
-	}
-	if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
-		log.L().Error("flush entity search engine", logf.Error(err), logf.Eid(en.ID()))
-		//			return errors.Wrap(err, "flush entity into search engine")
+	} else {
+		if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
+			log.L().Error("flush entity search engine", logf.Error(err), logf.Eid(en.ID()))
+			//			return errors.Wrap(err, "flush entity into search engine")
+		}
 	}
 
 	// 2.2 flush search model data.
@@ -59,19 +61,21 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	flushData, err := n.makeTimeSeriesData(ctx, en)
 	if nil != err {
 		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
-	}
-	if _, err := n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
-		log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
-		//			return errors.Wrap(err, "flush entity into search engine")
+	} else {
+		if _, err := n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
+			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
+			//			return errors.Wrap(err, "flush entity into search engine")
+		}
 	}
 
 	// 2.4 flush raw data.
 	rawData, err := n.makeRawData(ctx, en)
 	if nil != err {
 		log.L().Error("make RawData error", logf.Error(err), logf.Eid(en.ID()))
-	}
-	if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
-		log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
+	} else {
+		if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
+			log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
+		}
 	}
 
 	return nil
