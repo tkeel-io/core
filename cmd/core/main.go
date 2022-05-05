@@ -130,6 +130,8 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
+	fmt.Fprintf(os.Stdout, "%s\n", cmd.VersionTemplate())
+
 	log.InfoStatusEvent(os.Stdout, "loading configuration...")
 
 	config.Init(_cfgFile)
