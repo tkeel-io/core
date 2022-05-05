@@ -724,11 +724,10 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 				entity.Owner = interface2string(kv["owner"])
 				entity.Type = interface2string(kv["type"])
 				if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
-					log.L().Error("get entity failed.", logf.Eid(interface2string(kv["id"])), zap.Error(err))
+					log.L().Error("reload entity failed.", logf.Eid(interface2string(kv["id"])), zap.Error(err))
 					continue
 				}
-				entityItem, _ := s.makeResponse(baseRet)
-				out.Items = append(out.Items, entityItem)
+				log.L().Warn("reload entity OK", logf.Eid(interface2string(kv["id"])), zap.Error(err))
 			}else{
 				//var entity = runtime.NewEntity(entityID, []byte(state))
 				if err = json.Unmarshal([]byte(state), baseRet); nil != err {
@@ -737,7 +736,6 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 					continue
 				}
 			}
-
 
 			entityItem, _ := s.makeResponse(baseRet)
 			out.Items = append(out.Items, entityItem)
