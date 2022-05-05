@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"fmt"
 	"github.com/tkeel-io/core/pkg/logfield"
 	"net/url"
 	"strings"
@@ -18,6 +19,7 @@ import (
 var GlobalService *Service
 
 func Init(urlText string) error {
+	log.L().Info(fmt.Sprintf("load search...%s", urlText))
 	// pasre configuration.
 	meta, err := parseConfig(urlText)
 	if nil != err {
