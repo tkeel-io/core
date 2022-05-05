@@ -6,6 +6,7 @@ import (
 	"github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 )
 
 type SubscriptionMode string
@@ -24,7 +25,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle external subscribe", logf.Eid(feed.EntityID), logf.Event(feed.Event))
 
 	entityID := feed.EntityID
-	state := feed.State
+	state := makeSubData(feed)
 	if subs, ok := r.entitySubscriptions[entityID]; ok {
 		for _, sub := range subs {
 			ctOpts := daprSDK.PublishEventWithContentType("application/json")
@@ -37,4 +38,14 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 		}
 	}
 	return feed
+}
+
+func makeSubData(feed *Feed) []byte {
+	ret := tdtl.New(`{}`)
+	cc := tdtl.New(feed.State)
+	for _, change := range feed.Changes {
+		path := change.Path
+		ret.Set(path, cc.Get(path))
+	}
+	return ret.Raw()
 }
