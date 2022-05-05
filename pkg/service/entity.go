@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tkeel-io/core/pkg/runtime"
+	"go.uber.org/zap"
 	"net/http"
 	"strings"
 
@@ -714,15 +715,31 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 		case map[string]interface{}:
 			state := interface2string(kv[runtime.FieldEntitySource])
 			entityID := interface2string(kv["id"])
-			//var entity = runtime.NewEntity(entityID, []byte(state))
-			var baseRet apim.BaseRet
-			if err = json.Unmarshal([]byte(state), &baseRet); nil != err {
-				log.L().Error("get entity, decode response",
-					logf.Error(err), logf.Eid(entityID), logf.Entity(state))
-				continue
+
+			var baseRet = &apim.BaseRet{}
+			if state == ""{
+				var entity = new(Entity)
+				entity.ID = interface2string(kv["id"])
+				entity.Source = interface2string(kv["source"])
+				entity.Owner = interface2string(kv["owner"])
+				entity.Type = interface2string(kv["type"])
+				if baseRet, err = s.apiManager.GetEntity(ctx, entity); nil != err {
+					log.L().Error("get entity failed.", logf.Eid(interface2string(kv["id"])), zap.Error(err))
+					continue
+				}
+				entityItem, _ := s.makeResponse(baseRet)
+				out.Items = append(out.Items, entityItem)
+			}else{
+				//var entity = runtime.NewEntity(entityID, []byte(state))
+				if err = json.Unmarshal([]byte(state), baseRet); nil != err {
+					log.L().Error("get entity, decode response",
+						logf.Error(err), logf.Eid(entityID), logf.Entity(state))
+					continue
+				}
 			}
 
-			entityItem, _ := s.makeResponse(&baseRet)
+
+			entityItem, _ := s.makeResponse(baseRet)
 			out.Items = append(out.Items, entityItem)
 		}
 	}
