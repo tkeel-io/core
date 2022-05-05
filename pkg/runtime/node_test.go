@@ -96,7 +96,7 @@ func TestNode_getGlobalData(t *testing.T) {
 		t.Log(err)
 	}
 	t.Log(en)
-	res := node.getGlobalData(en)
+	res := node.makeSearchData(en)
 	t.Log(string(res))
 
 	resMap := make(map[string]interface{})
@@ -136,7 +136,7 @@ func TestNode_flushRawData(t *testing.T) {
 		t.Log(err)
 	}
 	t.Log(en)
-	node.flushRawData(context.TODO(), en)
+	node.makeRawData(context.TODO(), en)
 }
 
 func Test_parseExpression(t *testing.T) {
