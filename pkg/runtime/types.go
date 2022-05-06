@@ -122,7 +122,8 @@ func newEvalEnd(path, target, expressionID string) EvalEndpoint {
 }
 
 func (e EvalEndpoint) ID() string {
-	return e.path + e.target
+	//return e.path + e.target
+	return e.expresionID
 }
 
 func (e EvalEndpoint) WildcardPath() string {
