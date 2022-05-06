@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"math/rand"
 	"sort"
 	"strings"
 	"time"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
@@ -132,7 +133,7 @@ func (i *Influx) WriteData(req *pb.GetTSDataRequest) {
 		data := fmt.Sprintf("keel,id=%s ", req.Id)
 		ident := make([]string, 0)
 		for _, ideidentifier := range identifiers {
-			value := float32(rand.Intn(100)) / 10.0 //nolint
+			value := float32(rand.Intn(100)) / 10.0
 			ident = append(ident, fmt.Sprintf("%s=%f", ideidentifier, value))
 		}
 		data = data + strings.Join(ident, ",") + fmt.Sprintf(" %d", (req.StartTime+(req.EndTime-req.StartTime)/int64(1000)*int64((i+1)))*1e9)

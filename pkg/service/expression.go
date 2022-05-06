@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/kit/log"

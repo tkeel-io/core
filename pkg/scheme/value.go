@@ -18,6 +18,7 @@ package scheme
 
 import (
 	"encoding/json"
+
 	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/mitchellh/mapstructure"

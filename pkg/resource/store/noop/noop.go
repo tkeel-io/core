@@ -5,7 +5,7 @@ import (
 	"os"
 
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/store"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"

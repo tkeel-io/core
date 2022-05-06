@@ -19,7 +19,6 @@ type IRepository interface {
 	RangeExpression(ctx context.Context, rev int64, handler RangeExpressionFunc)
 	WatchExpression(ctx context.Context, rev int64, handler WatchExpressionFunc)
 
-
 	PutSubscription(ctx context.Context, expr *Subscription) error
 	GetSubscription(ctx context.Context, expr *Subscription) (*Subscription, error)
 	DelSubscription(ctx context.Context, expr *Subscription) error

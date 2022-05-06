@@ -24,7 +24,7 @@ func TestClickhouse_genSql(t *testing.T) {
 		fields: []string{"a", "b", "c"},
 		args:   []interface{}{"1", "2", "3"},
 	}
-	sql := c.genSql(&row)
+	sql := c.genSQL(&row)
 	t.Log(sql)
 }
 
@@ -39,7 +39,7 @@ func TestClickhouse(t *testing.T) {
 	}
 	ck := NewClickhouse()
 	ck.Init(metadata)
-	req := rawdata.RawDataRequest{
+	req := rawdata.Request{
 		Data:     []*rawdata.RawData{},
 		Metadata: map[string]string{},
 	}
@@ -83,7 +83,5 @@ func TestClickhouse_Query(t *testing.T) {
 	//	resp, err := ck.Query(context.Background(), req)
 	if err != nil {
 		t.Log(err)
-	} else {
-		//		t.Log(resp)
 	}
 }

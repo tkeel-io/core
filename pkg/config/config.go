@@ -26,10 +26,11 @@ package config
 
 import (
 	"errors"
-	"github.com/tkeel-io/kit/log"
 	"io/fs"
 	"os"
 	"strings"
+
+	"github.com/tkeel-io/kit/log"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -65,7 +66,7 @@ type Components struct {
 	Etcd         EtcdConfig `yaml:"etcd" mapstructure:"etcd"`
 	Store        Metadata   `yaml:"store" mapstructure:"store"`
 	TimeSeries   Metadata   `yaml:"time_series" mapstructure:"time_series"`
-	RawData      Metadata   `yaml:"rawdata" mapstructure:"rawdata"`
+	Rawdata      Metadata   `yaml:"rawdata" mapstructure:"rawdata"`
 }
 
 type Pair struct {

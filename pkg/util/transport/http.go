@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"context"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/panjf2000/ants/v2"
+	logf "github.com/tkeel-io/core/pkg/logfield"
+
+	ants "github.com/panjf2000/ants/v2"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 )

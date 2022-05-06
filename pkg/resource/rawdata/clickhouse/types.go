@@ -3,7 +3,7 @@ package clickhouse
 type Option struct {
 	//Addrs     string `json:"addrs,omitempty"`
 	Urls   []string         `json:"urls"`
-	DbName string           `json:"dbName,omitempty"`
+	DbName string           `json:"dbName,omitempty"` //nolint
 	Table  string           `json:"table,omitempty"`
 	Fields map[string]Field `json:"fields,omitempty"`
 }
@@ -19,5 +19,5 @@ type execNode struct {
 }
 
 const (
-	CLICKHOUSE_SSQL_TLP = `INSERT INTO %s.%s (%s) VALUES (%s)`
+	ClickhouseSSQLTlp = `INSERT INTO %s.%s (%s) VALUES (%s)`
 )

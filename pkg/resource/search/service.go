@@ -3,9 +3,10 @@ package search
 import (
 	"context"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"net/url"
 	"strings"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"

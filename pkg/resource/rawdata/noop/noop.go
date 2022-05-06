@@ -15,7 +15,7 @@ func (n *Noop) Init(resource.Metadata) error {
 	return nil
 }
 
-func (n *Noop) Write(ctx context.Context, req *rawdata.RawDataRequest) error {
+func (n *Noop) Write(ctx context.Context, req *rawdata.Request) error {
 	return nil
 }
 
@@ -23,7 +23,7 @@ func (n *Noop) Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRaw
 	return nil, nil
 }
 
-func NewNoop() rawdata.RawDataService {
+func NewNoop() rawdata.Service {
 	return &Noop{}
 }
 

@@ -11,13 +11,13 @@ type resourceManager struct {
 	defaultSearch  *search.Service
 	defaultTSDB    tseries.TimeSerier
 	defaultRepo    repository.IRepository
-	defaultRawData rawdata.RawDataService
+	defaultRawData rawdata.Service
 }
 
 func NewResources(
 	searchClient *search.Service,
 	tseriesClient tseries.TimeSerier,
-	rawdataClient rawdata.RawDataService,
+	rawdataClient rawdata.Service,
 	repoClient repository.IRepository) ResourceManager {
 	return &resourceManager{
 		defaultRepo:    repoClient,
@@ -39,6 +39,6 @@ func (r *resourceManager) Repo() repository.IRepository {
 	return r.defaultRepo
 }
 
-func (r *resourceManager) RawData() rawdata.RawDataService {
+func (r *resourceManager) RawData() rawdata.Service {
 	return r.defaultRawData
 }

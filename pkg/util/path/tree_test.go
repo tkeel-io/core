@@ -8,11 +8,11 @@ import (
 func TestTree(t *testing.T) {
 	tr := New()
 	addNode := func(path string) {
-		path = path + ".*"
+		path += ".*"
 		tr.Add(path, &NodeMock{path: path})
 	}
 	delNode := func(path string) {
-		path = path + ".*"
+		path += ".*"
 		tr.Remove(path, &NodeMock{path: path})
 	}
 	// 需要订阅或执行的语句
@@ -58,11 +58,11 @@ func TestTree(t *testing.T) {
 func TestRefTree(t *testing.T) {
 	tr := NewRefTree()
 	addNode := func(path string) {
-		path = path + ".*"
+		path += ".*"
 		tr.Add(path, &NodeMock{path: path})
 	}
 	delNode := func(path string) {
-		path = path + ".*"
+		path += ".*"
 		tr.Remove(path, &NodeMock{path: path})
 	}
 	// 需要订阅或执行的语句

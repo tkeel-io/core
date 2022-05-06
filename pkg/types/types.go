@@ -14,7 +14,7 @@ type ResourceManager interface {
 	Search() *search.Service
 	TSDB() tseries.TimeSerier
 	Repo() repository.IRepository
-	RawData() rawdata.RawDataService
+	RawData() rawdata.Service
 }
 
 type Republisher interface {

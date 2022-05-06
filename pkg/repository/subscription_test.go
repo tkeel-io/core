@@ -18,46 +18,21 @@ package repository
 
 import (
 	"context"
-	"reflect"
 	"testing"
 )
 
-func TestNewPubSub(t *testing.T) {
-	type args struct {
-		owner  string
-		ID     string
-		name   string
-		subscription string
-		desc   string
-	}
-	tests := []struct {
-		name string
-		args args
-		want *Subscription
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSubscription(tt.args.owner, tt.args.ID, tt.args.name, tt.args.subscription, tt.args.desc); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewSubscription() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_repo_PutSubscription(t *testing.T) {
 	tests := []struct {
-		name    string
-		subscription  Subscription
-		wantErr bool
+		name         string
+		subscription Subscription
+		wantErr      bool
 	}{
-		{"1", Subscription{ID: `ups1`, Owner: `owner`, Subscription: `{a:1234}`}, false},
+		{"1", Subscription{ID: `ups1`, Owner: `owner`}, false},
 	}
 	for _, tt := range tests {
 		ctx := context.Background()
 		t.Run(tt.name, func(t *testing.T) {
-			if err := rr.PutSubscription(ctx, tt.subscription); (err != nil) != tt.wantErr {
+			if err := rr.PutSubscription(ctx, &tt.subscription); (err != nil) != tt.wantErr {
 				t.Errorf("PutSubscription() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

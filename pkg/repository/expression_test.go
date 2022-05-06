@@ -9,7 +9,7 @@ import (
 )
 
 var repoIns IRepository
-var testReady bool
+var testReady bool //nolint
 
 //func TestNewExpression(t *testing.T) {
 //	expr := NewExpression("admin", "device123", "expression001", "temp", "device234.temp", "")

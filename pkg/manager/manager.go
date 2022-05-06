@@ -29,7 +29,7 @@ import (
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/manager/holder"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
@@ -464,9 +464,7 @@ func checkExpression(expr *repository.Expression) error {
 		log.L().Error("check expression", logf.Error(err), logf.Expr(expr.Expression))
 		return errors.Wrap(xerrors.ErrInternal, "preparse expression")
 	}
-
 	return nil
-
 }
 
 // implement apis for Expression.

@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )

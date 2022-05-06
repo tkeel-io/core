@@ -36,8 +36,6 @@ var (
 	ErrEntityAreadyExisted = errors.New("entity already existed")
 )
 
-
-
 type APIManager interface {
 	// OnRespond handle message.
 	OnRespond(context.Context, *holder.Response)

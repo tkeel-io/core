@@ -18,12 +18,13 @@ package runtime
 
 import (
 	"context"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
-	"testing"
 
 	"github.com/tkeel-io/tdtl"
 )
@@ -138,8 +139,8 @@ var expr2 = `{"ID":"/core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-b
 "Description":"iotd-06a96c8d-c166-447c-afd1-63010636b362=映射3,yc1=遥测1"}`
 
 //iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf
-//- yc2 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1
-//- yc1 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1
+//- yc2 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1.
+//- yc1 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1.
 func TestRuntime_handleComputed(t *testing.T) {
 	placement.Initialize()
 	placement.Global().Append(placement.Info{

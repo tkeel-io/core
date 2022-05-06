@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	coreDao dao.IDao
+	coreDao dao.IDao //nolint
 	rr      *repo
 )
 

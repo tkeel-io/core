@@ -48,7 +48,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	if nil != err {
 		log.L().Error("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
-		if _, err := n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
+		if _, err = n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
 			log.L().Error("flush entity search engine", logf.Error(err), logf.Eid(en.ID()))
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
@@ -62,7 +62,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	if nil != err {
 		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
-		if _, err := n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
+		if _, err = n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
@@ -81,8 +81,8 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	return nil
 }
 
-func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.RawDataRequest, error) {
-	req := &rawdata.RawDataRequest{}
+func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.Request, error) {
+	req := &rawdata.Request{}
 	req.Metadata = make(map[string]string)
 	raw := en.GetProp("rawData")
 

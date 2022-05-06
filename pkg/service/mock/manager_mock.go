@@ -84,3 +84,15 @@ func (m *APIManagerMock) GetExpression(context.Context, repository.Expression) (
 func (m *APIManagerMock) ListExpression(context.Context, *apim.Base) ([]*repository.Expression, error) {
 	return nil, nil
 }
+
+func (m *APIManagerMock) CreateSubscription(context.Context, *repository.Subscription) error {
+	return nil
+}
+
+func (m *APIManagerMock) DeleteSubscription(context.Context, *repository.Subscription) error {
+	return nil
+}
+
+func (m *APIManagerMock) GetSubscription(context.Context, *repository.Subscription) (*repository.Subscription, error) {
+	return nil, nil
+}

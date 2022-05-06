@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/kit/log"
 )
 
