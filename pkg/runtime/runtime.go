@@ -14,7 +14,7 @@ import (
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -139,7 +139,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				&handlerImpl{fn: r.handleComputed},   //无变化
 				&handlerImpl{fn: r.handlePersistent}, //无变化
 				&handlerImpl{fn: r.handleSubscribe},  //
-				&handlerImpl{fn: r.handleTemplate}}} //
+				&handlerImpl{fn: r.handleTemplate}}}  //
 
 		return execer, &Feed{
 			Err:      err,
@@ -210,7 +210,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			execFunc: DefaultEntity(ev.Entity()),
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
-				&handlerImpl{fn: r.handleSubscribe},  //
+				&handlerImpl{fn: r.handleSubscribe}, //
 				&handlerImpl{fn: r.handleComputed},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.L().Info("create entity successed", logf.Eid(ev.Entity()),
@@ -729,8 +729,7 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			log.L().Debug("extract RawData successful", logf.Eid(feed.EntityID),
 				logf.Any("raw", patch.Value.String()), logf.String("value", string(bytes)))
 
-
-			if !json.Valid(bytes){
+			if !json.Valid(bytes) {
 				log.L().Debug("RawData Json Valid Fail", logf.Eid(feed.EntityID),
 					logf.Any("raw", patch.Value.String()), logf.String("value", string(bytes)))
 				continue

@@ -2,8 +2,9 @@ package logf
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"time"
+
+	"go.uber.org/zap"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
 )

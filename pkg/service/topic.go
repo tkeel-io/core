@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	pb "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/resource/pubsub/dapr"
 	xjson "github.com/tkeel-io/core/pkg/util/json"

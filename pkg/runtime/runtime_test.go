@@ -117,3 +117,9 @@ func Test_adjustTSData(t *testing.T) {
 	out = adjustTSData(in)
 	t.Log(string(out))
 }
+
+func Test_mergePath(t *testing.T) {
+	subPath := "iotd-007d04c3-78ad-48a1-961f-809df87d301d.*"
+	changePath := "properties.connectInfo._timestamp"
+	t.Log(mergePath(subPath, changePath))
+}

@@ -9,14 +9,14 @@ import (
 	"github.com/tkeel-io/core/pkg/resource"
 )
 
-var registeredRawData = make(map[string]RawDataGenerator)
+var registeredRawData = make(map[string]Generator)
 
 type RawData struct {
 	ID        string    `db:"id"`
 	EntityID  string    `db:"entity_id"`
 	Path      string    `db:"path"`
 	Values    string    `db:"values"`
-	Timestamp time.Time `db:"timestamp"` //nolint
+	Timestamp time.Time `db:"timestamp"`
 	Tag       []string  `db:"tag"`
 }
 
@@ -28,31 +28,31 @@ func (r *RawData) Bytes() []byte {
 	return []byte("")
 }
 
-type RawDataRequest struct {
+type Request struct {
 	Data     []*RawData
 	Metadata map[string]string
 }
 
-type RawDataResponse struct {
+type Response struct {
 	Data     []*RawData
 	Metadata map[string]string
 }
 
-type RawDataService interface {
+type Service interface {
 	Init(resource.Metadata) error
-	Write(ctx context.Context, req *RawDataRequest) error
+	Write(ctx context.Context, req *Request) error
 	Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, error)
 }
 
-type RawDataGenerator func() RawDataService
+type Generator func() Service
 
-func NewRawDataService(name string) RawDataService {
+func NewRawDataService(name string) Service {
 	if generator, has := registeredRawData[name]; has {
 		return generator()
 	}
 	return registeredRawData["noop"]()
 }
 
-func Register(name string, handler RawDataGenerator) {
+func Register(name string, handler Generator) {
 	registeredRawData[name] = handler
 }

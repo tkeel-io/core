@@ -2,8 +2,9 @@ package runtime
 
 import (
 	"context"
+
 	daprSDK "github.com/dapr/go-sdk/client"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"

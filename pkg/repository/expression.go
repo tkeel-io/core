@@ -126,9 +126,9 @@ func (r *repo) ListExpression(ctx context.Context, rev int64, req *ListExprReq) 
 	// construct prefix.
 	prefix := ListExpressionPrefix(req.Owner, req.EntityID)
 	ress, err := r.dao.ListResource(ctx, rev, prefix,
-		func(key,raw []byte) (dao.Resource, error) {
+		func(key, raw []byte) (dao.Resource, error) {
 			var res Expression // escape.
-			err := res.Decode(key,raw)
+			err := res.Decode(key, raw)
 			return &res, errors.Wrap(err, "decode expression")
 		})
 

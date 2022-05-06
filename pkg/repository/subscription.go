@@ -29,21 +29,20 @@ type Subscription struct {
 	// Subscription owner.
 	Owner string
 
-	Mode              string `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
-	Source            string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	Filter            string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
-	Target            string `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
-	Topic             string `protobuf:"bytes,5,opt,name=topic,proto3" json:"topic,omitempty"`
-	PubsubName        string `protobuf:"bytes,6,opt,name=pubsub_name,json=pubsubName,proto3" json:"pubsub_name,omitempty"`
-	Source2           string
+	Mode       string `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
+	Source     string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Filter     string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
+	Target     string `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`
+	Topic      string `protobuf:"bytes,5,opt,name=topic,proto3" json:"topic,omitempty"`
+	PubsubName string `protobuf:"bytes,6,opt,name=pubsub_name,json=pubsubName,proto3" json:"pubsub_name,omitempty"`
+	Source2    string
 
 	SourceEntityPaths []string
 	SourceEntityID    string
 }
 
 func NewSubscription(ID, Owner, Mode, Source, Filter, Target, Topic, PubsubName string) *Subscription {
-	return &Subscription{
-	}
+	return &Subscription{}
 }
 
 func ListSubscriptionPrefix(Owner, EntityID string) string {
@@ -74,17 +73,16 @@ func (s *Subscription) Decode(key, bytes []byte) error {
 	if bytes != nil {
 		err := json.Unmarshal(bytes, s)
 		return errors.Wrap(err, "decode Subscription")
-	} else {
-		///core/v1/subscription/admin/sub-1234/device123
-		keys := strings.Split(string(key), "/")
-		if len(keys) != 7 {
-			return errors.Errorf("error:decode Subscription from key[%s]", string(key))
-		}
-		s.Owner = keys[4]
-		s.ID = keys[5]
-		s.SourceEntityID = keys[6]
-		return nil
 	}
+	///core/v1/subscription/admin/sub-1234/device123
+	keys := strings.Split(string(key), "/")
+	if len(keys) != 7 {
+		return errors.Errorf("error:decode Subscription from key[%s]", string(key))
+	}
+	s.Owner = keys[4]
+	s.ID = keys[5]
+	s.SourceEntityID = keys[6]
+	return nil
 }
 
 func (r *repo) PutSubscription(ctx context.Context, expr *Subscription) error {

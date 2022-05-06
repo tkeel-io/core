@@ -39,7 +39,7 @@ var (
 	ErrInvalidParam             = errors.New("Core.Params.Invalid")
 	ErrExpressionNotFound       = errors.New("Core.Expression.NotFound")
 
-	// Resource errors.
+	// ErrResourceNotFound errors.
 	ErrResourceNotFound = errors.New("Core.Resource.NotFound")
 )
 

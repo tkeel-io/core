@@ -19,14 +19,15 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"github.com/tkeel-io/collectjs"
-	"github.com/tkeel-io/tdtl"
 	"strconv"
 	"time"
 
+	"github.com/tkeel-io/collectjs"
+	"github.com/tkeel-io/tdtl"
+
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
@@ -77,8 +78,8 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	return nil
 }
 
-func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.RawDataRequest, error) {
-	req := &rawdata.RawDataRequest{}
+func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.Request, error) {
+	req := &rawdata.Request{}
 	req.Metadata = make(map[string]string)
 	raw := en.GetProp("rawData")
 

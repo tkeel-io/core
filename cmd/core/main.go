@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/pkg/errors"
 	corev1 "github.com/tkeel-io/core/api/core/v1"
@@ -319,8 +320,8 @@ func newResourceManager(coreRepo repository.IRepository) types.ResourceManager {
 	tsdbClient := tseries.NewTimeSerier(resource.ParseFrom(config.Get().Components.TimeSeries).Name)
 	tsdbClient.Init(resource.ParseFrom(config.Get().Components.TimeSeries))
 	// default rawdata
-	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
-	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
+	rawdataClient := rawdata.NewRawDataService(config.Get().Components.Rawdata.Name)
+	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.Rawdata)); err != nil {
 		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
 	return types.NewResources(search.GlobalService, tsdbClient, rawdataClient, coreRepo)

@@ -19,10 +19,11 @@ package service
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/util"
@@ -69,7 +70,7 @@ func interface2string(in interface{}) (out string) {
 	return
 }
 
-func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (out *pb.SubscriptionResponse) {
+func (s *SubscriptionService) entity2SubscriptionResponse(base *apim.BaseRet) (out *pb.SubscriptionResponse) { //nolint
 	if base == nil {
 		return
 	}

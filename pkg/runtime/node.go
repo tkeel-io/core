@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/mapper/expression"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -52,7 +52,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 //1. 创建 KafkaSource & runtime
 //2. list resource
 //3. watch resource
-//4. start KafkaReceived
+//4. start KafkaReceived.
 func (n *Node) Start(cfg NodeConf) error {
 	log.L().Info("start node...")
 
@@ -316,7 +316,7 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 }
 
 // exprKey return unique expression identifier.
-func exprKey(expr *repository.Expression) string {
+func exprKey(expr *repository.Expression) string { //nolint
 	return expr.EntityID + expr.Path
 }
 

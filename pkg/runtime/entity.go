@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/kit/log"
@@ -247,12 +247,10 @@ func makeSubPath(dest, src []byte, path string) ([]byte, string, error) {
 		return src, path, nil
 	}
 
-	missSegs := segs[index:]
-	if len(missSegs) > 3 {
+	if missSegs := segs[index:]; len(missSegs) > 3 {
 		path = strings.Join(append([]string{seg0}, segs[:index+1]...), ".")
 		return makeScheme(missSegs, src), path, nil
 	}
-
 	return src, path, nil
 }
 

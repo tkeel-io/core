@@ -1,8 +1,9 @@
 package dapr
 
 import (
-	"github.com/tkeel-io/core/pkg/logfield"
 	"sync"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/kit/log"

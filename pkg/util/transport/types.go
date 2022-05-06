@@ -2,7 +2,8 @@ package transport
 
 import (
 	"context"
-	"github.com/tkeel-io/core/pkg/logfield"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/tkeel-io/kit/log"
 )

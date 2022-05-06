@@ -33,14 +33,14 @@ func (et EnventType) String() string {
 	return mvccpb.Event_EventType(et).String()
 }
 
-type DecodeFunc func(key ,bytes []byte) (Resource, error)
+type DecodeFunc func(key, bytes []byte) (Resource, error)
 type RangeResourceFunc func([]*mvccpb.KeyValue)
 type WatchResourceFunc func(EnventType, *mvccpb.KeyValue)
 
 type Resource interface {
 	EncodeKey() ([]byte, error)
 	Encode() ([]byte, error)
-	Decode(key ,bytes []byte) error
+	Decode(key, bytes []byte) error
 }
 
 type IDao interface {

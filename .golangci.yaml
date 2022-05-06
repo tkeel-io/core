@@ -43,7 +43,6 @@ output:
   # print linter name in the end of issue text, default is true
   print-linter-name: true
 
-
 # all available settings of specific linters
 linters-settings:
   errcheck:
@@ -88,9 +87,6 @@ linters-settings:
     disable:
       - shadow
     disable-all: false
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.8
   gofmt:
     # simplify code: gofmt with `-s` option, true by default
     simplify: true
@@ -193,7 +189,7 @@ linters-settings:
       - HACK # marks hack-arounds that should be removed before merging
   godot:
     exclude:
-      - 'nosec'
+      - "nosec"
     capital: false
     scope: declarations
   dogsled:
@@ -201,7 +197,7 @@ linters-settings:
     max-blank-identifiers: 2
 
   whitespace:
-    multi-if: false   # Enforces newlines (or comments) after every multi-line if statement
+    multi-if: false # Enforces newlines (or comments) after every multi-line if statement
     multi-func: false # Enforces newlines (or comments) after every multi-line function signature
 
   wsl:
@@ -266,6 +262,16 @@ linters:
     - paralleltest
     - gofumpt
     - gomoddirectives
+    - varnamelen
+    - ireturn
+    - wrapcheck
+    - nilnil
+    - errchkjson
+    - containedctx
+    - contextcheck
+    - gocritic
+    - stylecheck
+    - gosec
 issues:
   exclude:
     # staticcheck

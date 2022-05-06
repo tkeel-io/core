@@ -62,10 +62,11 @@ type MCache struct {
 type Task func()
 
 type ExpressionInfo struct {
-	// embeded Expression.
+	// embedded Expression.
 	repository.Expression
 
-	isHere        bool // expression 所属 entity 是否属于当前 runtime.
+	// expression 所属 entity 是否属于当前 runtime.
+	isHere        bool //nolint
 	version       int
 	subEndpoints  []SubEndpoint
 	evalEndpoints []EvalEndpoint
@@ -95,9 +96,9 @@ func (s *SubEndpoint) String() string {
 	return s.path + s.deliveryID + s.target
 }
 
-func (e SubEndpoint) WildcardPath() string {
-	wildcardPath := e.path
-	if !strings.HasSuffix(e.path, path.WildcardSome) {
+func (s *SubEndpoint) WildcardPath() string {
+	wildcardPath := s.path
+	if !strings.HasSuffix(s.path, path.WildcardSome) {
 		wildcardPath = wildcardPath + path.Separator + path.WildcardSome
 	}
 	return wildcardPath

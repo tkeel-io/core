@@ -22,7 +22,7 @@ import (
 )
 
 func TestNewKafkaPubsub(t *testing.T) {
-	c,err := NewKafkaPubsub("kafka://localhost:20222/core-test/core")
+	c, err := NewKafkaPubsub("kafka://localhost:20222/core-test/core")
 	t.Log(err)
-	c.Send(context.Background(),nil)
+	c.Send(context.Background(), nil)
 }

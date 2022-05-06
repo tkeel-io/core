@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"encoding/base64"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"net/http"
 	"net/url"
 	"time"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/config"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/kit/log"
@@ -17,12 +17,12 @@ import (
 
 type RawdataService struct {
 	pb.UnimplementedRawdataServer
-	rawdataClient rawdata.RawDataService
+	rawdataClient rawdata.Service
 }
 
 func NewRawdataService() (*RawdataService, error) {
-	rawdataClient := rawdata.NewRawDataService(config.Get().Components.RawData.Name)
-	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.RawData)); err != nil {
+	rawdataClient := rawdata.NewRawDataService(config.Get().Components.Rawdata.Name)
+	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.Rawdata)); err != nil {
 		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
 	return &RawdataService{
@@ -46,6 +46,7 @@ func (s *RawdataService) GetRawdata(ctx context.Context, req *pb.GetRawdataReque
 		user = getUser(header, user)
 	}
 	// 检查user和实体id的合法性
+	log.L().Info("user: ", logf.String("user", user))
 
 	resp, err := s.rawdataClient.Query(ctx, req)
 

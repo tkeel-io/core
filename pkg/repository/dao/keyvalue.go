@@ -34,7 +34,7 @@ type KeyValue interface {
 	Watch(ctx context.Context, key string, opts ...clientv3.OpOption) clientv3.WatchChan
 }
 
-func newEtcd(cfg clientv3.Config) (KeyValue, error) {
+func newEtcd(cfg clientv3.Config) (KeyValue, error) { //nolint
 	etcdEndpoint, err := clientv3.New(cfg)
 	return etcdEndpoint, errors.Wrap(err, "new etcd KeyValue instance")
 }
@@ -42,7 +42,7 @@ func newEtcd(cfg clientv3.Config) (KeyValue, error) {
 // ---------------------- KeyValue mock.
 
 type keyValueNoop struct {
-	ctx context.Context
+	ctx context.Context //nolint
 }
 
 func newNoop() KeyValue {

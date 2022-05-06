@@ -3,10 +3,11 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/tdtl"
 	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/tkeel-io/tdtl"
 )
 
 // func TestNode_Start(t *testing.T) {
@@ -96,7 +97,7 @@ func TestNode_getGlobalData(t *testing.T) {
 		t.Log(err)
 	}
 	t.Log(en)
-	res := node.makeSearchData(en)
+	res, _ := node.makeSearchData(en)
 	t.Log(string(res))
 
 	resMap := make(map[string]interface{})
@@ -142,7 +143,6 @@ func TestNode_flushRawData(t *testing.T) {
 func Test_parseExpression(t *testing.T) {
 
 }
-
 
 func TestTDTL(t *testing.T) {
 	tqlString := `insert into entity3 

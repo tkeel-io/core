@@ -20,15 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/runtime"
-	"go.uber.org/zap"
 	"net/http"
 	"strings"
+
+	"github.com/tkeel-io/core/pkg/runtime"
+	"go.uber.org/zap"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
-	"github.com/tkeel-io/core/pkg/logfield"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/mapper"
 	"github.com/tkeel-io/core/pkg/scheme"
@@ -717,7 +718,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			entityID := interface2string(kv["id"])
 
 			var baseRet = &apim.BaseRet{}
-			if state == ""{
+			if state == "" {
 				var entity = new(Entity)
 				entity.ID = interface2string(kv["id"])
 				entity.Source = interface2string(kv["source"])
@@ -728,7 +729,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 					continue
 				}
 				log.L().Warn("reload entity OK", logf.Eid(interface2string(kv["id"])), zap.Error(err))
-			}else{
+			} else {
 				//var entity = runtime.NewEntity(entityID, []byte(state))
 				if err = json.Unmarshal([]byte(state), baseRet); nil != err {
 					log.L().Error("get entity, decode response",

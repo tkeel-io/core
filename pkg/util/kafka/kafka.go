@@ -3,10 +3,11 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/logfield"
 	"net/url"
 	"strings"
 	"time"
+
+	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/Shopify/sarama"
 	"github.com/dapr/kit/retry"
