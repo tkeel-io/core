@@ -26,9 +26,10 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 	log.L().Debug("handle external subscribe", logf.Eid(feed.EntityID), logf.Event(feed.Event))
 
 	entityID := feed.EntityID
-	state := makeSubData(feed)
 	if subs, ok := r.entitySubscriptions[entityID]; ok {
 		for _, sub := range subs {
+			state := makeSubData(feed, sub.ID)
+			log.L().Debug("handle external subs", logf.Eid(feed.EntityID), logf.Event(feed.Event), logf.Any("sub", sub.Filter))
 			ctOpts := daprSDK.PublishEventWithContentType("application/json")
 			err := dapr.Get().Select().PublishEvent(ctx, sub.PubsubName, sub.Topic, state, ctOpts)
 			if nil != err {
@@ -37,16 +38,20 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 				return feed
 			}
 		}
+	} else {
+		log.L().Error("handle external subscribe nil", logf.Eid(feed.EntityID))
 	}
 	return feed
 }
 
-func makeSubData(feed *Feed) []byte {
+func makeSubData(feed *Feed, subscribeID string) []byte {
 	ret := tdtl.New(`{}`)
 	cc := tdtl.New(feed.State)
 	for _, change := range feed.Changes {
 		path := change.Path
 		ret.Set(path, cc.Get(path))
 	}
+	ret.Set("id", tdtl.NewString(feed.EntityID))
+	ret.Set("subscribe_id", tdtl.NewString(subscribeID))
 	return ret.Raw()
 }
