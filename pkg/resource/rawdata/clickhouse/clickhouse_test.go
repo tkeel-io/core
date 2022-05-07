@@ -33,8 +33,8 @@ func TestClickhouse(t *testing.T) {
 		Name: "myck",
 		Properties: map[string]interface{}{
 			"database": "core",
-			"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
-			"table":    "event_data1",
+			//	"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
+			"table": "event_data1",
 		},
 	}
 	ck := NewClickhouse()
@@ -60,8 +60,8 @@ func TestClickhouse_Query(t *testing.T) {
 		Name: "myck",
 		Properties: map[string]interface{}{
 			"database": "core",
-			"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
-			"table":    "event_data",
+			//	"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
+			"table": "event_data",
 		},
 	}
 	ck := NewClickhouse()

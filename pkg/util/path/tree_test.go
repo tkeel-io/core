@@ -1,6 +1,7 @@
 package path
 
 import (
+	"sort"
 	"strings"
 	"testing"
 )
@@ -36,7 +37,7 @@ func TestTree(t *testing.T) {
 		want string
 	}{
 		{"1", "a.b.c.r", "a.*|a.b.c.*"},
-		{"2", "a", "a.*|a.x[0].*|a.b.c.*|a.b.c.d.e.*|a.b.c.d.e.f.*|a.b.c.d.e.i.*|a.b.c.d.e.g.*|a.b.c.d.e.i.j.*|a.b.c.d.e.i.j.k.*"},
+		{"2", "a", "a.*|a.b.c.*|a.b.c.d.e.*|a.b.c.d.e.f.*|a.b.c.d.e.g.*|a.b.c.d.e.i.*|a.b.c.d.e.i.j.*|a.b.c.d.e.i.j.k.*|a.x[0].*"},
 		{"3", "b.b.c.r", ""},
 	}
 	for _, tt := range tests {
@@ -46,6 +47,7 @@ func TestTree(t *testing.T) {
 			for _, node := range nodes {
 				ret = append(ret, node.String())
 			}
+			sort.Strings(ret)
 			size := len(ret)
 			got := strings.Join(ret, "|")
 			if got != tt.want {
@@ -86,7 +88,7 @@ func TestRefTree(t *testing.T) {
 		want string
 	}{
 		{"1", "a.b.c.r", "a.*|a.b.c.*"},
-		{"2", "a", "a.*|a.x[0].*|a.b.c.*|a.b.c.d.*|a.b.c.d.e.*|a.b.c.d.e.f.*|a.b.c.d.e.i.*|a.b.c.d.e.g.*|a.b.c.d.e.i.j.*|a.b.c.d.e.i.j.k.*"},
+		{"2", "a", "a.*|a.b.c.*|a.b.c.d.*|a.b.c.d.e.*|a.b.c.d.e.f.*|a.b.c.d.e.g.*|a.b.c.d.e.i.*|a.b.c.d.e.i.j.*|a.b.c.d.e.i.j.k.*|a.x[0].*"},
 		{"1", "b.b.c.r", ""},
 	}
 	for _, tt := range tests {
@@ -96,6 +98,7 @@ func TestRefTree(t *testing.T) {
 			for _, node := range nodes {
 				ret = append(ret, node.String())
 			}
+			sort.Strings(ret)
 			size := len(ret)
 			got := strings.Join(ret, "|")
 			if got != tt.want {

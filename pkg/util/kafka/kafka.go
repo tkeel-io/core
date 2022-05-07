@@ -90,7 +90,9 @@ func (k *Pubsub) Send(ctx context.Context, event v1.Event) error {
 		bytes    []byte
 		entityID string
 	)
-
+	if event == nil {
+		return nil
+	}
 	log.L().Debug("pubsub.kafka send", logf.Message(event), logf.Topic(k.kafkaMetadata.Topic),
 		logf.ID(k.id), logf.Endpoints(k.kafkaMetadata.Brokers), logf.Group(k.kafkaMetadata.Group))
 
