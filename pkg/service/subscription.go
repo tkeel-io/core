@@ -112,6 +112,9 @@ func (s *SubscriptionService) CreateSubscription(ctx context.Context, req *pb.Cr
 	if sub.Owner == "" {
 		sub.Owner = req.Owner
 	}
+	if sub.Source == "" {
+		sub.Source = req.Source
+	}
 
 	err = s.apiManager.CreateSubscription(ctx, sub)
 	out = &pb.SubscriptionResponse{
@@ -148,9 +151,18 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 	if sub.Owner == "" {
 		sub.Owner = req.Owner
 	}
+	if sub.Source == "" {
+		sub.Source = req.Source
+	}
 
 	err = s.apiManager.CreateSubscription(ctx, sub)
 
+	out.Id = sub.ID
+	out.Owner = sub.Owner
+	out.Source = sub.Source
+	out.Subscription = req.Subscription
+	out.Subscription.Id = sub.ID
+	out.Subscription.Owner = sub.Owner
 	log.L().Debug("UpdateSubscription", logf.Any("[+]sub", sub), logf.Error(err))
 	return out, errors.Wrap(err, "update subscription")
 }
