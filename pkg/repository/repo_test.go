@@ -16,7 +16,7 @@ var (
 
 func TestMain(m *testing.M) {
 	var err error
-	coreDao, err := dao.New(
+	coreDao, err := dao.NewMock(
 		context.Background(),
 		config.Metadata{Name: "noop"},
 		config.EtcdConfig{Endpoints: []string{"http://localhost:2379"}, DialTimeout: 3},
