@@ -30,6 +30,7 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "github.com/tkeel-io/core/api/core/v1"
+	opsv1 "github.com/tkeel-io/core/api/ops/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	apim "github.com/tkeel-io/core/pkg/manager"
@@ -228,6 +229,7 @@ func core(cmd *cobra.Command, args []string) {
 	if err = nodeInstance.Start(runtime.NodeConf{Sources: config.Get().Server.Sources}); nil != err {
 		log.Fatal(err)
 	}
+	_gopsSrv.SetNode(nodeInstance)
 
 	// initialize core services.
 	initialzeService(_apiManager, search.GlobalService)
@@ -264,6 +266,7 @@ var (
 	_searchSrv       *service.SearchService
 	_subscriptionSrv *service.SubscriptionService
 	_rawdataSrv      *service.RawdataService
+	_gopsSrv         *service.GOPSService
 )
 
 // serviceRegisterToCoreV1 register your services here.
@@ -306,6 +309,21 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 		log.Fatal(err)
 	}
 	corev1.RegisterRawdataHTTPServer(httpSrv.Container, _rawdataSrv)
+
+	// register rawdata service.
+	if _rawdataSrv, err = service.NewRawdataService(); nil != err {
+		log.Fatal(err)
+	}
+	corev1.RegisterRawdataHTTPServer(httpSrv.Container, _rawdataSrv)
+
+	// metrics service.
+	if _gopsSrv, err = service.NewGOPSService(); nil != err {
+		log.Fatal(err)
+	}
+	opsv1.RegisterMetricsHTTPServer(httpSrv.Container, _gopsSrv)
+	opsv1.RegisterDebugHTTPServer(httpSrv.Container, _gopsSrv)
+
+	log.L().Debug("RegisterDebugHTTPServer")
 }
 
 func serviceRegisterToProxyV1(ctx context.Context, httpSrv *http.Server, grpcSrv *grpc.Server) {

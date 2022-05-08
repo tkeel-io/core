@@ -7,5 +7,6 @@ import (
 )
 
 type Dispatcher interface {
+	DispatchToLog(context.Context, []byte) error
 	Dispatch(context.Context, v1.Event) error
 }

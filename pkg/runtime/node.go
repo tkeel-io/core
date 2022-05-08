@@ -2,6 +2,10 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	go_restful "github.com/emicklei/go-restful"
+	"github.com/tkeel-io/core/pkg/util/path"
+	"strings"
 	"sync"
 	"time"
 
@@ -332,4 +336,36 @@ func newExprInfo(expr *repository.Expression) ExpressionInfo {
 			Expression:  expr.Expression,
 			Description: expr.Description,
 		}}
+}
+
+func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
+	fmt.Println("Debug", req.Request.URL)
+	action := req.Request.URL.Query().Get("action")
+	switch action {
+	case "nodelist":
+		ret := []string{}
+		for k, _ := range n.runtimes {
+			ret = append(ret, k)
+		}
+		resp.WriteAsJson(strings.Join(ret, "|"))
+	case "subtree":
+		rid := req.Request.URL.Query().Get("rid")
+		ret := n.runtimes[rid]
+		resp.Write([]byte(ret.subTree.String()))
+	case "eveltree":
+		rid := req.Request.URL.Query().Get("rid")
+		ret := n.runtimes[rid]
+		resp.Write([]byte(ret.evalTree.String()))
+	case "sub":
+		rid := req.Request.URL.Query().Get("rid")
+		entityID := req.Request.URL.Query().Get("entityID")
+		changePath := req.Request.URL.Query().Get("changePath")
+		rt, ok := n.runtimes[rid]
+		if ok {
+			ret := rt.subTree.MatchPrefix(path.FmtWatchKey(entityID, changePath))
+			resp.WriteAsJson(ret)
+		} else {
+			resp.WriteErrorString(501, "runtime <"+rid+"> not found")
+		}
+	}
 }

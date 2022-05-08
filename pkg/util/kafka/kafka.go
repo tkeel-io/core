@@ -85,29 +85,28 @@ func (k *Pubsub) ID() string {
 }
 
 func (k *Pubsub) Send(ctx context.Context, event v1.Event) error {
-	var (
-		err      error
-		bytes    []byte
-		entityID string
-	)
 	if event == nil {
 		return nil
 	}
 	log.L().Debug("pubsub.kafka send", logf.Message(event), logf.Topic(k.kafkaMetadata.Topic),
 		logf.ID(k.id), logf.Endpoints(k.kafkaMetadata.Brokers), logf.Group(k.kafkaMetadata.Group))
 
-	if bytes, err = v1.Marshal(event); nil != err {
+	if bytes, err := v1.Marshal(event); nil != err {
 		log.L().Error("encode payload", logf.Error(err), logf.ID(k.id),
-			logf.Topic(k.kafkaMetadata.Topic), logf.Eid(entityID))
+			logf.Topic(k.kafkaMetadata.Topic), logf.Any("event", event))
+	} else {
+		k.SendBytes(ctx, bytes)
 	}
-
+	return nil
+}
+func (k *Pubsub) SendBytes(ctx context.Context, bytes []byte) error {
 	msg := &sarama.ProducerMessage{
-		Key:   sarama.StringEncoder(entityID),
+		Key:   sarama.StringEncoder(""),
 		Topic: k.kafkaMetadata.Topic,
 		Value: sarama.ByteEncoder(bytes),
 	}
 
-	_, _, err = k.kafkaProducer.SendMessage(msg)
+	_, _, err := k.kafkaProducer.SendMessage(msg)
 	return errors.Wrap(err, "kafka client send message")
 }
 

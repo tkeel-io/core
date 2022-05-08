@@ -93,19 +93,31 @@ func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessag
 	r.HandleEvent(ctx, &ev)
 }
 
+type FeedLog struct {
+	Old *Feed
+	New *Feed
+}
+
 func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 	log.L().Debug("handle event", logf.RID(r.id),
 		logf.Event(event), logf.EvID(event.ID()))
 
 	execer, feed := r.PrepareEvent(ctx, event)
-	feed = execer.Exec(ctx, feed)
+	new_feed := execer.Exec(ctx, feed)
 
 	// call callback once.
-	r.handleCallback(ctx, feed)
-	if nil != feed.Err {
-		log.Error("handle event", logf.Error(feed.Err),
+	r.handleCallback(ctx, new_feed)
+	if nil != new_feed.Err {
+		log.Error("handle event", logf.Error(new_feed.Err),
 			logf.ID(event.ID()), logf.Eid(event.Entity()), logf.Event(event))
 	}
+
+	byt, err := json.Marshal(FeedLog{feed, new_feed})
+	if nil != err {
+		log.Error("Marshal event error", logf.Error(new_feed.Err),
+			logf.ID(event.ID()), logf.Eid(event.Entity()), logf.Event(event))
+	}
+	r.dispatcher.DispatchToLog(ctx, byt)
 
 	return nil
 }

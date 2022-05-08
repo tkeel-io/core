@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -93,7 +94,7 @@ func (s *SubEndpoint) ID() string {
 }
 
 func (s *SubEndpoint) String() string {
-	return s.path + s.deliveryID + s.target
+	return fmt.Sprintf("%s|%s|%s|%s", s.path, s.deliveryID, s.target, s.expressionID)
 }
 
 func (s *SubEndpoint) WildcardPath() string {
@@ -136,7 +137,7 @@ func (e EvalEndpoint) WildcardPath() string {
 }
 
 func (e *EvalEndpoint) String() string {
-	return e.path + e.target
+	return fmt.Sprintf("%s|%s|%s", e.path, e.target, e.expresionID)
 }
 
 func (e *EvalEndpoint) Expression() string {

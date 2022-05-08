@@ -25,6 +25,7 @@ func New(ctx context.Context) *dispatcher { //nolint
 		transmitter: transport.New(transport.TransTypeHTTP),
 		upstreams:   make(map[string]pubsub.Pubsub),
 		downstreams: make(map[string]*xkafka.Pubsub),
+		logstreams:  nil,
 	}
 }
 
@@ -35,6 +36,16 @@ type dispatcher struct {
 	transmitter transport.Transmitter
 	upstreams   map[string]pubsub.Pubsub
 	downstreams map[string]*xkafka.Pubsub
+	logstreams  *xkafka.Pubsub
+}
+
+func (d *dispatcher) DispatchToLog(ctx context.Context, ev []byte) error {
+	log.L().Debug("DispatchToLog", logf.ByteString("bytes", ev))
+	if d.logstreams != nil {
+		err := d.logstreams.SendBytes(ctx, ev)
+		return errors.Wrap(err, "dispatch event")
+	}
+	return nil
 }
 
 func (d *dispatcher) Dispatch(ctx context.Context, ev v1.Event) error {
@@ -67,6 +78,15 @@ func (d *dispatcher) Start(ctx context.Context, cfg config.DispatchConfig) error
 		if err := d.initUpstream(ctx, cfg.Upstreams); nil != err {
 			return errors.Wrap(err, "init upstream")
 		}
+	}
+
+	// initialize dispatch upstreams.
+	if cfg.Logstream != "" {
+		streamIns, err := xkafka.NewKafkaPubsub(cfg.Logstream)
+		if nil != err {
+			return errors.Wrap(err, "create sink instance")
+		}
+		d.logstreams = streamIns
 	}
 
 	return nil
