@@ -68,3 +68,35 @@ func TestDeleteExpressions(t *testing.T) {
 	err := repoIns.DelExprByEnity(context.Background(), Expression{Owner: "admin", EntityID: "device123"})
 	assert.Nil(t, err)
 }
+
+func Test_Expressions_Decode(t *testing.T) {
+	tests := []struct {
+		name string
+		expr *Expression
+	}{
+		{
+			name: "test1",
+			expr: NewExpression("admin", "device123", "expr1", "temp", "device002.temp", ""),
+		},
+		{
+			name: "test2",
+			expr: NewExpression("admin", "device123", "expr2", "cpu0", "device002.metrics.cpus[0].value", ""),
+		},
+		{
+			name: "test3",
+			expr: NewExpression("admin", "device123", "expr3", "mems[1].value", "device002.metrics.mems[1].value", ""),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, err := tt.expr.EncodeKey()
+			assert.Nil(t, err)
+			_, err = tt.expr.Encode()
+			assert.Nil(t, err)
+			ex := &Expression{}
+			err = ex.Decode(key, nil)
+			assert.Nil(t, err)
+		})
+	}
+}

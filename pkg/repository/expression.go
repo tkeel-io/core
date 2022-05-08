@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -53,11 +54,7 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 		escapePath = url.PathEscape(path)
 		typ = ExprTypeSub
 	}
-
-	identifier := fmt.Sprintf("%s/%s/%s/%s",
-		ExprPrefix, owner, entityID, escapePath)
-	return &Expression{
-		ID:          identifier,
+	ret := &Expression{
 		Name:        name,
 		Path:        path,
 		Type:        typ,
@@ -66,12 +63,20 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 		Expression:  expr,
 		Description: desc,
 	}
+	ret.GenKey()
+	return ret
 }
 
 func ListExpressionPrefix(Owner, EntityID string) string {
 	keyString := fmt.Sprintf("%s/%s/%s",
 		ExprPrefix, Owner, EntityID)
 	return keyString
+}
+
+func (e *Expression) GenKey() error {
+	key, err := e.EncodeKey()
+	e.ID = string(key)
+	return err
 }
 
 func (e *Expression) EncodeKey() ([]byte, error) {
@@ -87,8 +92,20 @@ func (e *Expression) Encode() ([]byte, error) {
 }
 
 func (e *Expression) Decode(key, bytes []byte) error {
-	err := json.Unmarshal(bytes, e)
-	return errors.Wrap(err, "decode Expression")
+	if bytes != nil {
+		err := json.Unmarshal(bytes, e)
+		return errors.Wrap(err, "decode Expression")
+	}
+	///core/v1/subscription/admin/sub-1234/device123
+	// /core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-06a96c8d-c166-447c-afd1-63010636b362/properties.basicInfo.templateName
+	keys := strings.Split(string(key), "/")
+	if len(keys) != 7 {
+		return errors.Errorf("error:decode Subscription from key[%s]", string(key))
+	}
+	e.Owner = keys[4]
+	e.EntityID = keys[5]
+	e.ID = string(key)
+	return nil
 }
 
 func (e *Expression) Prefix() string {
