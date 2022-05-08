@@ -488,40 +488,38 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
 	targets := make(map[string]string)
 	entityID := feed.EntityID
-	var patches = make(map[string]*v1.PatchData)
+	var patches = make(map[string][]*v1.PatchData)
 	for _, change := range feed.Changes {
 		for _, node := range r.subTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			subEnd, _ := node.(*SubEndpoint)
+			//sub 可以带 *， Path
 			subPath := mergePath(subEnd.path, change.Path)
 			targets[subEnd.deliveryID] = whichPrefix(targets[subEnd.deliveryID], subPath)
-			log.L().Debug("expression sub matched", logf.Eid(entityID), logf.Path(change.Path),
+			log.L().Debug("expression sub matched", logf.Eid(entityID),
+				logf.String("subPath", subPath), logf.Path(change.Path),
 				logf.Target(subEnd.target), logf.Path(subEnd.path), logf.ID(subEnd.deliveryID), logf.Expr(subEnd.Expression()))
 		}
 
 		// TODO: 提到for外存在优化空间.
 		for runtimeID, sendPath := range targets {
-			if sendPath == change.Path {
-				patches[runtimeID] = &v1.PatchData{
-					Path:     change.Path,
-					Operator: xjson.OpReplace.String(),
-					Value:    change.Value.Raw(),
-				}
-				continue
+			if _, ok := patches[runtimeID]; !ok {
+				patches[runtimeID] = make([]*v1.PatchData, 0)
 			}
 
 			// select send data.
 			stateIns, _ := NewEntity(feed.EntityID, feed.State)
 			sendVal := stateIns.Get(sendPath)
 			if tdtl.Undefined != sendVal.Type() {
-				patches[runtimeID] = &v1.PatchData{
-					Path:     sendPath,
+				patches[runtimeID] = append(patches[runtimeID], &v1.PatchData{
+					Path:     change.Path,
 					Operator: xjson.OpReplace.String(),
-					Value:    sendVal.Raw(),
-				}
+					Value:    change.Value.Raw(),
+				})
 			}
 		}
 	}
+	log.L().Debug("expression sub matched", logf.Any("len", len(patches)), logf.Any("patches", patches))
 
 	// 2. dispatch.send()
 	for runtimeID, sendData := range patches {
@@ -540,7 +538,7 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				v1.MetaSender:      entityID},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
-					Patches: []*v1.PatchData{sendData},
+					Patches: sendData,
 				}},
 		})
 	}
