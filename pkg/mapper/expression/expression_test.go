@@ -11,7 +11,7 @@ import (
 func Test_Expression(t *testing.T) {
 	exprIns, err := NewExpr("device234.properties.temp2", nil)
 	assert.Nil(t, err)
-	t.Log(exprIns.Entities())
+	t.Log(exprIns.Sources())
 	res, err := exprIns.Eval(context.Background(),
 		map[string]tdtl.Node{"device234.properties.temp2": tdtl.NewInt64(89)})
 	t.Log(map[string]tdtl.Node{"device234.properties.temp2": tdtl.NewInt64(89)})

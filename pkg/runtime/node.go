@@ -278,18 +278,18 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 		return nil, errors.Wrap(err, "parse expression")
 	}
 
-	ownerInfo := placement.Global().Select(expr.EntityID)
+	ownerRuntimeInfo := placement.Global().Select(expr.EntityID)
 	exprInfos := map[string]*ExpressionInfo{
-		ownerInfo.ID: {
+		ownerRuntimeInfo.ID: {
 			version:    version,
 			Expression: expr,
 			isHere:     true,
 		}}
 
-	for eid, paths := range exprIns.Entities() {
-		info := placement.Global().Select(eid)
-		if _, has := exprInfos[info.ID]; !has {
-			exprInfos[info.ID] = &ExpressionInfo{
+	for sourceEntityID, paths := range exprIns.Sources() {
+		sourceRuntimeInfo := placement.Global().Select(sourceEntityID)
+		if _, has := exprInfos[sourceRuntimeInfo.ID]; !has {
+			exprInfos[sourceRuntimeInfo.ID] = &ExpressionInfo{
 				version:    version,
 				Expression: expr,
 			}
@@ -297,21 +297,21 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 
 		for _, path := range paths {
 			// construct sub endpoint.
-			if eid != expr.EntityID {
-				exprInfos[info.ID].subEndpoints =
-					append(exprInfos[info.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
+			if sourceEntityID != expr.EntityID {
+				exprInfos[sourceRuntimeInfo.ID].subEndpoints =
+					append(exprInfos[sourceRuntimeInfo.ID].subEndpoints,
+						newSubEnd(path, expr.EntityID, expr.ID, ownerRuntimeInfo.ID))
 			}
 
 			// construct eval endpoint.
 			if repository.ExprTypeEval == expr.Type {
-				exprInfos[ownerInfo.ID].evalEndpoints =
-					append(exprInfos[ownerInfo.ID].evalEndpoints,
+				exprInfos[ownerRuntimeInfo.ID].evalEndpoints =
+					append(exprInfos[ownerRuntimeInfo.ID].evalEndpoints,
 						newEvalEnd(path, expr.EntityID, expr.ID))
 			} else if repository.ExprTypeSub == expr.Type {
-				exprInfos[ownerInfo.ID].subEndpoints =
-					append(exprInfos[ownerInfo.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
+				exprInfos[ownerRuntimeInfo.ID].subEndpoints =
+					append(exprInfos[ownerRuntimeInfo.ID].subEndpoints,
+						newSubEnd(path, expr.EntityID, expr.ID, ownerRuntimeInfo.ID))
 			}
 		}
 	}
