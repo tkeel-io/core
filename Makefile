@@ -144,6 +144,17 @@ build:
 	@echo "Bin: $(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT)"
 	@echo "-----------Done------------"
 
+build-linux:
+	@echo "---------------------------"
+	@echo "-        build Linux...   -"
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64  go build $(GCFLAGS) -ldflags $(LDFLAGS) \
+     	-o ./dist/linux_amd64/release/$(CLI_BINARY)$(BINARY_EXT) cmd/core/main.go
+	@echo "-    builds completed!    -"
+	@echo "---------------------------"
+	@echo "Bin: ./dist/linux_amd64/release/$(CLI_BINARY)$(BINARY_EXT)"
+	@echo "-----------Done------------"
+
+
 show:
 	@$(BINS_OUT_DIR)/$(CLI_BINARY)$(BINARY_EXT) --version
 
@@ -188,7 +199,7 @@ docker-auto:
 	sudo docker push tkeelio/core:${CORE_VERSION}
 
 docker-auto-local:
-	make build
+	make build-linux
 	sudo docker build -f Dockerfile.local -t tkeelio/core:${CORE_VERSION} .
 	sudo docker push tkeelio/core:${CORE_VERSION}
 
