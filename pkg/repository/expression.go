@@ -96,8 +96,6 @@ func (e *Expression) Decode(key, bytes []byte) error {
 		err := json.Unmarshal(bytes, e)
 		return errors.Wrap(err, "decode Expression")
 	}
-	///core/v1/subscription/admin/sub-1234/device123
-	// /core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-06a96c8d-c166-447c-afd1-63010636b362/properties.basicInfo.templateName
 	keys := strings.Split(string(key), "/")
 	if len(keys) != 7 {
 		return errors.Errorf("error:decode Subscription from key[%s]", string(key))
