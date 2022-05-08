@@ -65,9 +65,6 @@ type Task func()
 type ExpressionInfo struct {
 	// embedded Expression.
 	repository.Expression
-
-	// expression 所属 entity 是否属于当前 runtime.
-	isHere        bool //nolint
 	version       int
 	subEndpoints  []SubEndpoint
 	evalEndpoints []EvalEndpoint
