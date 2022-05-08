@@ -90,7 +90,7 @@ func newSubEnd(path, target, exprID, deliveryID string) SubEndpoint {
 }
 
 func (s *SubEndpoint) ID() string {
-	return s.path + s.deliveryID
+	return s.expressionID
 }
 
 func (s *SubEndpoint) String() string {
