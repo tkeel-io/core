@@ -278,12 +278,11 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 		return nil, errors.Wrap(err, "parse expression")
 	}
 
-	ownerRuntimeInfo := placement.Global().Select(expr.EntityID)
+	targetRuntimeInfo := placement.Global().Select(expr.EntityID)
 	exprInfos := map[string]*ExpressionInfo{
-		ownerRuntimeInfo.ID: {
+		targetRuntimeInfo.ID: {
 			version:    version,
 			Expression: expr,
-			isHere:     true,
 		}}
 
 	for sourceEntityID, paths := range exprIns.Sources() {
@@ -300,18 +299,18 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 			if sourceEntityID != expr.EntityID {
 				exprInfos[sourceRuntimeInfo.ID].subEndpoints =
 					append(exprInfos[sourceRuntimeInfo.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerRuntimeInfo.ID))
+						newSubEnd(path, expr.EntityID, expr.ID, targetRuntimeInfo.ID))
 			}
 
 			// construct eval endpoint.
 			if repository.ExprTypeEval == expr.Type {
-				exprInfos[ownerRuntimeInfo.ID].evalEndpoints =
-					append(exprInfos[ownerRuntimeInfo.ID].evalEndpoints,
+				exprInfos[targetRuntimeInfo.ID].evalEndpoints =
+					append(exprInfos[targetRuntimeInfo.ID].evalEndpoints,
 						newEvalEnd(path, expr.EntityID, expr.ID))
 			} else if repository.ExprTypeSub == expr.Type {
-				exprInfos[ownerRuntimeInfo.ID].subEndpoints =
-					append(exprInfos[ownerRuntimeInfo.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerRuntimeInfo.ID))
+				exprInfos[targetRuntimeInfo.ID].subEndpoints =
+					append(exprInfos[targetRuntimeInfo.ID].subEndpoints,
+						newSubEnd(path, expr.EntityID, expr.ID, targetRuntimeInfo.ID))
 			}
 		}
 	}

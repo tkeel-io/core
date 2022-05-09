@@ -151,7 +151,7 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 				&handlerImpl{fn: r.handleComputed},   //无变化
 				&handlerImpl{fn: r.handlePersistent}, //无变化
 				&handlerImpl{fn: r.handleSubscribe},  //
-				&handlerImpl{fn: r.handleTemplate}}}  //
+				&handlerImpl{fn: r.handleTemplate}}} //
 
 		return execer, &Feed{
 			Err:      err,
@@ -430,18 +430,18 @@ func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression
 
 	in := make(map[string]tdtl.Node)
 	for _, item := range exprInfo.evalEndpoints {
-		// entityID.propertyKey
-		segs := strings.SplitN(item.path, ".", 2)
+		// watchKey = entityID，propertyKey
+		watchKey := mapper.NewWatchKey(item.path)
 
 		var state Entity
 		// get value from entities.
-		if state, has = r.entities[segs[0]]; has {
-			in[item.path] = state.Get(segs[1])
+		if state, has = r.entities[watchKey.EntityID]; has {
+			in[item.path] = state.Get(watchKey.PropertyKey)
 			continue
 		}
 		// get value from cache.
-		if state, err = r.enCache.Load(ctx, segs[0]); nil == err {
-			in[item.path] = state.Get(segs[1])
+		if state, err = r.enCache.Load(ctx, watchKey.EntityID); nil == err {
+			in[item.path] = state.Get(watchKey.PropertyKey)
 		}
 	}
 
@@ -482,8 +482,8 @@ func (r *Runtime) evalExpression(ctx context.Context, expr repository.Expression
 
 func mergePath(subPath, changePath string) string {
 	// subPath format: entity_id.property_key
-	seg2 := strings.SplitN(subPath, ".", 2)
-	return path.MergePath(seg2[1], changePath)
+	watchKey := mapper.NewWatchKey(subPath)
+	return path.MergePath(watchKey.PropertyKey, changePath)
 }
 
 func whichPrefix(targetPath, changePath string) string {
