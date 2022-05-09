@@ -14,4 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kafka
+package runtime
+
+import (
+	"context"
+)
+
+type cacheMock struct {
+	entities map[string]Entity
+}
+
+func NewCacheMock(entities map[string]Entity) EntityCache {
+	return &cacheMock{entities: entities}
+}
+
+func (ec *cacheMock) Load(ctx context.Context, id string) (Entity, error) {
+	if state, ok := ec.entities[id]; ok {
+		return state, nil
+	}
+
+	panic("load cache entity")
+}
+
+func (ec *cacheMock) Snapshot() error {
+	panic("implement me")
+}

@@ -141,7 +141,6 @@ func TestNode_flushRawData(t *testing.T) {
 }
 
 func Test_parseExpression(t *testing.T) {
-
 }
 
 func TestTDTL(t *testing.T) {

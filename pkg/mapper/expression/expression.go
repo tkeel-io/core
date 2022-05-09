@@ -10,7 +10,7 @@ import (
 
 type IExpression interface {
 	Eval(context.Context, map[string]tdtl.Node) (tdtl.Node, error)
-	Entities() map[string][]string
+	Sources() map[string][]string
 }
 
 func Validate(expr repository.Expression) error {
@@ -35,6 +35,6 @@ func (e *Expr) Eval(ctx context.Context, in map[string]tdtl.Node) (tdtl.Node, er
 	return result, errors.Wrap(result.Error(), "eval expression")
 }
 
-func (e *Expr) Entities() map[string][]string {
+func (e *Expr) Sources() map[string][]string {
 	return e.exprIns.Sources()
 }

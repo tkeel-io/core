@@ -436,7 +436,7 @@ func checkExpression(expr *repository.Expression) error {
 	}
 
 	propKeys := make(map[string]string)
-	for _, keys := range exprIns.Entities() {
+	for _, keys := range exprIns.Sources() {
 		for _, key := range keys {
 			segs := strings.SplitN(key, sep, 2)
 			if segs[1] != "*" {

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 )
@@ -46,18 +46,15 @@ type Expression struct {
 }
 
 func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
-	escapePath := url.PathEscape(path)
 	typ := ExprTypeEval
-	if escapePath == "" {
-		path = util.UUID("exprsub")
-		escapePath = url.PathEscape(path)
-		typ = ExprTypeSub
-	}
-
-	identifier := fmt.Sprintf("%s/%s/%s/%s",
-		ExprPrefix, owner, entityID, escapePath)
-	return &Expression{
-		ID:          identifier,
+	//Expression only for Eval
+	//escapePath := url.PathEscape(path)
+	//if escapePath == "" {
+	//	path = util.UUID("exprsub")
+	//	escapePath = url.PathEscape(path)
+	//	typ = ExprTypeSub
+	//}
+	ret := &Expression{
 		Name:        name,
 		Path:        path,
 		Type:        typ,
@@ -66,12 +63,20 @@ func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
 		Expression:  expr,
 		Description: desc,
 	}
+	ret.GenKey()
+	return ret
 }
 
 func ListExpressionPrefix(Owner, EntityID string) string {
 	keyString := fmt.Sprintf("%s/%s/%s",
 		ExprPrefix, Owner, EntityID)
 	return keyString
+}
+
+func (e *Expression) GenKey() error {
+	key, err := e.EncodeKey()
+	e.ID = string(key)
+	return err
 }
 
 func (e *Expression) EncodeKey() ([]byte, error) {
@@ -87,8 +92,18 @@ func (e *Expression) Encode() ([]byte, error) {
 }
 
 func (e *Expression) Decode(key, bytes []byte) error {
-	err := json.Unmarshal(bytes, e)
-	return errors.Wrap(err, "decode Expression")
+	if bytes != nil {
+		err := json.Unmarshal(bytes, e)
+		return errors.Wrap(err, "decode Expression")
+	}
+	keys := strings.Split(string(key), "/")
+	if len(keys) != 7 {
+		return errors.Errorf("error:decode Subscription from key[%s]", string(key))
+	}
+	e.Owner = keys[4]
+	e.EntityID = keys[5]
+	e.ID = string(key)
+	return nil
 }
 
 func (e *Expression) Prefix() string {
@@ -170,5 +185,7 @@ func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpr
 	})
 }
 
-type RangeExpressionFunc func([]*Expression)
-type WatchExpressionFunc func(dao.EnventType, Expression)
+type (
+	RangeExpressionFunc func([]*Expression)
+	WatchExpressionFunc func(dao.EnventType, Expression)
+)

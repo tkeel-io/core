@@ -2,8 +2,12 @@ package runtime
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
+
+	go_restful "github.com/emicklei/go-restful"
+	"github.com/tkeel-io/core/pkg/util/path"
 
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
@@ -49,14 +53,14 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 }
 
 // Start Node
-//1. 创建 KafkaSource & runtime
-//2. list resource
-//3. watch resource
-//4. start KafkaReceived.
+// 1. 创建 KafkaSource & runtime
+// 2. list resource
+// 3. watch resource
+// 4. start KafkaReceived.
 func (n *Node) Start(cfg NodeConf) error {
 	log.L().Info("start node...")
 
-	//1. 创建 KafkaSource & runtime
+	// 1. 创建 KafkaSource & runtime
 	var err error
 	var sourceIns *xkafka.Pubsub
 	for index := range cfg.Sources {
@@ -74,14 +78,14 @@ func (n *Node) Start(cfg NodeConf) error {
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})
 	}
 
-	//2. list resource
+	// 2. list resource
 	var elapsed util.ElapsedTime
 	n.listMetadata()
 
-	//3. watch resource
+	// 3. watch resource
 	n.watchMetadata()
 
-	//4. start KafkaReceived
+	// 4. start KafkaReceived
 	for _, queue := range n.queues {
 		if err = queue.Received(n.ctx, n); nil != err {
 			return errors.Wrap(err, "consume source")
@@ -274,18 +278,18 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 		return nil, errors.Wrap(err, "parse expression")
 	}
 
-	ownerInfo := placement.Global().Select(expr.EntityID)
+	targetRuntimeInfo := placement.Global().Select(expr.EntityID)
 	exprInfos := map[string]*ExpressionInfo{
-		ownerInfo.ID: {
+		targetRuntimeInfo.ID: {
 			version:    version,
 			Expression: expr,
-			isHere:     true,
-		}}
+		},
+	}
 
-	for eid, paths := range exprIns.Entities() {
-		info := placement.Global().Select(eid)
-		if _, has := exprInfos[info.ID]; !has {
-			exprInfos[info.ID] = &ExpressionInfo{
+	for sourceEntityID, paths := range exprIns.Sources() {
+		sourceRuntimeInfo := placement.Global().Select(sourceEntityID)
+		if _, has := exprInfos[sourceRuntimeInfo.ID]; !has {
+			exprInfos[sourceRuntimeInfo.ID] = &ExpressionInfo{
 				version:    version,
 				Expression: expr,
 			}
@@ -293,21 +297,18 @@ func parseExpression(expr repository.Expression, version int) (map[string]*Expre
 
 		for _, path := range paths {
 			// construct sub endpoint.
-			if eid != expr.EntityID {
-				exprInfos[info.ID].subEndpoints =
-					append(exprInfos[info.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
+			if sourceEntityID != expr.EntityID {
+				exprInfos[sourceRuntimeInfo.ID].subEndpoints = append(exprInfos[sourceRuntimeInfo.ID].subEndpoints,
+					newSubEnd(path, expr.EntityID, expr.ID, targetRuntimeInfo.ID))
 			}
 
 			// construct eval endpoint.
 			if repository.ExprTypeEval == expr.Type {
-				exprInfos[ownerInfo.ID].evalEndpoints =
-					append(exprInfos[ownerInfo.ID].evalEndpoints,
-						newEvalEnd(path, expr.EntityID, expr.ID))
+				exprInfos[targetRuntimeInfo.ID].evalEndpoints = append(exprInfos[targetRuntimeInfo.ID].evalEndpoints,
+					newEvalEnd(path, expr.EntityID, expr.ID))
 			} else if repository.ExprTypeSub == expr.Type {
-				exprInfos[ownerInfo.ID].subEndpoints =
-					append(exprInfos[ownerInfo.ID].subEndpoints,
-						newSubEnd(path, expr.EntityID, expr.ID, ownerInfo.ID))
+				exprInfos[targetRuntimeInfo.ID].subEndpoints = append(exprInfos[targetRuntimeInfo.ID].subEndpoints,
+					newSubEnd(path, expr.EntityID, expr.ID, targetRuntimeInfo.ID))
 			}
 		}
 	}
@@ -331,5 +332,37 @@ func newExprInfo(expr *repository.Expression) ExpressionInfo {
 			EntityID:    expr.EntityID,
 			Expression:  expr.Expression,
 			Description: expr.Description,
-		}}
+		},
+	}
+}
+
+func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
+	action := req.Request.URL.Query().Get("action")
+	switch action {
+	case "nodelist":
+		ret := []string{}
+		for k := range n.runtimes {
+			ret = append(ret, k)
+		}
+		resp.WriteAsJson(strings.Join(ret, "|"))
+	case "subtree":
+		rid := req.Request.URL.Query().Get("rid")
+		ret := n.runtimes[rid]
+		resp.Write([]byte(ret.subTree.String()))
+	case "eveltree":
+		rid := req.Request.URL.Query().Get("rid")
+		ret := n.runtimes[rid]
+		resp.Write([]byte(ret.evalTree.String()))
+	case "sub":
+		rid := req.Request.URL.Query().Get("rid")
+		entityID := req.Request.URL.Query().Get("entityID")
+		changePath := req.Request.URL.Query().Get("changePath")
+		rt, ok := n.runtimes[rid]
+		if ok {
+			ret := rt.subTree.MatchPrefix(path.FmtWatchKey(entityID, changePath))
+			resp.WriteAsJson(ret)
+		} else {
+			resp.WriteErrorString(501, "runtime <"+rid+"> not found")
+		}
+	}
 }

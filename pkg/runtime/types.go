@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/tkeel-io/core/pkg/mapper"
@@ -31,7 +32,6 @@ type EntityAttr interface {
 
 type Entity interface {
 	EntityAttr
-
 	ID() string
 	Get(string) tdtl.Node
 	Copy() Entity
@@ -64,9 +64,6 @@ type Task func()
 type ExpressionInfo struct {
 	// embedded Expression.
 	repository.Expression
-
-	// expression 所属 entity 是否属于当前 runtime.
-	isHere        bool //nolint
 	version       int
 	subEndpoints  []SubEndpoint
 	evalEndpoints []EvalEndpoint
@@ -89,11 +86,11 @@ func newSubEnd(path, target, exprID, deliveryID string) SubEndpoint {
 }
 
 func (s *SubEndpoint) ID() string {
-	return s.path + s.deliveryID
+	return s.expressionID
 }
 
 func (s *SubEndpoint) String() string {
-	return s.path + s.deliveryID + s.target
+	return fmt.Sprintf("%s|%s|%s|%s", s.path, s.deliveryID, s.target, s.expressionID)
 }
 
 func (s *SubEndpoint) WildcardPath() string {
@@ -123,7 +120,7 @@ func newEvalEnd(path, target, expressionID string) EvalEndpoint {
 }
 
 func (e EvalEndpoint) ID() string {
-	//return e.path + e.target
+	// return e.path + e.target
 	return e.expresionID
 }
 
@@ -136,7 +133,7 @@ func (e EvalEndpoint) WildcardPath() string {
 }
 
 func (e *EvalEndpoint) String() string {
-	return e.path + e.target
+	return fmt.Sprintf("%s|%s|%s", e.path, e.target, e.expresionID)
 }
 
 func (e *EvalEndpoint) Expression() string {
