@@ -310,12 +310,6 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	}
 	corev1.RegisterRawdataHTTPServer(httpSrv.Container, _rawdataSrv)
 
-	// register rawdata service.
-	if _rawdataSrv, err = service.NewRawdataService(); nil != err {
-		log.Fatal(err)
-	}
-	corev1.RegisterRawdataHTTPServer(httpSrv.Container, _rawdataSrv)
-
 	// metrics service.
 	if _gopsSrv, err = service.NewGOPSService(); nil != err {
 		log.Fatal(err)
