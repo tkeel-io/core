@@ -144,7 +144,7 @@ func (r *repo) RangeSubscription(ctx context.Context, rev int64, handler RangeSu
 
 func (r *repo) WatchSubscription(ctx context.Context, rev int64, handler WatchSubscriptionFunc) {
 	r.dao.WatchResource(ctx, rev, SubscriptionPrefix, func(et dao.EnventType, kv *mvccpb.KeyValue) {
-		var expr = &Subscription{}
+		expr := &Subscription{}
 		err := expr.Decode(kv.Key, kv.Value)
 		if nil != err {
 			log.L().Error("")
@@ -153,5 +153,7 @@ func (r *repo) WatchSubscription(ctx context.Context, rev int64, handler WatchSu
 	})
 }
 
-type RangeSubscriptionFunc func([]*Subscription)
-type WatchSubscriptionFunc func(dao.EnventType, *Subscription)
+type (
+	RangeSubscriptionFunc func([]*Subscription)
+	WatchSubscriptionFunc func(dao.EnventType, *Subscription)
+)

@@ -142,5 +142,7 @@ func (r *repo) WatchSchema(ctx context.Context, rev int64, handler WatchSchemaFu
 	})
 }
 
-type RangeSchemaFunc func([]*Schema)
-type WatchSchemaFunc func(dao.EnventType, Schema)
+type (
+	RangeSchemaFunc func([]*Schema)
+	WatchSchemaFunc func(dao.EnventType, Schema)
+)

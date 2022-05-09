@@ -20,32 +20,33 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
-	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/tdtl"
 	"sync"
 	"testing"
+
+	"github.com/Shopify/sarama"
+	v1 "github.com/tkeel-io/core/api/core/v1"
 )
 
-type rc struct {
-}
-
-func (r *rc) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
-	var ev = v1.ProtoEvent{}
+func PrintProtoEvent(msg *sarama.ConsumerMessage) string {
+	ev := v1.ProtoEvent{}
 	if msg == nil || len(msg.Value) == 0 {
-		fmt.Println("[-]nil", msg.Topic)
-		return nil
+		return fmt.Sprintln("[-]", msg.Topic)
 	}
 	if err := v1.Unmarshal(msg.Value, &ev); nil != err {
-		fmt.Println("[-]", msg.Topic, err)
-		return err
+		return fmt.Sprintln("[-]", msg.Topic, err)
 	}
-	if byt, err := json.Marshal(ev); nil != err {
-		fmt.Println("[-]", msg.Topic, err)
-		return err
-	} else {
-		fmt.Println("[]", msg.Topic, string(byt))
+
+	byt, err := json.Marshal(&ev)
+	if nil != err {
+		return fmt.Sprintln("[-]", msg.Topic, err)
 	}
+	return fmt.Sprintln("[]", msg.Topic, string(byt))
+}
+
+type rc struct{}
+
+func (r *rc) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
+	PrintProtoEvent(msg)
 	return nil
 }
 
@@ -83,15 +84,12 @@ func TestNewKafkaPubsub(t *testing.T) {
 	wg.Wait()
 }
 
-type rc2 struct {
-}
+type rc2 struct{}
 
 func (r *rc2) HandleMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
-	cc := tdtl.New(msg.Value)
-	fmt.Println("[]", msg.Topic, cc.Get(""))
-
 	return nil
 }
+
 func TestNewKafkaPubsub2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)

@@ -103,18 +103,18 @@ func (r *Runtime) HandleEvent(ctx context.Context, event v1.Event) error {
 		logf.Event(event), logf.EvID(event.ID()))
 
 	execer, feed := r.PrepareEvent(ctx, event)
-	new_feed := execer.Exec(ctx, feed)
+	newFeed := execer.Exec(ctx, feed)
 
 	// call callback once.
-	r.handleCallback(ctx, new_feed)
-	if nil != new_feed.Err {
-		log.Error("handle event", logf.Error(new_feed.Err),
+	r.handleCallback(ctx, newFeed)
+	if nil != newFeed.Err {
+		log.Error("handle event", logf.Error(newFeed.Err),
 			logf.ID(event.ID()), logf.Eid(event.Entity()), logf.Event(event))
 	}
 
-	byt, err := json.Marshal(FeedLog{feed, new_feed})
+	byt, err := json.Marshal(FeedLog{feed, newFeed})
 	if nil != err {
-		log.Error("Marshal event error", logf.Error(new_feed.Err),
+		log.Error("Marshal event error", logf.Error(newFeed.Err),
 			logf.ID(event.ID()), logf.Eid(event.Entity()), logf.Event(event))
 	}
 	r.dispatcher.DispatchToLog(ctx, byt)
@@ -144,21 +144,25 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 		execer := &Execer{
 			state: state,
 			preFuncs: []Handler{
-				&handlerImpl{fn: r.handleRawData}}, //新增了 Patches
+				&handlerImpl{fn: r.handleRawData},
+			}, // 新增了 Patches
 			execFunc: state,
 			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},   //无变化
-				&handlerImpl{fn: r.handleComputed},   //无变化
-				&handlerImpl{fn: r.handlePersistent}, //无变化
+				&handlerImpl{fn: r.handleTentacle},   // 无变化
+				&handlerImpl{fn: r.handleComputed},   // 无变化
+				&handlerImpl{fn: r.handlePersistent}, // 无变化
 				&handlerImpl{fn: r.handleSubscribe},  //
-				&handlerImpl{fn: r.handleTemplate}}} //
+				&handlerImpl{fn: r.handleTemplate},
+			},
+		} //
 
 		return execer, &Feed{
 			Err:      err,
 			Event:    ev,
 			State:    state.Raw(),
 			EntityID: ev.Entity(),
-			Patches:  conv(e.Patches())}
+			Patches:  conv(e.Patches()),
+		}
 	case v1.ETCache:
 		sender := ev.Attr(v1.MetaSender)
 		// load cache.
@@ -174,13 +178,15 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			state:     state,
 			execFunc:  state,
 			preFuncs:  []Handler{},
-			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}}}
+			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}},
+		}
 		return execer, &Feed{
 			Err:      err,
 			Event:    ev,
 			State:    state.Raw(),
 			EntityID: sender,
-			Patches:  conv(e.Patches())}
+			Patches:  conv(e.Patches()),
+		}
 	default:
 		return &Execer{}, &Feed{
 			Event:    ev,
@@ -229,14 +235,16 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 						logf.ID(ev.ID()), logf.Header(ev.Attributes()), logf.Value(string(action.Data)))
 					return feed
 				}},
-			}}
+			},
+		}
 
 		// check entity exists.
 		if _, exists := r.entities[ev.Entity()]; exists {
 			return execer, &Feed{
 				Event:    ev,
 				EntityID: ev.Entity(),
-				Err:      xerrors.ErrEntityAleadyExists}
+				Err:      xerrors.ErrEntityAleadyExists,
+			}
 		}
 
 		// new entity.
@@ -247,7 +255,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
-				EntityID: ev.Entity()}
+				EntityID: ev.Entity(),
+			}
 		}
 
 		var scheme tdtl.Node
@@ -258,7 +267,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			return execer, &Feed{
 				Err:      err,
 				Event:    ev,
-				EntityID: ev.Entity()}
+				EntityID: ev.Entity(),
+			}
 		}
 
 		props := state.Get(FieldProperties)
@@ -273,11 +283,13 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			Patches: []Patch{{
 				Op:    xjson.OpMerge,
 				Path:  FieldProperties,
-				Value: tdtl.New(props.Raw())}, {
+				Value: tdtl.New(props.Raw()),
+			}, {
 				Op:    xjson.OpReplace,
 				Path:  FieldScheme,
 				Value: tdtl.New(scheme.Raw()),
-			}}}
+			}},
+		}
 	case v1.OpDelete:
 		state, err := r.LoadEntity(ev.Entity())
 		if nil != err {
@@ -290,7 +302,8 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 					}, &Feed{
 						Event:    ev,
 						State:    state.Raw(),
-						EntityID: ev.Entity()}
+						EntityID: ev.Entity(),
+					}
 			}
 			log.L().Error("delete entity", logf.Eid(ev.Entity()),
 				logf.Value(string(action.GetData())), logf.Error(err))
@@ -312,21 +325,24 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 					delete(r.entities, state.ID())
 
 					return feed
-				}}},
+				}},
+			},
 			postFuncs: []Handler{
 				&handlerImpl{fn: r.handleTentacle},
 				&handlerImpl{fn: func(_ context.Context, feed *Feed) *Feed {
 					log.L().Info("delete entity successed", logf.Eid(ev.Entity()),
 						logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 					return feed
-				}}},
+				}},
+			},
 		}
 
 		return execer, &Feed{
 			Err:      err,
 			Event:    ev,
 			State:    state.Raw(),
-			EntityID: ev.Entity()}
+			EntityID: ev.Entity(),
+		}
 	default:
 		return &Execer{
 				state:    DefaultEntity(ev.Entity()),
@@ -337,10 +353,13 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 						log.L().Error("event type not support", logf.Eid(ev.Entity()),
 							logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 						return feed
-					}}}}, &Feed{
+					}},
+				},
+			}, &Feed{
 				Event:    ev,
 				EntityID: ev.Entity(),
-				Err:      xerrors.ErrInternal}
+				Err:      xerrors.ErrInternal,
+			}
 	}
 }
 
@@ -404,11 +423,13 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 			Metadata: map[string]string{
 				v1.MetaType:     string(v1.ETEntity),
 				v1.MetaBorn:     "handleComputed",
-				v1.MetaEntityID: target},
+				v1.MetaEntityID: target,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patch,
-				}},
+				},
+			},
 		})
 	}
 
@@ -500,12 +521,12 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 	// 1. 检查 ret.path 和 订阅列表.
 	targets := make(map[string]string)
 	entityID := feed.EntityID
-	var patches = make(map[string][]*v1.PatchData)
+	patches := make(map[string][]*v1.PatchData)
 	for _, change := range feed.Changes {
 		for _, node := range r.subTree.
 			MatchPrefix(path.FmtWatchKey(entityID, change.Path)) {
 			subEnd, _ := node.(*SubEndpoint)
-			//sub 可以带 *， Path
+			// sub 可以带 *， Path
 			subPath := mergePath(subEnd.path, change.Path)
 			targets[subEnd.deliveryID] = whichPrefix(targets[subEnd.deliveryID], subPath)
 			log.L().Debug("expression sub matched", logf.Eid(entityID),
@@ -547,11 +568,13 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 				v1.MetaType:        string(v1.ETCache),
 				v1.MetaBorn:        "handleTentacle",
 				v1.MetaPartitionID: runtimeID,
-				v1.MetaSender:      entityID},
+				v1.MetaSender:      entityID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: sendData,
-				}},
+				},
+			},
 		})
 	}
 
@@ -573,7 +596,9 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: feed.State}}
+					RawData: feed.State,
+				},
+			}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaBorn, "handleCallback")
 			ev.SetAttr(v1.MetaResponseStatus, string(types.StatusOK))
@@ -585,7 +610,9 @@ func (r *Runtime) handleCallback(ctx context.Context, feed *Feed) error {
 				Callback:  event.CallbackAddr(),
 				Metadata:  event.Attributes(),
 				Data: &v1.ProtoEvent_RawData{
-					RawData: []byte(`{}`)}}
+					RawData: []byte(`{}`),
+				},
+			}
 			ev.SetType(v1.ETCallback)
 			ev.SetAttr(v1.MetaBorn, "handleCallback")
 			ev.SetAttr(v1.MetaResponseErrCode, feed.Err.Error())
@@ -644,14 +671,20 @@ func (r *Runtime) onTemplateChanged(ctx context.Context, entityID, templateID st
 			v1.MetaType:     string(v1.ETEntity),
 			v1.MetaBorn:     "onTemplateChanged",
 			v1.MetaEntityID: entityID,
-			v1.MetaSender:   entityID},
+			v1.MetaSender:   entityID,
+		},
 		Data: &v1.ProtoEvent_Patches{
 			Patches: &v1.PatchDatas{
-				Patches: []*v1.PatchData{{
-					Path:     FieldScheme,
-					Value:    templateIns.Scheme().Raw(),
-					Operator: xjson.OpReplace.String()},
-				}}}}
+				Patches: []*v1.PatchData{
+					{
+						Path:     FieldScheme,
+						Value:    templateIns.Scheme().Raw(),
+						Operator: xjson.OpReplace.String(),
+					},
+				},
+			},
+		},
+	}
 	err = r.dispatcher.Dispatch(ctx, ev)
 	return errors.Wrap(err, "On Template Changed")
 }
@@ -859,11 +892,13 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 			Metadata: map[string]string{
 				v1.MetaType:     string(v1.ETEntity),
 				v1.MetaBorn:     "initializeExpression",
-				v1.MetaEntityID: expr.EntityID},
+				v1.MetaEntityID: expr.EntityID,
+			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
 					Patches: patches,
-				}},
+				},
+			},
 		})
 	} else {
 		patches := map[string][]*v1.PatchData{}
@@ -890,12 +925,12 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 				continue
 			}
 
-			patches[item.EntityID] =
-				append(patches[item.EntityID],
-					&v1.PatchData{
-						Path:     path,
-						Value:    val.Raw(),
-						Operator: operator})
+			patches[item.EntityID] = append(patches[item.EntityID],
+				&v1.PatchData{
+					Path:     path,
+					Value:    val.Raw(),
+					Operator: operator,
+				})
 		}
 
 		// handle subscribe, dispatch entity state.
@@ -907,11 +942,13 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 					v1.MetaType:     string(v1.ETCache),
 					v1.MetaBorn:     "initializeExpression",
 					v1.MetaEntityID: expr.EntityID,
-					v1.MetaSender:   entityID},
+					v1.MetaSender:   entityID,
+				},
 				Data: &v1.ProtoEvent_Patches{
 					Patches: &v1.PatchDatas{
 						Patches: patch,
-					}},
+					},
+				},
 			})
 		}
 	}

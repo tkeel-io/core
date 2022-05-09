@@ -7,8 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var repoIns IRepository
-var testReady bool //nolint
+var (
+	repoIns   IRepository
+	testReady bool //nolint
+)
 
 //func TestNewExpression(t *testing.T) {
 //	expr := NewExpression("admin", "device123", "expression001", "temp", "device234.temp", "")

@@ -54,8 +54,10 @@ func NewEntity(id string, state []byte) (Entity, error) {
 		s.Set(FieldScheme, tdtl.New([]byte("{}")))
 	}
 
-	return &entity{id: id, state: *s,
-			pathConstructor: pathConstructor},
+	return &entity{
+			id: id, state: *s,
+			pathConstructor: pathConstructor,
+		},
 		errors.Wrap(s.Error(), "new entity")
 }
 
@@ -128,7 +130,8 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 			patch.Value.Foreach(func(key []byte, value *tdtl.Collect) {
 				changes = append(changes, Patch{
 					Op: xjson.OpReplace, Value: value,
-					Path: strings.Join([]string{patch.Path, string(key)}, ".")})
+					Path: strings.Join([]string{patch.Path, string(key)}, "."),
+				})
 			})
 		default:
 			changes = append(changes,
@@ -182,12 +185,15 @@ func (e *entity) Tiled() tdtl.Node {
 func (e *entity) Type() string {
 	return e.state.Get(FieldType).String()
 }
+
 func (e *entity) Owner() string {
 	return e.state.Get(FieldOwner).String()
 }
+
 func (e *entity) Source() string {
 	return e.state.Get(FieldSource).String()
 }
+
 func (e *entity) Version() int64 {
 	version := e.state.Get(FieldVersion).String()
 	i, _ := strconv.ParseInt(version, 10, 64)
@@ -199,18 +205,23 @@ func (e *entity) LastTime() int64 {
 	i, _ := strconv.ParseInt(lastTime, 10, 64)
 	return i
 }
+
 func (e *entity) TemplateID() string {
 	return e.state.Get(FieldTemplate).String()
 }
+
 func (e *entity) Properties() tdtl.Node {
 	return e.state.Get("properties")
 }
+
 func (e *entity) Scheme() tdtl.Node {
 	return e.state.Get("scheme")
 }
+
 func (e *entity) GetProp(key string) tdtl.Node {
 	return e.state.Get("properties." + key)
 }
+
 func (e *entity) Update() {
 	// update entity version.
 	lastTime := time.Now().UnixNano() / 1e6
@@ -287,9 +298,9 @@ func makeScheme(segs []string, data []byte) []byte {
 	// set last seg.
 	var v interface{}
 	json.Unmarshal(data, &v)
-	head.Define["fields"] =
-		map[string]interface{}{
-			segs[len(segs)-1]: v}
+	head.Define["fields"] = map[string]interface{}{
+		segs[len(segs)-1]: v,
+	}
 	bytes, _ := json.Marshal(cfg)
 
 	return bytes

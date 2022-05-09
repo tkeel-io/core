@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/core/pkg/repository/dao"
-	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 )
@@ -47,13 +46,14 @@ type Expression struct {
 }
 
 func NewExpression(owner, entityID, name, path, expr, desc string) *Expression {
-	escapePath := url.PathEscape(path)
 	typ := ExprTypeEval
-	if escapePath == "" {
-		path = util.UUID("exprsub")
-		escapePath = url.PathEscape(path)
-		typ = ExprTypeSub
-	}
+	//Expression only for Eval
+	//escapePath := url.PathEscape(path)
+	//if escapePath == "" {
+	//	path = util.UUID("exprsub")
+	//	escapePath = url.PathEscape(path)
+	//	typ = ExprTypeSub
+	//}
 	ret := &Expression{
 		Name:        name,
 		Path:        path,
@@ -185,5 +185,7 @@ func (r *repo) WatchExpression(ctx context.Context, rev int64, handler WatchExpr
 	})
 }
 
-type RangeExpressionFunc func([]*Expression)
-type WatchExpressionFunc func(dao.EnventType, Expression)
+type (
+	RangeExpressionFunc func([]*Expression)
+	WatchExpressionFunc func(dao.EnventType, Expression)
+)

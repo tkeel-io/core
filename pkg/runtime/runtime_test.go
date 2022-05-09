@@ -18,7 +18,8 @@ package runtime
 
 import (
 	"context"
-	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/placement"
@@ -26,7 +27,6 @@ import (
 	"github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/tdtl"
-	"testing"
 )
 
 func TestTTDL(t *testing.T) {
@@ -56,12 +56,14 @@ var expr1 = `{"ID":"/core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-b
 "EntityID":"iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf",
 "Expression":"iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.src1",
 "Description":"iotd-06a96c8d-c166-447c-afd1-63010636b362=映射3,yc1=遥测1"}`
+
 var expr2 = `{"ID":"/core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf/properties.telemetry.yc2",
 "Path":"properties.telemetry.yc2",
 "Name":"", "Type":"eval", "Owner":"usr-57bea3a2d74e21ebbedde8268610",
 "EntityID":"iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf",
 "Expression":"iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.src2",
 "Description":"iotd-06a96c8d-c166-447c-afd1-63010636b362=映射3,yc1=遥测1"}`
+
 var state = `{
 "properties": {
 "_version": {"type": "number"},
@@ -70,20 +72,16 @@ var state = `{
 }
 }`
 
-type dispatcher_mock struct {
-}
+type dispatcherMock struct{}
 
-func (d *dispatcher_mock) DispatchToLog(ctx context.Context, bytes []byte) error {
+func (d *dispatcherMock) DispatchToLog(ctx context.Context, bytes []byte) error {
 	return nil
 }
 
-func (d *dispatcher_mock) Dispatch(ctx context.Context, event v1.Event) error {
+func (d *dispatcherMock) Dispatch(ctx context.Context, event v1.Event) error {
 	return nil
 }
 
-//iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf //目标
-//- yc2 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1  //e
-//- yc1 = iotd-06a96c8d-c166-447c-afd1-63010636b362.properties.telemetry.yc1
 func TestRuntime_handleComputed(t *testing.T) {
 	placement.Initialize()
 	placement.Global().Append(placement.Info{
@@ -93,8 +91,8 @@ func TestRuntime_handleComputed(t *testing.T) {
 	en, err := NewEntity("iotd-06a96c8d-c166-447c-afd1-63010636b362", []byte(state))
 	assert.Nil(t, err)
 
-	rt := Runtime{
-		dispatcher: &dispatcher_mock{},
+	rt := &Runtime{
+		dispatcher: &dispatcherMock{},
 		enCache: NewCacheMock(map[string]Entity{
 			"iotd-06a96c8d-c166-447c-afd1-63010636b362": en,
 		}),
@@ -103,9 +101,8 @@ func TestRuntime_handleComputed(t *testing.T) {
 		evalTree:    path.New(),
 	}
 
-	var exprs = make([]repository.Expression, 0)
-	exprs = append(exprs, updateExpr(t, rt, expr1))
-	exprs = append(exprs, updateExpr(t, rt, expr2))
+	updateExpr(rt, expr1)
+	updateExpr(rt, expr2)
 	feed := Feed{
 		TTL:      0,
 		Err:      nil,
@@ -131,8 +128,8 @@ func TestRuntime_handleComputed(t *testing.T) {
 	got = rt.handleComputed(context.Background(), &feed)
 	t.Log(got)
 
-	removeExpr(t, rt, expr1)
-	removeExpr(t, rt, expr2)
+	removeExpr(rt, expr1)
+	removeExpr(rt, expr2)
 	got = rt.handleTentacle(context.Background(), &feed)
 	t.Log(got)
 	got = rt.handleComputed(context.Background(), &feed)
@@ -140,7 +137,7 @@ func TestRuntime_handleComputed(t *testing.T) {
 }
 
 func makeExpr(exprRaw string) repository.Expression {
-	var expr = repository.Expression{}
+	expr := repository.Expression{}
 	expr.Decode([]byte(""), []byte(exprRaw))
 	return expr
 }
@@ -155,20 +152,21 @@ func makeExprInfos(expr repository.Expression) map[string]*ExpressionInfo {
 	return exprInfos
 }
 
-func updateExpr(t *testing.T, rt Runtime, exprRaw string) repository.Expression {
-	var expr = repository.Expression{}
+func updateExpr(rt *Runtime, exprRaw string) repository.Expression {
+	expr := repository.Expression{}
 	expr.Decode([]byte(""), []byte(exprRaw))
 	exprInfo1, err := parseExpression(expr, 1)
-	assert.Nil(t, err)
-	for runtimeID, exprIns := range exprInfo1 {
-		t.Log(runtimeID)
+	if err != nil {
+		panic(err)
+	}
+	for _, exprIns := range exprInfo1 {
 		rt.AppendExpression(*exprIns)
 	}
 	return expr
 }
 
-func removeExpr(t *testing.T, rt Runtime, exprRaw string) repository.Expression {
-	var expr = repository.Expression{}
+func removeExpr(rt *Runtime, exprRaw string) repository.Expression {
+	expr := repository.Expression{}
 	expr.Decode([]byte(""), []byte(exprRaw))
 	exprInfo := newExprInfo(&expr)
 	rt.RemoveExpression(exprInfo.ID)
@@ -203,8 +201,8 @@ func TestRuntime_AppendExpression(t *testing.T) {
 	en, err := NewEntity("iotd-06a96c8d-c166-447c-afd1-63010636b362", []byte(state))
 	assert.Nil(t, err)
 
-	rt := Runtime{
-		dispatcher: &dispatcher_mock{},
+	rt := &Runtime{
+		dispatcher: &dispatcherMock{},
 		enCache: NewCacheMock(map[string]Entity{
 			"iotd-06a96c8d-c166-447c-afd1-63010636b362": en,
 		}),
@@ -228,5 +226,5 @@ func TestRuntime_AppendExpression(t *testing.T) {
 	}
 	rt.RemoveExpression(ex1.ID)
 	rt.RemoveExpression(ex2.ID)
-	fmt.Println(rt)
+	t.Log(rt)
 }

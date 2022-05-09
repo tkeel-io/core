@@ -2,7 +2,6 @@ package path
 
 import (
 	"sort"
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -31,8 +30,6 @@ func TestTree(t *testing.T) {
 	addNode("a.b.c.d.e.g")
 	addNode("a.b.c.d.e.i.j")
 	addNode("a.b.c.d.e.i.j.k")
-
-	fmt.Println(tr.String())
 
 	tests := []struct {
 		name string

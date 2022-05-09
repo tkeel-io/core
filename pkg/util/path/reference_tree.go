@@ -72,7 +72,6 @@ func (rt *RefTree) MatchPrefix(path string) []Node {
 	return rt.tree.MatchPrefix(path)
 }
 
-
 func (rt *RefTree) String() string {
 	return rt.tree.String()
 }

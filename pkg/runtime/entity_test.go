@@ -40,7 +40,8 @@ func TestEntity_Handle(t *testing.T) {
 	in := []*Feed{
 		{
 			Event: &v1.ProtoEvent{
-				Metadata: map[string]string{}},
+				Metadata: map[string]string{},
+			},
 			Patches: []Patch{
 				{
 					Path:  "properties.temp",

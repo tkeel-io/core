@@ -32,7 +32,6 @@ type EntityAttr interface {
 
 type Entity interface {
 	EntityAttr
-
 	ID() string
 	Get(string) tdtl.Node
 	Copy() Entity
@@ -121,7 +120,7 @@ func newEvalEnd(path, target, expressionID string) EvalEndpoint {
 }
 
 func (e EvalEndpoint) ID() string {
-	//return e.path + e.target
+	// return e.path + e.target
 	return e.expresionID
 }
 
