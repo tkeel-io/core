@@ -104,7 +104,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		case xjson.OpReplace:
 			// construct sub path if not exists.
 			pcIns := v1.PathConstructor(pc)
-			patchVal, patchPath, err := e.pathConstructor(pcIns, e.state.Raw(), patch.Value.Raw(), patch.Path)
+			patchVal, patchPath, err := e.pathConstructor(pcIns, cc.Raw(), patch.Value.Raw(), patch.Path)
 			if nil != err {
 				log.L().Error("update entity", logf.Eid(e.id), logf.Error(err),
 					logf.Any("patches", feed.Patches), logf.Event(feed.Event))

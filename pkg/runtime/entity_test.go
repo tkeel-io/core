@@ -74,8 +74,26 @@ func TestEntity_Handle(t *testing.T) {
 				},
 			},
 		},
+		{
+			Event: &v1.ProtoEvent{
+				Metadata: map[string]string{
+					v1.MetaPathConstructor: string(v1.PCScheme),
+				},
+			},
+			Patches: []Patch{
+				{
+					Path:  "scheme.attributes.define.fields.serial-N",
+					Op:    xjson.OpReplace,
+					Value: tdtl.New(`{"id":"serial-N","type":"string","name":"序列号N","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxxn","rw":"w"},"last_time":1652164204383}`),
+				},
+				{
+					Path:  "scheme.attributes.define.fields.serial-3",
+					Op:    xjson.OpReplace,
+					Value: tdtl.New(`{"id":"serial-3","type":"string","name":"序列号3","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxx3","rw":"r"},"last_time":1652164204383}`),
+				},
+			},
+		},
 	}
-
 	for _, test := range in {
 		t.Run("test", func(t *testing.T) {
 			result := en.Handle(context.TODO(), test)
