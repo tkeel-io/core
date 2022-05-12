@@ -37,7 +37,7 @@ func TestEntity_Handle(t *testing.T) {
 	en, err := NewEntity("en-123", []byte(`{"properties": {"temp": 20}}`))
 	assert.Nil(t, err)
 
-	in := []*Feed{
+	feeds := []*Feed{
 		{
 			Event: &v1.ProtoEvent{
 				Metadata: map[string]string{},
@@ -74,17 +74,60 @@ func TestEntity_Handle(t *testing.T) {
 				},
 			},
 		},
+		{
+			Event: &v1.ProtoEvent{
+				Metadata: map[string]string{
+					v1.MetaPathConstructor: string(v1.PCScheme),
+				},
+			},
+			Patches: []Patch{
+				{
+					Path:  "scheme.attributes.define.fields.serial-N",
+					Op:    xjson.OpReplace,
+					Value: tdtl.New(`{"id":"serial-N","type":"string","name":"序列号N","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxxn","rw":"w"},"last_time":1652164204383}`),
+				},
+				{
+					Path:  "scheme.attributes.define.fields.serial-3",
+					Op:    xjson.OpReplace,
+					Value: tdtl.New(`{"id":"serial-3","type":"string","name":"序列号3","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxx3","rw":"r"},"last_time":1652164204383}`),
+				},
+			},
+		},
 	}
 
-	for _, test := range in {
-		t.Run("test", func(t *testing.T) {
-			result := en.Handle(context.TODO(), test)
-			assert.Nil(t, result.Err)
-			t.Log("result", result)
+	tests := []struct {
+		name string
+		feed *Feed
+		want map[string]string
+	}{
+		{"0",
+			feeds[0],
+			map[string]string{
+				"properties": `{"metrics":{"cpu_used":0.78,"mem_used":0.28,"interfaces":[0.28],"temp":209}}`,
+			},
+		},
+		{
+			"1",
+			feeds[1],
+			map[string]string{
+				"scheme.attributes.define.fields.serial-N": `{"id":"serial-N","type":"string","name":"序列号N","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxxn","rw":"w"},"last_time":1652164204383}`,
+				"scheme.attributes.define.fields.serial-3": `{"id":"serial-3","type":"string","name":"序列号3","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxx3","rw":"r"},"last_time":1652164204383}`,
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := en.Handle(ctx, tt.feed)
+			for path, val := range tt.want {
+				cc := tdtl.New(got.State)
+				if !assert.JSONEq(t, val, cc.Get(path).String()) {
+					t.Errorf("Path= %v, \nHandle() = %v, \nwant %v", path, cc.Get(path).String(), val)
+				}
+			}
 		})
 	}
-
-	t.Log(string(en.Raw()))
 }
 
 func TestMerge(t *testing.T) {
