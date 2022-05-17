@@ -26,13 +26,11 @@ import (
 	"syscall"
 	"time"
 
-	logf "github.com/tkeel-io/core/pkg/logfield"
-
-	"github.com/pkg/errors"
 	corev1 "github.com/tkeel-io/core/api/core/v1"
 	opsv1 "github.com/tkeel-io/core/api/ops/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
+	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
@@ -49,6 +47,7 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/store/memory"
 	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
+	_ "github.com/tkeel-io/core/pkg/resource/tseries/clickhouse"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -59,6 +58,8 @@ import (
 	_ "github.com/tkeel-io/core/pkg/util/transport"
 	"github.com/tkeel-io/core/pkg/version"
 
+	_ "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/tkeel-io/kit/app"
 	"github.com/tkeel-io/kit/log"
