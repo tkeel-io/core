@@ -17,12 +17,9 @@ func Test_clickhouse_Init(t *testing.T) {
 	err := c.Init(resource.Metadata{
 		Name: "clickhouse",
 		Properties: map[string]interface{}{
-			"host":     "127.0.0.1",
-			"port":     "9000",
-			"db_name":  "core2",
+			"urls":     []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
 			"table":    "test5",
-			"user":     "default",
-			"password": "tkeel123!",
+			"database": "core",
 		},
 	})
 	t.Log(err)
@@ -41,7 +38,7 @@ func Test_clickhouse_Init(t *testing.T) {
 						"abcd": rand.Float32(),
 						"abc":  rand.Float32(),
 					},
-					Timestamp: time.Now().UnixMilli(),
+					Timestamp: time.Now().UnixNano(),
 				},
 			},
 			Metadata: map[string]string{},
@@ -58,12 +55,9 @@ func Test_clickhouse_Query(t *testing.T) {
 	err := c.Init(resource.Metadata{
 		Name: "clickhouse",
 		Properties: map[string]interface{}{
-			"host":     "127.0.0.1",
-			"port":     "9000",
-			"db_name":  "core2",
+			"urls":     []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
 			"table":    "test5",
-			"user":     "default",
-			"password": "tkeel123!",
+			"database": "core",
 		},
 	})
 	t.Log(err)

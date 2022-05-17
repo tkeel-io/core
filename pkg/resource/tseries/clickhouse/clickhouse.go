@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -39,12 +40,9 @@ const (
 )
 
 type Config struct {
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	DbName   string `json:"db_name,omitempty"`
-	Table    string `json:"table,omitempty"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Urls     []string `json:"urls"`
+	Database string   `json:"database"`
+	Table    string   `json:"table,omitempty"`
 }
 
 type clickhouse struct {
@@ -84,7 +82,7 @@ func (c *clickhouse) Init(meta resource.Metadata) error {
 	if err != nil {
 		return errors.Wrap(err, "clickhouse init error")
 	}
-	connectStr := fmt.Sprintf("clickhouse://%s:%s@%s:%s?dial_timeout=1s&compress=true", c.cfg.User, c.cfg.Password, c.cfg.Host, c.cfg.Port)
+	connectStr := fmt.Sprintf("%s?dial_timeout=1s&compress=true", c.cfg.Urls[0])
 	conn, err := sql.Open("clickhouse", connectStr)
 	if err != nil {
 		log.Error("open clickhouse", logf.Any("error", err))
@@ -94,16 +92,16 @@ func (c *clickhouse) Init(meta resource.Metadata) error {
 		log.Error("ping clickhouse", logf.Any("error", err))
 		return err
 	}
-	_, err = conn.Exec(fmt.Sprintf(ClickhouseDBSQL, c.cfg.DbName))
+	_, err = conn.Exec(fmt.Sprintf(ClickhouseDBSQL, c.cfg.Database))
 	if err != nil {
 		log.Warn(err.Error())
 	}
 
-	_, err = conn.Exec(fmt.Sprintf(ClickhouseTableSQL, c.cfg.DbName, c.cfg.Table))
+	_, err = conn.Exec(fmt.Sprintf(ClickhouseTableSQL, c.cfg.Database, c.cfg.Table))
 	if err != nil {
 		log.Warn(err.Error())
 	}
-	if _, err = conn.Query(fmt.Sprintf("desc %s.%s;", c.cfg.DbName, c.cfg.Table)); err != nil { //nolint
+	if _, err = conn.Query(fmt.Sprintf("desc %s.%s;", c.cfg.Database, c.cfg.Table)); err != nil { //nolint
 		log.Error("check chronus table", logf.Any("error", err))
 		return err
 	}
@@ -125,7 +123,7 @@ func (c *clickhouse) Write(ctx context.Context, req *tseries.TSeriesRequest) (*t
 func (c *clickhouse) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	resp := &pb.GetTSDataResponse{}
 	tag := fmt.Sprintf(`'id=%s'`, req.GetId())
-	querySQL := fmt.Sprintf(ClickHouseQuery, c.cfg.DbName, c.cfg.Table, tag)
+	querySQL := fmt.Sprintf(ClickHouseQuery, c.cfg.Database, c.cfg.Table, tag)
 	querySQL += fmt.Sprintf(" `timestamp` > FROM_UNIXTIME(%d) AND `timestamp` < FROM_UNIXTIME(%d)", req.StartTime, req.EndTime)
 	identifiers := strings.Split(req.Identifiers, ",")
 	respData := make(map[time.Time]map[string]float32)
@@ -171,6 +169,11 @@ func (c *clickhouse) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.G
 			Value: v,
 		})
 	}
+	sort.Slice(resp.Items, func(i, j int) bool {
+		return resp.Items[i].Time < resp.Items[j].Time
+	})
+
+	resp.Total = int32(len(resp.Items))
 	resp.Total = int32(len(resp.Items))
 	resp.PageNum = req.PageNum
 	resp.PageSize = req.PageSize
@@ -213,7 +216,7 @@ func (c *clickhouse) writeBatch(items []*tseries.TSeriesData) error {
 		return err
 	}
 
-	batch, err := scope.Prepare(fmt.Sprintf(ClickhouseSSQLTlp, c.cfg.DbName, c.cfg.Table, "date, name, tags, value, timestamp"))
+	batch, err := scope.Prepare(fmt.Sprintf(ClickhouseSSQLTlp, c.cfg.Database, c.cfg.Table, "date, name, tags, value, timestamp"))
 	if err != nil {
 		return err
 	}
@@ -225,14 +228,15 @@ func (c *clickhouse) writeBatch(items []*tseries.TSeriesData) error {
 		}
 		for k, v := range item.Fields {
 			_, err := batch.Exec(
-				time.UnixMilli(item.Timestamp),
+				time.UnixMilli(item.Timestamp/1e6),
 				k,
 				[]string{fmt.Sprintf("id=%s", entityID)},
 				v,
-				item.Timestamp,
+				item.Timestamp/1e6,
 			)
 			if err != nil {
 				log.Error(err)
+				log.Info(item)
 			}
 		}
 	}
