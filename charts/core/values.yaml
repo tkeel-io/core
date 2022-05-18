@@ -53,12 +53,12 @@ tolerations: []
 
 affinity: {}
 # middleware configuration
-influxdb:
-  fullnameOverride: tkeel-core-influxdb
-  auth:
-    admin:
-      token: tr2zy29F1Tusl8bkBwOR
-      password: vR3MwJZIWcroG5Q4yTHL
-    user:
-      org: tkeel
-      bucket: core
+# influxdb:
+#  fullnameOverride: tkeel-core-influxdb
+#  auth:
+#    admin:
+#      token: tr2zy29F1Tusl8bkBwOR
+#      password: vR3MwJZIWcroG5Q4yTHL
+#    user:
+#      org: tkeel
+#      bucket: core
