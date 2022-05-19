@@ -57,7 +57,7 @@ func newClickhouse() tseries.TimeSerier {
 	return &clickhouse{
 		cfg:          &Config{},
 		msgQueue:     make(chan *tseries.TSeriesData, 1000),
-		batchSize:    10,
+		batchSize:    100,
 		batchTimeout: 1,
 	}
 }

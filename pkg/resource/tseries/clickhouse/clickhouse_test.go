@@ -12,13 +12,13 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 )
 
-func Test_clickhouse_Init(t *testing.T) {
+func Test_clickhouse_Write(t *testing.T) {
 	c := newClickhouse()
 	err := c.Init(resource.Metadata{
 		Name: "clickhouse",
 		Properties: map[string]interface{}{
 			"urls":     []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
-			"table":    "test5",
+			"table":    "test15",
 			"database": "core",
 		},
 	})
@@ -26,7 +26,7 @@ func Test_clickhouse_Init(t *testing.T) {
 	if err != nil {
 		return
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		req := &tseries.TSeriesRequest{
 			Data: []*tseries.TSeriesData{
 				{
@@ -43,11 +43,10 @@ func Test_clickhouse_Init(t *testing.T) {
 			},
 			Metadata: map[string]string{},
 		}
-		c.Write(context.Background(), req)
+		go c.Write(context.Background(), req)
 		t.Log(i)
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(200)))
 	}
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * 10)
 }
 
 func Test_clickhouse_Query(t *testing.T) {
