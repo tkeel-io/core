@@ -13,6 +13,8 @@ WORKDIR /src
 RUN GOPROXY=https://goproxy.cn make build
 
 FROM alpine:3.13
+RUN apk update
+RUN apk add tzdata
 
 RUN mkdir /keel
 COPY --from=builder /src/dist/linux_amd64/release/core /keel

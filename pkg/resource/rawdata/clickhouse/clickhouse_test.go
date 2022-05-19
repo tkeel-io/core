@@ -1,9 +1,11 @@
 package clickhouse
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
@@ -12,7 +14,7 @@ import (
 func TestClickhouse_genSql(t *testing.T) {
 	c := Clickhouse{
 		option: &Option{
-			Urls:   []string{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
+			Urls:   []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
 			DbName: "dbname",
 			Table:  "table",
 			Fields: map[string]Field{},
@@ -33,12 +35,15 @@ func TestClickhouse(t *testing.T) {
 		Name: "myck",
 		Properties: map[string]interface{}{
 			"database": "core",
-			//	"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
-			"table": "event_data1",
+			"urls":     []interface{}{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
+			"table":    "event_data1",
 		},
 	}
 	ck := NewClickhouse()
-	ck.Init(metadata)
+	err := ck.Init(metadata)
+	if err != nil {
+		return
+	}
 	req := rawdata.Request{
 		Data:     []*rawdata.RawData{},
 		Metadata: map[string]string{},
@@ -51,8 +56,8 @@ func TestClickhouse(t *testing.T) {
 		Values:    "ddddd",
 		Timestamp: time.Now(),
 	})
-	//	err := ck.Write(context.Background(), &req)
-	//	t.Log(err)
+	err = ck.Write(context.Background(), &req)
+	t.Log(err)
 }
 
 func TestClickhouse_Query(t *testing.T) {
@@ -60,18 +65,17 @@ func TestClickhouse_Query(t *testing.T) {
 		Name: "myck",
 		Properties: map[string]interface{}{
 			"database": "core",
-			//	"urls":     []interface{}{"http://default:C1ickh0use@clickhouse-my-ck:8123"},
-			"table": "event_data",
+			"urls":     []interface{}{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
+			"table":    "event_data1",
 		},
 	}
 	ck := NewClickhouse()
-	err := ck.Init(metadata)
-	if err != nil {
+	if err := ck.Init(metadata); err != nil {
 		return
 	}
 	req := &pb.GetRawdataRequest{
 		EntityId:     "iotd-124",
-		StartTime:    time.Now().Unix() - 3600*24 + 8*3600,
+		StartTime:    time.Now().Unix() - 3600*24,
 		EndTime:      time.Now().Unix() + 8*3600,
 		Path:         "adcd",
 		PageNum:      1,
@@ -80,8 +84,9 @@ func TestClickhouse_Query(t *testing.T) {
 		Filters:      map[string]string{},
 	}
 	req.Filters["path"] = "abc1,abc2"
-	//	resp, err := ck.Query(context.Background(), req)
+	resp, err := ck.Query(context.Background(), req)
 	if err != nil {
 		t.Log(err)
 	}
+	t.Log(resp)
 }

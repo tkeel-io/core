@@ -11,7 +11,6 @@ import (
 	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/jmoiron/sqlx"
-	ck "github.com/mailru/go-clickhouse"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
@@ -123,6 +122,7 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 	c.balance = NewLoadBalanceRandom(servers)
 	return nil
 }
+
 func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error) {
 	// log.Info("chronus Insert ", logf.Any("messages", messages)).
 	var (
@@ -136,12 +136,12 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error
 	for _, rawData := range req.Data {
 		data := new(execNode)
 
-		//fmt.Println(string(message.Data()))
+		// fmt.Println(string(message.Data()))
 		log.L().Info("Invoke", logf.Any("messages", string(rawData.Bytes())))
-		//jsonCtx := utils.NewJSONContext(string(message.Data()))
+		// jsonCtx := utils.NewJSONContext(string(message.Data()))
 
 		data.fields = []string{"tag", "entity_id", "timestamp", "values", "path"}
-		data.args = []interface{}{ck.Array(tags), rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path}
+		data.args = []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path}
 		if len(data.fields) > 0 && len(data.fields) == len(data.args) {
 			rows = append(rows, data)
 		} else {
