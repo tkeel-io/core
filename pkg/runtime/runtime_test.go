@@ -19,17 +19,11 @@ package runtime
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tkeel-io/collectjs"
-	pb "github.com/tkeel-io/core/api/core/v1"
 	v1 "github.com/tkeel-io/core/api/core/v1"
-	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/repository/dao"
-	_ "github.com/tkeel-io/core/pkg/resource/store/memory"
 	"github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/tdtl"
@@ -54,11 +48,6 @@ func Test_adjustTSData(t *testing.T) {
 	in = []byte(`{"ModBus-TCP":{"ts":1649215733364,"values":{"wet":42,"temperature":"abc"}},"OPC-UA":{"ts":1649215733364,"values":{"counter":15}}}`)
 	out = adjustTSData(in)
 	t.Log(string(out))
-	tt := collectjs.ByteNew(out)
-	item := tt.Get("OPC-UA@counter")
-	t.Log(string(item.GetRaw()))
-	item = tt.Get("OPC-UA")
-	t.Log(string(item.GetRaw()))
 }
 
 var expr1 = `{"ID":"/core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-b10bcaa1-ba98-4e03-bece-6f852feb6edf/properties.telemetry.yc1",
@@ -135,7 +124,6 @@ func TestRuntime_handleComputed(t *testing.T) {
 		},
 	}
 	got := rt.handleTentacle(context.Background(), &feed)
-	t.Log(string(feed.State))
 	t.Log(got)
 	got = rt.handleComputed(context.Background(), &feed)
 	t.Log(got)
@@ -239,59 +227,4 @@ func TestRuntime_AppendExpression(t *testing.T) {
 	rt.RemoveExpression(ex1.ID)
 	rt.RemoveExpression(ex2.ID)
 	t.Log(rt)
-}
-
-func NewRepo() repository.IRepository {
-	daoIns, _ := dao.NewMock(context.Background(), config.Metadata{}, config.EtcdConfig{})
-	return repository.New(daoIns)
-}
-
-func TestRuntime_HandleEvent(t *testing.T) {
-	placement.Initialize()
-	placement.Global().Append(placement.Info{
-		ID:   "core/1234",
-		Flag: true,
-	})
-	entityID := "ev-12345"
-
-	er := EntityResource{
-		FlushHandler:  nil,
-		RemoveHandler: nil,
-	}
-	repo := NewRepo()
-
-	ctx := context.Background()
-	repo.PutEntity(ctx, entityID, []byte(`{"id":"ev-12345","type":"template","owner":"usr-6e3f3707346822583797131e283f","source":"device","version":2,"last_time":1652164204493,"mappers":null,"template_id":"","properties":{"basicInfo":{"description":"这是一个测试摸版","name":"test-a06239"}}}`))
-	enB, err := repo.GetEntity(ctx, entityID)
-	t.Log(err)
-	t.Log(string(enB))
-
-	r := NewRuntime(ctx, er, "core", nil, repo)
-	ev := &pb.ProtoEvent{
-		Id:        entityID,
-		Timestamp: time.Now().UnixNano(),
-		Metadata:  map[string]string{},
-		Data: &pb.ProtoEvent_Patches{
-			Patches: &pb.PatchDatas{
-				Patches: []*pb.PatchData{
-					{
-						Path:     "scheme.attributes.define.fields.serial-N",
-						Operator: "replace",
-						Value:    []byte(`{"id":"serial-N","type":"string","name":"序列号N","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxxn","rw":"w"},"last_time":1652164204383}`),
-					},
-					{
-						Path:     "scheme.attributes.define.fields.serial-3",
-						Operator: "replace",
-						Value:    []byte(`{"id":"serial-3","type":"string","name":"序列号3","weight":0,"enabled":false,"enabled_search":false,"enabled_time_series":false,"description":"设备批次","define":{"default_value":"xxxxxxx3","rw":"r"},"last_time":1652164204383}`),
-					},
-				},
-			},
-		},
-	}
-	t.Log(ev.Entity())
-	ev.SetEntity(entityID)
-	ev.SetType(pb.ETEntity)
-	ev.SetAttr(pb.MetaPathConstructor, string(pb.PCScheme))
-	err = r.HandleEvent(ctx, ev)
-	t.Log(err)
 }
