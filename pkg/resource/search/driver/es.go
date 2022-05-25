@@ -37,9 +37,11 @@ import (
 
 const DriverTypeElasticsearch Type = "elasticsearch"
 
-const EntityIndex = "entity"
-const DefaultLimit int32 = 20
-const MaxLimit int32 = 200
+const (
+	EntityIndex        = "entity"
+	DefaultLimit int32 = 20
+	MaxLimit     int32 = 200
+)
 
 type ESConfig struct {
 	Username  string   `json:"username" mapstructure:"username"`
@@ -90,7 +92,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 
 func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
 	if _, err := es.Client.Index().Index(EntityIndex).
-		Id(index).BodyString(body).Do(ctx); err != nil {
+		Id(index).BodyString(body).Refresh("true").Do(ctx); err != nil {
 		return errors.Wrap(err, "set index in es error")
 	}
 	return nil

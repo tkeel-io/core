@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tkeel-io/collectjs"
@@ -33,7 +34,7 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
-func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
+func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
 
 	// 1. flush state.
@@ -44,7 +45,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 
 	// 2. flush data.
 	// 2.1 flush search global data.
-	globalData, err := n.makeSearchData(en)
+	globalData, err := n.makeSearchData(en, feed)
 	if nil != err {
 		log.L().Error("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
@@ -58,7 +59,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity) error {
 	// TODO.
 
 	// 2.3 flush timeseries data.
-	flushData, err := n.makeTimeSeriesData(ctx, en)
+	flushData, err := n.makeTimeSeriesData(ctx, en, feed)
 	if nil != err {
 		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
@@ -104,7 +105,18 @@ func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.Request, er
 	return req, nil
 }
 
-func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity) (*tseries.TSeriesRequest, error) {
+func (n *Node) getTimeSeriesKey(patchs []Patch) []string {
+	prefix := "properties.telemetry."
+	res := make([]string, 0)
+	for _, patch := range patchs {
+		if strings.HasPrefix(patch.Path, prefix) {
+			res = append(res, strings.TrimPrefix(patch.Path, prefix))
+		}
+	}
+	return res
+}
+
+func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, error) {
 	tsData := en.GetProp("telemetry")
 	var flushData []*tseries.TSeriesData
 	log.Info("tsData: ", tsData)
@@ -116,33 +128,36 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity) (*tseries.TSer
 		return nil, errors.Wrap(err, "write ts db error")
 	}
 	tss, ok := res.(map[string]interface{})
+	needWriteKeys := n.getTimeSeriesKey(feed.Changes)
 	if ok {
-		for k, v := range tss {
-			switch tsOne := v.(type) {
-			case map[string]interface{}:
-				if ts, ok := tsOne["ts"]; ok {
-					tsItem := tseries.TSeriesData{
-						Measurement: "keel",
-						Tags:        map[string]string{"id": en.ID()},
-						Fields:      map[string]float32{},
-						Timestamp:   0,
+		for _, k := range needWriteKeys {
+			if v, ok := tss[k]; ok {
+				switch tsOne := v.(type) {
+				case map[string]interface{}:
+					if ts, ok := tsOne["ts"]; ok {
+						tsItem := tseries.TSeriesData{
+							Measurement: "keel",
+							Tags:        map[string]string{"id": en.ID()},
+							Fields:      map[string]float32{},
+							Timestamp:   0,
+						}
+						switch tttV := tsOne["value"].(type) {
+						case float64:
+							tsItem.Fields[k] = float32(tttV)
+							timestamp, _ := ts.(float64)
+							tsItem.Timestamp = int64(timestamp) * 1e6
+							flushData = append(flushData, &tsItem)
+						case float32:
+							tsItem.Fields[k] = tttV
+							timestamp, _ := ts.(float64)
+							tsItem.Timestamp = int64(timestamp) * 1e6
+							flushData = append(flushData, &tsItem)
+						}
+						continue
 					}
-					switch tttV := tsOne["value"].(type) {
-					case float64:
-						tsItem.Fields[k] = float32(tttV)
-						timestamp, _ := ts.(float64)
-						tsItem.Timestamp = int64(timestamp) * 1e6
-						flushData = append(flushData, &tsItem)
-					case float32:
-						tsItem.Fields[k] = tttV
-						timestamp, _ := ts.(float64)
-						tsItem.Timestamp = int64(timestamp) * 1e6
-						flushData = append(flushData, &tsItem)
-					}
-					continue
+				default:
+					log.Info(tsOne)
 				}
-			default:
-				log.Info(tsOne)
 			}
 		}
 	}
@@ -152,7 +167,20 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity) (*tseries.TSer
 	}, errors.Wrap(err, "write ts db error")
 }
 
-func (n *Node) makeSearchData(en Entity) ([]byte, error) {
+func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
+	searchBasicPath := []string{"sysField", "basicInfo", "connectInfo"}
+	writeFlag := false
+	for _, patch := range feed.Changes {
+		for _, searchPath := range searchBasicPath {
+			if strings.HasPrefix(patch.Path, "properties."+searchPath) {
+				writeFlag = true
+			}
+		}
+	}
+	if !writeFlag {
+		return nil, errors.New("no need to write")
+	}
+
 	globalData := collectjs.ByteNew([]byte(`{}`))
 	globalData.Set(FieldID, en.Get(FieldID).Raw())
 	globalData.Set(FieldType, en.Get(FieldType).Raw())
@@ -166,28 +194,22 @@ func (n *Node) makeSearchData(en Entity) ([]byte, error) {
 	}
 	globalData.Set(FieldEntitySource, byt)
 
-	sysField := en.GetProp("sysField")
-	if sysField.Type() != tdtl.Null {
-		globalData.Set("sysField", sysField.Raw())
-	}
-	basicInfo := en.GetProp("basicInfo")
-	if basicInfo.Type() != tdtl.Null {
-		globalData.Set("basicInfo", basicInfo.Raw())
-	}
-	connectInfo := en.GetProp("connectInfo")
-	if connectInfo.Type() != tdtl.Null {
-		globalData.Set("connectInfo", connectInfo.Raw())
+	for _, path := range searchBasicPath {
+		item := en.GetProp(path)
+		if item.Type() != tdtl.Null {
+			globalData.Set(path, item.Raw())
+		}
 	}
 	return globalData.GetRaw(), nil
 }
 
-func (n *Node) RemoveEntity(ctx context.Context, en Entity) error {
+func (n *Node) RemoveEntity(ctx context.Context, en Entity, feed *Feed) error {
 	var err error
 
 	// recover entity state.
 	defer func() {
 		if nil != err {
-			if innerErr := n.FlushEntity(ctx, en); nil != innerErr {
+			if innerErr := n.FlushEntity(ctx, en, feed); nil != innerErr {
 				log.L().Error("remove entity failed, recover entity state failed", logf.Eid(en.ID()),
 					logf.Reason(err.Error()), logf.Error(innerErr), logf.Value(string(en.Raw())))
 			}

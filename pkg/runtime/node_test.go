@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,8 +97,14 @@ func TestNode_getGlobalData(t *testing.T) {
 	if err != nil {
 		t.Log(err)
 	}
-	t.Log(en)
-	res, _ := node.makeSearchData(en)
+	feed := &Feed{}
+	feed.Changes = append(feed.Changes, Patch{
+		Op:    0,
+		Path:  "properties.basicInfo",
+		Value: &tdtl.JSONNode{},
+	})
+	res, err := node.makeSearchData(en, feed)
+	t.Log(err)
 	t.Log(string(res))
 
 	resMap := make(map[string]interface{})
@@ -106,7 +113,7 @@ func TestNode_getGlobalData(t *testing.T) {
 	t.Log(err)
 }
 
-func TestNode_flushRawData(t *testing.T) {
+func TestNode_makeRawData(t *testing.T) {
 	node := NewNode(context.Background(), nil, nil)
 
 	entityBytes := `{
@@ -138,6 +145,53 @@ func TestNode_flushRawData(t *testing.T) {
 	}
 	t.Log(en)
 	node.makeRawData(context.TODO(), en)
+}
+
+func TestNode_makeSeriesData(t *testing.T) {
+	node := NewNode(context.Background(), nil, nil)
+	t.Log(strings.HasPrefix("a.b.c", "a.b"))
+	entityBytes := `{
+        "id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",
+        "source": "device",
+        "owner": "usr-3358ac43d4ca8a05fee8a6db7b14",
+        "type": "device",
+        "version": "13",
+        "last_time": "1649824136703",
+        "template_id": "",
+        "description": "",
+        "properties": {
+			"telemetry":{
+				"a": {
+					"ts":1649824136703,
+					"value": 8 
+				}, 
+				"b": {
+					"ts":1649824136703,
+					"value": 8 
+				}, 
+				"c": {
+					"ts":1649824136703,
+					"value": 8 
+				} 
+			}
+		
+		}
+
+	}`
+	en, err := NewEntity("iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41", []byte(entityBytes))
+	if err != nil {
+		t.Log(err)
+	}
+	feed := &Feed{}
+	feed.Changes = append(feed.Changes, Patch{
+		Op:    0,
+		Path:  "properties.telemetry.b",
+		Value: &tdtl.JSONNode{},
+	})
+
+	out, err := node.makeTimeSeriesData(context.TODO(), en, feed)
+	t.Log(err)
+	t.Log(out.Data)
 }
 
 func Test_parseExpression(t *testing.T) {

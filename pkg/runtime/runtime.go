@@ -31,7 +31,7 @@ const (
 	rawDataTelemetryType = "telemetry"
 )
 
-type EntityResourceFunc func(context.Context, Entity) error
+type EntityResourceFunc func(context.Context, Entity, *Feed) error
 
 type EntityResource struct {
 	FlushHandler  EntityResourceFunc
@@ -314,7 +314,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 			execFunc: state,
 			preFuncs: []Handler{
 				&handlerImpl{fn: func(ctx context.Context, feed *Feed) *Feed {
-					if innerErr := r.entityResourcer.RemoveHandler(ctx, state); nil != innerErr {
+					if innerErr := r.entityResourcer.RemoveHandler(ctx, state, feed); nil != innerErr {
 						log.L().Error("delete entity failure", logf.Eid(ev.Entity()),
 							logf.Error(innerErr), logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 						feed.Err = innerErr
@@ -636,7 +636,7 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 		// entity has been deleted.
 		return feed
 	}
-	r.entityResourcer.FlushHandler(ctx, en)
+	r.entityResourcer.FlushHandler(ctx, en, feed)
 	return feed
 }
 
