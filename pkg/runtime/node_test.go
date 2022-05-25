@@ -104,13 +104,21 @@ func TestNode_getGlobalData(t *testing.T) {
 		Value: &tdtl.JSONNode{},
 	})
 	res, err := node.makeSearchData(en, feed)
-	t.Log(err)
+	assert.Nil(t, err)
 	t.Log(string(res))
 
 	resMap := make(map[string]interface{})
 
 	err = json.Unmarshal(res, &resMap)
 	t.Log(err)
+	feed = &Feed{}
+	feed.Changes = append(feed.Changes, Patch{
+		Op:    0,
+		Path:  "properties.rawData",
+		Value: &tdtl.JSONNode{},
+	})
+	_, err = node.makeSearchData(en, feed)
+	assert.Error(t, err)
 }
 
 func TestNode_makeRawData(t *testing.T) {
