@@ -17,13 +17,14 @@ limitations under the License.
 package mapper
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/tdtl"
 )
 
-func TestMapper(t *testing.T) {
+func TestMapper1(t *testing.T) {
 	input := map[string]tdtl.Node{
 		"entity1.property1":      tdtl.IntNode(123),
 		"entity2.property2.name": tdtl.StringNode("tom"),
@@ -35,11 +36,15 @@ func TestMapper(t *testing.T) {
 		tqlText  string
 		input    map[string]tdtl.Node
 		computed bool
+		target   string
+		sources  []string
+		output   map[string]tdtl.Node
 	}{
-		{"tql1", "insert into device1 select device2.*", input, false},
-		{"tql2", "insert into test123 select test234.temp as temp", map[string]tdtl.Node{"test234.temp": tdtl.IntNode(123)}, true},
-		{"tql3", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true},
-		{"tql4", "insert into sub123 select test123.temp", nil, false},
+		{"tql1", "insert into device1 select device3.*", map[string]tdtl.Node{"device2.abc": tdtl.StringNode("abcs")}, true, "device1", []string{"device3"}, map[string]tdtl.Node{}},
+		{"tql2", "insert into test123 select test234.temp as temp", map[string]tdtl.Node{"test234.temp": tdtl.IntNode(123)}, true, "test123", []string{"test234"}, map[string]tdtl.Node{"temp": tdtl.IntNode(123)}},
+		{"tql3", "insert into test123 select test234.temp", map[string]tdtl.Node{"test234.temp": tdtl.IntNode(123)}, true, "test123", []string{"test234"}, map[string]tdtl.Node{}},
+		{"tql4", `insert into entity3 select entity1.property1 as property1, entity2.property2.name as property2, entity1.property1 + entity2.property3 as property3`, input, true, "entity3", []string{"entity1", "entity2"}, map[string]tdtl.Node{"property1": tdtl.IntNode(123), "property2": tdtl.StringNode("tom"), "property3": tdtl.IntNode(246)}},
+		{"tql5", "insert into sub123 select test123.temp", nil, false, "sub123", []string{"test123"}, map[string]tdtl.Node{}},
 	}
 
 	for _, tqlInst := range tqlTexts {
@@ -63,18 +68,25 @@ func TestMapper(t *testing.T) {
 
 			t.Log("parse target entity: ", m.TargetEntity())
 			t.Log("parse source entities: ", m.SourceEntities())
-
+			sources := make([]string, 0, len(m.SourceEntities()))
+			for k := range m.SourceEntities() {
+				sources = append(sources, k)
+			}
+			sort.Strings(sources)
+			assert.Equal(t, tqlInst.target, m.TargetEntity())
+			assert.Equal(t, tqlInst.sources, sources)
 			m.Copy()
 
 			if tqlInst.computed {
 				out, err := m.Exec(tqlInst.input)
 				t.Logf("exec input: %v\n output: %v\n error: %v", tqlInst.input, out, err)
+				assert.Equal(t, tqlInst.output, out)
 			}
 		})
 	}
 }
 
-func TestMapper1233(t *testing.T) {
+func TestMapper2(t *testing.T) {
 	tqlText := "insert into x4c1e33a1-6899-4643-a6b3-46cf37950b7f select x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath  + '/x4c1e33a1-6899-4643-a6b3-46cf37950b7f' as sysField._spacePath"
 	mapperIns, err := NewMapper(Mapper{ID: "mapper123", TQL: tqlText}, 0)
 	assert.Nil(t, err)
@@ -88,12 +100,18 @@ func TestMapper1233(t *testing.T) {
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
 		"x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.IntNode(123),
 	})
-
 	assert.Nil(t, err)
 	t.Log("result: ", res)
+	assert.Equal(t, map[string]tdtl.Node{"sysField._spacePath": tdtl.StringNode("123/x4c1e33a1-6899-4643-a6b3-46cf37950b7f")}, res)
+	res, err = mapperIns.Exec(map[string]tdtl.Node{
+		"x54cf69fc-78c3-4f79-9f6b-5d5e5bd8d3c0.sysField._spacePath": tdtl.StringNode("abc"),
+	})
+	assert.Nil(t, err)
+	t.Log("result: ", res)
+	assert.Equal(t, map[string]tdtl.Node{"sysField._spacePath": tdtl.StringNode("abc/x4c1e33a1-6899-4643-a6b3-46cf37950b7f")}, res)
 }
 
-func TestMapper123(t *testing.T) {
+func TestMapper3(t *testing.T) {
 	tqlText := `insert into b3a22c80-6afe-44a0-91b7-f1e49f3c962e select x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath  + '/b3a22c80-6afe-44a0-91b7-f1e49f3c962e' as sysField._spacePath, aaa.p1, b3a22c80-6afe-44a0-91b7-f1e49f3c962e.temp * 2 as temp2 `
 
 	mapperIns, err := NewMapper(Mapper{ID: "mapper123", TQL: tqlText}, 0)
@@ -110,8 +128,11 @@ func TestMapper123(t *testing.T) {
 
 	res, err := mapperIns.Exec(map[string]tdtl.Node{
 		"x49ff9ece-bc90-4e2c-b02e-b96ddedb8e2d.sysField._spacePath": tdtl.New(`"tom"`),
+		"aaa.p1": tdtl.StringNode("p1"),
+		"b3a22c80-6afe-44a0-91b7-f1e49f3c962e.temp": tdtl.IntNode(5),
 	})
 
 	assert.Nil(t, err)
 	t.Log("result: ", res)
+	assert.Equal(t, map[string]tdtl.Node{"sysField._spacePath": tdtl.StringNode("tom/b3a22c80-6afe-44a0-91b7-f1e49f3c962e"), "temp2": tdtl.IntNode(10)}, res)
 }

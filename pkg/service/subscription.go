@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -168,7 +169,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, req *pb.Up
 }
 
 func makeSubscription(subObj *pb.SubscriptionObject) (*repository.Subscription, error) {
-	var sub = new(repository.Subscription)
+	sub := new(repository.Subscription)
 	entitySources, err := entitySources(subObj.Filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "update subscription")
@@ -188,7 +189,9 @@ func makeSubscription(subObj *pb.SubscriptionObject) (*repository.Subscription, 
 	sub.PubsubName = subObj.PubsubName
 	for entityID, entityPaths := range entitySources {
 		sub.SourceEntityID = entityID
-		sub.SourceEntityPaths = entityPaths
+		for _, path := range entityPaths {
+			sub.SourceEntityPaths = append(sub.SourceEntityPaths, strings.Replace(path, entityID, "properties", 1))
+		}
 		break
 	}
 	return sub, nil
@@ -201,7 +204,7 @@ func (s *SubscriptionService) DeleteSubscription(ctx context.Context, req *pb.De
 	}
 
 	log.L().Debug("DeleteSubscription", logf.Any("[+]req.Subscription", req))
-	var sub = new(repository.Subscription)
+	sub := new(repository.Subscription)
 	if req.Id == "" {
 		req.Id = util.UUID("sub")
 	}
