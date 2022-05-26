@@ -18,6 +18,7 @@ import (
 type RawdataService struct {
 	pb.UnimplementedRawdataServer
 	rawdataClient rawdata.Service
+	entityHistory EntityHistory
 }
 
 func NewRawdataService() (*RawdataService, error) {
@@ -25,8 +26,11 @@ func NewRawdataService() (*RawdataService, error) {
 	if err := rawdataClient.Init(resource.ParseFrom(config.Get().Components.Rawdata)); err != nil {
 		log.L().Error("initialize rawdata server", logf.Error(err))
 	}
+
+	entityHistory := NewEntityHistory(resource.ParseFrom(config.Get().Components.Store), 5)
 	return &RawdataService{
 		rawdataClient: rawdataClient,
+		entityHistory: entityHistory,
 	}, nil
 }
 
@@ -49,6 +53,7 @@ func (s *RawdataService) GetRawdata(ctx context.Context, req *pb.GetRawdataReque
 	log.L().Info("user: ", logf.String("user", user))
 
 	resp, err := s.rawdataClient.Query(ctx, req)
+	s.entityHistory.AddEnity(user, req.EntityId)
 
 	return resp, err
 }
