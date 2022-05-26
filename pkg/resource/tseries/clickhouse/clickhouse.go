@@ -242,3 +242,37 @@ func (c *clickhouse) writeBatch(items []*tseries.TSeriesData) error {
 	}
 	return scope.Commit()
 }
+
+func (c *clickhouse) GetMetrics() (count, storage float64) {
+	metricsSQL := fmt.Sprintf(`SELECT 
+    	sum(rows) AS count,
+    	sum(data_uncompressed_bytes) AS storage_uncompress,
+    	sum(data_compressed_bytes) AS storage_compresss,
+    	round((sum(data_compressed_bytes) / sum(data_uncompressed_bytes)) * 100, 0) AS compress_rate
+	FROM system.parts WHERE (active = 1) AND (database = '%s') AND(table = '%s')
+	GROUP BY partition
+	ORDER BY partition ASC`, c.cfg.Database, c.cfg.Table)
+	rows, err := c.conn.Query(metricsSQL)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if rows.Err() != nil {
+		log.Error(rows.Err())
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			storageUncompress float64
+			storageCompresss  float64
+			compressRate      float64
+		)
+		if err := rows.Scan(&count, &storageUncompress, &storageCompresss, &compressRate); err != nil {
+			log.Error(err)
+			continue
+		}
+		return count, storageCompresss
+	}
+	return count, storage
+}

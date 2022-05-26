@@ -27,11 +27,13 @@ import (
 	"time"
 
 	corev1 "github.com/tkeel-io/core/api/core/v1"
+	metricsv1 "github.com/tkeel-io/core/api/metrics/v1"
 	opsv1 "github.com/tkeel-io/core/api/ops/v1"
 	"github.com/tkeel-io/core/pkg/config"
 	"github.com/tkeel-io/core/pkg/dispatch"
 	logf "github.com/tkeel-io/core/pkg/logfield"
 	apim "github.com/tkeel-io/core/pkg/manager"
+	metrics "github.com/tkeel-io/core/pkg/metrics"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/repository/dao"
@@ -234,7 +236,6 @@ func core(cmd *cobra.Command, args []string) {
 
 	// initialize core services.
 	initialzeService(_apiManager, search.GlobalService)
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, os.Interrupt)
 	<-stop
@@ -267,6 +268,7 @@ var (
 	_searchSrv       *service.SearchService
 	_subscriptionSrv *service.SubscriptionService
 	_rawdataSrv      *service.RawdataService
+	_metricsSrv      *service.MetricsService
 	_gopsSrv         *service.GOPSService
 )
 
@@ -317,6 +319,12 @@ func serviceRegisterToCoreV1(ctx context.Context, httpSrv *http.Server, grpcSrv 
 	}
 	opsv1.RegisterMetricsHTTPServer(httpSrv.Container, _gopsSrv)
 	opsv1.RegisterDebugHTTPServer(httpSrv.Container, _gopsSrv)
+
+	// register rawdata service.
+	if _metricsSrv, err = service.NewMetricsService(metrics.Metrics...); nil != err {
+		log.Fatal(err)
+	}
+	metricsv1.RegisterMetricsHTTPServer(httpSrv.Container, _metricsSrv)
 
 	log.L().Debug("RegisterDebugHTTPServer")
 }

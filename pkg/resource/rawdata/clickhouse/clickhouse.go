@@ -295,6 +295,42 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	return resp, err
 }
 
+func (c *Clickhouse) GetMetrics() (count, storage float64) {
+	metricsSQL := fmt.Sprintf(`SELECT 
+    	sum(rows) AS count,
+    	sum(data_uncompressed_bytes) AS storage_uncompress,
+    	sum(data_compressed_bytes) AS storage_compresss,
+    	round((sum(data_compressed_bytes) / sum(data_uncompressed_bytes)) * 100, 0) AS compress_rate
+	FROM system.parts WHERE (active = 1) AND (database = '%s') AND(table = '%s')
+	GROUP BY partition
+	ORDER BY partition ASC`, c.option.DbName, c.option.Table)
+
+	server := c.balance.Select([]*sqlx.DB{})
+	rows, err := server.DB.Query(metricsSQL)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if rows.Err() != nil {
+		log.Error(rows.Err())
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			storageUncompress float64
+			storageCompresss  float64
+			compressRate      float64
+		)
+		if err := rows.Scan(&count, &storageUncompress, &storageCompresss, &compressRate); err != nil {
+			log.Error(err)
+			continue
+		}
+		return count, storageCompresss
+	}
+	return count, storage
+}
+
 func init() {
 	rawdata.Register("clickhouse", NewClickhouse)
 }

@@ -26,8 +26,13 @@ func (n *noop) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries
 	log.L().Debug("insert time series data, noop.", logf.Any("data", req.Data), logf.Any("metadata", req.Metadata))
 	return &tseries.TSeriesResponse{}, nil
 }
+
 func (n *noop) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	return nil, nil
+}
+
+func (n *noop) GetMetrics() (count, storage float64) {
+	return
 }
 
 func init() {

@@ -222,6 +222,10 @@ func (i *Influx) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTS
 	return resp, nil
 }
 
+func (i *Influx) GetMetrics() (count, storage float64) {
+	return
+}
+
 func init() {
 	tseries.Register("influxdb", newInflux)
 }
