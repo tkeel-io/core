@@ -31,7 +31,7 @@ var defalutUser = "admin"
 type TSService struct {
 	pb.UnimplementedTSServer
 	tseriesClient tseries.TimeSerier
-	entityCache   map[string][]string
+	entityHistory EntityHistory
 	apiManager    apim.APIManager
 	lock          *sync.RWMutex
 	inited        *atomic.Bool
@@ -43,10 +43,11 @@ func NewTSService() (*TSService, error) {
 		log.L().Error("initialize time series", logf.Error(err))
 		return nil, errors.Wrap(err, "init ts service")
 	}
+	entityHistory := NewEntityHistory(resource.ParseFrom(config.Get().Components.Store), 5)
 
 	return &TSService{
 		tseriesClient: tseriesClient,
-		entityCache:   make(map[string][]string),
+		entityHistory: entityHistory,
 		lock:          new(sync.RWMutex),
 		inited:        atomic.NewBool(false),
 	}, nil
@@ -55,36 +56,6 @@ func NewTSService() (*TSService, error) {
 func (s *TSService) Init(apiManager apim.APIManager) {
 	s.inited.Store(true)
 	s.apiManager = apiManager
-}
-
-func (s *TSService) AddEntity(user, entityID string) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if _, ok := s.entityCache[user]; !ok {
-		s.entityCache[user] = make([]string, 0)
-	}
-	length := len(s.entityCache[user])
-	if length == 0 {
-		s.entityCache[user] = append(s.entityCache[user], entityID)
-		return
-	}
-	oldCache := s.entityCache[user]
-	cacheMap := make(map[string]struct{})
-	s.entityCache[user] = make([]string, 0)
-	s.entityCache[user] = append(s.entityCache[user], entityID)
-	cacheMap[entityID] = struct{}{}
-	count := 1
-	for _, v := range oldCache {
-		if _, ok := cacheMap[v]; ok {
-			continue
-		}
-		s.entityCache[user] = append(s.entityCache[user], v)
-		cacheMap[v] = struct{}{}
-		count++
-		if count >= 5 {
-			break
-		}
-	}
 }
 
 func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
@@ -122,11 +93,9 @@ func (s *TSService) GetTSData(ctx context.Context, req *pb.GetTSDataRequest) (*p
 	if err != nil {
 		return nil, errors.Wrap(err, "query time series data")
 	}
+	s.entityHistory.AddEnity(user, req.Id)
 	resp.Total = res.Total
 	resp.Items = res.Items
-	if resp.Total > 0 {
-		s.AddEntity(user, req.Id)
-	}
 	return resp, nil
 }
 
@@ -266,32 +235,26 @@ func (s *TSService) GetLatestEntities(ctx context.Context, req *pb.GetLatestEnti
 	} else {
 		return
 	}
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	if cache, ok := s.entityCache[user]; !ok {
-		resp.Total = 0
-		resp.Items = make([]*pb.EntityResponse, 0)
-		return resp, nil
-	} else { //nolint
-		resp.Total = int64(len(cache))
-		for _, v := range cache {
-			var entityBase = new(Entity)
-			entityBase.ID = v
-			entityBase.Source = "source"
-			entityBase.Owner = user
 
-			var baseRet *apim.BaseRet
-			if baseRet, err = s.apiManager.GetEntity(ctx, entityBase); nil != err {
-				log.L().Error("get entity", logf.Eid(entityBase.ID), logf.Error(err))
-				continue
-			}
+	cache := s.entityHistory.GetLatestEntities(user)
+	resp.Total = int64(len(cache))
+	for _, v := range cache {
+		entityBase := new(Entity)
+		entityBase.ID = v
+		entityBase.Source = "source"
+		entityBase.Owner = user
 
-			var entity *pb.EntityResponse
-			if entity, err = Entity2EntityResponse(baseRet); nil != err {
-				log.Error("patch entity failed.", logf.Eid(v), logf.Error(err))
-			} else {
-				resp.Items = append(resp.Items, entity)
-			}
+		var baseRet *apim.BaseRet
+		if baseRet, err = s.apiManager.GetEntity(ctx, entityBase); nil != err {
+			log.L().Error("get entity", logf.Eid(entityBase.ID), logf.Error(err))
+			continue
+		}
+
+		var entity *pb.EntityResponse
+		if entity, err = Entity2EntityResponse(baseRet); nil != err {
+			log.Error("patch entity failed.", logf.Eid(v), logf.Error(err))
+		} else {
+			resp.Items = append(resp.Items, entity)
 		}
 	}
 	return resp, nil
