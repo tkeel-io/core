@@ -99,7 +99,7 @@ func (es *ESClient) BuildIndex(ctx context.Context, index, body string) error {
 }
 
 func (es *ESClient) Delete(ctx context.Context, id string) error {
-	_, err := es.Client.Delete().Index(EntityIndex).Id(id).Do(ctx)
+	_, err := es.Client.Delete().Index(EntityIndex).Id(id).Refresh("true").Do(ctx)
 	if nil != err {
 		if elastic.IsNotFound(err) {
 			return errors.Wrap(xerrors.ErrEntityNotFound, "elasticsearch delete by id")
