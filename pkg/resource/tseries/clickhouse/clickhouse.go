@@ -203,8 +203,8 @@ func (c *clickhouse) write() {
 			if len(items) > 0 {
 				c.writeBatch(items)
 				items = make([]*tseries.TSeriesData, 0, c.batchSize)
-				t.Reset(time.Second * time.Duration(c.batchTimeout))
 			}
+			t.Reset(time.Second * time.Duration(c.batchTimeout))
 		}
 	}
 }
