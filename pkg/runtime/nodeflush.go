@@ -47,7 +47,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	// 2.1 flush search global data.
 	globalData, err := n.makeSearchData(en, feed)
 	if nil != err {
-		log.L().Error("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
+		log.L().Warn("make SearchData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
 		if _, err = n.resourceManager.Search().IndexBytes(ctx, en.ID(), globalData); nil != err {
 			log.L().Error("flush entity search engine", logf.Error(err), logf.Eid(en.ID()))
@@ -61,7 +61,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	// 2.3 flush timeseries data.
 	flushData, err := n.makeTimeSeriesData(ctx, en, feed)
 	if nil != err {
-		log.L().Error("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
+		log.L().Warn("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
 		if _, err = n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
@@ -72,7 +72,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	// 2.4 flush raw data.
 	rawData, err := n.makeRawData(ctx, en)
 	if nil != err {
-		log.L().Error("make RawData error", logf.Error(err), logf.Eid(en.ID()))
+		log.L().Warn("make RawData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
 		if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
 			log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
