@@ -137,7 +137,7 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
 	entity.Owner = req.Owner
@@ -164,7 +164,8 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			patches = append(patches, &pb.PatchData{
 				Path:     FieldProps,
 				Value:    entity.Properties,
-				Operator: xjson.OpMerge.String()})
+				Operator: xjson.OpMerge.String(),
+			})
 		}
 	case nil:
 	default:
@@ -204,7 +205,8 @@ func (s *EntityService) UpdateEntity(ctx context.Context, req *pb.UpdateEntityRe
 			patches = append(patches, &pb.PatchData{
 				Path:     FieldScheme,
 				Value:    entity.Scheme,
-				Operator: xjson.OpReplace.String()})
+				Operator: xjson.OpReplace.String(),
+			})
 		}
 	case nil:
 	default:
@@ -276,7 +278,7 @@ func (s *EntityService) UpdateEntityProps(ctx context.Context, req *pb.UpdateEnt
 		return nil, errors.Wrap(xerrors.ErrServerNotReady, "service not ready")
 	}
 
-	var entity = new(Entity)
+	entity := new(Entity)
 	entity.ID = req.Id
 	entity.Type = req.Type
 	entity.Owner = req.Owner
@@ -701,6 +703,16 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	searchReq.OrderBy = req.OrderBy
 	searchReq.Condition = req.Condition
 
+	// 调用接口改了后去掉
+	if searchReq.OrderBy != "" && searchReq.OrderBy != "id" {
+		searchReq.OrderBy = "basicInfo." + searchReq.OrderBy
+	}
+
+	// keyword才可以排序
+	if searchReq.OrderBy != "" {
+		searchReq.OrderBy += ".keyword"
+	}
+
 	var resp *pb.SearchResponse
 	if resp, err = s.searchClient.Search(ctx, searchReq); err != nil {
 		log.L().Error("list entity.", logf.Error(err))
@@ -717,9 +729,9 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 			state := interface2string(kv[runtime.FieldEntitySource])
 			entityID := interface2string(kv["id"])
 
-			var baseRet = &apim.BaseRet{}
+			baseRet := &apim.BaseRet{}
 			if state == "" {
-				var entity = new(Entity)
+				entity := new(Entity)
 				entity.ID = interface2string(kv["id"])
 				entity.Source = interface2string(kv["source"])
 				entity.Owner = interface2string(kv["owner"])
@@ -730,7 +742,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 				}
 				log.L().Warn("reload entity OK", logf.Eid(interface2string(kv["id"])), zap.Error(err))
 			} else {
-				//var entity = runtime.NewEntity(entityID, []byte(state))
+				// var entity = runtime.NewEntity(entityID, []byte(state))
 				if err = json.Unmarshal([]byte(state), baseRet); nil != err {
 					log.L().Error("get entity, decode response",
 						logf.Error(err), logf.Eid(entityID), logf.Entity(state))

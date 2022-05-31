@@ -40,7 +40,7 @@ const DriverTypeElasticsearch Type = "elasticsearch"
 const (
 	EntityIndex        = "entity"
 	DefaultLimit int32 = 20
-	MaxLimit     int32 = 200
+	MaxLimit     int32 = 500
 )
 
 type ESConfig struct {
@@ -68,7 +68,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 		elastic.SetBasicAuth(cfg.Username, cfg.Password),
 	)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// ping connection.
@@ -132,7 +132,7 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 	}
 
 	req.Page = defaultPage(req.Page)
-	// searchQuery = searchQuery.Sort(req.Page.Sort, req.Page.Reverse).
+	searchQuery = searchQuery.Sort(req.Page.Sort, !req.Page.Reverse)
 	searchQuery = searchQuery.Query(boolQuery).From(int(req.Page.Offset)).Size(int(req.Page.Limit))
 
 	searchResult, err := searchQuery.Pretty(true).Do(ctx)
@@ -205,7 +205,7 @@ func defaultPage(page *pb.Pager) *pb.Pager {
 	}
 
 	if page.Sort == "" {
-		page.Sort = "id"
+		page.Sort = "id.keyword"
 	}
 	return page
 }
