@@ -17,6 +17,9 @@ limitations under the License.
 package driver
 
 import (
+	"context"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +27,6 @@ import (
 )
 
 func Test_condition2boolQuery(t *testing.T) {
-
 }
 
 func Test_defaultPage(t *testing.T) {
@@ -32,4 +34,37 @@ func Test_defaultPage(t *testing.T) {
 
 	defaultPage(page)
 	assert.Equal(t, DefaultLimit, page.Limit)
+}
+
+func TestESClient_Search(t *testing.T) {
+	urlText := "es://admin:admin@tkeel-middleware-elasticsearch-master:9200"
+	urlIns, err := url.Parse(urlText)
+	if nil != err {
+		t.Log(err)
+		return
+	}
+
+	cfgJSON := make(map[string]interface{})
+	cfgJSON["username"] = urlIns.User.Username()
+	cfgJSON["password"], _ = urlIns.User.Password()
+	cfgJSON["endpoints"] = strings.Split(urlIns.Host, ",")
+
+	se, err := NewElasticsearchEngine(cfgJSON)
+	if err != nil {
+		t.Log(err)
+		return
+	}
+	req := SearchRequest{}
+	req.Page = &pb.Pager{
+		Limit:   1,
+		Offset:  0,
+		Sort:    "owner.keyword",
+		Reverse: false,
+	}
+	resp, err := se.Search(context.Background(), req)
+
+	assert.Nil(t, err)
+	t.Log(resp.Total)
+	t.Log(len(resp.Data))
+	//	t.Log(resp.Data)
 }
