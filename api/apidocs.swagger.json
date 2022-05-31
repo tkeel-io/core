@@ -12,9 +12,6 @@
       "name": "Subscription"
     },
     {
-      "name": "Search"
-    },
-    {
       "name": "TS"
     },
     {
@@ -1357,39 +1354,6 @@
         ]
       }
     },
-    "/index": {
-      "post": {
-        "summary": "Index a object",
-        "operationId": "IndexObject",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1IndexResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
-        ]
-      }
-    },
     "/rawdata/{entity_id}": {
       "post": {
         "summary": "Get entity rawdata",
@@ -1466,83 +1430,6 @@
         ],
         "tags": [
           "Rawdata"
-        ]
-      }
-    },
-    "/search": {
-      "delete": {
-        "summary": "Delete objects by id",
-        "operationId": "SearchObjects",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteByIDResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "entity id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "source id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "owner id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Search"
-        ]
-      },
-      "post": {
-        "summary": "Search objects by keyword",
-        "operationId": "SearchObjects",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1SearchResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1SearchRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
         ]
       }
     },
@@ -2006,9 +1893,6 @@
       },
       "description": "Append Mapper Response."
     },
-    "v1DeleteByIDResponse": {
-      "type": "object"
-    },
     "v1DeleteEntityResponse": {
       "type": "object",
       "properties": {
@@ -2254,14 +2138,6 @@
             "$ref": "#/definitions/v1TSResponse"
           },
           "description": "data list"
-        }
-      }
-    },
-    "v1IndexResponse": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
         }
       }
     },
@@ -2537,75 +2413,6 @@
         }
       }
     },
-    "v1SearchRequest": {
-      "type": "object",
-      "properties": {
-        "source": {
-          "type": "string",
-          "description": "source id"
-        },
-        "owner": {
-          "type": "string",
-          "description": "owner id"
-        },
-        "query": {
-          "type": "string",
-          "description": "search keyword"
-        },
-        "condition": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1SearchCondition"
-          },
-          "description": "conditions list"
-        },
-        "page_num": {
-          "type": "integer",
-          "format": "int32",
-          "description": "记录开始位置"
-        },
-        "page_size": {
-          "type": "integer",
-          "format": "int32",
-          "description": "每页限制条数"
-        },
-        "order_by": {
-          "type": "string",
-          "description": "排序字段"
-        },
-        "is_descending": {
-          "type": "boolean",
-          "description": "是否逆序， false：不逆序，true:逆序"
-        }
-      }
-    },
-    "v1SearchResponse": {
-      "type": "object",
-      "properties": {
-        "total": {
-          "type": "string",
-          "format": "int64",
-          "description": "count of the results"
-        },
-        "page_num": {
-          "type": "integer",
-          "format": "int32",
-          "description": "记录开始位置"
-        },
-        "page_size": {
-          "type": "integer",
-          "format": "int32",
-          "description": "每页限制条数"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          },
-          "description": "items of the results"
-        }
-      }
-    },
     "v1SubscriptionObject": {
       "type": "object",
       "properties": {
@@ -2632,6 +2439,14 @@
         "pubsub_name": {
           "type": "string",
           "description": "pubsub name"
+        },
+        "id": {
+          "type": "string",
+          "description": "suscription id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "suscription owner"
         }
       }
     },
