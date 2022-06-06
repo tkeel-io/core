@@ -59,11 +59,9 @@ func (svc *MetricsService) Metrics(req *go_restful.Request, resp *go_restful.Res
 }
 
 func (svc *MetricsService) flushMetrics() {
-	count, storage := svc.tseriesClient.GetMetrics()
-	metrics.CollectorTimeseriesCount.WithLabelValues("admin").Set(count)
+	_, storage := svc.tseriesClient.GetMetrics()
 	metrics.CollectorTimeseriesStorage.WithLabelValues("admin").Set(storage)
 
-	count, storage = svc.rawdataClient.GetMetrics()
-	metrics.CollectorRawDataCount.WithLabelValues("admin").Set(count)
+	_, storage = svc.rawdataClient.GetMetrics()
 	metrics.CollectorRawDataStorage.WithLabelValues("admin").Set(storage)
 }

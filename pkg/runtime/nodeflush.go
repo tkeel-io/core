@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/metrics"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
@@ -59,10 +60,11 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	// TODO.
 
 	// 2.3 flush timeseries data.
-	flushData, err := n.makeTimeSeriesData(ctx, en, feed)
+	flushData, tsCount, err := n.makeTimeSeriesData(ctx, en, feed)
 	if nil != err {
 		log.L().Warn("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
+		metrics.CollectorMsgCount.WithLabelValues(en.Owner(), metrics.MsgTypeTimeseries).Add(float64(tsCount))
 		if _, err = n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
 			//			return errors.Wrap(err, "flush entity into search engine")
@@ -74,6 +76,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	if nil != err {
 		log.L().Warn("make RawData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
+		metrics.CollectorMsgCount.WithLabelValues(en.Owner(), metrics.MsgTypeRawData).Inc()
 		if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
 			log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
 		}
@@ -116,7 +119,7 @@ func (n *Node) getTimeSeriesKey(patchs []Patch) []string {
 	return res
 }
 
-func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, error) {
+func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, int, error) {
 	tsData := en.GetProp("telemetry")
 	var flushData []*tseries.TSeriesData
 	log.Info("tsData: ", tsData)
@@ -125,10 +128,11 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 	err := json.Unmarshal(tsData.Raw(), &res)
 	if nil != err {
 		log.L().Warn("parse json type", logf.Error(err))
-		return nil, errors.Wrap(err, "write ts db error")
+		return nil, 0, errors.Wrap(err, "write ts db error")
 	}
 	tss, ok := res.(map[string]interface{})
 	needWriteKeys := n.getTimeSeriesKey(feed.Changes)
+	tsCount := 0
 	if ok {
 		for _, k := range needWriteKeys {
 			if v, ok := tss[k]; ok {
@@ -147,11 +151,13 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
 							flushData = append(flushData, &tsItem)
+							tsCount += 1
 						case float32:
 							tsItem.Fields[k] = tttV
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
 							flushData = append(flushData, &tsItem)
+							tsCount += 1
 						}
 						continue
 					}
@@ -164,7 +170,7 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 	return &tseries.TSeriesRequest{
 		Data:     flushData,
 		Metadata: map[string]string{},
-	}, errors.Wrap(err, "write ts db error")
+	}, tsCount, errors.Wrap(err, "write ts db error")
 }
 
 func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
