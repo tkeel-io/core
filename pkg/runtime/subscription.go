@@ -44,7 +44,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 			}
 		}
 	} else {
-		log.L().Error("handle external subscribe nil", logf.Eid(feed.EntityID))
+		log.L().Info("handle external subscribe nil", logf.Eid(feed.EntityID))
 	}
 	return feed
 }
