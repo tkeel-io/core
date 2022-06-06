@@ -6,7 +6,7 @@ import (
 
 const (
 	// metrics label.
-	MetricsLabelTenant  = "tenant"
+	MetricsLabelTenant  = "tenant_id"
 	MetricsLabelMsgType = "msg_type"
 
 	// msg type.
