@@ -46,7 +46,8 @@ func NewMetricsService(mtrCollectors ...prometheus.Collector) (*MetricsService, 
 
 	svc := &MetricsService{metricHandler, rawdataClient, tseriesClient}
 	go func() {
-		timer := time.NewTicker(time.Minute)
+		svc.flushMetrics()
+		timer := time.NewTicker(time.Hour)
 		for range timer.C {
 			svc.flushMetrics()
 		}
