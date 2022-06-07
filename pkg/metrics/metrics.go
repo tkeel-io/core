@@ -6,13 +6,18 @@ import (
 
 const (
 	// metrics label.
-	MetricsLabelTenant  = "tenant_id"
-	MetricsLabelMsgType = "msg_type"
+	MetricsLabelTenant    = "tenant_id"
+	MetricsLabelMsgType   = "msg_type"
+	MetricsLabelSpaceType = "space_type"
 
 	// msg type.
 	MsgTypeSubscribe  = "subscribe"
 	MsgTypeRawData    = "rawdata"
 	MsgTypeTimeseries = "timeseries"
+
+	// space type.
+	SpaceTypeTotal = "total"
+	SpaceTypeUsed  = "used"
 
 	// metrics msg count name.
 	MetricsMsgCount = "core_msg_total"
@@ -22,6 +27,12 @@ const (
 
 	// metrics rawdata storage name.
 	MetricsTimeseriesStorgae = "timeseries_storage"
+
+	// metrics message storage name.
+	MetricsMsgStorageSpace = "msg_storage_space"
+
+	// metrics message storage days.
+	MetricsMsgStorageSeconds = "msg_storage_seconds"
 )
 
 var CollectorMsgCount = prometheus.NewCounterVec(
@@ -48,4 +59,20 @@ var CollectorTimeseriesStorage = prometheus.NewGaugeVec(
 	[]string{MetricsLabelTenant},
 )
 
-var Metrics = []prometheus.Collector{CollectorRawDataStorage, CollectorTimeseriesStorage, CollectorMsgCount}
+var CollectorMsgStorageSpace = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: MetricsMsgStorageSpace,
+		Help: "msg storage space.",
+	},
+	[]string{MetricsLabelTenant, MetricsLabelSpaceType},
+)
+
+var CollectorMsgStorageSeconds = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: MetricsMsgStorageSeconds,
+		Help: "msg storage seconds.",
+	},
+	[]string{MetricsLabelTenant},
+)
+
+var Metrics = []prometheus.Collector{CollectorRawDataStorage, CollectorTimeseriesStorage, CollectorMsgCount, CollectorMsgStorageSpace, CollectorMsgStorageSeconds}

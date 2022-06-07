@@ -295,7 +295,36 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	return resp, err
 }
 
-func (c *Clickhouse) GetMetrics() (count, storage float64) {
+func (c *Clickhouse) getSystemSpace() (total, used float64) {
+	metricsSQL := "SELECT free_space, total_space FROM system.disks"
+	server := c.balance.Select([]*sqlx.DB{})
+	rows, err := server.DB.Query(metricsSQL)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if rows.Err() != nil {
+		log.Error(rows.Err())
+		return
+	}
+	defer rows.Close()
+	var totalAll, freeAll float64
+	for rows.Next() {
+		var freeSpace, totalSpace float64
+
+		if err := rows.Scan(&freeSpace, &totalSpace); err != nil {
+			log.Error(err)
+			continue
+		} else {
+			totalAll += totalSpace
+			freeAll += freeSpace
+		}
+	}
+	return totalAll, totalAll - freeAll
+}
+
+func (c *Clickhouse) GetMetrics() (count, storage, total, used float64) {
+	total, used = c.getSystemSpace()
 	metricsSQL := fmt.Sprintf(`SELECT 
     	sum(rows) AS count,
     	sum(data_uncompressed_bytes) AS storage_uncompress,
@@ -326,9 +355,9 @@ func (c *Clickhouse) GetMetrics() (count, storage float64) {
 			log.Error(err)
 			continue
 		}
-		return count, storageCompresss
+		return count, storageCompresss, total, used
 	}
-	return count, storage
+	return count, storage, total, used
 }
 
 func init() {

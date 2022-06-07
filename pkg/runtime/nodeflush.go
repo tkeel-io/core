@@ -37,6 +37,10 @@ import (
 
 func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
+	tenantID := en.GetProp("sysField._tenantId").String()
+	if tenantID == "" {
+		tenantID = en.Owner()
+	}
 
 	// 1. flush state.
 	if err := n.resourceManager.Repo().PutEntity(ctx, en.ID(), en.Raw()); nil != err {
@@ -64,7 +68,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	if nil != err {
 		log.L().Warn("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
-		metrics.CollectorMsgCount.WithLabelValues(en.Owner(), metrics.MsgTypeTimeseries).Add(float64(tsCount))
+		metrics.CollectorMsgCount.WithLabelValues(tenantID, metrics.MsgTypeTimeseries).Add(float64(tsCount))
 		if _, err = n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
 			//			return errors.Wrap(err, "flush entity into search engine")
@@ -76,7 +80,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	if nil != err {
 		log.L().Warn("make RawData error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
-		metrics.CollectorMsgCount.WithLabelValues(en.Owner(), metrics.MsgTypeRawData).Inc()
+		metrics.CollectorMsgCount.WithLabelValues(tenantID, metrics.MsgTypeRawData).Inc()
 		if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
 			log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
 		}

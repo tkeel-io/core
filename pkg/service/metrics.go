@@ -63,6 +63,10 @@ func (svc *MetricsService) flushMetrics() {
 	_, storage := svc.tseriesClient.GetMetrics()
 	metrics.CollectorTimeseriesStorage.WithLabelValues("admin").Set(storage)
 
-	_, storage = svc.rawdataClient.GetMetrics()
+	_, storage, total, used := svc.rawdataClient.GetMetrics()
 	metrics.CollectorRawDataStorage.WithLabelValues("admin").Set(storage)
+	metrics.CollectorMsgStorageSpace.WithLabelValues("admin", metrics.SpaceTypeTotal).Set(total)
+	metrics.CollectorMsgStorageSpace.WithLabelValues("admin", metrics.SpaceTypeUsed).Set(used)
+
+	metrics.CollectorMsgStorageSeconds.WithLabelValues("admin").Set(3600 * 24 * 7)
 }

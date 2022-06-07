@@ -22,7 +22,7 @@ func (n *Noop) Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRaw
 	return nil, nil
 }
 
-func (n *Noop) GetMetrics() (count, storage float64) {
+func (n *Noop) GetMetrics() (count, storage, total, used float64) {
 	return
 }
 

@@ -42,7 +42,7 @@ type Service interface {
 	Init(resource.Metadata) error
 	Write(ctx context.Context, req *Request) error
 	Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, error)
-	GetMetrics() (count, storage float64)
+	GetMetrics() (count, storage, total, used float64)
 }
 
 type Generator func() Service
