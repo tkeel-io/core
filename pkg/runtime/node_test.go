@@ -197,8 +197,9 @@ func TestNode_makeSeriesData(t *testing.T) {
 		Value: &tdtl.JSONNode{},
 	})
 
-	out, err := node.makeTimeSeriesData(context.TODO(), en, feed)
+	out, count, err := node.makeTimeSeriesData(context.TODO(), en, feed)
 	t.Log(err)
+	t.Log(count)
 	t.Log(out.Data)
 }
 

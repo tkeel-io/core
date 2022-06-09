@@ -8,8 +8,7 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 )
 
-type Noop struct {
-}
+type Noop struct{}
 
 func (n *Noop) Init(resource.Metadata) error {
 	return nil
@@ -21,6 +20,10 @@ func (n *Noop) Write(ctx context.Context, req *rawdata.Request) error {
 
 func (n *Noop) Query(ctx context.Context, req *pb.GetRawdataRequest) (*pb.GetRawdataResponse, error) {
 	return nil, nil
+}
+
+func (n *Noop) GetMetrics() (count, storage, total, used float64) {
+	return
 }
 
 func NewNoop() rawdata.Service {

@@ -49,6 +49,7 @@ type TimeSerier interface {
 	Init(resource.Metadata) error
 	Write(ctx context.Context, req *TSeriesRequest) (*TSeriesResponse, error)
 	Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error)
+	GetMetrics() (count, storage float64)
 }
 
 type TSGenerator func() TimeSerier

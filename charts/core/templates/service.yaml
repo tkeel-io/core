@@ -4,6 +4,7 @@ metadata:
   name: {{ include "core.name" . }}
   labels:
     app: {{ include "core.name" . }}
+    tkeel.io/prometheus: "true"
 spec:
   type: NodePort
   ports:

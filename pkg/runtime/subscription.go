@@ -6,6 +6,7 @@ import (
 
 	daprSDK "github.com/dapr/go-sdk/client"
 	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/metrics"
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/core/pkg/util/dapr"
 	"github.com/tkeel-io/kit/log"
@@ -34,6 +35,7 @@ func (r *Runtime) handleSubscribe(ctx context.Context, feed *Feed) *Feed {
 			if state == nil {
 				continue
 			}
+			metrics.CollectorMsgCount.WithLabelValues(sub.Owner, metrics.MsgTypeSubscribe).Inc()
 			log.L().Debug("handle external subs", logf.Eid(feed.EntityID), logf.Event(feed.Event), logf.Any("sub", sub.Filter))
 			ctOpts := daprSDK.PublishEventWithContentType("application/json")
 			err := dapr.Get().Select().PublishEvent(ctx, sub.PubsubName, sub.Topic, state, ctOpts)

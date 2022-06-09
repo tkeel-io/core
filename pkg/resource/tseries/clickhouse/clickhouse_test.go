@@ -74,3 +74,20 @@ func Test_clickhouse_Query(t *testing.T) {
 	t.Log(err)
 	t.Log(resp)
 }
+
+func Test_clickhouse_GetMetrics(t *testing.T) {
+	c := newClickhouse()
+	err := c.Init(resource.Metadata{
+		Name: "clickhouse",
+		Properties: map[string]interface{}{
+			"urls":     []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
+			"table":    "timeseries",
+			"database": "core",
+		},
+	})
+	t.Log(err)
+	if err != nil {
+		return
+	}
+	t.Log(c.GetMetrics())
+}
