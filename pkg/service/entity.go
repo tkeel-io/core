@@ -23,9 +23,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tkeel-io/core/pkg/runtime"
-	"go.uber.org/zap"
-
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	xerrors "github.com/tkeel-io/core/pkg/errors"
@@ -37,6 +34,7 @@ import (
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -726,11 +724,21 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 	for _, item := range resp.Items {
 		switch kv := item.AsInterface().(type) {
 		case map[string]interface{}:
-			state := interface2string(kv[runtime.FieldEntitySource])
-			entityID := interface2string(kv["id"])
+			// state := interface2string(kv[runtime.FieldEntitySource])
 
 			baseRet := &apim.BaseRet{}
-			if state == "" {
+			baseRet.ID = interface2string(kv["id"])
+			baseRet.Source = interface2string(kv["source"])
+			baseRet.Owner = interface2string(kv["owner"])
+			baseRet.Type = interface2string(kv["type"])
+			baseRet.TemplateID = interface2string(kv["template_id"])
+			baseRet.Properties = make(map[string]interface{})
+			baseRet.Properties["sysField"] = kv["sysField"]
+			baseRet.Properties["basicInfo"] = kv["basicInfo"]
+			baseRet.Properties["connectInfo"] = kv["connectInfo"]
+			baseRet.Properties["group"] = kv["group"]
+
+			if baseRet.Type == "group" && baseRet.Properties["group"] == nil {
 				entity := new(Entity)
 				entity.ID = interface2string(kv["id"])
 				entity.Source = interface2string(kv["source"])
@@ -741,15 +749,7 @@ func (s *EntityService) ListEntity(ctx context.Context, req *pb.ListEntityReques
 					continue
 				}
 				log.L().Warn("reload entity OK", logf.Eid(interface2string(kv["id"])), zap.Error(err))
-			} else {
-				// var entity = runtime.NewEntity(entityID, []byte(state))
-				if err = json.Unmarshal([]byte(state), baseRet); nil != err {
-					log.L().Error("get entity, decode response",
-						logf.Error(err), logf.Eid(entityID), logf.Entity(state))
-					continue
-				}
 			}
-
 			entityItem, _ := s.makeResponse(baseRet)
 			out.Items = append(out.Items, entityItem)
 		}
