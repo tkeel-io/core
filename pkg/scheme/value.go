@@ -36,6 +36,7 @@ const (
 	PropertyTypeString = "string"
 	PropertyTypeArray  = "array"
 	PropertyTypeStruct = "struct"
+	PropertyTypeEnum   = "enum"
 
 	DefineFieldArrayLength  = "length"
 	DefineFieldArrayElemCfg = "elem_type"
@@ -174,6 +175,7 @@ func parseField(in Config) (out Config, err error) {
 	case PropertyTypeFloat:
 	case PropertyTypeDouble:
 	case PropertyTypeString:
+	case PropertyTypeEnum:
 	case PropertyTypeArray:
 		arrDefine := DefineArray{}
 		if err = mapstructure.Decode(in.Define, &arrDefine); nil != err {
