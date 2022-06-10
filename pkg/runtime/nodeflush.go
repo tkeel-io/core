@@ -178,7 +178,7 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 }
 
 func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
-	searchBasicPath := []string{"sysField", "basicInfo", "connectInfo"}
+	searchBasicPath := []string{"sysField", "basicInfo", "connectInfo", "group"}
 	writeFlag := false
 	for _, patch := range feed.Changes {
 		for _, searchPath := range searchBasicPath {
@@ -198,12 +198,13 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
 	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
 
-	byt, err := json.Marshal(string(en.Raw()))
-	if err != nil {
-		log.L().Error("json marshal error")
-	}
-	globalData.Set(FieldEntitySource, byt)
-
+	/*
+		byt, err := json.Marshal(string(en.Raw()))
+		if err != nil {
+			log.L().Error("json marshal error")
+		}
+		globalData.Set(FieldEntitySource, byt)
+	*/
 	for _, path := range searchBasicPath {
 		item := en.GetProp(path)
 		if item.Type() != tdtl.Null {
