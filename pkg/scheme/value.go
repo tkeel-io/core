@@ -17,7 +17,7 @@ limitations under the License.
 package scheme
 
 import (
-	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
 
 	logf "github.com/tkeel-io/core/pkg/logfield"
 
@@ -27,6 +27,8 @@ import (
 	"github.com/tkeel-io/core/pkg/util"
 	"github.com/tkeel-io/kit/log"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
 	PropertyTypeInt    = "int"

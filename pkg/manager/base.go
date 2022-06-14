@@ -1,8 +1,6 @@
 package manager
 
 import (
-	"encoding/json"
-
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/tdtl"

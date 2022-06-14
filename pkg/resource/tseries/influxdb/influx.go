@@ -2,7 +2,6 @@ package influxdb
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -13,12 +12,15 @@ import (
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Influx allows writing to InfluxDB.
 type Influx struct {

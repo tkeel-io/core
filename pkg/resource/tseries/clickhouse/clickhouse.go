@@ -3,11 +3,12 @@ package clickhouse
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	pb "github.com/tkeel-io/core/api/core/v1"
 	logf "github.com/tkeel-io/core/pkg/logfield"
@@ -17,6 +18,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const ClickhouseDBSQL = `CREATE DATABASE IF NOT EXISTS %s`
 
@@ -56,8 +59,8 @@ type clickhouse struct {
 func newClickhouse() tseries.TimeSerier {
 	return &clickhouse{
 		cfg:          &Config{},
-		msgQueue:     make(chan *tseries.TSeriesData, 1000),
-		batchSize:    100,
+		msgQueue:     make(chan *tseries.TSeriesData, 3000),
+		batchSize:    1000,
 		batchTimeout: 1,
 	}
 }
@@ -226,13 +229,19 @@ func (c *clickhouse) writeBatch(items []*tseries.TSeriesData) error {
 		if !ok {
 			continue
 		}
+		timestamp := item.Timestamp / 1e6
+		timeMilli := time.UnixMilli(timestamp)
+		var builder strings.Builder
+		builder.WriteString("id=")
+		builder.WriteString(entityID)
+		tagID := builder.String()
 		for k, v := range item.Fields {
 			_, err := batch.Exec(
-				time.UnixMilli(item.Timestamp/1e6),
+				timeMilli,
 				k,
-				[]string{fmt.Sprintf("id=%s", entityID)},
+				[]string{tagID},
 				v,
-				item.Timestamp/1e6,
+				timestamp,
 			)
 			if err != nil {
 				log.Error(err)
