@@ -43,8 +43,8 @@ type Clickhouse struct {
 
 func NewClickhouse() rawdata.Service {
 	return &Clickhouse{
-		msgQueue:     make(chan *rawdata.Request, 3000),
-		batchSize:    100,
+		msgQueue:     make(chan *rawdata.Request, 1000),
+		batchSize:    200,
 		batchTimeout: 1,
 	}
 }
