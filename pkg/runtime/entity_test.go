@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -100,7 +99,8 @@ func TestEntity_Handle(t *testing.T) {
 		feed *Feed
 		want map[string]string
 	}{
-		{"0",
+		{
+			"0",
 			feeds[0],
 			map[string]string{
 				"properties": `{"metrics":{"cpu_used":0.78,"mem_used":0.28,"interfaces":[0.28],"temp":209}}`,

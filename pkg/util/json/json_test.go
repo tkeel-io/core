@@ -17,14 +17,17 @@ limitations under the License.
 package json
 
 import (
-	"encoding/json"
 	"testing"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/tkeel-io/collectjs"
 	"github.com/tkeel-io/collectjs/pkg/json/jsonparser"
 	"github.com/tkeel-io/tdtl"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func TestEncodeJSON(t *testing.T) {
 	kvalues := map[string]tdtl.Node{

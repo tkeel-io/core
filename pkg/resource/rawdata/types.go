@@ -2,14 +2,17 @@ package rawdata
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	pb "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/resource"
 )
 
-var registeredRawData = make(map[string]Generator)
+var (
+	json              = jsoniter.ConfigCompatibleWithStandardLibrary
+	registeredRawData = make(map[string]Generator)
+)
 
 type RawData struct {
 	ID        string    `db:"id"`

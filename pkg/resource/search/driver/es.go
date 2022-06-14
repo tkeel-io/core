@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -30,10 +29,13 @@ import (
 	xerrors "github.com/tkeel-io/core/pkg/errors"
 	logf "github.com/tkeel-io/core/pkg/logfield"
 
+	jsoniter "github.com/json-iterator/go"
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/kit/log"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const DriverTypeElasticsearch Type = "elasticsearch"
 

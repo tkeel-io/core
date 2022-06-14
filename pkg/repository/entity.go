@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/pkg/errors"
 	xerrors "github.com/tkeel-io/core/pkg/errors"

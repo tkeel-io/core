@@ -41,6 +41,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.0.14
 	github.com/google/uuid v1.3.0
 	github.com/jmoiron/sqlx v1.3.5
+	github.com/json-iterator/go v1.1.12
 	github.com/prometheus/client_golang v1.11.0
 	github.com/tkeel-io/kit v0.0.0-20220516081405-657ecd52268a
 	github.com/valyala/fastrand v1.1.0
@@ -70,7 +71,6 @@ require (
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/lightstep/tracecontext.go v0.0.0-20181129014701-1757c391b1ac // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

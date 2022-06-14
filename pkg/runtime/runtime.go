@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -50,6 +49,7 @@ type Runtime struct {
 	entityResourcer EntityResource
 	// map[entityID][SubscriptionID]Subscription
 	entitySubscriptions map[string]map[string]*repository.Subscription
+	msgs                chan sarama.ConsumerMessage
 
 	mlock  sync.RWMutex
 	lock   sync.RWMutex
@@ -59,7 +59,7 @@ type Runtime struct {
 
 func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatcher dispatch.Dispatcher, repo repository.IRepository) *Runtime {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Runtime{
+	runtime := Runtime{
 		id:                  id,
 		enCache:             NewCache(repo),
 		entities:            map[string]Entity{},
@@ -74,7 +74,10 @@ func NewRuntime(ctx context.Context, ercFuncs EntityResource, id string, dispatc
 		mlock:               sync.RWMutex{},
 		cancel:              cancel,
 		ctx:                 ctx,
+		msgs:                make(chan sarama.ConsumerMessage, 10),
 	}
+	go runtime.deliveredEvent()
+	return &runtime
 }
 
 func (r *Runtime) ID() string {
@@ -82,15 +85,21 @@ func (r *Runtime) ID() string {
 }
 
 func (r *Runtime) DeliveredEvent(ctx context.Context, msg *sarama.ConsumerMessage) {
-	var err error
-	var ev v1.ProtoEvent
-	if err = v1.Unmarshal(msg.Value, &ev); nil != err {
-		log.L().Error("decode Event", logf.Error(err),
-			logf.Message(string(msg.Value)), logf.RID(r.id))
-		return
-	}
+	r.msgs <- *msg
+}
 
-	r.HandleEvent(ctx, &ev)
+func (r *Runtime) deliveredEvent() {
+	for msg := range r.msgs {
+		var err error
+		var ev v1.ProtoEvent
+		if err = v1.Unmarshal(msg.Value, &ev); nil != err {
+			log.L().Error("decode Event", logf.Error(err),
+				logf.Message(string(msg.Value)), logf.RID(r.id))
+			continue
+		}
+
+		r.HandleEvent(context.Background(), &ev)
+	}
 }
 
 type FeedLog struct {

@@ -24,7 +24,7 @@ import (
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	"github.com/tkeel-io/core/pkg/placement"
 	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/core/pkg/util/json"
+	tkeelJson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
 	"github.com/tkeel-io/tdtl"
 )
@@ -112,12 +112,12 @@ func TestRuntime_handleComputed(t *testing.T) {
 		Patches:  nil,
 		Changes: []Patch{
 			{
-				Op:    json.OpReplace,
+				Op:    tkeelJson.OpReplace,
 				Path:  "properties.telemetry.src1",
 				Value: tdtl.New(123),
 			},
 			{
-				Op:    json.OpReplace,
+				Op:    tkeelJson.OpReplace,
 				Path:  "properties.telemetry.src2",
 				Value: tdtl.New(123),
 			},

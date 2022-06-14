@@ -1,13 +1,16 @@
 package logf
 
 import (
-	"encoding/json"
 	"time"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"go.uber.org/zap"
 
 	v1 "github.com/tkeel-io/core/api/core/v1"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Eid returns enitty id field.
 func Eid(id string) zap.Field {
