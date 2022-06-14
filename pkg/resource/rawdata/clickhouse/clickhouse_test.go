@@ -11,25 +11,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 )
 
-func TestClickhouse_genSql(t *testing.T) {
-	c := Clickhouse{
-		option: &Option{
-			Urls:   []string{"clickhouse://default:C1ickh0use@clickhouse-tkeel-core:9000"},
-			DbName: "dbname",
-			Table:  "table",
-			Fields: map[string]Field{},
-		},
-		balance: nil,
-	}
-	row := execNode{
-		ts:     0,
-		fields: []string{"a", "b", "c"},
-		args:   []interface{}{"1", "2", "3"},
-	}
-	sql := c.genSQL(&row)
-	t.Log(sql)
-}
-
 func TestClickhouse(t *testing.T) {
 	metadata := resource.Metadata{
 		Name: "myck",

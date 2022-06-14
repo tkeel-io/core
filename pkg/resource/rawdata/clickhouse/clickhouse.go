@@ -34,12 +34,19 @@ SETTINGS index_granularity = 8192;
 `
 
 type Clickhouse struct {
-	option  *Option
-	balance LoadBalance
+	option       *Option
+	balance      LoadBalance
+	msgQueue     chan *rawdata.Request
+	batchSize    int
+	batchTimeout int
 }
 
 func NewClickhouse() rawdata.Service {
-	return &Clickhouse{}
+	return &Clickhouse{
+		msgQueue:     make(chan *rawdata.Request, 3000),
+		batchSize:    100,
+		batchTimeout: 1,
+	}
 }
 
 func (c *Clickhouse) parseOption(metadata resource.Metadata) (*Option, error) {
@@ -120,103 +127,88 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 	c.option = opt
 
 	c.balance = NewLoadBalanceRandom(servers)
+	go c.write()
 	return nil
 }
 
 func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error) {
+	c.msgQueue <- req
+	return
+}
+
+// 写入超时时间，和最大写入并发，每1秒或者100条写入一次.
+func (c *Clickhouse) write() {
+	t := time.NewTimer(time.Second * time.Duration(c.batchTimeout))
+	items := make([]*rawdata.Request, 0, c.batchSize)
+	for {
+		select {
+		case item := <-c.msgQueue:
+			items = append(items, item)
+			if len(items) >= c.batchSize {
+				c.writeBatch(items)
+				items = make([]*rawdata.Request, 0, c.batchSize)
+				t.Reset(time.Second * time.Duration(c.batchTimeout))
+			}
+
+		case <-t.C:
+			if len(items) > 0 {
+				c.writeBatch(items)
+				items = make([]*rawdata.Request, 0, c.batchSize)
+			}
+			t.Reset(time.Second * time.Duration(c.batchTimeout))
+		}
+	}
+}
+
+func (c *Clickhouse) writeBatch(items []*rawdata.Request) (err error) {
 	// log.Info("chronus Insert ", logf.Any("messages", messages)).
 	var (
 		tx *sql.Tx
 	)
-	rows := make([]*execNode, 0)
-	tags := make([]string, 0)
-	for k, v := range req.Metadata {
-		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
+	server := c.balance.Select([]*sqlx.DB{})
+	if server == nil {
+		return fmt.Errorf("get database failed, can't insert")
 	}
-	for _, rawData := range req.Data {
-		data := new(execNode)
-
-		// fmt.Println(string(message.Data()))
-		log.L().Info("Invoke", logf.Any("messages", string(rawData.Bytes())))
-		// jsonCtx := utils.NewJSONContext(string(message.Data()))
-
-		data.fields = []string{"tag", "entity_id", "timestamp", "values", "path"}
-		data.args = []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path}
-		if len(data.fields) > 0 && len(data.fields) == len(data.args) {
-			rows = append(rows, data)
-		} else {
-			log.L().Warn("rows is empty",
-				logf.Any("args", data.args),
-				logf.Any("fields", data.fields),
-				logf.Any("option", c.option),
-			)
-		}
+	fields := []string{"tag", "entity_id", "timestamp", "values", "path"}
+	preURL := fmt.Sprintf(ClickhouseSSQLTlp, c.option.DbName, c.option.Table, strings.Join(fields, ","))
+	if tx, err = server.DB.BeginTx(context.Background(), nil); err != nil {
+		log.L().Error("pre URL error",
+			logf.String("preURL", preURL),
+			logf.Any("row", fields),
+			logf.String("error", err.Error()))
+		return err
 	}
-	if len(rows) > 0 {
-		preURL := c.genSQL(rows[0])
-		server := c.balance.Select([]*sqlx.DB{})
-		if server == nil {
-			return fmt.Errorf("get database failed, can't insert")
-		}
-		if tx, err = server.DB.BeginTx(ctx, nil); err != nil {
-			log.L().Error("pre URL error",
-				logf.String("preURL", preURL),
-				logf.Any("row", rows[0]),
-				logf.String("error", err.Error()))
-			return err
-		}
-		defer func() {
-			if err != nil {
-				_ = tx.Rollback()
-			}
-		}()
-		stmt, err := tx.Prepare(preURL)
+	defer func() {
 		if err != nil {
-			log.L().Error("pre URL error",
-				logf.String("preURL", preURL),
-				logf.String("error", err.Error()))
-			return err
+			_ = tx.Rollback()
 		}
-		defer stmt.Close()
-		for _, row := range rows {
-			log.L().Debug("preURL",
-				logf.Int64("ts", row.ts),
-				logf.Any("args", row.args),
-				logf.String("preURL", preURL))
-			if _, err = stmt.Exec(row.args...); err != nil {
+	}()
+	stmt, err := tx.Prepare(preURL)
+	if err != nil {
+		log.L().Error("pre URL error",
+			logf.String("preURL", preURL),
+			logf.String("error", err.Error()))
+		return err
+	}
+	defer stmt.Close()
+
+	for _, item := range items {
+		tags := make([]string, 0)
+		for k, v := range item.Metadata {
+			tags = append(tags, fmt.Sprintf("%s=%s", k, v))
+		}
+		for _, rawData := range item.Data {
+			log.L().Debug("Invoke", logf.Any("messages", string(rawData.Bytes())))
+			args := []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path}
+			if _, err = stmt.Exec(args...); err != nil {
 				log.L().Error("db Exec error",
 					logf.String("preURL", preURL),
-					logf.Any("args", row.args),
-					logf.Any("fields", row.fields),
+					logf.Any("args", args),
 					logf.String("error", err.Error()))
-				return err
 			}
 		}
-		err = tx.Commit()
-		if err != nil {
-			row := rows[0]
-			log.L().Error("tx Commit error",
-				logf.Int64("ts", row.ts),
-				logf.Any("args", row.args),
-				logf.Any("fields", row.fields),
-				logf.String("preURL", preURL),
-				logf.String("error", err.Error()))
-			return err
-		}
 	}
-	return nil
-}
-
-func (c *Clickhouse) genSQL(row *execNode) string {
-	stmts := strings.Repeat("?,", len(row.fields))
-	if len(stmts) > 0 {
-		stmts = stmts[:len(stmts)-1]
-	}
-	return fmt.Sprintf(ClickhouseSSQLTlp,
-		c.option.DbName,
-		c.option.Table,
-		strings.Join(row.fields, ","),
-		stmts)
+	return tx.Commit()
 }
 
 func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp *pb.GetRawdataResponse, err error) {
