@@ -1,5 +1,5 @@
 apiVersion: tkeel.io/v1
-kind: TkeelCluster
+kind: TkeelCoreCluster
 metadata:
   name: {{ include "core.name" . }}
   labels:
