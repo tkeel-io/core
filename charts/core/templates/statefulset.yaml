@@ -1,14 +1,13 @@
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: tkeel.io/v1
+kind: TkeelCluster
 metadata:
   name: {{ include "core.name" . }}
   labels:
     app: {{ include "core.name" . }}
 spec:
   serviceName: {{ .Values.serviceName }}
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  nodes: {{ .Values.nodeCount }}
+  topics: {{ .Values.topicCount }}
   selector:
     matchLabels:
       app: {{ include "core.name" . }}
