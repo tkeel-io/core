@@ -78,6 +78,6 @@ spec:
       volumes:
         - name: conf
           configMap:
-            name: core-cm
+            name: tkeel-core-cluster-config
         - name: config
           emptyDir: {}
