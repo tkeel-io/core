@@ -1,5 +1,5 @@
 apiVersion: tkeel.io/v1
-kind: TkeelCluster
+kind: TkeelCoreCluster
 metadata:
   name: {{ include "core.name" . }}
   labels:
@@ -78,6 +78,6 @@ spec:
       volumes:
         - name: conf
           configMap:
-            name: core-cm
+            name: tkeel-core-cluster-config
         - name: config
           emptyDir: {}
