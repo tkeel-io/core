@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	logf "github.com/tkeel-io/core/pkg/logfield"
+	"github.com/tkeel-io/core/pkg/resource/transport"
 	"strings"
 	"time"
-
-	logf "github.com/tkeel-io/core/pkg/logfield"
 
 	"github.com/jmoiron/sqlx"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -205,6 +205,44 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error
 		}
 	}
 	return nil
+}
+
+func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}) {
+	var preUrl string
+	dataLen := len(reqs)
+	if dataLen <= 0 {
+		return preUrl, nil
+	}
+	fields := []string{"tag", "entity_id", "timestamp", "values", "path"}
+	preUrl = c.genSQL(&execNode{fields: fields})
+
+	var tags []string
+
+	var args = make([][]interface{}, 0, dataLen)
+	for index, req := range reqs {
+		if req, ok := req.(*rawdata.Request); ok {
+			if index == 0 {
+				tags = make([]string, len(req.Metadata))
+				for k, v := range req.Metadata {
+					tags[index] = fmt.Sprintf("%s=%s", k, v)
+					index++
+				}
+			}
+			for _, rawData := range req.Data {
+				args = append(args, []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path})
+			}
+		}
+	}
+	return preUrl, &args
+}
+
+func (c *Clickhouse) BatchWrite(ctx context.Context, reqs []interface{}) (err error) {
+	preURL, args := c.buildBulkData(reqs)
+	if args != nil && len(*args) > 0 {
+		server := c.balance.Select([]*sqlx.DB{})
+		return transport.BulkWrite(ctx, server.DB, preURL, args)
+	}
+	return errors.New("BatchWrite: call buildBulkData failed")
 }
 
 func (c *Clickhouse) genSQL(row *execNode) string {

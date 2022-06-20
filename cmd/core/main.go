@@ -42,6 +42,7 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/kafka"
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
+	_ "github.com/tkeel-io/core/pkg/resource/rawdata/builder"
 	_ "github.com/tkeel-io/core/pkg/resource/rawdata/clickhouse"
 	_ "github.com/tkeel-io/core/pkg/resource/rawdata/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
