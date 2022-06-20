@@ -41,9 +41,9 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	if tenantID == "" {
 		tenantID = en.Owner()
 	}
-	templateId := en.GetProp("basicInfo.templateId").String()
-	if templateId == "" {
-		templateId = "unSet"
+	templateID := en.GetProp("basicInfo.templateId").String()
+	if templateID == "" {
+		templateID = "empty_template_id"
 	}
 
 	// 1. flush state.
