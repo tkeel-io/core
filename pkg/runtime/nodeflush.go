@@ -94,7 +94,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	for _, tsData := range flushData.Data {
 		for key, value := range tsData.Fields {
 			metrics.CollectorDeviceTelemetry.
-				WithLabelValues(tenantID, templateId, entityID, key).Set(float64(value))
+				WithLabelValues(tenantID, templateID, entityID, key).Set(float64(value))
 		}
 	}
 
