@@ -7,6 +7,9 @@ import (
 const (
 	// metrics label.
 	MetricsLabelTenant    = "tenant_id"
+	MetricsLabelSchema    = "schema_id"
+	MetricsLabelEntity    = "entity_id"
+	MetricsLabelValueKey  = "value_key"
 	MetricsLabelMsgType   = "msg_type"
 	MetricsLabelSpaceType = "space_type"
 
@@ -33,6 +36,9 @@ const (
 
 	// metrics message storage days.
 	MetricsMsgStorageSeconds = "msg_storage_seconds"
+
+	// metrics device telemetry.
+	DeviceTelemetry = "device_telemetry"
 )
 
 var CollectorMsgCount = prometheus.NewCounterVec(
@@ -73,6 +79,14 @@ var CollectorMsgStorageSeconds = prometheus.NewGaugeVec(
 		Help: "msg storage seconds.",
 	},
 	[]string{MetricsLabelTenant},
+)
+
+var CollectorDeviceTelemetry = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: DeviceTelemetry,
+		Help: "device telemetry.",
+	},
+	[]string{MetricsLabelTenant, MetricsLabelSchema, MetricsLabelEntity, MetricsLabelValueKey},
 )
 
 var Metrics = []prometheus.Collector{CollectorRawDataStorage, CollectorTimeseriesStorage, CollectorMsgCount, CollectorMsgStorageSpace, CollectorMsgStorageSeconds}

@@ -36,9 +36,14 @@ import (
 
 func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
+	entityID := feed.EntityID
 	tenantID := en.GetProp("sysField._tenantId").String()
 	if tenantID == "" {
 		tenantID = en.Owner()
+	}
+	templateId := en.GetProp("basicInfo.templateId").String()
+	if templateId == "" {
+		templateId = "unSet"
 	}
 
 	// 1. flush state.
@@ -82,6 +87,14 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 		metrics.CollectorMsgCount.WithLabelValues(tenantID, metrics.MsgTypeRawData).Inc()
 		if err := n.resourceManager.RawData().Write(context.Background(), rawData); nil != err {
 			log.L().Error("flush entity rawData", logf.Error(err), logf.Eid(en.ID()))
+		}
+	}
+
+	// 2.5 flush metric
+	for _, tsData := range flushData.Data {
+		for key, value := range tsData.Fields {
+			metrics.CollectorDeviceTelemetry.
+				WithLabelValues(tenantID, templateId, entityID, key).Set(float64(value))
 		}
 	}
 
