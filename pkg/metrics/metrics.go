@@ -89,4 +89,11 @@ var CollectorDeviceTelemetry = prometheus.NewGaugeVec(
 	[]string{MetricsLabelTenant, MetricsLabelSchema, MetricsLabelEntity, MetricsLabelValueKey},
 )
 
-var Metrics = []prometheus.Collector{CollectorRawDataStorage, CollectorTimeseriesStorage, CollectorMsgCount, CollectorMsgStorageSpace, CollectorMsgStorageSeconds}
+var Metrics = []prometheus.Collector{
+	CollectorRawDataStorage,
+	CollectorTimeseriesStorage,
+	CollectorMsgCount,
+	CollectorMsgStorageSpace,
+	CollectorMsgStorageSeconds,
+	CollectorDeviceTelemetry,
+}
