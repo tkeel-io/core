@@ -82,7 +82,7 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 		// 2.3.2 flush metric
 		for _, tsData := range flushData.Data {
 			for key, value := range tsData.Fields {
-				metrics.CollectorDeviceTelemetry.
+				metrics.CollectorTelemetry.
 					WithLabelValues(tenantID, templateID, entityID, key).Set(float64(value))
 			}
 		}
