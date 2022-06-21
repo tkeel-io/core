@@ -17,7 +17,6 @@ package manager
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -66,7 +65,8 @@ type apiManager struct {
 func New(
 	ctx context.Context,
 	repo repository.IRepository,
-	dispatcher dispatch.Dispatcher) (APIManager, error) {
+	dispatcher dispatch.Dispatcher,
+) (APIManager, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	apiManager := &apiManager{
 		ctx:        ctx,
@@ -128,12 +128,14 @@ func (m *apiManager) CreateEntity(ctx context.Context, en *Base) (*BaseRet, erro
 			v1.MetaBorn:      bornCreate,
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
-			v1.MetaEntityID:  en.ID},
+			v1.MetaEntityID:  en.ID,
+		},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
 				Operator: string(v1.OpCreate),
 				Data:     bytes,
-			}},
+			},
+		},
 	}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("create entity, dispatch event",
@@ -178,7 +180,8 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 		v1.MetaBorn:      bornPatch,
 		v1.MetaType:      enET,
 		v1.MetaEntityID:  en.ID,
-		v1.MetaRequestID: reqID}
+		v1.MetaRequestID: reqID,
+	}
 	// use patch options.
 	for _, option := range opts {
 		option(metadata)
@@ -192,7 +195,8 @@ func (m *apiManager) PatchEntity(ctx context.Context, en *Base, pds []*v1.PatchD
 			Timestamp: time.Now().UnixNano(),
 			Callback:  m.callbackAddr(),
 			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{Patches: pds}},
+				Patches: &v1.PatchDatas{Patches: pds},
+			},
 		}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("patch entity, dispatch event",
@@ -246,9 +250,11 @@ func (m *apiManager) GetEntity(ctx context.Context, en *Base) (*BaseRet, error) 
 				v1.MetaBorn:      bornGet,
 				v1.MetaType:      enET,
 				v1.MetaRequestID: reqID,
-				v1.MetaEntityID:  en.ID},
+				v1.MetaEntityID:  en.ID,
+			},
 			Data: &v1.ProtoEvent_Patches{
-				Patches: &v1.PatchDatas{}},
+				Patches: &v1.PatchDatas{},
+			},
 		}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("get entity, dispatch event",
@@ -300,11 +306,14 @@ func (m *apiManager) DeleteEntity(ctx context.Context, en *Base) error {
 			v1.MetaBorn:      bornDelete,
 			v1.MetaType:      sysET,
 			v1.MetaRequestID: reqID,
-			v1.MetaEntityID:  en.ID},
+			v1.MetaEntityID:  en.ID,
+		},
 		Data: &v1.ProtoEvent_SystemData{
 			SystemData: &v1.SystemData{
-				Operator: string(v1.OpDelete)},
-		}}); nil != err {
+				Operator: string(v1.OpDelete),
+			},
+		},
+	}); nil != err {
 		respWaiter.Cancel()
 		log.L().Error("delete entity, dispatch event",
 			logf.Error(err), logf.Eid(en.ID), logf.ReqID(reqID))

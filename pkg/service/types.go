@@ -17,8 +17,6 @@ limitations under the License.
 package service
 
 import (
-	"encoding/json"
-
 	apim "github.com/tkeel-io/core/pkg/manager"
 )
 

@@ -3,6 +3,8 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 2
+nodeCount: 3
+topicCount: 12
 
 daprVersion: "1.6"
 

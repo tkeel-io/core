@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/pkg/errors"
 	logf "github.com/tkeel-io/core/pkg/logfield"
