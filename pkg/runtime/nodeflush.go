@@ -36,9 +36,14 @@ import (
 
 func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
+	entityID := feed.EntityID
 	tenantID := en.GetProp("sysField._tenantId").String()
 	if tenantID == "" {
 		tenantID = en.Owner()
+	}
+	templateID := en.GetProp("basicInfo.templateId").String()
+	if templateID == "" {
+		templateID = "empty_template_id"
 	}
 
 	// 1. flush state.
@@ -67,10 +72,19 @@ func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
 	if nil != err {
 		log.L().Warn("make TimeSeries error", logf.Error(err), logf.Eid(en.ID()))
 	} else {
+		// 2.3.1 msg count
 		metrics.CollectorMsgCount.WithLabelValues(tenantID, metrics.MsgTypeTimeseries).Add(float64(tsCount))
 		if _, err = n.resourceManager.TSDB().Write(ctx, flushData); nil != err {
 			log.L().Error("flush entity timeseries database", logf.Error(err), logf.Eid(en.ID()))
 			//			return errors.Wrap(err, "flush entity into search engine")
+		}
+
+		// 2.3.2 flush metric
+		for _, tsData := range flushData.Data {
+			for key, value := range tsData.Fields {
+				metrics.CollectorTelemetry.
+					WithLabelValues(tenantID, templateID, entityID, key).Set(float64(value))
+			}
 		}
 	}
 
@@ -124,9 +138,21 @@ func (n *Node) getTimeSeriesKey(patchs []Patch) []string {
 
 func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, int, error) {
 	tsData := en.GetProp("telemetry")
-	var flushData []*tseries.TSeriesData
 	log.Info("tsData: ", tsData)
-	var res interface{}
+	var (
+		flushData []*tseries.TSeriesData
+		ret       = &tseries.TSeriesRequest{
+			Data:     flushData,
+			Metadata: map[string]string{},
+		}
+		res     interface{}
+		tsCount = 0
+	)
+
+	needWriteKeys := n.getTimeSeriesKey(feed.Changes)
+	if len(needWriteKeys) == 0 {
+		return ret, tsCount, nil
+	}
 
 	err := json.Unmarshal(tsData.Raw(), &res)
 	if nil != err {
@@ -134,8 +160,6 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 		return nil, 0, errors.Wrap(err, "write ts db error")
 	}
 	tss, ok := res.(map[string]interface{})
-	needWriteKeys := n.getTimeSeriesKey(feed.Changes)
-	tsCount := 0
 	if ok {
 		for _, k := range needWriteKeys {
 			if v, ok := tss[k]; ok {
@@ -153,13 +177,13 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 							tsItem.Fields[k] = float32(tttV)
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
-							flushData = append(flushData, &tsItem)
+							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
 						case float32:
 							tsItem.Fields[k] = tttV
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
-							flushData = append(flushData, &tsItem)
+							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
 						}
 						continue
@@ -170,10 +194,7 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 			}
 		}
 	}
-	return &tseries.TSeriesRequest{
-		Data:     flushData,
-		Metadata: map[string]string{},
-	}, tsCount, errors.Wrap(err, "write ts db error")
+	return ret, tsCount, errors.Wrap(err, "write ts db error")
 }
 
 func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
