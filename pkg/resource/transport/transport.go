@@ -2,7 +2,7 @@ package transport
 
 import (
 	"context"
-	"github.com/tkeel-io/core/pkg/util/batch_queue"
+	batchqueue "github.com/tkeel-io/core/pkg/util/batch_queue"
 	"time"
 )
 

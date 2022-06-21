@@ -128,13 +128,12 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error
 }
 
 func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}) {
-	var preUrl string
-	dataLen := len(reqs)
-	if dataLen <= 0 {
-		return preUrl, nil
+	var preURL string
+	if len(reqs) <= 0 {
+		return preURL, nil
 	}
 	fields := []string{"tag", "entity_id", "timestamp", "values", "path"}
-	preUrl = c.genSQL(&fields)
+	preURL = c.genSQL(&fields)
 
 	var tags []string
 
@@ -163,7 +162,7 @@ func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}
 			continue
 		}
 	}
-	return preUrl, &argsVal
+	return preURL, &argsVal
 }
 
 func (c *Clickhouse) BatchWrite(ctx context.Context, reqs []interface{}) (err error) {

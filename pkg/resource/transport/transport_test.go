@@ -2,13 +2,14 @@ package transport
 
 import (
 	"context"
-	_ "github.com/ClickHouse/clickhouse-go/v2"
 	"os"
 	"os/signal"
 	"syscall"
 	"testing"
 	"time"
 	"unsafe"
+
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 )
 
 type MockMsg struct {

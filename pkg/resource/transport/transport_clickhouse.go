@@ -3,8 +3,9 @@ package transport
 import (
 	"context"
 	"database/sql"
-	"github.com/jmoiron/sqlx"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type ClickHouseCli interface {
