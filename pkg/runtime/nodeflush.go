@@ -177,13 +177,13 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 							tsItem.Fields[k] = float32(tttV)
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
-							flushData = append(flushData, &tsItem)
+							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
 						case float32:
 							tsItem.Fields[k] = tttV
 							timestamp, _ := ts.(float64)
 							tsItem.Timestamp = int64(timestamp) * 1e6
-							flushData = append(flushData, &tsItem)
+							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
 						}
 						continue
