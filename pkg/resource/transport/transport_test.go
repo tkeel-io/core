@@ -38,15 +38,18 @@ func newTimerWrapFunc(t time.Duration, fn func()) {
 	ch := make(chan os.Signal, 1)
 
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	for counter := 100000; counter > 0; counter-- {
+	for counter := 1; counter > 0; counter-- {
 		select {
 		case <-tick.C:
 			fn()
 		case <-ch:
-			tick.Stop()
-			close(ch)
+			break
 		}
 	}
+	tick.Stop()
+	close(ch)
+	timer := time.After(time.Second * 7)
+	<-timer
 }
 
 func TestNewSinkTransport(t *testing.T) {
