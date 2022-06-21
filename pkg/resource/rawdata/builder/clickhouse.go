@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+
 	"github.com/tkeel-io/core/pkg/resource"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/rawdata/clickhouse"

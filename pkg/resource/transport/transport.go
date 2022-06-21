@@ -2,8 +2,9 @@ package transport
 
 import (
 	"context"
-	batchqueue "github.com/tkeel-io/core/pkg/util/batch_queue"
 	"time"
+
+	batchqueue "github.com/tkeel-io/core/pkg/util/batch_queue"
 )
 
 var (
