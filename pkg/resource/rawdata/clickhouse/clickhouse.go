@@ -2,7 +2,6 @@ package clickhouse
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	logf "github.com/tkeel-io/core/pkg/logfield"
@@ -125,86 +124,7 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 
 func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error) {
 	// log.Info("chronus Insert ", logf.Any("messages", messages)).
-	var (
-		tx *sql.Tx
-	)
-	rows := make([]*execNode, 0)
-	tags := make([]string, 0)
-	for k, v := range req.Metadata {
-		tags = append(tags, fmt.Sprintf("%s=%s", k, v))
-	}
-	for _, rawData := range req.Data {
-		data := new(execNode)
-
-		// fmt.Println(string(message.Data()))
-		log.L().Info("Invoke", logf.Any("messages", string(rawData.Bytes())))
-		// jsonCtx := utils.NewJSONContext(string(message.Data()))
-
-		data.fields = []string{"tag", "entity_id", "timestamp", "values", "path"}
-		data.args = []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path}
-		if len(data.fields) > 0 && len(data.fields) == len(data.args) {
-			rows = append(rows, data)
-		} else {
-			log.L().Warn("rows is empty",
-				logf.Any("args", data.args),
-				logf.Any("fields", data.fields),
-				logf.Any("option", c.option),
-			)
-		}
-	}
-	if len(rows) > 0 {
-		preURL := c.genSQL(rows[0])
-		server := c.balance.Select([]*sqlx.DB{})
-		if server == nil {
-			return fmt.Errorf("get database failed, can't insert")
-		}
-		if tx, err = server.DB.BeginTx(ctx, nil); err != nil {
-			log.L().Error("pre URL error",
-				logf.String("preURL", preURL),
-				logf.Any("row", rows[0]),
-				logf.String("error", err.Error()))
-			return err
-		}
-		defer func() {
-			if err != nil {
-				_ = tx.Rollback()
-			}
-		}()
-		stmt, err := tx.Prepare(preURL)
-		if err != nil {
-			log.L().Error("pre URL error",
-				logf.String("preURL", preURL),
-				logf.String("error", err.Error()))
-			return err
-		}
-		defer stmt.Close()
-		for _, row := range rows {
-			log.L().Debug("preURL",
-				logf.Int64("ts", row.ts),
-				logf.Any("args", row.args),
-				logf.String("preURL", preURL))
-			if _, err = stmt.Exec(row.args...); err != nil {
-				log.L().Error("db Exec error",
-					logf.String("preURL", preURL),
-					logf.Any("args", row.args),
-					logf.Any("fields", row.fields),
-					logf.String("error", err.Error()))
-				return err
-			}
-		}
-		err = tx.Commit()
-		if err != nil {
-			row := rows[0]
-			log.L().Error("tx Commit error",
-				logf.Int64("ts", row.ts),
-				logf.Any("args", row.args),
-				logf.Any("fields", row.fields),
-				logf.String("preURL", preURL),
-				logf.String("error", err.Error()))
-			return err
-		}
-	}
-	return nil
+	return c.BatchWrite(ctx, []interface{}{req})
 }
 
 func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}) {
@@ -214,26 +134,36 @@ func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}
 		return preUrl, nil
 	}
 	fields := []string{"tag", "entity_id", "timestamp", "values", "path"}
-	preUrl = c.genSQL(&execNode{fields: fields})
+	preUrl = c.genSQL(&fields)
 
 	var tags []string
 
-	var args = make([][]interface{}, 0, dataLen)
-	for index, req := range reqs {
-		if req, ok := req.(*rawdata.Request); ok {
-			if index == 0 {
-				tags = make([]string, len(req.Metadata))
-				for k, v := range req.Metadata {
-					tags[index] = fmt.Sprintf("%s=%s", k, v)
-					index++
-				}
-			}
-			for _, rawData := range req.Data {
-				args = append(args, []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path})
+	var argsVal = make([][]interface{}, 0, 1)
+
+	buildFn := func(index int, req *rawdata.Request, args *[][]interface{}) {
+		if index == 0 {
+			tags = make([]string, len(req.Metadata))
+			for k, v := range req.Metadata {
+				tags[index] = fmt.Sprintf("%s=%s", k, v)
+				index++
 			}
 		}
+		for _, rawData := range req.Data {
+			*args = append(*args, []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path})
+		}
 	}
-	return preUrl, &args
+
+	for reqIndex, reqVal := range reqs {
+		switch v := reqVal.(type) {
+		case *rawdata.Request:
+			buildFn(reqIndex, v, &argsVal)
+		case rawdata.Request:
+			buildFn(reqIndex, &v, &argsVal)
+		default:
+			continue
+		}
+	}
+	return preUrl, &argsVal
 }
 
 func (c *Clickhouse) BatchWrite(ctx context.Context, reqs []interface{}) (err error) {
@@ -245,15 +175,15 @@ func (c *Clickhouse) BatchWrite(ctx context.Context, reqs []interface{}) (err er
 	return errors.New("BatchWrite: call buildBulkData failed")
 }
 
-func (c *Clickhouse) genSQL(row *execNode) string {
-	stmts := strings.Repeat("?,", len(row.fields))
+func (c *Clickhouse) genSQL(fields *[]string) string {
+	stmts := strings.Repeat("?,", len(*fields))
 	if len(stmts) > 0 {
 		stmts = stmts[:len(stmts)-1]
 	}
 	return fmt.Sprintf(ClickhouseSSQLTlp,
 		c.option.DbName,
 		c.option.Table,
-		strings.Join(row.fields, ","),
+		strings.Join(*fields, ","),
 		stmts)
 }
 
