@@ -42,7 +42,7 @@ const DriverTypeElasticsearch Type = "elasticsearch"
 const (
 	EntityIndex        = "entity"
 	DefaultLimit int32 = 20
-	MaxLimit     int32 = 500
+	MaxLimit     int32 = 200
 )
 
 type ESConfig struct {

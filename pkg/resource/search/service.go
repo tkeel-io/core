@@ -92,7 +92,7 @@ func (s *Service) Search(ctx context.Context, request *pb.SearchRequest) (*pb.Se
 	}
 	resp, err := engine.Search(ctx, req)
 	if err != nil {
-		return nil, errors.Wrap(err, "build index error")
+		return nil, errors.Wrap(err, "search error")
 	}
 	for j := range resp.Data {
 		val, err := structpb.NewValue(resp.Data[j])
