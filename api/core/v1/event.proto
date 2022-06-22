@@ -12,9 +12,9 @@ option java_package = "api.core.v1";
 
 
 message PatchData {
-    string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property path"}];
-    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator"}];
-    bytes value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator value"}];
+    string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段"}];
+    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "操作类型"}];
+    bytes value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体数值"}];
 }
 
 

@@ -14,7 +14,7 @@ option java_package = "api.core.v1";
 service Topic {
   rpc TopicEventHandler(TopicEventRequest) returns(TopicEventResponse) {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "TopicEvent handler";
+      summary: "事件分发处理";
       operation_id: "TopicEventHandler";
       tags: "TopicEvent";
       responses: {
