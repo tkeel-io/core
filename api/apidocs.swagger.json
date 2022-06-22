@@ -1785,10 +1785,11 @@
     },
     "/ts": {
       "get": {
-        "operationId": "TS_GetLatestEntities",
+        "summary": "获取最新的实体数据",
+        "operationId": "GetLatestEntities",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1GetLatestEntitiesResponse"
             }
@@ -1807,10 +1808,11 @@
     },
     "/ts/{id}": {
       "get": {
-        "operationId": "TS_DownloadTSData",
+        "summary": "下载时序数据",
+        "operationId": "DownloadTSData",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1DownloadTSDataResponse"
             }
@@ -1859,10 +1861,11 @@
         ]
       },
       "post": {
-        "operationId": "TS_GetTSData",
+        "summary": "获取时序数据",
+        "operationId": "GetTSData",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1GetTSDataResponse"
             }
@@ -2669,14 +2672,16 @@
       "properties": {
         "time": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "时间"
         },
         "value": {
           "type": "object",
           "additionalProperties": {
             "type": "number",
             "format": "float"
-          }
+          },
+          "description": "时序数据"
         }
       }
     },

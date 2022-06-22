@@ -15,19 +15,51 @@ service TS {
 	rpc GetTSData (GetTSDataRequest) returns (GetTSDataResponse) {
 		option (google.api.http) = {
 			post : "/ts/{id}"
-            body : "*"
+      body : "*"
 		};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "获取时序数据";
+      operation_id: "GetTSData";
+      tags: "TS";
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
 	};
 	rpc DownloadTSData (DownloadTSDataRequest) returns (DownloadTSDataResponse) {
 		option (google.api.http) = {
 			get: "/ts/{id}"
-
 		};
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+        summary: "下载时序数据";
+        operation_id: "DownloadTSData";
+        tags: "TS";
+        responses: {
+          key: "200"
+          value: {
+            description: "OK";
+          }
+        }
+      };
 	};
 	rpc GetLatestEntities (GetLatestEntitiesRequest) returns (GetLatestEntitiesResponse) {
 		option (google.api.http) = {
 			get : "/ts"
 		};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "获取最新的实体数据";
+      operation_id: "GetLatestEntities";
+      tags: "TS";
+      responses: {
+        key: "200"
+        value: {
+          description: "OK";
+        }
+      }
+    };
 	};
 }
 
@@ -55,8 +87,8 @@ message GetTSDataResponse {
 }
 
 message TSResponse {
-    int64 time = 1;
-    map<string, float> value = 2;
+    int64 time = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "时间"}];;
+    map<string, float> value = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "时序数据"}];
 }
 
 message DownloadTSDataRequest {
