@@ -13,12 +13,13 @@ var (
 )
 
 type SinkTransport struct {
-	sink batchqueue.BatchSink
-	fn   batchqueue.ProcessFn
+	sink    batchqueue.BatchSink
+	fn      batchqueue.ProcessFn
+	encoder Encoder
 }
 
-func NewSinkTransport(ctx context.Context, name string, fn batchqueue.ProcessFn) (Transport, error) {
-	ts := &SinkTransport{fn: fn}
+func NewSinkTransport(ctx context.Context, name string, fn batchqueue.ProcessFn, encoder Encoder) (Transport, error) {
+	ts := &SinkTransport{fn: fn, encoder: encoder}
 
 	opts := &batchqueue.Config{
 		Name:                  name,
@@ -33,7 +34,7 @@ func NewSinkTransport(ctx context.Context, name string, fn batchqueue.ProcessFn)
 }
 
 func (s *SinkTransport) Send(ctx context.Context, msg interface{}) error {
-	return s.sink.Send(ctx, msg)
+	return s.sink.Send(ctx, s.encoder(msg))
 }
 
 func (s *SinkTransport) Close() {

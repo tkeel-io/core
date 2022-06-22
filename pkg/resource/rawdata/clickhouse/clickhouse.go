@@ -125,49 +125,35 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 
 func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error) {
 	// log.Info("chronus Insert ", logf.Any("messages", messages)).
-	return c.BatchWrite(ctx, []interface{}{req})
+	return c.BatchWrite(ctx, &[]interface{}{c.BuildBulkData(req)})
 }
 
-func (c *Clickhouse) buildBulkData(reqs []interface{}) (string, *[][]interface{}) {
-	var preURL string
-	if len(reqs) <= 0 {
-		return preURL, nil
-	}
-	fields := []string{"tag", "entity_id", "timestamp", "values", "path"}
-	preURL = c.genSQL(&fields)
-
+func (c *Clickhouse) BuildBulkData(req interface{}) interface{} {
 	var tags []string
-
-	var argsVal = make([][]interface{}, 0, 1)
-
-	buildFn := func(index int, req *rawdata.Request, args *[][]interface{}) {
-		if index == 0 {
-			tags = make([]string, len(req.Metadata))
-			for k, v := range req.Metadata {
-				tags[index] = fmt.Sprintf("%s=%s", k, v)
-				index++
-			}
+	var argsVal = make([]interface{}, 0, 1)
+	buildFn := func(req *rawdata.Request, args *[]interface{}) {
+		tags = make([]string, len(req.Metadata))
+		index := 0
+		for k, v := range req.Metadata {
+			tags[index] = fmt.Sprintf("%s=%s", k, v)
+			index++
 		}
 		for _, rawData := range req.Data {
 			*args = append(*args, []interface{}{tags, rawData.EntityID, rawData.Timestamp.UnixMilli(), rawData.Values, rawData.Path})
 		}
 	}
 
-	for reqIndex, reqVal := range reqs {
-		switch v := reqVal.(type) {
-		case *rawdata.Request:
-			buildFn(reqIndex, v, &argsVal)
-		case rawdata.Request:
-			buildFn(reqIndex, &v, &argsVal)
-		default:
-			continue
-		}
+	switch v := req.(type) {
+	case *rawdata.Request:
+		buildFn(v, &argsVal)
+	case rawdata.Request:
+		buildFn(&v, &argsVal)
 	}
-	return preURL, &argsVal
+	return argsVal
 }
 
-func (c *Clickhouse) BatchWrite(ctx context.Context, reqs []interface{}) (err error) {
-	preURL, args := c.buildBulkData(reqs)
+func (c *Clickhouse) BatchWrite(ctx context.Context, args *[]interface{}) (err error) {
+	preURL := c.genSQL(&[]string{"tag", "entity_id", "timestamp", "values", "path"})
 	if args != nil && len(*args) > 0 {
 		server := c.balance.Select([]*sqlx.DB{})
 		return transport.BulkWrite(ctx, server.DB, preURL, args)

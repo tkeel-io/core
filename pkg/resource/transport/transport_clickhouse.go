@@ -9,12 +9,11 @@ import (
 )
 
 type ClickHouseCli interface {
-	BatchWrite(ctx context.Context, reqs []interface{}) error
+	BatchWrite(ctx context.Context, args *[]interface{}) error
+	BuildBulkData(m interface{}) interface{}
 }
 
-type BulkWriteFunc func(ctx context.Context, db *sqlx.DB, query string, args *[][]interface{}) error
-
-func BulkWrite(ctx context.Context, db *sqlx.DB, query string, args *[][]interface{}) error {
+func BulkWrite(ctx context.Context, db *sqlx.DB, query string, args *[]interface{}) error {
 	var (
 		err error
 		tx  *sql.Tx
@@ -33,9 +32,17 @@ func BulkWrite(ctx context.Context, db *sqlx.DB, query string, args *[][]interfa
 		return err
 	}
 	defer stmt.Close()
-	for _, val := range *args {
-		if _, err = stmt.Exec(val...); err != nil {
-			return err
+	for _, arg := range *args {
+		rows, ok := arg.([]interface{})
+		if !ok {
+			continue
+		}
+		for _, row := range rows {
+			if rowData, ok := row.([]interface{}); ok {
+				if _, err = stmt.Exec(rowData...); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	err = tx.Commit()
@@ -47,11 +54,12 @@ func NewClickHouseTransport(ctx context.Context, cli ClickHouseCli) (Transport, 
 		ctx,
 		"clickhouse",
 		func(messages []interface{}) (err error) {
-			err = cli.BatchWrite(context.Background(), messages)
+			err = cli.BatchWrite(context.Background(), &messages)
 			if err != nil {
 				log.Println(err)
 			}
 			return err
-		})
+		},
+		cli.BuildBulkData)
 	return sinkTransport, err
 }
