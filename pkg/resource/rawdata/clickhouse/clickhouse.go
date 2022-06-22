@@ -129,10 +129,9 @@ func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error
 }
 
 func (c *Clickhouse) BuildBulkData(req interface{}) interface{} {
-	var tags []string
 	var argsVal = make([]interface{}, 0, 1)
 	buildFn := func(req *rawdata.Request, args *[]interface{}) {
-		tags = make([]string, len(req.Metadata))
+		tags := make([]string, len(req.Metadata))
 		index := 0
 		for k, v := range req.Metadata {
 			tags[index] = fmt.Sprintf("%s=%s", k, v)
