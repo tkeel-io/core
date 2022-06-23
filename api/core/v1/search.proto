@@ -18,7 +18,7 @@ service Search {
 			body : "obj"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "Index a object";
+            summary: "创建索引";
             operation_id: "IndexObject";
             tags: "Search";
             responses: {
@@ -35,7 +35,7 @@ service Search {
 			body: "*"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "Search objects by keyword";
+            summary: "关键词搜索";
             operation_id: "SearchObjects";
             tags: "Search";
             responses: {
@@ -51,7 +51,7 @@ service Search {
 			delete : "/search"
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "Delete objects by id";
+            summary: "根据id删除实体信息";
             operation_id: "SearchObjects";
             tags: "Search";
             responses: {
@@ -73,16 +73,16 @@ message IndexResponse {
 }
 
 message SearchCondition {
-    string field = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity property key"}];
-    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "operator $gt $gte $eq $lt $lte "}];
-    google.protobuf.Value value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "value of the key"}];
+    string field = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段"}];
+    string operator = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "操作符 $gt $gte $eq $lt $lte "}];
+    google.protobuf.Value value = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体数值"}];
 }
 
 message SearchRequest {
-    string source = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    string owner = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
-    string query = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "search keyword"}];
-    repeated SearchCondition condition = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "conditions list"}];
+    string source = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
+    string owner = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
+    string query = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "查询关键词"}];
+    repeated SearchCondition condition = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "条件列表"}];
     int32 page_num= 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
     int32 page_size = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
     string order_by = 9 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "排序字段"}];
@@ -90,18 +90,18 @@ message SearchRequest {
 }
 
 message SearchResponse {
-    int64 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "count of the results"}];
+    int64 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "结果总数"}];
     int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
     int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    repeated google.protobuf.Value items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "items of the results"}];
+    repeated google.protobuf.Value items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "查询结果列表"}];
 }
 
 
 
 message DeleteByIDRequest {
-    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "entity id"}];
-    string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "source id"}];
-    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "owner id"}];
+    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+    string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
+    string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
 }
 
 message DeleteByIDResponse {}
