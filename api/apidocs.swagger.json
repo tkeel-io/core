@@ -12,6 +12,9 @@
       "name": "Subscription"
     },
     {
+      "name": "Search"
+    },
+    {
       "name": "TS"
     },
     {
@@ -30,7 +33,7 @@
   "paths": {
     "/entities": {
       "post": {
-        "summary": "Create a entity",
+        "summary": "创建实体",
         "operationId": "CreateEntity",
         "responses": {
           "200": {
@@ -49,45 +52,45 @@
         "parameters": [
           {
             "name": "body",
-            "description": "entity properties, optional",
+            "description": "实体属性, 可选的",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties, optional"
+              "description": "实体属性, 可选的"
             }
           },
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "from",
-            "description": "template entity id",
+            "description": "模版id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
@@ -100,7 +103,7 @@
     },
     "/entities/search": {
       "post": {
-        "summary": "List entities",
+        "summary": "查询实体列表",
         "operationId": "ListEntity",
         "responses": {
           "200": {
@@ -133,7 +136,7 @@
     },
     "/entities/{entity_id}/expressions": {
       "get": {
-        "summary": "list expression",
+        "summary": "获取实体表达式列表",
         "operationId": "ListExpression",
         "responses": {
           "200": {
@@ -152,21 +155,21 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -178,7 +181,7 @@
         ]
       },
       "delete": {
-        "summary": "remove expression from entity",
+        "summary": "移除实体表达式",
         "operationId": "RemoveExpression",
         "responses": {
           "200": {
@@ -197,28 +200,28 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "paths",
-            "description": "expression target path",
+            "description": "目标属性",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -230,7 +233,7 @@
         ]
       },
       "post": {
-        "summary": "Append expressions for entity",
+        "summary": "添加实体表达式",
         "operationId": "AppendExpression",
         "responses": {
           "200": {
@@ -249,31 +252,31 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "expression information",
+            "description": "表达式信息",
             "in": "body",
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1Expressions",
-              "description": "expression information"
+              "description": "表达式信息"
             }
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -287,7 +290,7 @@
     },
     "/entities/{entity_id}/expressions/{path}": {
       "get": {
-        "summary": "get expression by id",
+        "summary": "获取实体表达式",
         "operationId": "GetExpression",
         "responses": {
           "200": {
@@ -306,28 +309,28 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "path",
-            "description": "target property path",
+            "description": "目标属性",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -341,7 +344,7 @@
     },
     "/entities/{entity_id}/mappers": {
       "get": {
-        "summary": "list mappers",
+        "summary": "获取实体映射列表",
         "operationId": "ListMapper",
         "responses": {
           "200": {
@@ -360,28 +363,28 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -393,7 +396,7 @@
         ]
       },
       "delete": {
-        "summary": "remove mappers from entity",
+        "summary": "移除实体映射",
         "operationId": "RemoveMapper",
         "responses": {
           "200": {
@@ -412,35 +415,35 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "id",
-            "description": "mapper id",
+            "description": "映射id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -452,7 +455,7 @@
         ]
       },
       "post": {
-        "summary": "Append mapper for entity",
+        "summary": "添加实体映射",
         "operationId": "AppendMapper",
         "responses": {
           "200": {
@@ -471,38 +474,38 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "mapper information",
+            "description": "映射信息",
             "in": "body",
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1Mapper",
-              "description": "mapper information"
+              "description": "映射信息"
             }
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -516,7 +519,7 @@
     },
     "/entities/{entity_id}/mappers/{id}": {
       "get": {
-        "summary": "get mapper by id",
+        "summary": "查询实体映射",
         "operationId": "GetMapper",
         "responses": {
           "200": {
@@ -535,35 +538,35 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "id",
-            "description": "mapper id",
+            "description": "映射id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -577,7 +580,7 @@
     },
     "/entities/{id}": {
       "get": {
-        "summary": "Get a entity",
+        "summary": "查询实体详情",
         "operationId": "GetEntity",
         "responses": {
           "200": {
@@ -596,28 +599,28 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -628,7 +631,7 @@
         ]
       },
       "delete": {
-        "summary": "Delete a entity",
+        "summary": "删除实体",
         "operationId": "DeleteEntity",
         "responses": {
           "200": {
@@ -647,28 +650,28 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -679,7 +682,7 @@
         ]
       },
       "put": {
-        "summary": "Update Entity",
+        "summary": "更新实体",
         "operationId": "UpdateEntity",
         "responses": {
           "200": {
@@ -698,7 +701,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -712,31 +715,31 @@
               "properties": {
                 "type": {
                   "type": "string",
-                  "description": "entity type"
+                  "description": "实体类型"
                 },
                 "source": {
                   "type": "string",
-                  "description": "source id"
+                  "description": "来源id"
                 },
                 "owner": {
                   "type": "string",
-                  "description": "owner id"
+                  "description": "用户id"
                 },
                 "template_id": {
                   "type": "string",
-                  "description": "template id"
+                  "description": "模版id"
                 },
                 "description": {
                   "type": "string",
-                  "description": "template id"
+                  "description": "描述"
                 },
                 "properties": {
                   "type": "object",
-                  "description": "entity description"
+                  "description": "实体描述"
                 },
                 "configs": {
                   "type": "object",
-                  "description": "entity configs"
+                  "description": "实体配置"
                 }
               },
               "description": "Update Entity Request."
@@ -748,7 +751,7 @@
         ]
       },
       "patch": {
-        "summary": "Patch entity properties",
+        "summary": "批量更新实体属性",
         "operationId": "PatchEntityProps",
         "responses": {
           "200": {
@@ -767,38 +770,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "entity properties",
+            "description": "实体属性",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties"
+              "description": "实体属性"
             }
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
@@ -811,7 +814,7 @@
     },
     "/entities/{id}/configs": {
       "get": {
-        "summary": "query entity configs",
+        "summary": "查询实体配置",
         "operationId": "GetEntityConfigs",
         "responses": {
           "200": {
@@ -830,35 +833,35 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "property_keys",
-            "description": "entity property ids",
+            "description": "实体属性字段",
             "in": "query",
             "required": false,
             "type": "string"
@@ -869,7 +872,7 @@
         ]
       },
       "delete": {
-        "summary": "remove entity configs",
+        "summary": "批量删除实体配置",
         "operationId": "RemoveEntityConfigs",
         "responses": {
           "200": {
@@ -888,35 +891,35 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "property_keys",
-            "description": "entity property ids",
+            "description": "实体属性字段",
             "in": "query",
             "required": false,
             "type": "string"
@@ -927,7 +930,7 @@
         ]
       },
       "put": {
-        "summary": "update entity configs.",
+        "summary": "更新(插入)实体配置",
         "operationId": "UpdateEntityConfigs",
         "responses": {
           "200": {
@@ -946,38 +949,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "configs",
+            "description": "实体配置",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "configs"
+              "description": "实体配置"
             }
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -988,7 +991,7 @@
         ]
       },
       "patch": {
-        "summary": "patch entity configs",
+        "summary": "批量更新实体配置",
         "operationId": "PatchEntityConfigs",
         "responses": {
           "200": {
@@ -1007,38 +1010,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "property configs",
+            "description": "实体配置",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "property configs"
+              "description": "实体配置"
             }
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1051,7 +1054,7 @@
     },
     "/entities/{id}/configs/patch": {
       "put": {
-        "summary": "patch entity configs",
+        "summary": "批量更新实体配置",
         "operationId": "PatchEntityConfigsZ",
         "responses": {
           "200": {
@@ -1070,38 +1073,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "property configs",
+            "description": "实体配置",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "property configs"
+              "description": "实体配置"
             }
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1114,7 +1117,7 @@
     },
     "/entities/{id}/patch": {
       "put": {
-        "summary": "Patch entity properties",
+        "summary": "批量更新实体属性",
         "operationId": "PatchEntityPropsZ",
         "responses": {
           "200": {
@@ -1133,38 +1136,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "entity properties",
+            "description": "实体属性",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties"
+              "description": "实体属性"
             }
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1177,7 +1180,7 @@
     },
     "/entities/{id}/properties": {
       "get": {
-        "summary": "Get Entity Properties",
+        "summary": "查询实体属性",
         "operationId": "GetEntityProps",
         "responses": {
           "200": {
@@ -1196,35 +1199,35 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "property_keys",
-            "description": "entity property ids, eg: pids=1,2,3",
+            "description": "实体属性字段, eg: pids=1,2,3",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1235,7 +1238,7 @@
         ]
       },
       "delete": {
-        "summary": "Remove Entity Properties",
+        "summary": "批量删除实体属性",
         "operationId": "RemoveEntityProps",
         "responses": {
           "200": {
@@ -1254,35 +1257,35 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "property_keys",
-            "description": "entity property ids",
+            "description": "实体属性字段",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1293,7 +1296,7 @@
         ]
       },
       "put": {
-        "summary": "Update entity properties",
+        "summary": "更新(插入)实体属性",
         "operationId": "UpdateEntityProps",
         "responses": {
           "200": {
@@ -1312,38 +1315,38 @@
         "parameters": [
           {
             "name": "id",
-            "description": "entity id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "entity properties",
+            "description": "实体属性",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
-              "description": "entity properties"
+              "description": "实体属性"
             }
           },
           {
             "name": "type",
-            "description": "entity type",
+            "description": "实体类型",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1354,9 +1357,42 @@
         ]
       }
     },
+    "/index": {
+      "post": {
+        "summary": "创建索引",
+        "operationId": "IndexObject",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1IndexResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
     "/rawdata/{entity_id}": {
       "post": {
-        "summary": "Get entity rawdata",
+        "summary": "查询实体原始数据",
         "operationId": "GetRawdata",
         "responses": {
           "200": {
@@ -1375,7 +1411,7 @@
         "parameters": [
           {
             "name": "entity_id",
-            "description": "实体 id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1423,7 +1459,7 @@
                   "description": "过滤条件"
                 }
               },
-              "description": "Get raw data Request",
+              "description": "查询原始数据请求",
               "title": "GetRawdata"
             }
           }
@@ -1433,9 +1469,86 @@
         ]
       }
     },
+    "/search": {
+      "delete": {
+        "summary": "根据id删除实体信息",
+        "operationId": "SearchObjects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteByIDResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "description": "实体id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "source",
+            "description": "来源id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "description": "用户id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      },
+      "post": {
+        "summary": "关键词搜索",
+        "operationId": "SearchObjects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/v1SearchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SearchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Search"
+        ]
+      }
+    },
     "/subscriptions": {
       "get": {
-        "summary": "List subscriptions",
+        "summary": "查询订阅列表",
         "operationId": "ListScription",
         "responses": {
           "200": {
@@ -1454,14 +1567,14 @@
         "parameters": [
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1472,7 +1585,7 @@
         ]
       },
       "post": {
-        "summary": "Create subscription",
+        "summary": "创建订阅信息",
         "operationId": "CreateSubscription",
         "responses": {
           "200": {
@@ -1491,12 +1604,12 @@
         "parameters": [
           {
             "name": "body",
-            "description": "subscription object",
+            "description": "订阅信息",
             "in": "body",
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1SubscriptionObject",
-              "description": "subscription object"
+              "description": "订阅信息"
             }
           },
           {
@@ -1508,14 +1621,14 @@
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1528,7 +1641,7 @@
     },
     "/subscriptions/{id}": {
       "get": {
-        "summary": "Get subscription",
+        "summary": "查询订阅信息",
         "operationId": "GetSubscription",
         "responses": {
           "200": {
@@ -1547,21 +1660,21 @@
         "parameters": [
           {
             "name": "id",
-            "description": "subscription id",
+            "description": "订阅id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1572,7 +1685,7 @@
         ]
       },
       "delete": {
-        "summary": "Delete subscription",
+        "summary": "删除订阅信息",
         "operationId": "DeleteSubscription",
         "responses": {
           "200": {
@@ -1591,21 +1704,21 @@
         "parameters": [
           {
             "name": "id",
-            "description": "subscription id",
+            "description": "订阅id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1616,7 +1729,7 @@
         ]
       },
       "put": {
-        "summary": "Update subscription",
+        "summary": "更新订阅信息",
         "operationId": "UpdateSubscription",
         "responses": {
           "200": {
@@ -1635,31 +1748,31 @@
         "parameters": [
           {
             "name": "id",
-            "description": "subscription id",
+            "description": "订阅id",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "body",
-            "description": "subscription object",
+            "description": "订阅信息",
             "in": "body",
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1SubscriptionObject",
-              "description": "subscription object"
+              "description": "订阅信息"
             }
           },
           {
             "name": "source",
-            "description": "source id",
+            "description": "来源id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "owner",
-            "description": "owner id",
+            "description": "用户id",
             "in": "query",
             "required": false,
             "type": "string"
@@ -1672,10 +1785,11 @@
     },
     "/ts": {
       "get": {
-        "operationId": "TS_GetLatestEntities",
+        "summary": "获取最新的实体数据",
+        "operationId": "GetLatestEntities",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1GetLatestEntitiesResponse"
             }
@@ -1694,10 +1808,11 @@
     },
     "/ts/{id}": {
       "get": {
-        "operationId": "TS_DownloadTSData",
+        "summary": "下载时序数据",
+        "operationId": "DownloadTSData",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1DownloadTSDataResponse"
             }
@@ -1712,7 +1827,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "实体 id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1746,10 +1861,11 @@
         ]
       },
       "post": {
-        "operationId": "TS_GetTSData",
+        "summary": "获取时序数据",
+        "operationId": "GetTSData",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "OK",
             "schema": {
               "$ref": "#/definitions/v1GetTSDataResponse"
             }
@@ -1764,7 +1880,7 @@
         "parameters": [
           {
             "name": "id",
-            "description": "实体 id",
+            "description": "实体id",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1801,7 +1917,7 @@
                   "description": "每页限制条数"
                 }
               },
-              "description": "Get time series Request",
+              "description": "获取时序数据",
               "title": "GetTSData"
             }
           }
@@ -1853,16 +1969,16 @@
       "properties": {
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "count": {
           "type": "integer",
           "format": "int32",
-          "description": "effect count"
+          "description": "变更数量"
         }
       },
       "description": "Append Expression Response."
@@ -1872,37 +1988,40 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "entity type"
+          "description": "实体类型"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "mapper": {
           "$ref": "#/definitions/v1Mapper",
-          "description": "mapper information"
+          "description": "映射信息"
         }
       },
       "description": "Append Mapper Response."
+    },
+    "v1DeleteByIDResponse": {
+      "type": "object"
     },
     "v1DeleteEntityResponse": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "status": {
           "type": "string",
-          "description": "status"
+          "description": "操作状态"
         }
       },
       "description": "Delete Entity Response."
@@ -1912,11 +2031,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "subscription id"
+          "description": "订阅id"
         },
         "status": {
           "type": "string",
-          "description": "status"
+          "description": "状态"
         }
       }
     },
@@ -1926,15 +2045,15 @@
         "data": {
           "type": "string",
           "format": "byte",
-          "description": "content"
+          "description": "数据内容"
         },
         "length": {
           "type": "string",
-          "description": "content length in string"
+          "description": "数据长度"
         },
         "filename": {
           "type": "string",
-          "description": "filename"
+          "description": "文件名"
         }
       }
     },
@@ -1943,52 +2062,52 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "type": {
           "type": "string",
-          "description": "entity type"
+          "description": "实体类型"
         },
         "version": {
           "type": "string",
           "format": "int64",
-          "description": "entity version"
+          "description": "实体版本"
         },
         "last_time": {
           "type": "string",
           "format": "int64",
-          "description": "entity last modify timestamp"
+          "description": "上次修改时间"
         },
         "template_id": {
           "type": "string",
-          "description": "entity template"
+          "description": "实体模版"
         },
         "description": {
           "type": "string",
-          "description": "entity description"
+          "description": "实体描述"
         },
         "mappers": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1Mapper"
           },
-          "description": "entity mappers"
+          "description": "实体映射"
         },
         "configs": {
           "type": "object",
-          "description": "entity configs"
+          "description": "实体配置"
         },
         "properties": {
           "type": "object",
-          "description": "entity properties"
+          "description": "实体属性"
         }
       },
       "description": "Entity Response."
@@ -1998,19 +2117,19 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "target property path"
+          "description": "目标属性"
         },
         "name": {
           "type": "string",
-          "description": "expression name"
+          "description": "表达式名称"
         },
         "expression": {
           "type": "string",
-          "description": "expression text"
+          "description": "表达式"
         },
         "description": {
           "type": "string",
-          "description": "expression description"
+          "description": "表达式描述"
         }
       },
       "description": "Expression Definition."
@@ -2031,15 +2150,15 @@
       "properties": {
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "expression": {
           "$ref": "#/definitions/v1Expression",
-          "description": "expression information"
+          "description": "表达式信息"
         }
       },
       "description": "Get Expression Response."
@@ -2050,14 +2169,14 @@
         "total": {
           "type": "string",
           "format": "int64",
-          "description": "total count of the entities"
+          "description": "结果总数"
         },
         "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1EntityResponse"
           },
-          "description": "entity list"
+          "description": "最新的实体数据列表"
         }
       }
     },
@@ -2066,23 +2185,23 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "entity type"
+          "description": "实体类型"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "mapper": {
           "$ref": "#/definitions/v1Mapper",
-          "description": "mapper information"
+          "description": "映射信息"
         }
       },
       "description": "Get Mapper Response."
@@ -2093,7 +2212,7 @@
         "total": {
           "type": "integer",
           "format": "int32",
-          "description": "total count of the entities"
+          "description": "实体列表数量"
         },
         "page_num": {
           "type": "integer",
@@ -2110,7 +2229,7 @@
           "items": {
             "$ref": "#/definitions/v1RawdataResponse"
           },
-          "description": "data list"
+          "description": "原始数据列表"
         }
       }
     },
@@ -2120,7 +2239,7 @@
         "total": {
           "type": "integer",
           "format": "int32",
-          "description": "total count of the entities"
+          "description": "结果总数"
         },
         "page_num": {
           "type": "integer",
@@ -2137,7 +2256,15 @@
           "items": {
             "$ref": "#/definitions/v1TSResponse"
           },
-          "description": "data list"
+          "description": "结果列表"
+        }
+      }
+    },
+    "v1IndexResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
         }
       }
     },
@@ -2146,22 +2273,22 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "query": {
           "type": "string",
-          "description": "search keyword"
+          "description": "搜索关键词"
         },
         "condition": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1SearchCondition"
           },
-          "description": "search conditions"
+          "description": "搜索条件"
         },
         "page_num": {
           "type": "integer",
@@ -2182,7 +2309,7 @@
           "description": "是否逆序， false：不逆序，true:逆序"
         }
       },
-      "description": "List Entities Request",
+      "description": "获取实体列表",
       "title": "ListEntities"
     },
     "v1ListEntityResponse": {
@@ -2191,7 +2318,7 @@
         "total": {
           "type": "integer",
           "format": "int32",
-          "description": "total count of the entities"
+          "description": "实体总数"
         },
         "page_num": {
           "type": "integer",
@@ -2208,7 +2335,7 @@
           "items": {
             "$ref": "#/definitions/v1EntityResponse"
           },
-          "description": "entity list"
+          "description": "实体列表"
         }
       },
       "description": "List Entity Response."
@@ -2218,18 +2345,18 @@
       "properties": {
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "expressions": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1Expression"
           },
-          "description": "expression informations"
+          "description": "表达式信息"
         }
       },
       "description": "List Expression Response."
@@ -2239,26 +2366,26 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "entity type"
+          "description": "实体类型"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "mappers": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1Mapper"
           },
-          "description": "mapper informations"
+          "description": "映射信息"
         }
       },
       "description": "List Mapper Response."
@@ -2269,14 +2396,14 @@
         "count": {
           "type": "integer",
           "format": "int32",
-          "description": "count of the subscriptions"
+          "description": "订阅id"
         },
         "items": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1SubscriptionResponse"
           },
-          "description": "subscription items"
+          "description": "订阅列表"
         }
       }
     },
@@ -2285,19 +2412,19 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "mapper id"
+          "description": "映射id"
         },
         "name": {
           "type": "string",
-          "description": "mapper name"
+          "description": "映射名称"
         },
         "tql": {
           "type": "string",
-          "description": "mapper tql text"
+          "description": "映射tql语句"
         },
         "description": {
           "type": "string",
-          "description": "mapper description"
+          "description": "映射描述"
         }
       }
     },
@@ -2356,16 +2483,16 @@
       "properties": {
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         },
         "count": {
           "type": "integer",
           "format": "int32",
-          "description": "effect count"
+          "description": "变更数量"
         }
       },
       "description": "Remove Expression Response."
@@ -2375,23 +2502,23 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "mapper id"
+          "description": "映射id"
         },
         "type": {
           "type": "string",
-          "description": "entity type"
+          "description": "实体类型"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "entity_id": {
           "type": "string",
-          "description": "entity id"
+          "description": "实体id"
         }
       },
       "description": "Remove Mapper Response."
@@ -2401,15 +2528,84 @@
       "properties": {
         "field": {
           "type": "string",
-          "description": "entity property key"
+          "description": "实体属性字段"
         },
         "operator": {
           "type": "string",
-          "description": "operator $gt $gte $eq $lt $lte "
+          "description": "操作符 $gt $gte $eq $lt $lte "
         },
         "value": {
           "type": "object",
-          "description": "value of the key"
+          "description": "实体数值"
+        }
+      }
+    },
+    "v1SearchRequest": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "来源id"
+        },
+        "owner": {
+          "type": "string",
+          "description": "用户id"
+        },
+        "query": {
+          "type": "string",
+          "description": "查询关键词"
+        },
+        "condition": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1SearchCondition"
+          },
+          "description": "条件列表"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "order_by": {
+          "type": "string",
+          "description": "排序字段"
+        },
+        "is_descending": {
+          "type": "boolean",
+          "description": "是否逆序， false：不逆序，true:逆序"
+        }
+      }
+    },
+    "v1SearchResponse": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "string",
+          "format": "int64",
+          "description": "结果总数"
+        },
+        "page_num": {
+          "type": "integer",
+          "format": "int32",
+          "description": "记录开始位置"
+        },
+        "page_size": {
+          "type": "integer",
+          "format": "int32",
+          "description": "每页限制条数"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "查询结果列表"
         }
       }
     },
@@ -2418,35 +2614,35 @@
       "properties": {
         "mode": {
           "type": "string",
-          "description": "suscription mode"
+          "description": "订阅模式"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "filter": {
           "type": "string",
-          "description": "filter"
+          "description": "过滤规则"
         },
         "target": {
           "type": "string",
-          "description": "target id"
+          "description": "目标id"
         },
         "topic": {
           "type": "string",
-          "description": "topic name"
+          "description": "topic主题名称"
         },
         "pubsub_name": {
           "type": "string",
-          "description": "pubsub name"
+          "description": "pubsub发布订阅名称"
         },
         "id": {
           "type": "string",
-          "description": "suscription id"
+          "description": "订阅id"
         },
         "owner": {
           "type": "string",
-          "description": "suscription owner"
+          "description": "订阅者"
         }
       }
     },
@@ -2455,19 +2651,19 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "subscription id"
+          "description": "订阅id"
         },
         "source": {
           "type": "string",
-          "description": "source id"
+          "description": "来源id"
         },
         "owner": {
           "type": "string",
-          "description": "owner id"
+          "description": "用户id"
         },
         "subscription": {
           "$ref": "#/definitions/v1SubscriptionObject",
-          "description": "subscription object"
+          "description": "订阅信息"
         }
       }
     },
@@ -2476,14 +2672,16 @@
       "properties": {
         "time": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "时间"
         },
         "value": {
           "type": "object",
           "additionalProperties": {
             "type": "number",
             "format": "float"
-          }
+          },
+          "description": "时序数据"
         }
       }
     },

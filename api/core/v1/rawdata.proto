@@ -17,7 +17,7 @@ service Rawdata {
             body : "*" 
 		};
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "Get entity rawdata";
+            summary: "查询实体原始数据";
             operation_id: "GetRawdata";
             tags: "Rawdata";
             responses: {
@@ -34,10 +34,10 @@ message GetRawdataRequest {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
               json_schema: {
                 title: "GetRawdata"
-                description: "Get raw data Request"
+                description: "查询原始数据请求"
               }
             };
-    string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体 id"}];
+    string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
     int64 start_time = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "起始时间"}];
     int64 end_time = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "终止时间"}];
     string path = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "属性的位置"}];
@@ -48,10 +48,10 @@ message GetRawdataRequest {
 }
 
 message GetRawdataResponse {
-    int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "total count of the entities"}];
+    int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体列表数量"}];
     int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
     int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    repeated RawdataResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "data list"}];
+    repeated RawdataResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "原始数据列表"}];
 }
 
 message RawdataResponse {

@@ -15,7 +15,7 @@ option java_package = "api.core.v1";
 service Proxy {
 	rpc Respond (RespondRequest) returns (RespondResponse) {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-        summary: "apis callback respond.";
+        summary: "API响应回调接口";
         operation_id: "Respond";
         tags: "Proxy";
         responses: {
