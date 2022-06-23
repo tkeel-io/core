@@ -126,7 +126,7 @@ type Config struct {
 }
 
 func (c *Config) GetBatchingMaxFlushDelay() time.Duration {
-	if c.BatchingMaxFlushDelay != 0 {
+	if c.BatchingMaxFlushDelay == 0 {
 		c.BatchingMaxFlushDelay = defaultBatchingMaxFlushDelay
 	}
 	return c.BatchingMaxFlushDelay

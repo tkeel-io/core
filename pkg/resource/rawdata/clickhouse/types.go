@@ -14,5 +14,5 @@ type Field struct {
 }
 
 const (
-	ClickhouseSSQLTlp = `INSERT INTO %s.%s (%s)`
+	ClickhouseSSQLTlp = `INSERT INTO %s.%s (%s) VALUES (%s)`
 )
