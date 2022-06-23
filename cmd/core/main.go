@@ -68,9 +68,6 @@ import (
 	"github.com/tkeel-io/kit/transport"
 	"github.com/tkeel-io/kit/transport/grpc"
 	"github.com/tkeel-io/kit/transport/http"
-
-	profileHttp "net/http"
-	_ "net/http/pprof"
 )
 
 const _coreCmdExample = `you can use this like following:
@@ -139,12 +136,6 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
-	go func() {
-		if err := profileHttp.ListenAndServe(":8080", nil); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}()
 
 	fmt.Fprintf(os.Stdout, "%s\n", cmd.VersionTemplate())
 
