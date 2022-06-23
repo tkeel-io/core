@@ -34,7 +34,11 @@ func NewSinkTransport(ctx context.Context, name string, fn batchqueue.ProcessFn,
 }
 
 func (s *SinkTransport) Send(ctx context.Context, msg interface{}) error {
-	return s.sink.Send(ctx, s.encoder(msg))
+	m, err := s.encoder(msg)
+	if err != nil {
+		return err
+	}
+	return s.sink.Send(ctx, m)
 }
 
 func (s *SinkTransport) Close() {

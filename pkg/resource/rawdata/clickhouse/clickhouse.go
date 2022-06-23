@@ -125,10 +125,14 @@ func (c *Clickhouse) Init(metadata resource.Metadata) error {
 
 func (c *Clickhouse) Write(ctx context.Context, req *rawdata.Request) (err error) {
 	// log.Info("chronus Insert ", logf.Any("messages", messages)).
-	return c.BatchWrite(ctx, &[]interface{}{c.BuildBulkData(req)})
+	msg, err := c.BuildBulkData(req)
+	if err != nil {
+		return err
+	}
+	return c.BatchWrite(ctx, &[]interface{}{msg})
 }
 
-func (c *Clickhouse) BuildBulkData(req interface{}) interface{} {
+func (c *Clickhouse) BuildBulkData(req interface{}) (interface{}, error) {
 	var argsVal = make([]interface{}, 0, 1)
 	buildFn := func(req *rawdata.Request, args *[]interface{}) {
 		tags := make([]string, len(req.Metadata))
@@ -142,13 +146,11 @@ func (c *Clickhouse) BuildBulkData(req interface{}) interface{} {
 		}
 	}
 
-	switch v := req.(type) {
-	case *rawdata.Request:
+	if v, ok := req.(*rawdata.Request); ok {
 		buildFn(v, &argsVal)
-	case rawdata.Request:
-		buildFn(&v, &argsVal)
+		return argsVal, nil
 	}
-	return argsVal
+	return nil, errors.New("BuildBulkData error: invaild data")
 }
 
 func (c *Clickhouse) BatchWrite(ctx context.Context, args *[]interface{}) (err error) {
@@ -157,7 +159,7 @@ func (c *Clickhouse) BatchWrite(ctx context.Context, args *[]interface{}) (err e
 		server := c.balance.Select([]*sqlx.DB{})
 		return transport.BulkWrite(ctx, server.DB, preURL, args)
 	}
-	return errors.New("BatchWrite: call buildBulkData failed")
+	return errors.New("BatchWrite failed with：args == nil or len(*args) <= 0")
 }
 
 func (c *Clickhouse) genSQL(fields *[]string) string {
@@ -311,8 +313,4 @@ func (c *Clickhouse) GetMetrics() (count, storage, total, used float64) {
 		return count, storageCompresss, total, used
 	}
 	return count, storage, total, used
-}
-
-func init() {
-	rawdata.Register("clickhouse", NewClickhouse)
 }

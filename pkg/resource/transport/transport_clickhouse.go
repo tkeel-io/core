@@ -10,7 +10,7 @@ import (
 
 type ClickHouseCli interface {
 	BatchWrite(ctx context.Context, args *[]interface{}) error
-	BuildBulkData(m interface{}) interface{}
+	BuildBulkData(m interface{}) (interface{}, error)
 }
 
 func BulkWrite(ctx context.Context, db *sqlx.DB, query string, args *[]interface{}) error {

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	rawdata.Register("clickhouse_transport", NewRawDataEntry)
+	rawdata.Register("clickhouse", NewRawDataEntry)
 }
 
 type RawDataEntry struct {
