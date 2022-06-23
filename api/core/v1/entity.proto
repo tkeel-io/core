@@ -720,7 +720,7 @@ message ListEntityRequest {
   string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
   string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
   string query = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "搜索关键词"}];
-	repeated SearchCondition condition = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "搜索条件"}];
+  repeated SearchCondition condition = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "搜索条件"}];
   int32 page_num= 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
   int32 page_size = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
   string order_by = 9 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "排序字段"}];
@@ -749,17 +749,3 @@ message EntityResponse {
     google.protobuf.Value configs = 12 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体配置"}];
     google.protobuf.Value properties = 13 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性"}];
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

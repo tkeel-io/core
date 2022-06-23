@@ -36,7 +36,7 @@ service TS {
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
         summary: "下载时序数据";
         operation_id: "DownloadTSData";
-        tags: "TS";
+        tags: ["TS", "Internal"];
         responses: {
           key: "200"
           value: {
@@ -50,7 +50,7 @@ service TS {
 			get : "/ts"
 		};
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "获取最新的实体数据";
+      summary: "最近查询数据的实体";
       operation_id: "GetLatestEntities";
       tags: "TS";
       responses: {

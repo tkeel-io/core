@@ -20,7 +20,7 @@ service Search {
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "创建索引";
             operation_id: "IndexObject";
-            tags: "Search";
+            tags: ["Search", "Internal"];
             responses: {
               key: "200"
               value: {
@@ -37,7 +37,7 @@ service Search {
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "关键词搜索";
             operation_id: "SearchObjects";
-            tags: "Search";
+            tags: ["Search", "Internal"];
             responses: {
               key: "200"
               value: {
@@ -53,7 +53,7 @@ service Search {
         option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
             summary: "根据id删除实体信息";
             operation_id: "SearchObjects";
-            tags: "Search";
+            tags: ["Search", "Internal"];
             responses: {
               key: "200"
               value: {

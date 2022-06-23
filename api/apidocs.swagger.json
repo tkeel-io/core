@@ -12,9 +12,6 @@
       "name": "Subscription"
     },
     {
-      "name": "Search"
-    },
-    {
       "name": "TS"
     },
     {
@@ -1357,39 +1354,6 @@
         ]
       }
     },
-    "/index": {
-      "post": {
-        "summary": "创建索引",
-        "operationId": "IndexObject",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1IndexResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
-        ]
-      }
-    },
     "/rawdata/{entity_id}": {
       "post": {
         "summary": "查询实体原始数据",
@@ -1466,83 +1430,6 @@
         ],
         "tags": [
           "Rawdata"
-        ]
-      }
-    },
-    "/search": {
-      "delete": {
-        "summary": "根据id删除实体信息",
-        "operationId": "SearchObjects",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1DeleteByIDResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "description": "实体id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "source",
-            "description": "来源id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "owner",
-            "description": "用户id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "Search"
-        ]
-      },
-      "post": {
-        "summary": "关键词搜索",
-        "operationId": "SearchObjects",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "$ref": "#/definitions/v1SearchResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v1SearchRequest"
-            }
-          }
-        ],
-        "tags": [
-          "Search"
         ]
       }
     },
@@ -1785,7 +1672,7 @@
     },
     "/ts": {
       "get": {
-        "summary": "获取最新的实体数据",
+        "summary": "最近查询数据的实体",
         "operationId": "GetLatestEntities",
         "responses": {
           "200": {
@@ -1857,7 +1744,8 @@
           }
         ],
         "tags": [
-          "TS"
+          "TS",
+          "Internal"
         ]
       },
       "post": {
@@ -2008,9 +1896,6 @@
         }
       },
       "description": "Append Mapper Response."
-    },
-    "v1DeleteByIDResponse": {
-      "type": "object"
     },
     "v1DeleteEntityResponse": {
       "type": "object",
@@ -2260,14 +2145,6 @@
         }
       }
     },
-    "v1IndexResponse": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
-        }
-      }
-    },
     "v1ListEntityRequest": {
       "type": "object",
       "properties": {
@@ -2462,19 +2339,24 @@
       "properties": {
         "timestamp": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "description": "时间戳，毫秒"
         },
         "id": {
-          "type": "string"
+          "type": "string",
+          "description": "编号"
         },
         "entity_id": {
-          "type": "string"
+          "type": "string",
+          "description": "实体id"
         },
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "路径"
         },
         "values": {
-          "type": "string"
+          "type": "string",
+          "description": "数据"
         }
       }
     },
@@ -2537,75 +2419,6 @@
         "value": {
           "type": "object",
           "description": "实体数值"
-        }
-      }
-    },
-    "v1SearchRequest": {
-      "type": "object",
-      "properties": {
-        "source": {
-          "type": "string",
-          "description": "来源id"
-        },
-        "owner": {
-          "type": "string",
-          "description": "用户id"
-        },
-        "query": {
-          "type": "string",
-          "description": "查询关键词"
-        },
-        "condition": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1SearchCondition"
-          },
-          "description": "条件列表"
-        },
-        "page_num": {
-          "type": "integer",
-          "format": "int32",
-          "description": "记录开始位置"
-        },
-        "page_size": {
-          "type": "integer",
-          "format": "int32",
-          "description": "每页限制条数"
-        },
-        "order_by": {
-          "type": "string",
-          "description": "排序字段"
-        },
-        "is_descending": {
-          "type": "boolean",
-          "description": "是否逆序， false：不逆序，true:逆序"
-        }
-      }
-    },
-    "v1SearchResponse": {
-      "type": "object",
-      "properties": {
-        "total": {
-          "type": "string",
-          "format": "int64",
-          "description": "结果总数"
-        },
-        "page_num": {
-          "type": "integer",
-          "format": "int32",
-          "description": "记录开始位置"
-        },
-        "page_size": {
-          "type": "integer",
-          "format": "int32",
-          "description": "每页限制条数"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          },
-          "description": "查询结果列表"
         }
       }
     },
