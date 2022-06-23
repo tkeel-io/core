@@ -43,14 +43,13 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/pubsub/noop"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	_ "github.com/tkeel-io/core/pkg/resource/rawdata/builder"
-	_ "github.com/tkeel-io/core/pkg/resource/rawdata/clickhouse"
 	_ "github.com/tkeel-io/core/pkg/resource/rawdata/noop"
 	"github.com/tkeel-io/core/pkg/resource/search"
 	_ "github.com/tkeel-io/core/pkg/resource/store/dapr"
 	_ "github.com/tkeel-io/core/pkg/resource/store/memory"
 	_ "github.com/tkeel-io/core/pkg/resource/store/noop"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
-	_ "github.com/tkeel-io/core/pkg/resource/tseries/clickhouse"
+	_ "github.com/tkeel-io/core/pkg/resource/tseries/builder"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/influxdb"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/noop"
 	"github.com/tkeel-io/core/pkg/runtime"
@@ -69,6 +68,9 @@ import (
 	"github.com/tkeel-io/kit/transport"
 	"github.com/tkeel-io/kit/transport/grpc"
 	"github.com/tkeel-io/kit/transport/http"
+
+	profileHttp "net/http"
+	_ "net/http/pprof"
 )
 
 const _coreCmdExample = `you can use this like following:
@@ -137,6 +139,13 @@ func main() {
 }
 
 func core(cmd *cobra.Command, args []string) {
+	go func() {
+		if err := profileHttp.ListenAndServe(":8080", nil); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}()
+
 	fmt.Fprintf(os.Stdout, "%s\n", cmd.VersionTemplate())
 
 	log.InfoStatusEvent(os.Stdout, "loading configuration...")
