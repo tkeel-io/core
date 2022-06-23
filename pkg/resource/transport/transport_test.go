@@ -60,8 +60,8 @@ func TestNewSinkTransport(t *testing.T) {
 			t.Logf("handler msg: %s", msgs)
 			return nil
 		},
-		func(m interface{}) interface{} {
-			return m
+		func(m interface{}) (interface{}, error) {
+			return m, nil
 		})
 	if err != nil {
 		t.Error(err)
