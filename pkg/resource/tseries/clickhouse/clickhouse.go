@@ -2,11 +2,14 @@ package clickhouse
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	sql "github.com/jmoiron/sqlx"
+
+	"github.com/tkeel-io/core/pkg/resource/transport"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -48,24 +51,18 @@ type Config struct {
 	Table    string   `json:"table,omitempty"`
 }
 
-type clickhouse struct {
-	cfg          *Config
-	msgQueue     chan *tseries.TSeriesData
-	batchSize    int
-	batchTimeout int
-	conn         *sql.DB
+type Clickhouse struct {
+	cfg  *Config
+	conn *sql.DB
 }
 
 func newClickhouse() tseries.TimeSerier {
-	return &clickhouse{
-		cfg:          &Config{},
-		msgQueue:     make(chan *tseries.TSeriesData, 3000),
-		batchSize:    1000,
-		batchTimeout: 1,
+	return &Clickhouse{
+		cfg: &Config{},
 	}
 }
 
-func (c *clickhouse) getClickMetatadata(metadata resource.Metadata) (*Config, error) {
+func (c *Clickhouse) getClickMetatadata(metadata resource.Metadata) (*Config, error) {
 	b, err := json.Marshal(metadata.Properties)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse influx configurations")
@@ -79,7 +76,7 @@ func (c *clickhouse) getClickMetatadata(metadata resource.Metadata) (*Config, er
 	return &iMetadata, nil
 }
 
-func (c *clickhouse) Init(meta resource.Metadata) error {
+func (c *Clickhouse) Init(meta resource.Metadata) error {
 	var err error
 	c.cfg, err = c.getClickMetatadata(meta)
 	if err != nil {
@@ -111,19 +108,51 @@ func (c *clickhouse) Init(meta resource.Metadata) error {
 	conn.SetMaxIdleConns(5)
 	conn.SetConnMaxLifetime(30 * time.Second)
 	c.conn = conn
-	go c.write()
+	//go c.write()
 	return nil
 }
 
-func (c *clickhouse) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
-	for _, item := range req.Data {
-		c.msgQueue <- item
+func (c *Clickhouse) BatchWrite(ctx context.Context, args *[]interface{}) error {
+	preURL := fmt.Sprintf(ClickhouseSSQLTlp, c.cfg.Database, c.cfg.Table, "date, name, tags, value, timestamp")
+	if args != nil && len(*args) > 0 {
+		return transport.BulkWrite(ctx, c.conn, preURL, args)
 	}
+	return errors.New("BatchWrite failed with：args == nil or len(*args) <= 0")
+}
+
+func (c *Clickhouse) BuildBulkData(req interface{}) (interface{}, error) {
+	var argsVal = make([]interface{}, 0, 1)
+	buildFn := func(req *tseries.TSeriesRequest, args *[]interface{}) {
+		for _, item := range req.Data {
+			entityID, ok := item.Tags["id"]
+			if !ok {
+				continue
+			}
+			timestamp := item.Timestamp / 1e6
+			timeMilli := time.UnixMilli(timestamp)
+			var builder strings.Builder
+			builder.WriteString("id=")
+			builder.WriteString(entityID)
+			tagID := builder.String()
+			for k, v := range item.Fields {
+				*args = append(*args, []interface{}{timeMilli, k, []string{tagID}, v, timestamp})
+			}
+		}
+	}
+
+	if v, ok := req.(*tseries.TSeriesRequest); ok {
+		buildFn(v, &argsVal)
+		return argsVal, nil
+	}
+	return nil, errors.New("BuildBulkData error: invaild data")
+}
+
+func (c *Clickhouse) Write(ctx context.Context, req *tseries.TSeriesRequest) (*tseries.TSeriesResponse, error) {
 	return &tseries.TSeriesResponse{}, nil
 }
 
 // 单列查，再拼接.
-func (c *clickhouse) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
+func (c *Clickhouse) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.GetTSDataResponse, error) {
 	resp := &pb.GetTSDataResponse{}
 	tag := fmt.Sprintf(`'id=%s'`, req.GetId())
 	querySQL := fmt.Sprintf(ClickHouseQuery, c.cfg.Database, c.cfg.Table, tag)
@@ -184,75 +213,7 @@ func (c *clickhouse) Query(ctx context.Context, req *pb.GetTSDataRequest) (*pb.G
 	return resp, nil
 }
 
-func init() {
-	tseries.Register("clickhouse", newClickhouse)
-}
-
-// 写入超时时间，和最大写入并发，每1秒或者100条写入一次.
-func (c *clickhouse) write() {
-	t := time.NewTimer(time.Second * time.Duration(c.batchTimeout))
-	items := make([]*tseries.TSeriesData, 0, c.batchSize)
-	for {
-		select {
-		case item := <-c.msgQueue:
-			items = append(items, item)
-			if len(items) >= c.batchSize {
-				c.writeBatch(items)
-				items = make([]*tseries.TSeriesData, 0, c.batchSize)
-				t.Reset(time.Second * time.Duration(c.batchTimeout))
-			}
-
-		case <-t.C:
-			if len(items) > 0 {
-				c.writeBatch(items)
-				items = make([]*tseries.TSeriesData, 0, c.batchSize)
-			}
-			t.Reset(time.Second * time.Duration(c.batchTimeout))
-		}
-	}
-}
-
-func (c *clickhouse) writeBatch(items []*tseries.TSeriesData) error {
-	scope, err := c.conn.Begin()
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	batch, err := scope.Prepare(fmt.Sprintf(ClickhouseSSQLTlp, c.cfg.Database, c.cfg.Table, "date, name, tags, value, timestamp"))
-	if err != nil {
-		return err
-	}
-	defer batch.Close()
-	for _, item := range items {
-		entityID, ok := item.Tags["id"]
-		if !ok {
-			continue
-		}
-		timestamp := item.Timestamp / 1e6
-		timeMilli := time.UnixMilli(timestamp)
-		var builder strings.Builder
-		builder.WriteString("id=")
-		builder.WriteString(entityID)
-		tagID := builder.String()
-		for k, v := range item.Fields {
-			_, err := batch.Exec(
-				timeMilli,
-				k,
-				[]string{tagID},
-				v,
-				timestamp,
-			)
-			if err != nil {
-				log.Error(err)
-				log.Info(item)
-			}
-		}
-	}
-	return scope.Commit()
-}
-
-func (c *clickhouse) GetMetrics() (count, storage float64) {
+func (c *Clickhouse) GetMetrics() (count, storage float64) {
 	metricsSQL := fmt.Sprintf(`SELECT 
     	sum(rows) AS count,
     	sum(data_uncompressed_bytes) AS storage_uncompress,

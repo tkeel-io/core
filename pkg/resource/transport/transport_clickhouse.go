@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type ClickHouseCli interface {
@@ -13,13 +11,17 @@ type ClickHouseCli interface {
 	BuildBulkData(m interface{}) (interface{}, error)
 }
 
-func BulkWrite(ctx context.Context, db *sqlx.DB, query string, args *[]interface{}) error {
+type DB interface {
+	Begin() (*sql.Tx, error)
+}
+
+func BulkWrite(ctx context.Context, db DB, query string, args *[]interface{}) error {
 	var (
 		err error
 		tx  *sql.Tx
 	)
 
-	if tx, err = db.BeginTx(ctx, nil); err != nil {
+	if tx, err = db.Begin(); err != nil {
 		return err
 	}
 	defer func() {
