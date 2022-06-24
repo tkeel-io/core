@@ -6,51 +6,42 @@ package api.core.v1;
 import "google/protobuf/struct.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 option java_multiple_files = true;
 option java_package = "api.core.v1";
 
 service Topic {
-  rpc TopicEventHandler(TopicEventRequest) returns(TopicEventResponse) {
+  rpc TopicEventHandler(TopicEventRequest) returns (TopicEventResponse) {
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "事件分发处理";
-      operation_id: "TopicEventHandler";
-      tags: "TopicEvent";
+      summary: "事件分发处理"
+      operation_id: "TopicEventHandler"
+      tags: "TopicEvent"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   }
 }
 
-
-
 message TopicEventRequest {
-    Metadata meta = 1;
-    google.protobuf.Value data = 6;
-    string data_base64 = 7;
-    bytes  raw_data = 8; 
+  Metadata meta = 1;
+  google.protobuf.Value data = 6;
+  string data_base64 = 7;
+  bytes raw_data = 8;
 }
-
 
 message Metadata {
-    string id = 1;
-    string specversion = 2;
-    string type = 3;
-    string source = 4;
-    string datacontenttype = 5;
-    string subject = 9;
-    string topic = 10;
-    string pubsubname = 11;
+  string id = 1;
+  string specversion = 2;
+  string type = 3;
+  string source = 4;
+  string datacontenttype = 5;
+  string subject = 9;
+  string topic = 10;
+  string pubsubname = 11;
 }
 
-
-
-
 message TopicEventResponse {
-    string status = 1;
+  string status = 1;
 }

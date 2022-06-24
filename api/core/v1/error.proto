@@ -44,5 +44,4 @@ enum Error {
   // @msg=cickhouse 错误
   // @code=UNAVAILABLE
   ERR_CLICKHOUSE = 9;
-
 }
