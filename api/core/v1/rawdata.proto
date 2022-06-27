@@ -11,53 +11,98 @@ option java_multiple_files = true;
 option java_package = "api.core.v1";
 
 service Rawdata {
-	rpc GetRawdata (GetRawdataRequest) returns (GetRawdataResponse) {
-		option (google.api.http) = {
-			post : "/rawdata/{entity_id}"
-            body : "*" 
-		};
-        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-            summary: "查询实体原始数据";
-            operation_id: "GetRawdata";
-            tags: "Rawdata";
-            responses: {
-              key: "200"
-              value: {
-                description: "OK";
-            }
-          }
-        };
-	};
+  rpc GetRawdata(GetRawdataRequest) returns (GetRawdataResponse) {
+    option (google.api.http) = {
+      post: "/rawdata/{entity_id}"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "查询实体原始数据"
+      operation_id: "GetRawdata"
+      tags: "Rawdata"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
+      }
+    };
+  };
 }
 
 message GetRawdataRequest {
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
-              json_schema: {
-                title: "GetRawdata"
-                description: "查询原始数据请求"
-              }
-            };
-    string entity_id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-    int64 start_time = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "起始时间"}];
-    int64 end_time = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "终止时间"}];
-    string path = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "属性的位置"}];
-    int32 page_num= 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
-    int32 page_size = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    bool is_descending = 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "是否逆序， false：不逆序，true:逆序"}];
-    map<string, string> filters = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "过滤条件"}];
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: { title: "GetRawdata" description: "查询原始数据请求" }
+  };
+  string entity_id = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  int64 start_time = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "起始时间"
+      }];
+  int64 end_time = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "终止时间"
+      }];
+  string path = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "属性的位置"
+      }];
+  int32 page_num = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "记录开始位置"
+      }];
+  int32 page_size = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "每页限制条数"
+      }];
+  bool is_descending = 7
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "是否逆序， false：不逆序，true:逆序"
+      }];
+  map<string, string> filters = 8
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "过滤条件"
+      }];
 }
 
 message GetRawdataResponse {
-    int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体列表数量"}];
-    int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
-    int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    repeated RawdataResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "原始数据列表"}];
+  int32 total = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体列表数量"
+      }];
+  int32 page_num = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "记录开始位置"
+      }];
+  int32 page_size = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "每页限制条数"
+      }];
+  repeated RawdataResponse items = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "原始数据列表"
+      }];
 }
 
 message RawdataResponse {
-    int64 timestamp = 1;
-    string id = 2;
-    string entity_id = 3;
-    string path = 4;
-    string values = 5;
+  int64 timestamp = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "时间戳，毫秒"
+      }];
+  string id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "编号"
+  }];
+  string entity_id = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  string path = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "路径"
+      }];
+  string values = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "数据"
+      }];
 }

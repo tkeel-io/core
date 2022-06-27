@@ -9,640 +9,899 @@ import "google/protobuf/struct.proto";
 import "api/core/v1/search.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-
 option go_package = "github.com/tkeel-io/core/api/core/v1;v1";
 option java_multiple_files = true;
 option java_package = "api.core.v1";
 
 service Entity {
-	rpc CreateEntity (CreateEntityRequest) returns (EntityResponse) {
+  rpc CreateEntity(CreateEntityRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      post : "/entities"
+      post: "/entities"
       body: "properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-        summary: "创建实体";
-        operation_id: "CreateEntity";
-        tags: "Entity";
-        responses: {
-          key: "200"
-          value: {
-            description: "OK";
-        }
+      summary: "创建实体"
+      operation_id: "CreateEntity"
+      tags: "Entity"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
       }
     };
   };
 
-	rpc UpdateEntity (UpdateEntityRequest) returns (EntityResponse) {
-		option (google.api.http) = {
-			put : "/entities/{id}"
+  rpc UpdateEntity(UpdateEntityRequest) returns (EntityResponse) {
+    option (google.api.http) = {
+      put: "/entities/{id}"
       body: "*"
-		};
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "更新实体";
-      operation_id: "UpdateEntity";
-      tags: "Entity";
-      responses: {
-        key: "200"
-        value: {
-          description: "OK";
-        }
-      }
-    };
-	};
-
-	rpc GetEntity (GetEntityRequest) returns (EntityResponse) {
-		option (google.api.http) = {
-			get : "/entities/{id}"
-		};
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "查询实体详情";
-      operation_id: "GetEntity";
-      tags: "Entity";
-      responses: {
-        key: "200"
-        value: {
-          description: "OK";
-        }
-      }
-    };
-	};
-
-	rpc DeleteEntity (DeleteEntityRequest) returns (DeleteEntityResponse) {
-		option (google.api.http) = {
-			delete : "/entities/{id}"
-		};
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "删除实体";
-      operation_id: "DeleteEntity";
-      tags: "Entity";
-      responses: {
-        key: "200"
-        value: {
-          description: "OK";
-        }
-      }
-    };
-	};
-
-
-	rpc UpdateEntityProps (UpdateEntityPropsRequest) returns (EntityResponse) {
-		option (google.api.http) = {
-			put : "/entities/{id}/properties"
-			body : "properties"
-		};
-    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "更新(插入)实体属性";
-      operation_id: "UpdateEntityProps";
-      tags: "Entity";
-      responses: {
-        key: "200"
-        value: {
-          description: "OK";
-        }
-      }
-    };
-	};
-
-  rpc PatchEntityProps (PatchEntityPropsRequest) returns (EntityResponse) {
-    option (google.api.http) = {
-        patch: "/entities/{id}"
-        body: "properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量更新实体属性";
-      operation_id: "PatchEntityProps";
-      tags: "Entity";
+      summary: "更新实体"
+      operation_id: "UpdateEntity"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
-  rpc PatchEntityPropsZ (PatchEntityPropsRequest) returns (EntityResponse) {
+  rpc GetEntity(GetEntityRequest) returns (EntityResponse) {
     option (google.api.http) = {
-        put: "/entities/{id}/patch"
-        body: "properties"
+      get: "/entities/{id}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量更新实体属性";
-      operation_id: "PatchEntityPropsZ";
-      tags: "Entity";
+      summary: "查询实体详情"
+      operation_id: "GetEntity"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
+      }
+    };
+  };
+
+  rpc DeleteEntity(DeleteEntityRequest) returns (DeleteEntityResponse) {
+    option (google.api.http) = {
+      delete: "/entities/{id}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "删除实体"
+      operation_id: "DeleteEntity"
+      tags: "Entity"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
+      }
+    };
+  };
+
+  rpc UpdateEntityProps(UpdateEntityPropsRequest) returns (EntityResponse) {
+    option (google.api.http) = {
+      put: "/entities/{id}/properties"
+      body: "properties"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "更新(插入)实体属性"
+      operation_id: "UpdateEntityProps"
+      tags: "Entity"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
+      }
+    };
+  };
+
+  rpc PatchEntityProps(PatchEntityPropsRequest) returns (EntityResponse) {
+    option (google.api.http) = {
+      patch: "/entities/{id}"
+      body: "properties"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "批量更新实体属性"
+      operation_id: "PatchEntityProps"
+      tags: "Entity"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
+      }
+    };
+  };
+
+  rpc PatchEntityPropsZ(PatchEntityPropsRequest) returns (EntityResponse) {
+    option (google.api.http) = {
+      put: "/entities/{id}/patch"
+      body: "properties"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "批量更新实体属性"
+      operation_id: "PatchEntityPropsZ"
+      tags: "Entity"
+      responses: {
+        key: "200"
+        value: { description: "OK" }
       }
     };
   }
 
   rpc GetEntityProps(GetEntityPropsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      get : "/entities/{id}/properties"
+      get: "/entities/{id}/properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "查询实体属性";
-      operation_id: "GetEntityProps";
-      tags: "Entity";
+      summary: "查询实体属性"
+      operation_id: "GetEntityProps"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
   rpc RemoveEntityProps(RemoveEntityPropsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      delete : "/entities/{id}/properties"
+      delete: "/entities/{id}/properties"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量删除实体属性";
-      operation_id: "RemoveEntityProps";
-      tags: "Entity";
+      summary: "批量删除实体属性"
+      operation_id: "RemoveEntityProps"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
-
-
   rpc UpdateEntityConfigs(UpdateEntityConfigsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      put : "/entities/{id}/configs"
+      put: "/entities/{id}/configs"
       body: "configs"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "更新(插入)实体配置";
-      operation_id: "UpdateEntityConfigs";
-      tags: "Entity";
+      summary: "更新(插入)实体配置"
+      operation_id: "UpdateEntityConfigs"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
   rpc PatchEntityConfigs(PatchEntityConfigsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      patch : "/entities/{id}/configs"
+      patch: "/entities/{id}/configs"
       body: "configs"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量更新实体配置";
-      operation_id: "PatchEntityConfigs";
-      tags: "Entity";
+      summary: "批量更新实体配置"
+      operation_id: "PatchEntityConfigs"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
   rpc PatchEntityConfigsZ(PatchEntityConfigsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      put : "/entities/{id}/configs/patch"
+      put: "/entities/{id}/configs/patch"
       body: "configs"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量更新实体配置";
-      operation_id: "PatchEntityConfigsZ";
-      tags: "Entity";
+      summary: "批量更新实体配置"
+      operation_id: "PatchEntityConfigsZ"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
   rpc RemoveEntityConfigs(RemoveEntityConfigsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      delete : "/entities/{id}/configs"
+      delete: "/entities/{id}/configs"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "批量删除实体配置";
-      operation_id: "RemoveEntityConfigs";
-      tags: "Entity";
+      summary: "批量删除实体配置"
+      operation_id: "RemoveEntityConfigs"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
   rpc GetEntityConfigs(GetEntityConfigsRequest) returns (EntityResponse) {
     option (google.api.http) = {
-      get : "/entities/{id}/configs"
+      get: "/entities/{id}/configs"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "查询实体配置";
-      operation_id: "GetEntityConfigs";
-      tags: "Entity";
+      summary: "查询实体配置"
+      operation_id: "GetEntityConfigs"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
   };
 
-	rpc AppendMapper(AppendMapperRequest) returns (AppendMapperResponse) {
-		option (google.api.http) = {
-			post : "/entities/{entity_id}/mappers"
-			body: "mapper"
-		};
+  rpc AppendMapper(AppendMapperRequest) returns (AppendMapperResponse) {
+    option (google.api.http) = {
+      post: "/entities/{entity_id}/mappers"
+      body: "mapper"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "添加实体映射";
-      operation_id: "AppendMapper";
-      tags: ["Entity", "Mapper"];
+      summary: "添加实体映射"
+      operation_id: "AppendMapper"
+      tags: [ "Entity", "Mapper" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-	rpc GetMapper(GetMapperRequest) returns (GetMapperResponse) {
-		option (google.api.http) = {
-			get : "/entities/{entity_id}/mappers/{id}"
-		};
+  rpc GetMapper(GetMapperRequest) returns (GetMapperResponse) {
+    option (google.api.http) = {
+      get: "/entities/{entity_id}/mappers/{id}"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "查询实体映射";
-      operation_id: "GetMapper";
-      tags: ["Entity", "Mapper"];
+      summary: "查询实体映射"
+      operation_id: "GetMapper"
+      tags: [ "Entity", "Mapper" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-	rpc ListMapper(ListMapperRequest) returns (ListMapperResponse) {
-		option (google.api.http) = {
-			get : "/entities/{entity_id}/mappers"
-		};
+  rpc ListMapper(ListMapperRequest) returns (ListMapperResponse) {
+    option (google.api.http) = {
+      get: "/entities/{entity_id}/mappers"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "获取实体映射列表";
-      operation_id: "ListMapper";
-      tags: ["Entity", "Mapper"];
+      summary: "获取实体映射列表"
+      operation_id: "ListMapper"
+      tags: [ "Entity", "Mapper" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-
-	rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
-		option (google.api.http) = {
-			delete : "/entities/{entity_id}/mappers"
-		};
+  rpc RemoveMapper(RemoveMapperRequest) returns (RemoveMapperResponse) {
+    option (google.api.http) = {
+      delete: "/entities/{entity_id}/mappers"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "移除实体映射";
-      operation_id: "RemoveMapper";
-      tags: ["Entity", "Mapper"];
+      summary: "移除实体映射"
+      operation_id: "RemoveMapper"
+      tags: [ "Entity", "Mapper" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
-
-
+  };
 
   // expression.
   rpc AppendExpression(AppendExpressionReq) returns (AppendExpressionResp) {
-		option (google.api.http) = {
-			post : "/entities/{entity_id}/expressions"
-			body: "expressions"
-		};
+    option (google.api.http) = {
+      post: "/entities/{entity_id}/expressions"
+      body: "expressions"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "添加实体表达式";
-      operation_id: "AppendExpression";
-      tags: ["Entity", "Expression"];
+      summary: "添加实体表达式"
+      operation_id: "AppendExpression"
+      tags: [ "Entity", "Expression" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-	rpc GetExpression(GetExpressionReq) returns (GetExpressionResp) {
-		option (google.api.http) = {
-			get : "/entities/{entity_id}/expressions/{path}"
-		};
+  rpc GetExpression(GetExpressionReq) returns (GetExpressionResp) {
+    option (google.api.http) = {
+      get: "/entities/{entity_id}/expressions/{path}"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "获取实体表达式";
-      operation_id: "GetExpression";
-      tags: ["Entity", "Expression"];
+      summary: "获取实体表达式"
+      operation_id: "GetExpression"
+      tags: [ "Entity", "Expression" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-	rpc ListExpression(ListExpressionReq) returns (ListExpressionResp) {
-		option (google.api.http) = {
-			get : "/entities/{entity_id}/expressions"
-		};
+  rpc ListExpression(ListExpressionReq) returns (ListExpressionResp) {
+    option (google.api.http) = {
+      get: "/entities/{entity_id}/expressions"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "获取实体表达式列表";
-      operation_id: "ListExpression";
-      tags: ["Entity", "Expression"];
+      summary: "获取实体表达式列表"
+      operation_id: "ListExpression"
+      tags: [ "Entity", "Expression" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-
-	rpc RemoveExpression(RemoveExpressionReq) returns (RemoveExpressionResp) {
-		option (google.api.http) = {
-			delete : "/entities/{entity_id}/expressions"
-		};
+  rpc RemoveExpression(RemoveExpressionReq) returns (RemoveExpressionResp) {
+    option (google.api.http) = {
+      delete: "/entities/{entity_id}/expressions"
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "移除实体表达式";
-      operation_id: "RemoveExpression";
-      tags: ["Entity", "Expression"];
+      summary: "移除实体表达式"
+      operation_id: "RemoveExpression"
+      tags: [ "Entity", "Expression" ]
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 
-
-
-	rpc ListEntity (ListEntityRequest) returns (ListEntityResponse) {
-		option (google.api.http) = {
-			post : "/entities/search"
+  rpc ListEntity(ListEntityRequest) returns (ListEntityResponse) {
+    option (google.api.http) = {
+      post: "/entities/search"
       body: "*"
-		};
+    };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
-      summary: "查询实体列表";
-      operation_id: "ListEntity";
-      tags: "Entity";
+      summary: "查询实体列表"
+      operation_id: "ListEntity"
+      tags: "Entity"
       responses: {
         key: "200"
-        value: {
-          description: "OK";
-        }
+        value: { description: "OK" }
       }
     };
-	};
+  };
 }
-
-
 
 // ------------------------------ Requests.
 
 // Create Entity Request.
 message CreateEntityRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string from = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "模版id"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}, (google.api.field_behavior) = REQUIRED];
-  string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  google.protobuf.Value properties = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性, 可选的"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string from = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "模版id"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4 [
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      description: "用户id"
+    },
+    (google.api.field_behavior) = REQUIRED
+  ];
+  string type = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  google.protobuf.Value properties = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性, 可选的"
+      }];
 }
 
 // Update Entity Request.
 message UpdateEntityRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string template_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "模版id"}];
-  string description = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "描述"}];
-  google.protobuf.Value properties = 15 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体描述"}];
-  google.protobuf.Value configs = 16 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体配置"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string template_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "模版id"
+      }];
+  string description = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "描述"
+      }];
+  google.protobuf.Value properties = 15
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体描述"
+      }];
+  google.protobuf.Value configs = 16
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体配置"
+      }];
 }
 
 // Get Entity Request.
 message GetEntityRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
 }
 
 // Delete Entity Request.
 message DeleteEntityRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
 }
 
 // Delete Entity Response.
 message DeleteEntityResponse {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string status = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "操作状态"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string status = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "操作状态"
+      }];
 }
 
 // ---------------------- Entity Property Request.
 
 // Update(upsert) Entity Properties Request.
 message UpdateEntityPropsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  google.protobuf.Value properties = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  google.protobuf.Value properties = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性"
+      }];
 }
 
 // Patch Entity Properties Request.
 message PatchEntityPropsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  google.protobuf.Value properties = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string type = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  google.protobuf.Value properties = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性"
+      }];
 }
 
 // Get Entity Properties Request.
 message GetEntityPropsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}, (google.api.field_behavior) = REQUIRED];
-  string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string property_keys = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段, eg: pids=1,2,3"}];
+  string id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4 [
+    (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+      description: "用户id"
+    },
+    (google.api.field_behavior) = REQUIRED
+  ];
+  string type = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string property_keys = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性字段, eg: pids=1,2,3"
+      }];
 }
 
 // Remove Entity Properties Request.
 message RemoveEntityPropsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string property_keys = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string property_keys = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性字段"
+      }];
 }
 
 // ------------------------ Entity Configs Request.
 
 // Update(upsert) Entity Configs Request.
 message UpdateEntityConfigsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体配置"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  google.protobuf.Value configs = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体配置"
+      }];
 }
 
 // Patch Entity Configs Request.
 message PatchEntityConfigsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  google.protobuf.Value configs = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体配置"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  google.protobuf.Value configs = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体配置"
+      }];
 }
 
 // Get Entity Configs Request.
 message GetEntityConfigsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string property_keys = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string property_keys = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性字段"
+      }];
 }
 
 // Remove Entity Configs Request.
 message RemoveEntityConfigsRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string property_keys = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性字段"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string property_keys = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性字段"
+      }];
 }
 
 // ------------------- Entity Mapper Requests.
 
 message Mapper {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射id"}];
-  string name = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射名称"}];
-  string tql = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射tql语句"}];
-  string description = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射描述"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "映射id"
+  }];
+  string name = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射名称"
+      }];
+  string tql = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射tql语句"
+      }];
+  string description = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射描述"
+      }];
 }
 
 // Append Mapper Request.
 message AppendMapperRequest {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  Mapper mapper = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射信息"}];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  Mapper mapper = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射信息"
+      }];
 }
 
 // Get Mapper Request.
 message GetMapperRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "映射id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // List Mapper Request.
 message ListMapperRequest {
-  string type = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string type = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
-
 
 // Remove Mapper Request.
 message RemoveMapperRequest {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "映射id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // Append Mapper Response.
 message AppendMapperResponse {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  Mapper mapper = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射信息"}];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  Mapper mapper = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射信息"
+      }];
 }
 
 // Remove Mapper Response.
 message RemoveMapperResponse {
-  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射id"}];
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "映射id"
+  }];
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // Get Mapper Response.
 message GetMapperResponse {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  Mapper mapper = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射信息"}];
-} 
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  Mapper mapper = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射信息"
+      }];
+}
 
 // List Mapper Response.
 message ListMapperResponse {
-  string type = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-  string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  repeated Mapper mappers = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "映射信息"}];
-} 
-
-
+  string type = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  repeated Mapper mappers = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "映射信息"
+      }];
+}
 
 // ------------------- Entity Mapper Requests.
 
 // Expression Definition.
 message Expression {
-  string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "目标属性"}];
-  string name = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式名称"}];
-  string expression = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式"}];
-  string description = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式描述"}];
+  string path = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "目标属性"
+      }];
+  string name = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式名称"
+      }];
+  string expression = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式"
+      }];
+  string description = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式描述"
+      }];
 }
 
 message Expressions {
@@ -651,115 +910,246 @@ message Expressions {
 
 // Append Expression Request.
 message AppendExpressionReq {
-  string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  Expressions expressions = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式信息"}];
+  string source = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  Expressions expressions = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式信息"
+      }];
 }
 
 // Get Expression Request.
 message GetExpressionReq {
-  string path = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "目标属性"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string path = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "目标属性"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // List Expression Request.
 message ListExpressionReq {
-  string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string source = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // Remove Expression Request.
 message RemoveExpressionReq {
-  string paths = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "目标属性"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string source = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string entity_id = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
+  string paths = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "目标属性"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string source = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string entity_id = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
 }
 
 // Append Expression Response.
 message AppendExpressionResp {
-  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  int32 count = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "变更数量"}];
+  string owner = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  int32 count = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "变更数量"
+      }];
 }
 
 // Remove Expression Response.
 message RemoveExpressionResp {
-  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  int32 count = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "变更数量"}];
+  string owner = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  int32 count = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "变更数量"
+      }];
 }
 
 // Get Expression Response.
 message GetExpressionResp {
-  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  Expression expression = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式信息"}];
-} 
+  string owner = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  Expression expression = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式信息"
+      }];
+}
 
 // List Expression Response.
 message ListExpressionResp {
-  string owner = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string entity_id = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-  repeated Expression expressions = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "表达式信息"}];
-} 
-
+  string owner = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string entity_id = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体id"
+      }];
+  repeated Expression expressions = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "表达式信息"
+      }];
+}
 
 // List Entity Request.
 message ListEntityRequest {
   option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
-  json_schema: {
-      title: "ListEntities"
-      description: "获取实体列表"
-    }
+    json_schema: { title: "ListEntities" description: "获取实体列表" }
   };
-  string source = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-  string owner = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-  string query = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "搜索关键词"}];
-	repeated SearchCondition condition = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "搜索条件"}];
-  int32 page_num= 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
-  int32 page_size = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-  string order_by = 9 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "排序字段"}];
-  bool is_descending = 10 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "是否逆序， false：不逆序，true:逆序"}];
+  string source = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string query = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "搜索关键词"
+      }];
+  repeated SearchCondition condition = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "搜索条件"
+      }];
+  int32 page_num = 7
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "记录开始位置"
+      }];
+  int32 page_size = 8
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "每页限制条数"
+      }];
+  string order_by = 9
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "排序字段"
+      }];
+  bool is_descending = 10
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "是否逆序， false：不逆序，true:逆序"
+      }];
 }
 
 // List Entity Response.
 message ListEntityResponse {
-    int32 total = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体总数"}];
-    int32 page_num= 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "记录开始位置"}];
-    int32 page_size = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "每页限制条数"}];
-    repeated EntityResponse items = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体列表"}];
+  int32 total = 1
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体总数"
+      }];
+  int32 page_num = 2
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "记录开始位置"
+      }];
+  int32 page_size = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "每页限制条数"
+      }];
+  repeated EntityResponse items = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体列表"
+      }];
 }
 
 // Entity Response.
 message EntityResponse {
-    string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体id"}];
-    string source = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "来源id"}];
-    string owner = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "用户id"}];
-    string type = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体类型"}];
-    int64 version = 6 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体版本"}];
-    int64 last_time = 7 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "上次修改时间"}];
-    string template_id = 8 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体模版"}];
-    string description = 10 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体描述"}];
-    repeated Mapper mappers = 11 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体映射"}];
-    google.protobuf.Value configs = 12 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体配置"}];
-    google.protobuf.Value properties = 13 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {description: "实体属性"}];
+  string id = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+    description: "实体id"
+  }];
+  string source = 3
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "来源id"
+      }];
+  string owner = 4
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "用户id"
+      }];
+  string type = 5
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体类型"
+      }];
+  int64 version = 6
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体版本"
+      }];
+  int64 last_time = 7
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "上次修改时间"
+      }];
+  string template_id = 8
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体模版"
+      }];
+  string description = 10
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体描述"
+      }];
+  repeated Mapper mappers = 11
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体映射"
+      }];
+  google.protobuf.Value configs = 12
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体配置"
+      }];
+  google.protobuf.Value properties = 13
+      [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {
+        description: "实体属性"
+      }];
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
