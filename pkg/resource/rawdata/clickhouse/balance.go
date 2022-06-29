@@ -1,11 +1,16 @@
 package clickhouse
 
 import (
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/valyala/fastrand"
+)
+
+var (
+	ErrNoServerAvailable = errors.New("balance select error: server is not available")
 )
 
 type Server struct {
@@ -18,7 +23,7 @@ type Server struct {
 type LoadBalance interface {
 	// 选择一个后端Server.
 	// 参数remove是需要排除选择的后端Server.
-	Select(remove []*sqlx.DB) *Server
+	Select(remove []*sqlx.DB) (*Server, error)
 	// 更新可用Server列表.
 	UpdateServers(servers []*Server)
 	Close()
@@ -71,12 +76,12 @@ func (l *LoadBalanceRandom) daemon() {
 }
 
 // 选择一个后端Server.
-func (l *LoadBalanceRandom) Select(remove []*sqlx.DB) *Server {
+func (l *LoadBalanceRandom) Select(remove []*sqlx.DB) (*Server, error) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	curServer := l.servers
 	if len(curServer) == 0 {
-		return nil
+		return nil, ErrNoServerAvailable
 	}
 
 	if len(remove) == 0 {
@@ -98,19 +103,19 @@ func (l *LoadBalanceRandom) Select(remove []*sqlx.DB) *Server {
 		}
 	}
 	if len(tmpServers) == 0 {
-		return nil
+		return nil, ErrNoServerAvailable
 	}
 	// selected := fastrand.Uint32n(uint32(len(tmpServers)))
 	// return tmpServers[selected]
 	return l.selectServer(tmpServers, removeServers)
 }
 
-func (l *LoadBalanceRandom) selectServer(activeServers []*Server, removeServers []*Server) *Server {
+func (l *LoadBalanceRandom) selectServer(activeServers []*Server, removeServers []*Server) (*Server, error) {
 	curActiveServer := activeServers
 	for i := 0; i < 5; i++ {
 		serverLen := uint32(len(curActiveServer))
 		if serverLen == 0 {
-			return nil
+			return nil, ErrNoServerAvailable
 		}
 		id := fastrand.Uint32n(serverLen)
 		activeServers := make([]*Server, 0)
@@ -141,10 +146,10 @@ func (l *LoadBalanceRandom) selectServer(activeServers []*Server, removeServers 
 		l.notActiveServers = append(l.notActiveServers, notActiveServers...)
 		curActiveServer = l.servers
 		if isSelected {
-			return resultServer
+			return resultServer, nil
 		}
 	}
-	return nil
+	return nil, ErrNoServerAvailable
 }
 
 func (l *LoadBalanceRandom) String() string {

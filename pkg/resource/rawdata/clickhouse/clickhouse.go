@@ -156,7 +156,10 @@ func (c *Clickhouse) BuildBulkData(req interface{}) (interface{}, error) {
 func (c *Clickhouse) BatchWrite(ctx context.Context, args *[]interface{}) (err error) {
 	preURL := c.genSQL(&[]string{"tag", "entity_id", "timestamp", "values", "path"})
 	if args != nil && len(*args) > 0 {
-		server := c.balance.Select([]*sqlx.DB{})
+		server, err := c.balance.Select([]*sqlx.DB{})
+		if err != nil {
+			return err
+		}
 		return transport.BulkWrite(ctx, server.DB, preURL, args)
 	}
 	return errors.New("BatchWrite failed with：args == nil or len(*args) <= 0")
@@ -212,8 +215,11 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 	offset := (req.PageNum - 1) * req.PageSize
 	querySQL += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
 
-	server := c.balance.Select([]*sqlx.DB{})
-
+	server, err := c.balance.Select([]*sqlx.DB{})
+	if err != nil {
+		log.Error(err.Error())
+		return nil, pb.ErrClickhouse()
+	}
 	countRes := make([]int64, 0)
 	err = server.DB.SelectContext(context.Background(), &countRes, countSQL)
 	if err != nil {
@@ -252,7 +258,11 @@ func (c *Clickhouse) Query(ctx context.Context, req *pb.GetRawdataRequest) (resp
 
 func (c *Clickhouse) getSystemSpace() (total, used float64) {
 	metricsSQL := "SELECT free_space, total_space FROM system.disks"
-	server := c.balance.Select([]*sqlx.DB{})
+	server, err := c.balance.Select([]*sqlx.DB{})
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	rows, err := server.DB.Query(metricsSQL)
 	if err != nil {
 		log.Error(err)
@@ -289,7 +299,11 @@ func (c *Clickhouse) GetMetrics() (count, storage, total, used float64) {
 	GROUP BY partition
 	ORDER BY partition ASC`, c.option.DbName, c.option.Table)
 
-	server := c.balance.Select([]*sqlx.DB{})
+	server, err := c.balance.Select([]*sqlx.DB{})
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	rows, err := server.DB.Query(metricsSQL)
 	if err != nil {
 		log.Error(err)
