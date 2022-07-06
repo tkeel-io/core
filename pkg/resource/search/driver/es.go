@@ -40,9 +40,10 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 const DriverTypeElasticsearch Type = "elasticsearch"
 
 const (
-	EntityIndex        = "entity"
-	DefaultLimit int32 = 20
-	MaxLimit     int32 = 200
+	EntityIndex                = "entity"
+	DefaultLimit         int32 = 20
+	MaxLimit             int32 = 200
+	EntityDefaultMapping       = `{"properties":{"basicInfo":{"properties":{"name":{"type":"text","fields":{"keyword":{"type":"keyword"}}}}},"sysField":{"properties":{"_subscribeAddr":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}}}}`
 )
 
 type ESConfig struct {
@@ -88,7 +89,7 @@ func NewElasticsearchEngine(cfgJSON map[string]interface{}) (SearchEngine, error
 	log.L().Info("use ElasticsearchDriver version:", logf.Value(info.Version.Number))
 	client.Index().Index(EntityIndex).Id("core_init").BodyString(`{"id":"core_init"}`).Do(context.Background())
 	// 1. 检查索引是否存在 2. 字段是否符合要求 3. 创建索引
-	client.PutMapping().Index(EntityIndex).BodyString(`{"properties":{"sysField":{"properties":{"_subscribeAddr":{"type":"text", "fields":{"keyword":{"type":"keyword", "ignore_above":4096}}}}}}}`).Do(context.Background())
+	client.PutMapping().Index(EntityIndex).BodyString(EntityDefaultMapping).Do(context.Background())
 	return &ESClient{Client: client}, nil
 }
 
