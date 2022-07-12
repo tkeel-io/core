@@ -1,9 +1,9 @@
 package dapr
 
 import (
-	"bytes"
 	"context"
 	"os"
+	"strings"
 
 	"github.com/dapr/go-sdk/client"
 	"github.com/tkeel-io/core/pkg/resource/transport"
@@ -87,9 +87,13 @@ func (d *daprStore) BatchWrite(ctx context.Context, args *[]interface{}) error {
 	}
 
 	if conn = dapr.Get().Select(); nil == conn {
-		buf := bytes.NewBuffer(make([]byte, 0, 1))
+		var buf strings.Builder
 		for _, k := range items {
-			buf.WriteString(k.Key)
+			_, err := buf.WriteString(k.Key)
+			if err != nil {
+				log.L().Error(err.Error(),
+					logf.String("daprStore BatchWrite buf.WriteString(k.Key) err", k.Key))
+			}
 		}
 		log.L().Error("nil connection", logf.Key(buf.String()),
 			logf.String("store_name", d.storeName),

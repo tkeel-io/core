@@ -2,9 +2,6 @@ package dapr
 
 import (
 	"context"
-	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 
 	logf "github.com/tkeel-io/core/pkg/logfield"
@@ -32,7 +29,7 @@ func TestDaprStateTransport(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	<-ch
+	//ch := make(chan os.Signal, 1)
+	//signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	//<-ch
 }
