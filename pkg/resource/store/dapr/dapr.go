@@ -77,20 +77,23 @@ func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 
 func (d *daprStore) BatchWrite(ctx context.Context, args *[]interface{}) error {
 	var conn dapr.Client
-	items := make([]*client.SetStateItem, 0, 1)
-	for _, v := range *args {
-		if item, ok := v.(*client.SetStateItem); ok {
-			items = append(items, item)
+	stateMap := make(map[string]*client.SetStateItem)
+	for _, val := range *args {
+		// need to order by update-time
+		if item, ok := val.(*client.SetStateItem); ok {
+			stateMap[item.Key] = item
 		} else {
 			return errors.Wrap(errors.New("invalid data"), "daprStore BatchWrite args error")
 		}
 	}
-
+	BulkStateItems := make([]*client.SetStateItem, 0, len(stateMap))
+	for _, v := range stateMap {
+		BulkStateItems = append(BulkStateItems, v)
+	}
 	if conn = dapr.Get().Select(); nil == conn {
 		var buf strings.Builder
-		for _, k := range items {
-			_, err := buf.WriteString(k.Key)
-			if err != nil {
+		for _, k := range BulkStateItems {
+			if _, err := buf.WriteString(k.Key); err != nil {
 				log.L().Error(err.Error(),
 					logf.String("daprStore BatchWrite buf.WriteString(k.Key) err", k.Key))
 			}
@@ -100,7 +103,7 @@ func (d *daprStore) BatchWrite(ctx context.Context, args *[]interface{}) error {
 			logf.ID(d.id))
 		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
 	}
-	return errors.Wrap(conn.SaveBulkState(ctx, d.storeName, items...), "dapr store set")
+	return errors.Wrap(conn.SaveBulkState(ctx, d.storeName, BulkStateItems...), "dapr store set")
 }
 
 func (d *daprStore) BuildBulkData(m interface{}) (interface{}, error) {
