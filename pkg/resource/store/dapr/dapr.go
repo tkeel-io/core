@@ -3,6 +3,10 @@ package dapr
 import (
 	"context"
 	"os"
+	"strings"
+
+	"github.com/dapr/go-sdk/client"
+	"github.com/tkeel-io/core/pkg/resource/transport"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -17,6 +21,15 @@ import (
 
 type daprMetadata struct {
 	StoreName string `mapstructure:"store_name"`
+}
+
+type daprBulkStore struct {
+	daprStore
+	bulkTransport transport.Transport
+}
+
+func (d *daprBulkStore) Set(ctx context.Context, key string, data []byte) error {
+	return d.bulkTransport.Send(ctx, &client.SetStateItem{Key: key, Value: data})
 }
 
 type daprStore struct {
@@ -62,6 +75,42 @@ func (d *daprStore) Set(ctx context.Context, key string, data []byte) error {
 	return errors.Wrap(conn.SaveState(ctx, d.storeName, key, data), "dapr store set")
 }
 
+func (d *daprStore) BatchWrite(ctx context.Context, args *[]interface{}) error {
+	var conn dapr.Client
+	stateMap := make(map[string]*client.SetStateItem)
+	for _, val := range *args {
+		// need to order by update-time
+		if item, ok := val.(*client.SetStateItem); ok {
+			stateMap[item.Key] = item
+		} else {
+			return errors.Wrap(errors.New("invalid data"), "daprStore BatchWrite args error")
+		}
+	}
+	BulkStateItems := make([]*client.SetStateItem, 0, len(stateMap))
+	for _, v := range stateMap {
+		BulkStateItems = append(BulkStateItems, v)
+	}
+	if conn = dapr.Get().Select(); nil == conn {
+		var buf strings.Builder
+		for _, k := range BulkStateItems {
+			if _, err := buf.WriteString(k.Key); err != nil {
+				log.L().Error(err.Error(),
+					logf.String("daprStore BatchWrite buf.WriteString(k.Key) err", k.Key))
+			}
+		}
+		log.L().Error("nil connection", logf.Key(buf.String()),
+			logf.String("store_name", d.storeName),
+			logf.ID(d.id))
+		return errors.Wrap(xerrors.ErrConnectionNil, "dapr send")
+	}
+	return errors.Wrap(conn.SaveBulkState(ctx, d.storeName, BulkStateItems...), "dapr store set")
+}
+
+func (d *daprStore) BuildBulkData(m interface{}) (interface{}, error) {
+	//TODO
+	return m, nil
+}
+
 func (d *daprStore) Del(ctx context.Context, key string) error {
 	var conn dapr.Client
 	if conn = dapr.Get().Select(); nil == conn {
@@ -82,10 +131,17 @@ func init() {
 
 		id := util.UUID("sdapr")
 		log.L().Info("create store.dapr instance", logf.ID(id))
-
-		return &daprStore{
+		s := daprStore{
 			id:        id,
 			storeName: daprMeta.StoreName,
+		}
+		bulkTransport, err := transport.NewDaprStateTransport(context.Background(), &s)
+		if err != nil {
+			return nil, err
+		}
+		return &daprBulkStore{
+			daprStore:     s,
+			bulkTransport: bulkTransport,
 		}, nil
 	})
 }

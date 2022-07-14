@@ -9,6 +9,8 @@
 
 FROM alpine:3.13
 
+RUN apk update
+RUN apk add tzdata
 RUN mkdir /keel
 Run mkdir /config
 COPY dist/linux_amd64/release/core /keel
