@@ -39,14 +39,14 @@ func TestPutExpression(t *testing.T) {
 
 	for _, exprInfo := range tests {
 		t.Run(exprInfo.name, func(t *testing.T) {
-			err := repoIns.PutExpression(context.Background(), *exprInfo.expr)
+			err := repoIns.PutExpression(context.Background(), exprInfo.expr)
 			assert.Nil(t, err)
 		})
 	}
 }
 
 func TestGetExpression(t *testing.T) {
-	_, err := repoIns.GetExpression(context.Background(), Expression{EntityID: "device123", Owner: "admin", Path: "temp"})
+	_, err := repoIns.GetExpression(context.Background(), &Expression{EntityID: "device123", Owner: "admin", Path: "temp"})
 	t.Log(err)
 	//	assert.ErrorIs(t, err, xerrors.ErrResourceNotFound)
 	// assert.Equal(t, "admin", expr.Owner)
@@ -62,12 +62,12 @@ func TestListExpression(t *testing.T) {
 }
 
 func TestDelExpression(t *testing.T) {
-	err := repoIns.DelExpression(context.Background(), Expression{Owner: "admin", EntityID: "device123", Path: "temp"})
+	err := repoIns.DelExpression(context.Background(), &Expression{Owner: "admin", EntityID: "device123", Path: "temp"})
 	assert.Nil(t, err)
 }
 
 func TestDeleteExpressions(t *testing.T) {
-	err := repoIns.DelExprByEnity(context.Background(), Expression{Owner: "admin", EntityID: "device123"})
+	err := repoIns.DelExprByEnity(context.Background(), &Expression{Owner: "admin", EntityID: "device123"})
 	assert.Nil(t, err)
 }
 
