@@ -93,7 +93,8 @@ func (m *mapper) Tentacles() map[string][]Tentacler {
 		for index, item := range tentacleConf.PropertyKeys {
 			watchKey := WatchKey{
 				EntityID:    entityID,
-				PropertyKey: item}
+				PropertyKey: item,
+			}
 			eItems[index] = watchKey
 			mItems = append(mItems, watchKey)
 		}
