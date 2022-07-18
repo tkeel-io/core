@@ -215,7 +215,15 @@ func (n *Node) listMetadata() {
 // watchResource watch resources.
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
-	go repo.WatchExpression(context.Background(), n.revision,
+	go n.watchExpression(repo)
+
+	go n.watchSubscription(repo)
+
+	go n.watchSchema(repo)
+}
+
+func (n *Node) watchExpression(repo repository.IRepository) {
+	repo.WatchExpression(context.Background(), n.revision,
 		func(et dao.EnventType, expr repository.Expression) {
 			switch et {
 			case dao.DELETE:
@@ -252,8 +260,10 @@ func (n *Node) watchMetadata() {
 				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
+}
 
-	go repo.WatchSubscription(context.Background(), n.revision,
+func (n *Node) watchSubscription(repo repository.IRepository) {
+	repo.WatchSubscription(context.Background(), n.revision,
 		func(et dao.EnventType, sub *repository.Subscription) {
 			switch et {
 			case dao.DELETE:
@@ -282,8 +292,9 @@ func (n *Node) watchMetadata() {
 				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
-
-	go repo.WatchSchema(context.Background(), n.revision,
+}
+func (n *Node) watchSchema(repo repository.IRepository) {
+	repo.WatchSchema(context.Background(), n.revision,
 		func(et dao.EnventType, sm repository.Schema) {
 			switch et {
 			case dao.DELETE:
@@ -298,7 +309,6 @@ func (n *Node) watchMetadata() {
 				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
-
 }
 
 func parseExpression(expr repository.Expression, version int) (map[string]*ExpressionInfo, error) {

@@ -17,8 +17,9 @@ limitations under the License.
 package runtime
 
 import (
-	"github.com/tkeel-io/core/pkg/repository"
 	"sync"
+
+	"github.com/tkeel-io/core/pkg/repository"
 )
 
 type SchemaStore struct {
@@ -37,7 +38,7 @@ func (s SchemaStore) Get(schemaID string) *repository.Schema {
 	defer s.RUnlock()
 	s.RLock()
 	sm, ok := s.data[schemaID]
-	if !ok{
+	if !ok {
 		return nil
 	}
 	return sm
@@ -55,6 +56,6 @@ func (s SchemaStore) Del(schemaID string) bool {
 	defer s.Unlock()
 	s.Lock()
 	_, ok := s.data[schemaID]
-	delete(s.data,schemaID)
+	delete(s.data, schemaID)
 	return ok
 }
