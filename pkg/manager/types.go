@@ -52,9 +52,9 @@ type APIManager interface {
 	AppendMapperZ(context.Context, *mapper.Mapper) error
 
 	// Expression.
-	AppendExpression(context.Context, []repository.Expression) error
-	RemoveExpression(context.Context, []repository.Expression) error
-	GetExpression(context.Context, repository.Expression) (*repository.Expression, error)
+	AppendExpression(context.Context, []*repository.Expression) error
+	RemoveExpression(context.Context, []*repository.Expression) error
+	GetExpression(context.Context, *repository.Expression) (*repository.Expression, error)
 	ListExpression(context.Context, *Base) ([]*repository.Expression, error)
 
 	// Subscription.

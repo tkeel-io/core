@@ -31,6 +31,7 @@ type NodeConf struct {
 type Node struct {
 	runtimes        map[string]*Runtime
 	queues          map[string]*xkafka.Pubsub
+	schemas         *SchemaStore
 	dispatch        dispatch.Dispatcher
 	resourceManager types.ResourceManager
 	revision        int64
@@ -49,6 +50,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 		resourceManager: resourceManager,
 		runtimes:        make(map[string]*Runtime),
 		queues:          make(map[string]*xkafka.Pubsub),
+		schemas:         NewSchemaStore(),
 	}
 }
 
@@ -197,6 +199,16 @@ func (n *Node) listMetadata() {
 			}
 		}
 	})
+
+	repo.RangeSchema(ctx, n.revision, func(schemas []*repository.Schema) {
+		// 所有node都需要存储 schema.
+		for _, sm := range schemas {
+			log.L().Debug("sync range Schema", logf.String("schemaID", sm.ID), logf.Any("schema", sm), logf.Owner(sm.Owner))
+			schemaID := sm.ID
+			n.schemas.Set(schemaID, sm)
+		}
+	})
+
 	log.L().Debug("runtime.Environment initialized", logf.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
@@ -270,6 +282,23 @@ func (n *Node) watchMetadata() {
 				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
+
+	go repo.WatchSchema(context.Background(), n.revision,
+		func(et dao.EnventType, sm repository.Schema) {
+			switch et {
+			case dao.DELETE:
+				log.L().Debug("sync DELETE Schema", logf.String("schemaID", sm.ID), logf.Owner(sm.Owner))
+				schemaID := sm.ID
+				n.schemas.Del(schemaID)
+			case dao.PUT:
+				log.L().Debug("sync PUT Schema", logf.String("schemaID", sm.ID), logf.Any("schema", sm), logf.Owner(sm.Owner))
+				schemaID := sm.ID
+				n.schemas.Set(schemaID, &sm)
+			default:
+				log.L().Error("watch metadata changed, invalid event type")
+			}
+		})
+
 }
 
 func parseExpression(expr repository.Expression, version int) (map[string]*ExpressionInfo, error) {
