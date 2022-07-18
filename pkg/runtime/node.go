@@ -293,6 +293,7 @@ func (n *Node) watchSubscription(repo repository.IRepository) {
 			}
 		})
 }
+
 func (n *Node) watchSchema(repo repository.IRepository) {
 	repo.WatchSchema(context.Background(), n.revision,
 		func(et dao.EnventType, sm repository.Schema) {
