@@ -74,10 +74,10 @@ func (m *APIManagerMock) CheckSubscription(ctx context.Context, en *apim.Base) (
 	return nil
 }
 
-func (m *APIManagerMock) AppendExpression(context.Context, []repository.Expression) error { return nil }
-func (m *APIManagerMock) RemoveExpression(context.Context, []repository.Expression) error { return nil }
+func (m *APIManagerMock) AppendExpression(context.Context, []*repository.Expression) error { return nil }
+func (m *APIManagerMock) RemoveExpression(context.Context, []*repository.Expression) error { return nil }
 
-func (m *APIManagerMock) GetExpression(context.Context, repository.Expression) (*repository.Expression, error) {
+func (m *APIManagerMock) GetExpression(context.Context, *repository.Expression) (*repository.Expression, error) {
 	return nil, nil
 }
 
