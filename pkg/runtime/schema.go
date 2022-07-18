@@ -22,20 +22,20 @@ import (
 )
 
 type SchemaStore struct {
-	sync.RWMutex
+	*sync.RWMutex
 	data map[string]*repository.Schema
 }
 
 func NewSchemaStore() *SchemaStore {
 	return &SchemaStore{
-		RWMutex: sync.RWMutex{},
+		RWMutex: &sync.RWMutex{},
 		data:    map[string]*repository.Schema{},
 	}
 }
 
 func (s SchemaStore) Get(schemaID string) *repository.Schema {
-	s.RLock()
 	defer s.RUnlock()
+	s.RLock()
 	sm, ok := s.data[schemaID]
 	if !ok{
 		return nil
@@ -44,16 +44,16 @@ func (s SchemaStore) Get(schemaID string) *repository.Schema {
 }
 
 func (s SchemaStore) Set(schemaID string, sm *repository.Schema) bool {
-	s.Lock()
 	defer s.Unlock()
+	s.Lock()
 	_, ok := s.data[schemaID]
 	s.data[schemaID] = sm
 	return ok
 }
 
 func (s SchemaStore) Del(schemaID string) bool {
-	s.Lock()
 	defer s.Unlock()
+	s.Lock()
 	_, ok := s.data[schemaID]
 	delete(s.data,schemaID)
 	return ok
