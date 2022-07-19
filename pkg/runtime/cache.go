@@ -19,11 +19,14 @@ type eCache struct {
 	repository repository.IRepository
 }
 
+var _defaultCache = &eCache{
+	repository: nil,
+	entities:   make(map[string]Entity),
+}
+
 func NewCache(repo repository.IRepository) EntityCache {
-	return &eCache{
-		repository: repo,
-		entities:   make(map[string]Entity),
-	}
+	_defaultCache.repository = repo
+	return _defaultCache
 }
 
 func (ec *eCache) Load(ctx context.Context, id string) (Entity, error) {
