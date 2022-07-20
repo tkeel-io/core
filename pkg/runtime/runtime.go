@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/tkeel-io/core/pkg/placement"
 	"strings"
 	"sync"
 	"time"
@@ -987,9 +988,12 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 		return nil, errors.Wrap(err, "create entity instance")
 	}
 
-	r.lock.Lock()
-	r.entities[id] = en
-	r.lock.Unlock()
+	info := placement.Global().Select(id)
+	if info.ID == r.ID(){
+		r.lock.Lock()
+		r.entities[id] = en
+		r.lock.Unlock()
+	}
 
 	return en, nil
 }
