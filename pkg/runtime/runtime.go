@@ -557,11 +557,20 @@ func (r *Runtime) handleTentacle(ctx context.Context, feed *Feed) *Feed {
 			stateIns, _ := NewEntity(feed.EntityID, feed.State)
 			sendVal := stateIns.Get(sendPath)
 			if tdtl.Undefined != sendVal.Type() {
-				patches[runtimeID] = append(patches[runtimeID], &v1.PatchData{
-					Path:     change.Path,
-					Operator: xjson.OpReplace.String(),
-					Value:    change.Value.Raw(),
-				})
+				switch change.Op {
+				case xjson.OpRemove:
+					patches[runtimeID] = append(patches[runtimeID], &v1.PatchData{
+						Path:     change.Path,
+						Operator: xjson.OpRemove.String(),
+						Value:    change.Value.Raw(),
+					})
+				default:
+					patches[runtimeID] = append(patches[runtimeID], &v1.PatchData{
+						Path:     change.Path,
+						Operator: xjson.OpReplace.String(),
+						Value:    change.Value.Raw(),
+					})
+				}
 			}
 		}
 	}
