@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -338,6 +339,7 @@ func newExprInfo(expr *repository.Expression) ExpressionInfo {
 
 func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
 	action := req.Request.URL.Query().Get("action")
+	entityID := req.Request.URL.Query().Get("entity")
 	switch action {
 	case "nodelist":
 		ret := []string{}
@@ -345,6 +347,32 @@ func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
 			ret = append(ret, k)
 		}
 		resp.WriteAsJson(strings.Join(ret, "|"))
+	case "entity":
+		var entity Entity
+		for _, runtime := range n.runtimes {
+			e, ok := runtime.entities[entityID]
+			if ok {
+				entity = e
+				resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
+				resp.Write(entity.Raw())
+			}
+		}
+		if entity == nil {
+			resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
+		}
+	case "cache":
+		var entity Entity
+		for _, runtime := range n.runtimes {
+			e, err := runtime.enCache.Load(context.Background(), entityID)
+			if err != nil {
+				entity = e
+				resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
+				resp.Write(entity.Raw())
+			}
+		}
+		if entity == nil {
+			resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
+		}
 	case "subtree":
 		rid := req.Request.URL.Query().Get("rid")
 		ret := n.runtimes[rid]
@@ -364,5 +392,7 @@ func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
 		} else {
 			resp.WriteErrorString(501, "runtime <"+rid+"> not found")
 		}
+	default:
+		resp.WriteAsJson("Noop~")
 	}
 }
