@@ -32,6 +32,10 @@ func (d *daprBulkStore) Set(ctx context.Context, key string, data []byte) error 
 	return d.bulkTransport.Send(ctx, &client.SetStateItem{Key: key, Value: data})
 }
 
+func (d *daprBulkStore) Flush(ctx context.Context) error {
+	return d.bulkTransport.Flush(ctx)
+}
+
 type daprStore struct {
 	id        string
 	storeName string

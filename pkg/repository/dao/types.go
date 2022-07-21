@@ -60,4 +60,5 @@ type IDao interface {
 	StoreResource(ctx context.Context, res Resource) error
 	GetStoreResource(ctx context.Context, res Resource) (Resource, error)
 	RemoveStoreResource(ctx context.Context, res Resource) error
+	FlushStoreResource(ctx context.Context) error
 }

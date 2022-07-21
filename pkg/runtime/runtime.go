@@ -35,8 +35,9 @@ const (
 type EntityResourceFunc func(context.Context, Entity, *Feed) error
 
 type EntityResource struct {
-	FlushHandler  EntityResourceFunc
-	RemoveHandler EntityResourceFunc
+	PersistentEntity EntityResourceFunc
+	FlushHandler     EntityResourceFunc
+	RemoveHandler    EntityResourceFunc
 }
 
 type Runtime struct {
@@ -658,7 +659,7 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 		// entity has been deleted.
 		return feed
 	}
-	r.entityResourcer.FlushHandler(ctx, en, feed)
+	r.entityResourcer.PersistentEntity(ctx, en, feed)
 	return feed
 }
 

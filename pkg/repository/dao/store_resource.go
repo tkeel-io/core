@@ -70,3 +70,7 @@ func (d *Dao) RemoveStoreResource(ctx context.Context, res Resource) error {
 	err = d.stateClient.Del(ctx, string(key))
 	return errors.Wrap(err, "dao store del entity")
 }
+
+func (d *Dao) FlushStoreResource(ctx context.Context) error {
+	return d.stateClient.Flush(ctx)
+}

@@ -116,6 +116,10 @@ func (r *repo) PutEntity(ctx context.Context, eid string, data []byte) error {
 	return errors.Wrap(err, "put entity repository")
 }
 
+func (r *repo) FlushEntity(ctx context.Context) error {
+	return r.dao.FlushStoreResource(ctx)
+}
+
 func (r *repo) GetEntity(ctx context.Context, eid string) ([]byte, error) {
 	ret, err := r.dao.GetStoreResource(ctx, &entityResource{id: eid})
 
