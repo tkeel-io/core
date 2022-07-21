@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tkeel-io/core/pkg/placement"
+
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -229,6 +231,7 @@ func (r *Runtime) prepareSystemEvent(ctx context.Context, event v1.Event) (*Exec
 	switch v1.SystemOp(operator) {
 	case v1.OpCreate:
 		log.L().Info("create entity", logf.Eid(ev.Entity()),
+			logf.ID(r.id),
 			logf.ID(ev.ID()), logf.Header(ev.Attributes()))
 
 		execer := &Execer{
@@ -430,9 +433,10 @@ func (r *Runtime) handleComputed(ctx context.Context, feed *Feed) *Feed {
 			Id:        util.IG().EvID(),
 			Timestamp: time.Now().UnixNano(),
 			Metadata: map[string]string{
-				v1.MetaType:     string(v1.ETEntity),
-				v1.MetaBorn:     "handleComputed",
-				v1.MetaEntityID: target,
+				v1.MetaType:        string(v1.ETEntity),
+				v1.MetaBorn:        "handleComputed",
+				v1.MetaPartitionID: r.ID(),
+				v1.MetaEntityID:    target,
 			},
 			Data: &v1.ProtoEvent_Patches{
 				Patches: &v1.PatchDatas{
@@ -987,10 +991,12 @@ func (r *Runtime) LoadEntity(id string) (Entity, error) {
 		return nil, errors.Wrap(err, "create entity instance")
 	}
 
-	r.lock.Lock()
-	r.entities[id] = en
-	r.lock.Unlock()
-
+	info := placement.Global().Select(id)
+	if info.ID == r.ID() {
+		r.lock.Lock()
+		r.entities[id] = en
+		r.lock.Unlock()
+	}
 	return en, nil
 }
 
