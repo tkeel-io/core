@@ -142,7 +142,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	case v1.ETSystem:
 		execer, feed := r.prepareSystemEvent(ctx, ev)
 		execer.postFuncs = append(execer.postFuncs,
-			&handlerImpl{fn: r.handlePersistent})
+			&handlerImpl{fn: r.handlePersistent},
+			&handlerImpl{fn: r.handleFlush})
 		return execer, feed
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
@@ -660,6 +661,14 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 		return feed
 	}
 	r.entityResourcer.PersistentEntity(ctx, en, feed)
+	return feed
+}
+
+func (r *Runtime) handleFlush(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handler flush", logf.Eid(feed.EntityID))
+	if err := r.entityResourcer.FlushHandler(ctx, nil, nil); err != nil {
+		log.L().Error("handler flush error", logf.Error(err))
+	}
 	return feed
 }
 
