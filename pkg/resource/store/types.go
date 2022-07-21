@@ -24,6 +24,7 @@ type Store interface {
 	Set(ctx context.Context, key string, data []byte) error
 	// Del delete record from store.
 	Del(ctx context.Context, key string) error
+	Flush(ctx context.Context) error
 }
 
 var registeredStores = make(map[string]Generator)

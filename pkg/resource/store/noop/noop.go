@@ -28,6 +28,10 @@ func (n *noopStore) Del(ctx context.Context, key string) error {
 	return nil
 }
 
+func (n *noopStore) Flush(ctx context.Context) error {
+	return nil
+}
+
 func init() {
 	log.SuccessStatusEvent(os.Stdout, "Register Resource<state.noop> successful")
 	store.Register("noop", func(properties map[string]interface{}) (store.Store, error) {

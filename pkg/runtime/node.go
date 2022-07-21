@@ -73,7 +73,7 @@ func (n *Node) Start(cfg NodeConf) error {
 		// create runtime instance.
 		log.L().Info("create runtime instance",
 			logf.ID(runtimeID), logf.Source(cfg.Sources[index]))
-		entityResouce := EntityResource{FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
+		entityResouce := EntityResource{PersistentEntity: n.PersistentEntity, FlushHandler: n.FlushEntity, RemoveHandler: n.RemoveEntity}
 		runtime := NewRuntime(n.ctx, entityResouce, runtimeID, n.dispatch, n.resourceManager.Repo())
 		n.runtimes[runtimeID] = runtime
 		placement.Global().Append(placement.Info{ID: sourceIns.ID(), Flag: true})

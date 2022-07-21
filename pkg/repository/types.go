@@ -7,6 +7,7 @@ import (
 type IRepository interface {
 	GetLastRevision(ctx context.Context) int64
 	PutEntity(ctx context.Context, eid string, data []byte) error
+	FlushEntity(ctx context.Context) error
 	GetEntity(ctx context.Context, eid string) ([]byte, error)
 	DelEntity(ctx context.Context, eid string) error
 	HasEntity(ctx context.Context, eid string) (bool, error)

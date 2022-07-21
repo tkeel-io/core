@@ -35,8 +35,9 @@ const (
 type EntityResourceFunc func(context.Context, Entity, *Feed) error
 
 type EntityResource struct {
-	FlushHandler  EntityResourceFunc
-	RemoveHandler EntityResourceFunc
+	PersistentEntity EntityResourceFunc
+	FlushHandler     EntityResourceFunc
+	RemoveHandler    EntityResourceFunc
 }
 
 type Runtime struct {
@@ -141,7 +142,8 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 	case v1.ETSystem:
 		execer, feed := r.prepareSystemEvent(ctx, ev)
 		execer.postFuncs = append(execer.postFuncs,
-			&handlerImpl{fn: r.handlePersistent})
+			&handlerImpl{fn: r.handlePersistent},
+			&handlerImpl{fn: r.handleFlush})
 		return execer, feed
 	case v1.ETEntity:
 		e, _ := ev.(v1.PatchEvent)
@@ -658,7 +660,15 @@ func (r *Runtime) handlePersistent(ctx context.Context, feed *Feed) *Feed {
 		// entity has been deleted.
 		return feed
 	}
-	r.entityResourcer.FlushHandler(ctx, en, feed)
+	r.entityResourcer.PersistentEntity(ctx, en, feed)
+	return feed
+}
+
+func (r *Runtime) handleFlush(ctx context.Context, feed *Feed) *Feed {
+	log.L().Debug("handler flush", logf.Eid(feed.EntityID))
+	if err := r.entityResourcer.FlushHandler(ctx, nil, nil); err != nil {
+		log.L().Error("handler flush error", logf.Error(err))
+	}
 	return feed
 }
 

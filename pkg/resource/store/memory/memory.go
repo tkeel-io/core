@@ -50,6 +50,9 @@ func (n *memStore) Del(ctx context.Context, key string) error {
 	delete(n.store, key)
 	return nil
 }
+func (n *memStore) Flush(ctx context.Context) error {
+	return nil
+}
 
 func initStore(properties map[string]interface{}) (store.Store, error) {
 	id := util.UUID("snoop")

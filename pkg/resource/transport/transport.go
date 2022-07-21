@@ -44,3 +44,7 @@ func (s *SinkTransport) Send(ctx context.Context, msg interface{}) error {
 func (s *SinkTransport) Close() {
 	s.sink.Close()
 }
+
+func (s *SinkTransport) Flush(ctx context.Context) error {
+	return s.sink.Flush(ctx)
+}

@@ -34,7 +34,7 @@ import (
 	"github.com/tkeel-io/kit/log"
 )
 
-func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
+func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
 	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
 	entityID := feed.EntityID
 	tenantID := en.GetProp("sysField._tenantId").String()
@@ -269,4 +269,8 @@ func (n *Node) RemoveEntity(ctx context.Context, en Entity, feed *Feed) error {
 
 	// 3. 删除实体相关的 Expression.
 	return nil
+}
+
+func (n *Node) FlushEntity(ctx context.Context, en Entity, feed *Feed) error {
+	return n.resourceManager.Repo().FlushEntity(ctx)
 }
