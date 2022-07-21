@@ -339,6 +339,7 @@ func newExprInfo(expr *repository.Expression) ExpressionInfo {
 
 func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
 	action := req.Request.URL.Query().Get("action")
+	runtimeID := req.Request.URL.Query().Get("runtime")
 	entityID := req.Request.URL.Query().Get("entity")
 	switch action {
 	case "nodelist":
@@ -348,51 +349,55 @@ func (n *Node) Debug(req *go_restful.Request, resp *go_restful.Response) {
 		}
 		resp.WriteAsJson(strings.Join(ret, "|"))
 	case "entity":
-		var entity Entity
-		for _, runtime := range n.runtimes {
-			e, ok := runtime.entities[entityID]
-			if ok {
-				entity = e
-				resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
-				resp.Write(entity.Raw())
-			}
-		}
-		if entity == nil {
-			resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
-		}
+		n.entity(entityID, resp)
 	case "cache":
-		var entity Entity
-		for _, runtime := range n.runtimes {
-			e, err := runtime.enCache.Load(context.Background(), entityID)
-			if err != nil {
-				entity = e
-				resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
-				resp.Write(entity.Raw())
-			}
-		}
-		if entity == nil {
-			resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
-		}
+		n.cache(entityID, resp)
 	case "subtree":
-		rid := req.Request.URL.Query().Get("rid")
-		ret := n.runtimes[rid]
+		ret := n.runtimes[runtimeID]
 		resp.Write([]byte(ret.subTree.String()))
-	case "eveltree":
-		rid := req.Request.URL.Query().Get("rid")
-		ret := n.runtimes[rid]
+	case "evaltree":
+		ret := n.runtimes[runtimeID]
 		resp.Write([]byte(ret.evalTree.String()))
 	case "sub":
-		rid := req.Request.URL.Query().Get("rid")
-		entityID := req.Request.URL.Query().Get("entityID")
 		changePath := req.Request.URL.Query().Get("changePath")
-		rt, ok := n.runtimes[rid]
+		rt, ok := n.runtimes[runtimeID]
 		if ok {
 			ret := rt.subTree.MatchPrefix(path.FmtWatchKey(entityID, changePath))
 			resp.WriteAsJson(ret)
 		} else {
-			resp.WriteErrorString(501, "runtime <"+rid+"> not found")
+			resp.WriteErrorString(501, "runtime <"+runtimeID+"> not found")
 		}
 	default:
 		resp.WriteAsJson("Noop~")
+	}
+}
+
+func (n *Node) cache(entityID string, resp *go_restful.Response) {
+	var entity Entity
+	for _, runtime := range n.runtimes {
+		e, err := runtime.enCache.Load(context.Background(), entityID)
+		if err != nil {
+			entity = e
+			resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
+			resp.Write(entity.Raw())
+		}
+	}
+	if entity == nil {
+		resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
+	}
+}
+
+func (n *Node) entity(entityID string, resp *go_restful.Response) {
+	var entity Entity
+	for _, runtime := range n.runtimes {
+		e, ok := runtime.entities[entityID]
+		if ok {
+			entity = e
+			resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
+			resp.Write(entity.Raw())
+		}
+	}
+	if entity == nil {
+		resp.WriteAsJson(fmt.Sprintf("not found entity:%v", entityID))
 	}
 }
