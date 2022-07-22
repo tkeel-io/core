@@ -10,7 +10,7 @@ daprVersion: "1.6"
 
 image:
   repository: tkeelio/core
-  pullPolicy: Always
+  pullPolicy: IfNotPreSent
   # Overrides the image tag whose default is the chart appVersion.
 #   tag: "runtime"
 
