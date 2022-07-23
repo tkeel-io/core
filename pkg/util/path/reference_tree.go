@@ -1,6 +1,7 @@
 package path
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -33,22 +34,22 @@ type RefTree struct {
 }
 
 func (rt *RefTree) Add(path string, value Node) bool {
+	defer rt.mutex.Unlock()
 	rt.mutex.Lock()
 	if _, exists := rt.nodes[value.ID()]; !exists {
 		rt.nodes[value.ID()] = &RefNode{node: value}
 	}
 	rt.nodes[value.ID()].Inc()
-	rt.mutex.Unlock()
 
 	// replace node.
-	return rt.tree.Add(path, value)
+	return rt.tree.add(value, 0, strings.Split(fmtPath(path), rt.tree.Separator), rt.tree.root)
 }
 
 func (rt *RefTree) Remove(path string, value Node) bool {
 	// increase counter if node exists.
+	defer rt.mutex.Unlock()
 	rt.mutex.Lock()
 	if _, exists := rt.nodes[value.ID()]; !exists {
-		rt.mutex.Unlock()
 		return false
 	}
 
@@ -58,11 +59,9 @@ func (rt *RefTree) Remove(path string, value Node) bool {
 		delete(rt.nodes, value.ID())
 	}
 
-	rt.mutex.Unlock()
-
 	// remove node.
 	if flag {
-		return rt.tree.Remove(path, value)
+		return rt.tree.remove(value, 0, strings.Split(fmtPath(path), rt.tree.Separator), rt.tree.root)
 	}
 
 	return true
