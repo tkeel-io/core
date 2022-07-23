@@ -376,7 +376,7 @@ func (n *Node) cache(entityID string, resp *go_restful.Response) {
 	var entity Entity
 	for _, runtime := range n.runtimes {
 		e, err := runtime.enCache.Load(context.Background(), entityID)
-		if err != nil {
+		if err == nil {
 			entity = e
 			resp.WriteAsJson(fmt.Sprintf("[%s]", runtime.id))
 			resp.Write(entity.Raw())
