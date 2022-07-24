@@ -957,12 +957,14 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 				continue
 			}
 
-			patches[item.EntityID] = append(patches[item.EntityID],
-				&v1.PatchData{
-					Path:     path,
-					Value:    val.Raw(),
-					Operator: operator,
-				})
+			if val.Type() != tdtl.Null || val.Type() != tdtl.Undefined {
+				patches[item.EntityID] = append(patches[item.EntityID],
+					&v1.PatchData{
+						Path:     path,
+						Value:    val.Raw(),
+						Operator: operator,
+					})
+			}
 		}
 
 		// handle subscribe, dispatch entity state.
