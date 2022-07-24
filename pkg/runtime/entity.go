@@ -84,7 +84,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		case xjson.OpCopy:
 		case xjson.OpMerge:
 			var err error
-			if patch.Value.Type() != tdtl.Null{
+			if patch.Value.Type() != tdtl.Null {
 				mval := cc.Get(patch.Path).Merge(patch.Value)
 				if err = mval.Error(); tdtl.Object != mval.Type() {
 					log.Error("patch merge", logf.Eid(e.id), logf.Error(err),
@@ -99,7 +99,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 					return feed
 				}
 				cc.Set(patch.Path, mval)
-			}else{
+			} else {
 				log.L().Error("merge entity error, patch value is null", logf.Eid(e.id), logf.Error(cc.Error()),
 					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 			}
@@ -108,7 +108,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		case xjson.OpReplace:
 			// construct sub path if not exists.
 			pcIns := v1.PathConstructor(pc)
-			if patch.Value.Type() != tdtl.Null{
+			if patch.Value.Type() != tdtl.Null {
 				patchVal, patchPath, err := e.pathConstructor(pcIns, cc.Raw(), patch.Value.Raw(), patch.Path)
 				if nil != err {
 					log.L().Error("update entity", logf.Eid(e.id), logf.Error(err),
@@ -120,7 +120,7 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 					return feed
 				}
 				cc.Set(patchPath, tdtl.New(patchVal))
-			}else{
+			} else {
 				log.L().Error("replace entity error, patch value is null", logf.Eid(e.id), logf.Error(cc.Error()),
 					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 			}
