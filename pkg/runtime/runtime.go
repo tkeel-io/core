@@ -957,7 +957,7 @@ func (r *Runtime) initializeExpression(ctx context.Context, expr ExpressionInfo)
 				continue
 			}
 
-			if val.Type() != tdtl.Null || val.Type() != tdtl.Undefined {
+			if val.Type() != tdtl.Null && val.Type() != tdtl.Undefined {
 				patches[item.EntityID] = append(patches[item.EntityID],
 					&v1.PatchData{
 						Path:     path,

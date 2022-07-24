@@ -84,36 +84,46 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		case xjson.OpCopy:
 		case xjson.OpMerge:
 			var err error
-			mval := cc.Get(patch.Path).Merge(patch.Value)
-			if err = mval.Error(); tdtl.Object != mval.Type() {
-				log.Error("patch merge", logf.Eid(e.id), logf.Error(err),
-					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
-				err = xerrors.ErrInternal
-			}
+			if patch.Value.Type() != tdtl.Null {
+				mval := cc.Get(patch.Path).Merge(patch.Value)
+				if err = mval.Error(); tdtl.Object != mval.Type() {
+					log.Error("patch merge", logf.Eid(e.id), logf.Error(err),
+						logf.Any("patches", feed.Patches), logf.Event(feed.Event))
+					err = xerrors.ErrInternal
+				}
 
-			if nil != err {
-				feed.Err = err
-				feed.Patches = []Patch{}
-				feed.State = e.Raw()
-				return feed
+				if nil != err {
+					feed.Err = err
+					feed.Patches = []Patch{}
+					feed.State = e.Raw()
+					return feed
+				}
+				cc.Set(patch.Path, mval)
+			} else {
+				log.L().Error("merge entity error, patch value is null", logf.Eid(e.id), logf.Error(cc.Error()),
+					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
 			}
-			cc.Set(patch.Path, mval)
 		case xjson.OpRemove:
 			cc.Del(patch.Path)
 		case xjson.OpReplace:
 			// construct sub path if not exists.
 			pcIns := v1.PathConstructor(pc)
-			patchVal, patchPath, err := e.pathConstructor(pcIns, cc.Raw(), patch.Value.Raw(), patch.Path)
-			if nil != err {
-				log.L().Error("update entity", logf.Eid(e.id), logf.Error(err),
+			if patch.Value.Type() != tdtl.Null {
+				patchVal, patchPath, err := e.pathConstructor(pcIns, cc.Raw(), patch.Value.Raw(), patch.Path)
+				if nil != err {
+					log.L().Error("update entity", logf.Eid(e.id), logf.Error(err),
+						logf.Any("patches", feed.Patches), logf.Event(feed.Event))
+					// in.Patches 处理完毕，丢弃.
+					feed.Err = err
+					feed.Patches = []Patch{}
+					feed.State = e.Raw()
+					return feed
+				}
+				cc.Set(patchPath, tdtl.New(patchVal))
+			} else {
+				log.L().Error("replace entity error, patch value is null", logf.Eid(e.id), logf.Error(cc.Error()),
 					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
-				// in.Patches 处理完毕，丢弃.
-				feed.Err = err
-				feed.Patches = []Patch{}
-				feed.State = e.Raw()
-				return feed
 			}
-			cc.Set(patchPath, tdtl.New(patchVal))
 		default:
 			return &Feed{Err: xerrors.ErrPatchPathInvalid}
 		}
