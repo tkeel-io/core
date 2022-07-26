@@ -32,6 +32,7 @@ type NodeConf struct {
 type Node struct {
 	runtimes        map[string]*Runtime
 	queues          map[string]*xkafka.Pubsub
+	schemas         *SchemaStore
 	dispatch        dispatch.Dispatcher
 	resourceManager types.ResourceManager
 	revision        int64
@@ -50,6 +51,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 		resourceManager: resourceManager,
 		runtimes:        make(map[string]*Runtime),
 		queues:          make(map[string]*xkafka.Pubsub),
+		schemas:         NewSchemaStore(),
 	}
 }
 
@@ -198,13 +200,31 @@ func (n *Node) listMetadata() {
 			}
 		}
 	})
+
+	repo.RangeSchema(ctx, n.revision, func(schemas []*repository.Schema) {
+		// 所有node都需要存储 schema.
+		for _, sm := range schemas {
+			log.L().Debug("sync range Schema", logf.String("schemaID", sm.ID), logf.Any("schema", sm), logf.Owner(sm.Owner))
+			schemaID := sm.ID
+			n.schemas.Set(schemaID, sm)
+		}
+	})
+
 	log.L().Debug("runtime.Environment initialized", logf.Elapsedms(elapsedTime.ElapsedMilli()))
 }
 
 // watchResource watch resources.
 func (n *Node) watchMetadata() {
 	repo := n.resourceManager.Repo()
-	go repo.WatchExpression(context.Background(), n.revision,
+	go n.watchExpression(repo)
+
+	go n.watchSubscription(repo)
+
+	go n.watchSchema(repo)
+}
+
+func (n *Node) watchExpression(repo repository.IRepository) {
+	repo.WatchExpression(context.Background(), n.revision,
 		func(et dao.EnventType, expr repository.Expression) {
 			switch et {
 			case dao.DELETE:
@@ -241,8 +261,10 @@ func (n *Node) watchMetadata() {
 				log.L().Error("watch metadata changed, invalid event type")
 			}
 		})
+}
 
-	go repo.WatchSubscription(context.Background(), n.revision,
+func (n *Node) watchSubscription(repo repository.IRepository) {
+	repo.WatchSubscription(context.Background(), n.revision,
 		func(et dao.EnventType, sub *repository.Subscription) {
 			switch et {
 			case dao.DELETE:
@@ -267,6 +289,24 @@ func (n *Node) watchMetadata() {
 					}
 					runtime.entitySubscriptions[entityID][sub.ID] = sub
 				}
+			default:
+				log.L().Error("watch metadata changed, invalid event type")
+			}
+		})
+}
+
+func (n *Node) watchSchema(repo repository.IRepository) {
+	repo.WatchSchema(context.Background(), n.revision,
+		func(et dao.EnventType, sm repository.Schema) {
+			switch et {
+			case dao.DELETE:
+				log.L().Debug("sync DELETE Schema", logf.String("schemaID", sm.ID), logf.Owner(sm.Owner))
+				schemaID := sm.ID
+				n.schemas.Del(schemaID)
+			case dao.PUT:
+				log.L().Debug("sync PUT Schema", logf.String("schemaID", sm.ID), logf.Any("schema", sm), logf.Owner(sm.Owner))
+				schemaID := sm.ID
+				n.schemas.Set(schemaID, &sm)
 			default:
 				log.L().Error("watch metadata changed, invalid event type")
 			}

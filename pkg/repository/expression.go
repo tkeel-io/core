@@ -109,30 +109,30 @@ func (e *Expression) Prefix() string {
 	return ListExpressionPrefix(e.Owner, e.EntityID)
 }
 
-func (r *repo) PutExpression(ctx context.Context, expr Expression) error {
-	err := r.dao.PutResource(ctx, &expr)
+func (r *repo) PutExpression(ctx context.Context, expr *Expression) error {
+	err := r.dao.PutResource(ctx, expr)
 	return errors.Wrap(err, "put expression repository")
 }
 
-func (r *repo) GetExpression(ctx context.Context, expr Expression) (Expression, error) {
-	_, err := r.dao.GetResource(ctx, &expr)
+func (r *repo) GetExpression(ctx context.Context, expr *Expression) (*Expression, error) {
+	_, err := r.dao.GetResource(ctx, expr)
 	return expr, errors.Wrap(err, "get expression repository")
 }
 
-func (r *repo) DelExpression(ctx context.Context, expr Expression) error {
-	err := r.dao.DelResource(ctx, &expr)
+func (r *repo) DelExpression(ctx context.Context, expr *Expression) error {
+	err := r.dao.DelResource(ctx, expr)
 	return errors.Wrap(err, "del expression repository")
 }
 
-func (r *repo) DelExprByEnity(ctx context.Context, expr Expression) error {
+func (r *repo) DelExprByEnity(ctx context.Context, expr *Expression) error {
 	// construct prefix key.
 	prefix := expr.Prefix()
 	err := r.dao.DelResources(ctx, prefix)
 	return errors.Wrap(err, "del expressions repository")
 }
 
-func (r *repo) HasExpression(ctx context.Context, expr Expression) (bool, error) {
-	has, err := r.dao.HasResource(ctx, &expr)
+func (r *repo) HasExpression(ctx context.Context, expr *Expression) (bool, error) {
+	has, err := r.dao.HasResource(ctx, expr)
 	return has, errors.Wrap(err, "exists expression repository")
 }
 

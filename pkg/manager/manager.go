@@ -477,10 +477,10 @@ func checkExpression(expr *repository.Expression) error {
 }
 
 // implement apis for Expression.
-func (m *apiManager) AppendExpression(ctx context.Context, exprs []repository.Expression) error {
+func (m *apiManager) AppendExpression(ctx context.Context, exprs []*repository.Expression) error {
 	// validate expressions.
 	for index, expr := range exprs {
-		if err := checkExpression(&exprs[index]); nil != err {
+		if err := checkExpression(exprs[index]); nil != err {
 			log.L().Error("append expression, invalidate expression", logf.Path(expr.Path),
 				logf.Eid(expr.EntityID), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 			return errors.Wrap(err, "invalid expression")
@@ -491,7 +491,7 @@ func (m *apiManager) AppendExpression(ctx context.Context, exprs []repository.Ex
 }
 
 // implement apis for Expression.
-func (m *apiManager) appendExpression(ctx context.Context, exprs []repository.Expression) error {
+func (m *apiManager) appendExpression(ctx context.Context, exprs []*repository.Expression) error {
 	// validate expressions.
 	for _, expr := range exprs {
 		if err := expression.Validate(expr); nil != err {
@@ -515,7 +515,7 @@ func (m *apiManager) appendExpression(ctx context.Context, exprs []repository.Ex
 	return nil
 }
 
-func (m *apiManager) RemoveExpression(ctx context.Context, exprs []repository.Expression) error {
+func (m *apiManager) RemoveExpression(ctx context.Context, exprs []*repository.Expression) error {
 	// delete expressions.
 	for index := range exprs {
 		log.L().Debug("remove expression",
@@ -532,7 +532,7 @@ func (m *apiManager) RemoveExpression(ctx context.Context, exprs []repository.Ex
 	return nil
 }
 
-func (m *apiManager) GetExpression(ctx context.Context, expr repository.Expression) (*repository.Expression, error) {
+func (m *apiManager) GetExpression(ctx context.Context, expr *repository.Expression) (*repository.Expression, error) {
 	// get expression.
 	expr, err := m.entityRepo.GetExpression(ctx, expr)
 	if nil != err {
@@ -540,7 +540,7 @@ func (m *apiManager) GetExpression(ctx context.Context, expr repository.Expressi
 			logf.Eid(expr.EntityID), logf.Owner(expr.Owner), logf.Expr(expr.Expression))
 		return nil, errors.Wrap(err, "get expression")
 	}
-	return &expr, nil
+	return expr, nil
 }
 
 func (m *apiManager) ListExpression(ctx context.Context, en *Base) ([]*repository.Expression, error) {
@@ -577,11 +577,11 @@ func (m *apiManager) GetSubscription(ctx context.Context, subscription *reposito
 
 //////////////
 
-func convExprs(mp mapper.Mapper) []repository.Expression {
+func convExprs(mp mapper.Mapper) []*repository.Expression {
 	segs := strings.SplitN(mp.TQL, "select", 2)
 	arr := strings.Split(segs[1], ",")
 
-	exprs := []repository.Expression{}
+	exprs := []*repository.Expression{}
 	for index := range arr {
 		segs = strings.Split(arr[index], " as ")
 
@@ -591,7 +591,7 @@ func convExprs(mp mapper.Mapper) []repository.Expression {
 		}
 
 		exprs = append(exprs,
-			*repository.NewExpression(
+			repository.NewExpression(
 				mp.Owner, mp.EntityID, mp.Name, path, segs[0], mp.Description))
 	}
 	return exprs

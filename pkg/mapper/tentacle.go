@@ -72,7 +72,10 @@ func (t *tentacle) Mapper() IMapper {
 func (t *tentacle) Copy() Tentacler {
 	items := make([]WatchKey, len(t.items))
 	for index, item := range t.items {
-		items[index] = item
+		items[index] = WatchKey{
+			item.EntityID,
+			item.PropertyKey,
+		}
 	}
 
 	ten := &tentacle{

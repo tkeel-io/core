@@ -73,23 +73,23 @@ func (s *Schema) Decode(key, bytes []byte) error {
 	return errors.Wrap(err, "decode Schema")
 }
 
-func (r *repo) PutSchema(ctx context.Context, expr Schema) error {
-	err := r.dao.PutResource(ctx, &expr)
+func (r *repo) PutSchema(ctx context.Context, expr *Schema) error {
+	err := r.dao.PutResource(ctx, expr)
 	return errors.Wrap(err, "put expression repository")
 }
 
-func (r *repo) GetSchema(ctx context.Context, expr Schema) (Schema, error) {
-	_, err := r.dao.GetResource(ctx, &expr)
+func (r *repo) GetSchema(ctx context.Context, expr *Schema) (*Schema, error) {
+	_, err := r.dao.GetResource(ctx, expr)
 	return expr, errors.Wrap(err, "get expression repository")
 }
 
-func (r *repo) DelSchema(ctx context.Context, expr Schema) error {
-	err := r.dao.DelResource(ctx, &expr)
+func (r *repo) DelSchema(ctx context.Context, expr *Schema) error {
+	err := r.dao.DelResource(ctx, expr)
 	return errors.Wrap(err, "del expression repository")
 }
 
-func (r *repo) HasSchema(ctx context.Context, expr Schema) (bool, error) {
-	has, err := r.dao.HasResource(ctx, &expr)
+func (r *repo) HasSchema(ctx context.Context, expr *Schema) (bool, error) {
+	has, err := r.dao.HasResource(ctx, expr)
 	return has, errors.Wrap(err, "exists expression repository")
 }
 

@@ -13,7 +13,7 @@ type IExpression interface {
 	Sources() map[string][]string
 }
 
-func Validate(expr repository.Expression) error {
+func Validate(expr *repository.Expression) error {
 	// check path.
 
 	// check expression.

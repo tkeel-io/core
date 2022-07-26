@@ -29,9 +29,9 @@ func (s *EntityService) AppendExpression(ctx context.Context, req *pb.AppendExpr
 		logf.Eid(req.EntityId), logf.Value(req.Expressions))
 
 	// append expressions.
-	expressions := make([]repository.Expression, len(req.Expressions.Expressions))
+	expressions := make([]*repository.Expression, len(req.Expressions.Expressions))
 	for index, expr := range req.Expressions.Expressions {
-		expressions[index] = *repository.NewExpression(
+		expressions[index] = repository.NewExpression(
 			req.Owner, req.EntityId, expr.Name,
 			propKey(expr.Path), expr.Expression, expr.Description)
 	}
@@ -68,10 +68,10 @@ func (s *EntityService) RemoveExpression(ctx context.Context, req *pb.RemoveExpr
 		paths = strings.Split(pathText, ",")
 	}
 
-	exprs := []repository.Expression{}
+	exprs := []*repository.Expression{}
 	for index := range paths {
 		exprs = append(exprs,
-			repository.Expression{
+			&repository.Expression{
 				Path:     propKey(paths[index]),
 				Owner:    en.Owner,
 				EntityID: en.ID,
@@ -105,7 +105,7 @@ func (s *EntityService) GetExpression(ctx context.Context, in *pb.GetExpressionR
 
 	var expr *repository.Expression
 	if expr, err = s.apiManager.GetExpression(ctx,
-		repository.Expression{
+		&repository.Expression{
 			Path:     propKey(in.Path),
 			Owner:    en.Owner,
 			EntityID: en.ID,
