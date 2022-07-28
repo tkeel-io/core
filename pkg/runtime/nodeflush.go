@@ -18,20 +18,19 @@ package runtime
 
 import (
 	"context"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/tkeel-io/collectjs"
-	"github.com/tkeel-io/tdtl"
-
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/metrics"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
+	"strconv"
+	"strings"
+	"time"
+	"unsafe"
 )
 
 func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
@@ -63,7 +62,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
 	}
-
+	log.L().Debug(string(globalData), logf.String("make search data", ""))
 	// 2.2 flush search model data.
 	// TODO.
 
@@ -212,11 +211,15 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	}
 
 	globalData := collectjs.ByteNew([]byte(`{}`))
-	globalData.Set(FieldID, en.Get(FieldID).Raw())
-	globalData.Set(FieldType, en.Get(FieldType).Raw())
-	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
-	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
-	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+	keywords := collectjs.ByteNew([]byte(`{}`))
+	fields := []string{FieldID, FieldType, FieldOwner, FieldSource, FieldTemplate}
+	for _, field := range fields {
+		val := en.Get(field).Raw()
+		globalData.Set(field, val)
+		if len(val) > 0 {
+			keywords.Set(field, val)
+		}
+	}
 
 	/*
 		byt, err := json.Marshal(string(en.Raw()))
@@ -228,8 +231,21 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	for _, path := range searchBasicPath {
 		item := en.GetProp(path)
 		if item.Type() != tdtl.Null {
-			globalData.Set(path, item.Raw())
+			val := item.Raw()
+			globalData.Set(path, val)
+			if len(val) > 0 {
+				keywords.Set(path, val)
+			}
 		}
+	}
+
+	keyWordsVal := keywords.GetRaw()
+	keyWordsValByte := *(*string)(unsafe.Pointer(&keyWordsVal))
+
+	if v, err := json.Marshal(keyWordsValByte); err != nil {
+		log.L().Error(err.Error())
+	} else {
+		globalData.Set(FieldKeyWords, v)
 	}
 	return globalData.GetRaw(), nil
 }
