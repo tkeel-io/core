@@ -154,36 +154,36 @@ func TestESClient_Search2(t *testing.T) {
 	// http://user1:secret1@localhost:9200
 	client, err := elastic.NewClient(elastic.SetURL("http://10.10.98.254:9200"))
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	boolQuery := elastic.NewBoolQuery()
-
-	searchQuery := client.Search().Index(EntityIndex)
-
-	if req.Condition != nil {
-		condition2boolQuery(req.Condition, boolQuery)
-	}
-	if req.Query != "" {
-		queryKeyWords := strings.Split(req.Query, " ")
-		for _, val := range queryKeyWords {
-			boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
-			//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
-		}
-	}
-	if _, err = printQuery(boolQuery); err != nil {
-		t.Fatal(err)
+		t.Log(err)
 	} else {
-		req.Page = defaultPage(req.Page)
-		searchQuery = searchQuery.Sort(req.Page.Sort, !req.Page.Reverse)
-		searchQuery = searchQuery.Query(boolQuery).From(int(req.Page.Offset)).Size(int(req.Page.Limit)).Profile(true)
+		boolQuery := elastic.NewBoolQuery()
 
-		searchResult, err := searchQuery.Pretty(true).Do(context.Background())
-		if err != nil {
+		searchQuery := client.Search().Index(EntityIndex)
+
+		if req.Condition != nil {
+			condition2boolQuery(req.Condition, boolQuery)
+		}
+		if req.Query != "" {
+			queryKeyWords := strings.Split(req.Query, " ")
+			for _, val := range queryKeyWords {
+				boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
+				//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
+			}
+		}
+		if _, err = printQuery(boolQuery); err != nil {
 			t.Error(err)
 		} else {
-			printHits(searchResult)
-			printProfile(searchResult)
+			req.Page = defaultPage(req.Page)
+			searchQuery = searchQuery.Sort(req.Page.Sort, !req.Page.Reverse)
+			searchQuery = searchQuery.Query(boolQuery).From(int(req.Page.Offset)).Size(int(req.Page.Limit)).Profile(true)
+
+			searchResult, err := searchQuery.Pretty(true).Do(context.Background())
+			if err != nil {
+				t.Error(err)
+			} else {
+				printHits(searchResult)
+				printProfile(searchResult)
+			}
 		}
 	}
 }
