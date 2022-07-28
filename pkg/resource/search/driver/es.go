@@ -45,7 +45,7 @@ const (
 	EntityIndex                = "entity"
 	DefaultLimit         int32 = 20
 	MaxLimit             int32 = 200
-	EntityDefaultMapping       = `{"properties":{"basicInfo":{"properties":{"name":{"type":"text","fields":{"keyword":{"type":"keyword"}}}}},"sysField":{"properties":{"_subscribeAddr":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}}}}`
+	EntityDefaultMapping       = `{"properties":{"basicInfo":{"properties":{"name":{"type":"text","fields":{"keyword":{"type":"keyword"}}}}},"sysField":{"properties":{"_subscribeAddr":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}},"search_model":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}}`
 )
 
 type ESConfig struct {
@@ -134,18 +134,9 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 	}
 	if req.Query != "" {
 		queryKeyWords := strings.Split(req.Query, " ")
-
-		if len(queryKeyWords) == 1 {
-			boolQuery.Should(elastic.NewMultiMatchQuery(req.Query).Boost(1000))
-			boolQuery.Should(elastic.NewWildcardQuery("keywords", fmt.Sprintf("*%s*",
-				queryKeyWords[0])).
-				Boost(10))
-		} else {
-			for _, val := range queryKeyWords {
-				boolQuery.Must(elastic.NewWildcardQuery("keywords", fmt.Sprintf("*%s*", val)).
-					Boost(10))
-				//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
-			}
+		for _, val := range queryKeyWords {
+			boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
+			//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
 		}
 	}
 

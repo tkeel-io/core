@@ -131,7 +131,7 @@ func TestESClient_Search2(t *testing.T) {
 	req := SearchRequest{
 		Source: "device",
 		Owner:  "usr-9dd24b66b6ff21ce9114ea0afbca",
-		Query:  "青云",
+		Query:  "北京 杭州 武汉",
 		Page: &pb.Pager{
 			Limit:   20,
 			Offset:  0,
@@ -161,17 +161,9 @@ func TestESClient_Search2(t *testing.T) {
 	}
 	if req.Query != "" {
 		queryKeyWords := strings.Split(req.Query, " ")
-
-		if len(queryKeyWords) == 1 {
-			boolQuery.Should(elastic.NewMultiMatchQuery(req.Query).Boost(1000))
-			boolQuery.Should(elastic.NewWildcardQuery("keywords", fmt.Sprintf("*%s*",
-				queryKeyWords[0])).
-				Boost(10))
-		} else {
-			for _, val := range queryKeyWords {
-				boolQuery.Must(elastic.NewWildcardQuery("keywords", fmt.Sprintf("*%s*", val)))
-				//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
-			}
+		for _, val := range queryKeyWords {
+			boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
+			//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
 		}
 	}
 	if _, err = printQuery(boolQuery); err != nil {
