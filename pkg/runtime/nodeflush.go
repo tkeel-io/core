@@ -18,6 +18,11 @@ package runtime
 
 import (
 	"context"
+	"strconv"
+	"strings"
+	"time"
+	"unsafe"
+
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -27,10 +32,6 @@ import (
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
-	"strconv"
-	"strings"
-	"time"
-	"unsafe"
 )
 
 func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
