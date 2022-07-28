@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"testing"
@@ -30,12 +31,7 @@ import (
 	pb "github.com/tkeel-io/core/api/core/v1"
 )
 
-type logFunc interface {
-	Logf(format string, args ...interface{})
-	Log(args ...interface{})
-}
-
-func printQuery(l logFunc, query elastic.Query) (string, error) {
+func printQuery(query elastic.Query) (string, error) {
 	src, err := query.Source()
 	if err != nil {
 		return "", err
@@ -45,26 +41,26 @@ func printQuery(l logFunc, query elastic.Query) (string, error) {
 		return "", err
 	}
 	got := string(data)
-	l.Logf("query: %s\n", got)
+	log.Printf("query: %s\n", got)
 	return got, nil
 }
 
-func printHits(l logFunc, result *elastic.SearchResult) []interface{} {
+func printHits(result *elastic.SearchResult) ([]interface{}, int64) {
 	total := result.Hits.TotalHits.Value
 	num := len(result.Hits.Hits)
 	val := make([]interface{}, num)
-	l.Logf("total: %d\n", total)
+	log.Printf("total: %d\n", total)
 	for i, hit := range result.Hits.Hits {
 		s := hit.Source
-		l.Logf("result: %d %s\n", i, s)
+		log.Printf("result: %d %s\n", i, s)
 		val[i] = string(s)
 	}
-	return val
+	return val, total
 }
 
-func printProfile(l logFunc, result *elastic.SearchResult) {
+func printProfile(result *elastic.SearchResult) {
 	printProfileRet := func(r *elastic.ProfileResult) {
-		l.Logf("--Description: %s \n--Type: %s \n--NodeTime: %s \n--NodeTimeNanos: %d\n",
+		log.Printf("--Description: %s \n--Type: %s \n--NodeTime: %s \n--NodeTimeNanos: %d\n",
 			r.Description,
 			r.Type,
 			r.NodeTime,
@@ -72,18 +68,18 @@ func printProfile(l logFunc, result *elastic.SearchResult) {
 	}
 
 	for _, val := range result.Profile.Shards {
-		l.Logf("-->profile: ID: %s\n", val.ID)
+		log.Printf("-->profile: ID: %s\n", val.ID)
 		for _, search := range val.Searches {
-			l.Log("-Searches: ")
+			log.Println("-Searches: ")
 			for _, q := range search.Query {
 				printProfileRet(&q)
 			}
-			l.Logf("--Collector: %s \n--RewriteTime: %d\n",
+			log.Printf("--Collector: %s \n--RewriteTime: %d\n",
 				search.Collector,
 				search.RewriteTime)
 		}
 		for _, agg := range val.Aggregations {
-			l.Log("-Aggregations: ")
+			log.Println("-Aggregations: ")
 			printProfileRet(&agg)
 		}
 	}
@@ -175,7 +171,7 @@ func TestESClient_Search2(t *testing.T) {
 			//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
 		}
 	}
-	if _, err = printQuery(t, boolQuery); err != nil {
+	if _, err = printQuery(boolQuery); err != nil {
 		t.Fatal(err)
 	} else {
 		req.Page = defaultPage(req.Page)
@@ -186,8 +182,8 @@ func TestESClient_Search2(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		} else {
-			printHits(t, searchResult)
-			printProfile(t, searchResult)
+			printHits(searchResult)
+			printProfile(searchResult)
 		}
 	}
 }
