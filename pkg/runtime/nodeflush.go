@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/pkg/errors"
 	"github.com/tkeel-io/collectjs"
@@ -199,7 +198,6 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 
 func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	searchBasicPath := []string{"sysField", "basicInfo", "connectInfo", "group"}
-	searchBasicMap := map[string][]byte{"sysField": {}, "basicInfo": {}, "connectInfo": {}, "group": {}}
 	writeFlag := false
 	for _, patch := range feed.Changes {
 		for _, searchPath := range searchBasicPath {
@@ -213,7 +211,6 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	}
 
 	globalData := collectjs.ByteNew([]byte(`{}`))
-	keywords := collectjs.ByteNew([]byte(`{}`))
 	fields := []string{FieldID, FieldType, FieldOwner, FieldSource, FieldTemplate}
 	for _, field := range fields {
 		globalData.Set(field, en.Get(field).Raw())
@@ -231,27 +228,22 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 		if item.Type() != tdtl.Null {
 			val := item.Raw()
 			globalData.Set(path, val)
-			searchBasicMap[path] = val
 		}
 	}
 
+	//log.L().Info("searchModel", logf.Value(n.searchModel))
+	keywords := make([]string, 0, 4)
 	if n.searchModel != nil && len(n.searchModel) > 0 {
 		for _, field := range n.searchModel {
-			if val, ok := searchBasicMap[field]; ok {
-				keywords.Set(field, val)
-			} else {
-				keywords.Set(field, en.Get(field).Raw())
+			val := strings.Trim(string(en.Get(field).Raw()), "\"")
+			//log.L().Info("searchModel:field", logf.Value(val))
+			if val != "" {
+				keywords = append(keywords, val)
 			}
 		}
-	}
-
-	keyWordsVal := keywords.GetRaw()
-	keyWordsValByte := *(*string)(unsafe.Pointer(&keyWordsVal))
-
-	if v, err := json.Marshal(keyWordsValByte); err != nil {
-		log.L().Error(err.Error())
-	} else {
-		globalData.Set(FieldKeyWords, v)
+		if len(keywords) > 0 {
+			globalData.Set(FieldKeyWords, tdtl.NewString(strings.Join(keywords, " ")).Raw())
+		}
 	}
 	return globalData.GetRaw(), nil
 }

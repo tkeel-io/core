@@ -132,13 +132,14 @@ func Init(cfgFile string) {
 
 	onConfigChanged(fsnotify.Event{Name: "init", Op: fsnotify.Chmod})
 	// set command line configuration.
-	_cmdViper.Unmarshal(&_config)
+	viper.Unmarshal(&_config)
 
 	viper.WatchConfig()
 }
 
 func onConfigChanged(_ fsnotify.Event) {
 	_ = viper.Unmarshal(&_config)
+	_config.Components.SearchModel = strings.Split(viper.GetString("SEARCH_MODEL"), ",")
 }
 
 func writeDefault(cfgFile string) {
@@ -174,5 +175,5 @@ func init() {
 	viper.AutomaticEnv()
 
 	// initialize command  viper.
-	_cmdViper = viper.New()
+	_cmdViper = viper.GetViper()
 }
