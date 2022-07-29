@@ -28,6 +28,9 @@ components:
   time_series:
     name: noop
   search_engine: noop://admin:admin@127.0.0.1:9200"
+  search_model:
+    - basicInfo
+    - connectInfo
   rawdata:
     name: noop
 dispatcher:

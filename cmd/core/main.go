@@ -224,7 +224,7 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	coreRepo := repository.New(coreDao)
-	nodeInstance := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
+	nodeInstance := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher, config.Get().Components.SearchModel)
 	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
 		log.Fatal(err)
 	}

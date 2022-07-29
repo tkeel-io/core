@@ -62,6 +62,7 @@ type Proxy struct {
 }
 
 type Components struct {
+	SearchModel  []string   `yaml:"search_model" mapstructure:"search_model"`
 	SearchEngine string     `yaml:"search_engine" mapstructure:"search_engine"`
 	Etcd         EtcdConfig `yaml:"etcd" mapstructure:"etcd"`
 	Store        Metadata   `yaml:"store" mapstructure:"store"`
