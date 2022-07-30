@@ -226,8 +226,7 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	for _, path := range searchBasicPath {
 		item := en.GetProp(path)
 		if item.Type() != tdtl.Null {
-			val := item.Raw()
-			globalData.Set(path, val)
+			globalData.Set(path, item.Raw())
 		}
 	}
 
