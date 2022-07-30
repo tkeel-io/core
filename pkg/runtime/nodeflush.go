@@ -22,16 +22,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tkeel-io/collectjs"
-	"github.com/tkeel-io/tdtl"
-
 	"github.com/pkg/errors"
+	"github.com/tkeel-io/collectjs"
 	v1 "github.com/tkeel-io/core/api/core/v1"
 	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/metrics"
 	"github.com/tkeel-io/core/pkg/resource/rawdata"
 	"github.com/tkeel-io/core/pkg/resource/tseries"
 	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 )
 
 func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
@@ -63,7 +62,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
 	}
-
+	log.L().Debug(string(globalData), logf.String("make search data", ""))
 	// 2.2 flush search model data.
 	// TODO.
 
@@ -212,11 +211,10 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 	}
 
 	globalData := collectjs.ByteNew([]byte(`{}`))
-	globalData.Set(FieldID, en.Get(FieldID).Raw())
-	globalData.Set(FieldType, en.Get(FieldType).Raw())
-	globalData.Set(FieldOwner, en.Get(FieldOwner).Raw())
-	globalData.Set(FieldSource, en.Get(FieldSource).Raw())
-	globalData.Set(FieldTemplate, en.Get(FieldTemplate).Raw())
+	fields := []string{FieldID, FieldType, FieldOwner, FieldSource, FieldTemplate}
+	for _, field := range fields {
+		globalData.Set(field, en.Get(field).Raw())
+	}
 
 	/*
 		byt, err := json.Marshal(string(en.Raw()))
@@ -229,6 +227,21 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 		item := en.GetProp(path)
 		if item.Type() != tdtl.Null {
 			globalData.Set(path, item.Raw())
+		}
+	}
+
+	//log.L().Info("searchModel", logf.Value(n.searchModel))
+	keywords := make([]string, 0, 4)
+	if n.searchModel != nil && len(n.searchModel) > 0 {
+		for _, field := range n.searchModel {
+			val := strings.Trim(string(en.Get(field).Raw()), "\"")
+			//log.L().Info("searchModel:field", logf.Value(val))
+			if val != "" {
+				keywords = append(keywords, val)
+			}
+		}
+		if len(keywords) > 0 {
+			globalData.Set(FieldKeyWords, tdtl.NewString(strings.Join(keywords, " ")).Raw())
 		}
 	}
 	return globalData.GetRaw(), nil

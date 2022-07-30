@@ -35,7 +35,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestNode_getGlobalData(t *testing.T) {
-	node := NewNode(context.Background(), nil, nil)
+	node := NewNode(context.Background(), nil, nil, nil)
 
 	entityBytes := `{
         "id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",
@@ -121,7 +121,7 @@ func TestNode_getGlobalData(t *testing.T) {
 }
 
 func TestNode_makeRawData(t *testing.T) {
-	node := NewNode(context.Background(), nil, nil)
+	node := NewNode(context.Background(), nil, nil, nil)
 
 	entityBytes := `{
         "id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",
@@ -155,7 +155,7 @@ func TestNode_makeRawData(t *testing.T) {
 }
 
 func TestNode_makeSeriesData(t *testing.T) {
-	node := NewNode(context.Background(), nil, nil)
+	node := NewNode(context.Background(), nil, nil, nil)
 	t.Log(strings.HasPrefix("a.b.c", "a.b"))
 	entityBytes := `{
         "id": "iotd-a4375b93-a9fd-417c-b6a4-5ec8ecb87f41",

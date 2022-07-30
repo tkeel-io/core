@@ -30,7 +30,9 @@ const (
 	FieldDescription string = "description"
 	FieldProperties  string = "properties"
 	FieldRawData     string = "properties.rawData"
+	FieldKeyWords    string = "search_model"
 	// FieldEntitySource string = "entity_source".
+
 )
 
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
