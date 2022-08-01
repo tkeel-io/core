@@ -109,7 +109,7 @@ func main() {
 	cmd.Flags().Int("proxy_grpc_port", 20001, "core proxy http listen address port.")
 	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, example: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
 	cmd.Flags().String("search_engine", "", "your search engine SDN.")
-	cmd.Flags().StringSlice("search_model", []string{"properties.basicInfo.name", "properties.basicInfo.description", "properties.basicInfo.templateName", "properties.connectInfo._online"}, "your search engine model.")
+	cmd.Flags().StringSlice("search_model", []string{"properties.basicInfo.name", "properties.basicInfo.description", "properties.basicInfo.templateName", "properties.connectInfo._online", "id", "template_id"}, "your search engine model.")
 
 	// bind commandline arguments.
 	cmdViper := config.GetCmdV()
