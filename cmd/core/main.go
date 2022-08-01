@@ -109,11 +109,13 @@ func main() {
 	cmd.Flags().Int("proxy_grpc_port", 20001, "core proxy http listen address port.")
 	cmd.Flags().StringSlice("etcd", nil, "etcd brokers address, example: --etcd=\"http://localhost:2379,http://192.168.12.90:2379\"")
 	cmd.Flags().String("search_engine", "", "your search engine SDN.")
+	cmd.Flags().StringSlice("search_model", []string{"properties.basicInfo.name", "properties.basicInfo.description", "properties.basicInfo.templateName", "properties.connectInfo._online", "id", "template_id"}, "your search engine model.")
 
 	// bind commandline arguments.
 	cmdViper := config.GetCmdV()
 	cmdViper.BindPFlag("components.etcd.endpoints", cmd.Flags().Lookup("etcd"))
 	cmdViper.BindPFlag("components.search_engine", cmd.Flags().Lookup("search_engine"))
+	cmdViper.BindPFlag("components.search_model", cmd.Flags().Lookup("search_model"))
 	cmdViper.BindPFlag("server.http_addr", cmd.Flags().Lookup("http_addr"))
 	cmdViper.BindPFlag("server.grpc_addr", cmd.Flags().Lookup("grpc_addr"))
 	cmdViper.BindPFlag("proxy.http_port", cmd.Flags().Lookup("proxy_http_port"))
@@ -224,7 +226,7 @@ func core(cmd *cobra.Command, args []string) {
 	}
 
 	coreRepo := repository.New(coreDao)
-	nodeInstance := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher)
+	nodeInstance := runtime.NewNode(context.Background(), newResourceManager(coreRepo), _dispatcher, config.Get().Components.SearchModel)
 	if _apiManager, err = apim.New(context.Background(), coreRepo, _dispatcher); nil != err {
 		log.Fatal(err)
 	}

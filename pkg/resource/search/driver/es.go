@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/goinggo/mapstructure"
 	pb "github.com/tkeel-io/core/api/core/v1"
@@ -43,7 +45,7 @@ const (
 	EntityIndex                = "entity"
 	DefaultLimit         int32 = 20
 	MaxLimit             int32 = 200
-	EntityDefaultMapping       = `{"properties":{"basicInfo":{"properties":{"name":{"type":"text","fields":{"keyword":{"type":"keyword"}}}}},"sysField":{"properties":{"_subscribeAddr":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}}}}`
+	EntityDefaultMapping       = `{"properties":{"basicInfo":{"properties":{"name":{"type":"text","fields":{"keyword":{"type":"keyword"}}}}},"sysField":{"properties":{"_subscribeAddr":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}},"search_model":{"type":"text","fields":{"keyword":{"type":"keyword","ignore_above":4096}}}}}`
 )
 
 type ESConfig struct {
@@ -131,7 +133,11 @@ func (es *ESClient) Search(ctx context.Context, req SearchRequest) (SearchRespon
 		condition2boolQuery(req.Condition, boolQuery)
 	}
 	if req.Query != "" {
-		boolQuery = boolQuery.Must(elastic.NewMultiMatchQuery(req.Query))
+		queryKeyWords := strings.Split(req.Query, " ")
+		for _, val := range queryKeyWords {
+			boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
+			//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
+		}
 	}
 
 	req.Page = defaultPage(req.Page)
@@ -167,21 +173,21 @@ func condition2boolQuery(conditions []*pb.SearchCondition, boolQuery *elastic.Bo
 	for _, condition := range conditions {
 		switch condition.Operator {
 		case "$lt":
-			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))
+			boolQuery = boolQuery.Filter(elastic.NewRangeQuery(condition.Field).Lt(condition.Value.AsInterface()))
 		case "$lte":
-			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Lte(condition.Value.AsInterface()))
+			boolQuery = boolQuery.Filter(elastic.NewRangeQuery(condition.Field).Lte(condition.Value.AsInterface()))
 		case "$gt":
-			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gt(condition.Value.AsInterface()))
+			boolQuery = boolQuery.Filter(elastic.NewRangeQuery(condition.Field).Gt(condition.Value.AsInterface()))
 		case "$gte":
-			boolQuery = boolQuery.Must(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
+			boolQuery = boolQuery.Filter(elastic.NewRangeQuery(condition.Field).Gte(condition.Value.AsInterface()))
 		case "$neq":
-			boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
+			boolQuery = boolQuery.Filter(elastic.NewTermQuery(condition.Field+".keyword", condition.Value.AsInterface()))
 		case "$eq":
 			switch valueItem := condition.Value.AsInterface().(type) {
 			case bool:
-				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field, valueItem))
+				boolQuery = boolQuery.Filter(elastic.NewTermQuery(condition.Field, valueItem))
 			default:
-				boolQuery = boolQuery.Must(elastic.NewTermQuery(condition.Field+".keyword", valueItem))
+				boolQuery = boolQuery.Filter(elastic.NewTermQuery(condition.Field+".keyword", valueItem))
 			}
 		case "$prefix":
 			boolQuery = boolQuery.Must(elastic.NewPrefixQuery(condition.Field+".keyword", condition.Value.GetStringValue()))

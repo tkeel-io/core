@@ -18,13 +18,72 @@ package driver
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/olivere/elastic/v7"
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"github.com/stretchr/testify/assert"
 	pb "github.com/tkeel-io/core/api/core/v1"
 )
+
+func printQuery(query elastic.Query) (string, error) {
+	src, err := query.Source()
+	if err != nil {
+		return "", err
+	}
+	data, err := json.Marshal(src)
+	if err != nil {
+		return "", err
+	}
+	got := string(data)
+	log.Printf("query: %s\n", got)
+	return got, nil
+}
+
+func printHits(result *elastic.SearchResult) ([]interface{}, int64) {
+	total := result.Hits.TotalHits.Value
+	num := len(result.Hits.Hits)
+	val := make([]interface{}, num)
+	log.Printf("total: %d\n", total)
+	for i, hit := range result.Hits.Hits {
+		s := hit.Source
+		log.Printf("result: %d %s\n", i, s)
+		val[i] = string(s)
+	}
+	return val, total
+}
+
+func printProfile(result *elastic.SearchResult) {
+	printProfileRet := func(r *elastic.ProfileResult) {
+		log.Printf("--Description: %s \n--Type: %s \n--NodeTime: %s \n--NodeTimeNanos: %d\n",
+			r.Description,
+			r.Type,
+			r.NodeTime,
+			r.NodeTimeNanos)
+	}
+
+	for _, val := range result.Profile.Shards {
+		log.Printf("-->profile: ID: %s\n", val.ID)
+		for _, search := range val.Searches {
+			log.Println("-Searches: ")
+			for _, q := range search.Query {
+				printProfileRet(&q)
+			}
+			log.Printf("--Collector: %s \n--RewriteTime: %d\n",
+				search.Collector,
+				search.RewriteTime)
+		}
+		for _, agg := range val.Aggregations {
+			log.Println("-Aggregations: ")
+			printProfileRet(&agg)
+		}
+	}
+}
 
 func Test_condition2boolQuery(t *testing.T) {
 }
@@ -67,4 +126,64 @@ func TestESClient_Search(t *testing.T) {
 	t.Log(resp.Total)
 	t.Log(len(resp.Data))
 	//	t.Log(resp.Data)
+}
+
+func TestESClient_Search2(t *testing.T) {
+	val, err := structpb.NewValue("template")
+	if err != nil {
+		t.Error(err)
+	}
+	req := SearchRequest{
+		Source: "device",
+		Owner:  "usr-9dd24b66b6ff21ce9114ea0afbca",
+		Query:  "北京 杭州 武汉",
+		Page: &pb.Pager{
+			Limit:   20,
+			Offset:  0,
+			Sort:    "",
+			Reverse: false,
+		},
+		Condition: []*pb.SearchCondition{
+			{
+				Field:    "type",
+				Operator: "$eq",
+				Value:    val,
+			},
+		},
+	}
+	// http://user1:secret1@localhost:9200
+	client, err := elastic.NewClient(elastic.SetURL("http://10.10.98.254:9200"))
+	if err != nil {
+		t.Log(err)
+	} else {
+		boolQuery := elastic.NewBoolQuery()
+
+		searchQuery := client.Search().Index(EntityIndex)
+
+		if req.Condition != nil {
+			condition2boolQuery(req.Condition, boolQuery)
+		}
+		if req.Query != "" {
+			queryKeyWords := strings.Split(req.Query, " ")
+			for _, val := range queryKeyWords {
+				boolQuery.Must(elastic.NewWildcardQuery("search_model.keyword", fmt.Sprintf("*%s*", val)))
+				//boolQuery.Should(elastic.NewRegexpQuery(name, fmt.Sprintf("*%s*", val)))
+			}
+		}
+		if _, err = printQuery(boolQuery); err != nil {
+			t.Error(err)
+		} else {
+			req.Page = defaultPage(req.Page)
+			searchQuery = searchQuery.Sort(req.Page.Sort, !req.Page.Reverse)
+			searchQuery = searchQuery.Query(boolQuery).From(int(req.Page.Offset)).Size(int(req.Page.Limit)).Profile(true)
+
+			searchResult, err := searchQuery.Pretty(true).Do(context.Background())
+			if err != nil {
+				t.Error(err)
+			} else {
+				printHits(searchResult)
+				printProfile(searchResult)
+			}
+		}
+	}
 }

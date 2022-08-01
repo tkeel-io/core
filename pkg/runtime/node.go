@@ -38,9 +38,10 @@ type Node struct {
 	lock            sync.RWMutex
 	ctx             context.Context
 	cancel          context.CancelFunc
+	searchModel     []string
 }
 
-func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher) *Node {
+func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatcher dispatch.Dispatcher, searchModel []string) *Node {
 	ctx, cacel := context.WithCancel(ctx)
 	return &Node{
 		ctx:             ctx,
@@ -50,6 +51,7 @@ func NewNode(ctx context.Context, resourceManager types.ResourceManager, dispatc
 		resourceManager: resourceManager,
 		runtimes:        make(map[string]*Runtime),
 		queues:          make(map[string]*xkafka.Pubsub),
+		searchModel:     searchModel,
 	}
 }
 
