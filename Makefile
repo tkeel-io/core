@@ -19,7 +19,7 @@ CLI_BINARY  = core
 ifdef REL_VERSION
 	CORE_VERSION := $(REL_VERSION)
 else
-	CORE_VERSION := edge
+	CORE_VERSION := 1.0.0
 endif
 
 ifdef API_VERSION
