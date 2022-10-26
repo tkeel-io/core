@@ -43,7 +43,7 @@ type entity struct {
 	pathConstructor PathConstructor
 }
 
-func DefaultEntity(id string) Entity {
+func DefaultEntity(id string) *entity {
 	return &entity{id: id, state: *tdtl.New([]byte(`{"properties":{}}`)), pathConstructor: pathConstructor}
 }
 
