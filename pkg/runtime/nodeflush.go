@@ -50,6 +50,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 		log.L().Error("flush entity state storage", logf.Error(err), logf.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into state storage")
 	}
+	log.L().Debug("flush state", logf.Any("Entity", en))
 
 	// 2. flush data.
 	// 2.1 flush search global data.
@@ -62,7 +63,8 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
 	}
-	log.L().Debug(string(globalData), logf.String("make search data", ""))
+	log.L().Debug("flush search global data done", logf.Any("globalData", globalData))
+
 	// 2.2 flush search model data.
 	// TODO.
 
