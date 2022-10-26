@@ -1,0 +1,58 @@
+name: Docker Image CI(PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - master
+      - main    
+    
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Get version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+    - name: Get Branch
+      id: git_branch
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/heads\//}
+
+    - name: Check Branch
+      run: echo "${{ steps.git_branch.outputs.VERSION }}"
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+      
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Set env
+      run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      
+    - name: Get Hash
+      id: git_sha
+      run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_OUTPUT 
+    
+    - name: Test Tag
+      run: echo tkeelio/tkeel-alarm:pr${{ github.event.pull_request.id }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
+      
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: tkeelio/tkeel-alarm:pr${{ github.event.pull_request.number }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
+        
+        
