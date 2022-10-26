@@ -744,47 +744,24 @@ type tsDevice struct {
 	Values map[string]interface{} `json:"values"`
 }
 
-func adjustTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
-	if ret := adjustDeviceTSData(bytes, feed); len(ret) > 0 {
+func adjustTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
+	if ret := adjustDeviceTSData(bytes, entity); len(ret) > 0 {
 		return ret
 	}
-	if ret := adjustGatewayTSData(bytes, feed); len(ret) > 0 {
+	if ret := adjustGatewayTSData(bytes, entity); len(ret) > 0 {
 		return ret
 	}
 	return []byte{}
 }
 
-func adjustGatewayTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
-	tsGatewayData := make(map[string]*tsDevice)
-	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
-	tsGatewayAdjustData := make(map[string]interface{})
-
-	err := json.Unmarshal(bytes, &tsGatewayData)
-	if err == nil {
-		for k, v := range tsGatewayData {
-			tsGatewayAdjustDataK := map[string]*tsData{}
-			for kk, vv := range v.Values {
-				tsGatewayAdjustDataK[kk] = &tsData{TS: v.TS, Value: vv}
-				//		tsGatewayAdjustData[strings.Join([]string{k, kk}, ".")] = &tsData{TS: v.TS, Value: vv}
-			}
-			tsGatewayAdjustData[k] = tsGatewayAdjustDataK
-		}
-		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
-		return
-	}
-	log.Error("ts data adjust error", logf.Error(err))
-	return dataAdjust
-}
-
-func adjustDeviceTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
-	entity, err := NewEntity(feed.EntityID, feed.State)
-	if err != nil {
-		log.Error("ts data adjust error", logf.Error(err))
-		entity = DefaultEntity(feed.EntityID)
+func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
+	if entity == nil {
+		log.Info("ts data adjust error")
+		entity = DefaultEntity("adjustDeviceTSData.EntityID")
 	}
 
 	tsDevice2 := tsDevice{}
-	err = json.Unmarshal(bytes, &tsDevice2)
+	err := json.Unmarshal(bytes, &tsDevice2)
 	var data = tdtl.New(bytes)
 	var deviceTime int64
 	var deviceData map[string]interface{}
@@ -806,19 +783,21 @@ func adjustDeviceTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
 
 	tsDeviceAdjustData := make(map[string]*tsData)
 	for k, _ := range deviceData {
-		typ := entity.Get(fmt.Sprintf("scheme.telemetry.define.field.%s", k)).String()
+		typ := entity.Get(fmt.Sprintf("scheme.telemetry.define.fields.%s.type", k)).String()
 		switch typ {
 		case "int":
 			dt := &tsData{TS: deviceTime}
-			val, err := strconv.ParseInt(data.Get(k).Node().To(tdtl.Int).String(), 10, 64)
-			if err != nil {
-				dt.Value = val
+			str := data.Get(k).To(tdtl.Number).String()
+			val, err := strconv.ParseFloat(str, 32)
+			if err == nil {
+				dt.Value = int64(val + 0.5)
 				tsDeviceAdjustData[k] = dt
 			}
 		case "float", "double":
 			dt := &tsData{TS: deviceTime}
-			val, err := strconv.ParseFloat(data.Get(k).Node().To(tdtl.Int).String(), 32)
-			if err != nil {
+			str := data.Get(k).To(tdtl.Number).String()
+			val, err := strconv.ParseFloat(str, 32)
+			if err == nil {
 				dt.Value = val
 				tsDeviceAdjustData[k] = dt
 			}
@@ -832,6 +811,28 @@ func adjustDeviceTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
 	dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
 	return dataAdjust
 
+}
+
+func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {
+	tsGatewayData := make(map[string]*tsDevice)
+	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
+	tsGatewayAdjustData := make(map[string]interface{})
+
+	err := json.Unmarshal(bytes, &tsGatewayData)
+	if err == nil {
+		for k, v := range tsGatewayData {
+			tsGatewayAdjustDataK := map[string]*tsData{}
+			for kk, vv := range v.Values {
+				tsGatewayAdjustDataK[kk] = &tsData{TS: v.TS, Value: vv}
+				//		tsGatewayAdjustData[strings.Join([]string{k, kk}, ".")] = &tsData{TS: v.TS, Value: vv}
+			}
+			tsGatewayAdjustData[k] = tsGatewayAdjustDataK
+		}
+		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
+		return
+	}
+	log.Error("ts data adjust error", logf.Error(err))
+	return dataAdjust
 }
 
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
@@ -865,7 +866,12 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			}
 
 			if prefix == rawDataTelemetryType {
-				bytes = adjustTSData(bytes, feed)
+				entity, err := NewEntity(feed.EntityID, feed.State)
+				if err != nil {
+					log.Warn("ts data adjust error", logf.Error(err))
+					entity = DefaultEntity(feed.EntityID)
+				}
+				bytes = adjustTSData(bytes, entity)
 			}
 
 			path := strings.Join([]string{FieldProperties, prefix}, ".")
