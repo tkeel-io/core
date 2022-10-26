@@ -86,6 +86,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			}
 		}
 	}
+	log.L().Debug("flush timeseries done.", logf.Any("flushData", flushData))
 
 	// 2.4 flush raw data.
 	rawData, err := n.makeRawData(ctx, en)
