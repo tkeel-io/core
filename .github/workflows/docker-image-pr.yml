@@ -46,13 +46,13 @@ jobs:
       run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_OUTPUT 
     
     - name: Test Tag
-      run: echo tkeelio/tkeel-alarm:pr${{ github.event.pull_request.id }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
+      run: echo tkeelio/core:pr${{ github.event.pull_request.id }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
       
     - name: Build and push
       uses: docker/build-push-action@v2
       with:
         context: .
         push: true
-        tags: tkeelio/tkeel-alarm:pr${{ github.event.pull_request.number }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
+        tags: tkeelio/core:pr${{ github.event.pull_request.number }}-${{ steps.git_sha.outputs.GITHUB_SHA_SHORT }}
         
         
