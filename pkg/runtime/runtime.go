@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -140,66 +141,11 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 
 	switch ev.Type() {
 	case v1.ETSystem:
-		execer, feed := r.prepareSystemEvent(ctx, ev)
-		execer.postFuncs = append(execer.postFuncs,
-			&handlerImpl{fn: r.handlePersistent},
-			&handlerImpl{fn: r.handleFlush})
-		return execer, feed
+		return r.handleSystemEvent(ctx, ev)
 	case v1.ETEntity:
-		e, _ := ev.(v1.PatchEvent)
-		state, err := r.LoadEntity(ev.Entity())
-		if nil != err {
-			log.L().Error("load entity", logf.Eid(ev.Entity()),
-				logf.Error(err), logf.ID(ev.ID()), logf.Header(ev.Attributes()))
-			state = DefaultEntity(ev.Entity())
-		}
-
-		execer := &Execer{
-			state: state,
-			preFuncs: []Handler{
-				&handlerImpl{fn: r.handleRawData},
-			}, // 新增了 Patches
-			execFunc: state,
-			postFuncs: []Handler{
-				&handlerImpl{fn: r.handleTentacle},   // 无变化
-				&handlerImpl{fn: r.handleComputed},   // 无变化
-				&handlerImpl{fn: r.handlePersistent}, // 无变化
-				&handlerImpl{fn: r.handleSubscribe},  //
-				&handlerImpl{fn: r.handleTemplate},
-			},
-		} //
-
-		return execer, &Feed{
-			Err:      err,
-			Event:    ev,
-			State:    state.Raw(),
-			EntityID: ev.Entity(),
-			Patches:  conv(e.Patches()),
-		}
+		return r.handleEntityEvent(ev)
 	case v1.ETCache:
-		sender := ev.Attr(v1.MetaSender)
-		// load cache.
-		state, err := r.enCache.Load(ctx, sender)
-		if nil != err {
-			log.L().Error("load cache entity", logf.Header(ev.Attributes()),
-				logf.Eid(ev.Entity()), logf.ID(ev.ID()), logf.Sender(sender))
-			state = DefaultEntity(sender)
-		}
-
-		e, _ := ev.(v1.PatchEvent)
-		execer := &Execer{
-			state:     state,
-			execFunc:  state,
-			preFuncs:  []Handler{},
-			postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}},
-		}
-		return execer, &Feed{
-			Err:      err,
-			Event:    ev,
-			State:    state.Raw(),
-			EntityID: sender,
-			Patches:  conv(e.Patches()),
-		}
+		return r.handleCacheEvent(ctx, ev)
 	default:
 		return &Execer{}, &Feed{
 			Event:    ev,
@@ -207,6 +153,73 @@ func (r *Runtime) PrepareEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed
 			Err:      fmt.Errorf(" unknown RuntimeEvent Type"),
 			EntityID: ev.Entity(),
 		}
+	}
+}
+
+func (r *Runtime) handleCacheEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
+	senderID := ev.Attr(v1.MetaSender)
+	// load cache.
+	entity, err := r.enCache.Load(ctx, senderID)
+	if nil != err {
+		log.L().Error("load cache entity", logf.Header(ev.Attributes()),
+			logf.Eid(ev.Entity()), logf.ID(ev.ID()), logf.Sender(senderID))
+		entity = DefaultEntity(senderID)
+	}
+
+	e, _ := ev.(v1.PatchEvent)
+	execer := &Execer{
+		state:     entity,
+		execFunc:  entity,
+		preFuncs:  []Handler{},
+		postFuncs: []Handler{&handlerImpl{fn: r.handleComputed}},
+	}
+	return execer, &Feed{
+		Err:      err,
+		Event:    ev,
+		State:    entity.Raw(),
+		EntityID: entity.ID(),
+		Patches:  conv(e.Patches()),
+	}
+}
+
+func (r *Runtime) handleSystemEvent(ctx context.Context, ev v1.Event) (*Execer, *Feed) {
+	execer, feed := r.prepareSystemEvent(ctx, ev)
+	execer.postFuncs = append(execer.postFuncs,
+		&handlerImpl{fn: r.handlePersistent},
+		&handlerImpl{fn: r.handleFlush})
+	return execer, feed
+}
+
+func (r *Runtime) handleEntityEvent(ev v1.Event) (*Execer, *Feed) {
+	e, _ := ev.(v1.PatchEvent)
+	entity, err := r.LoadEntity(ev.Entity())
+	if nil != err {
+		log.L().Error("load entity", logf.Eid(ev.Entity()),
+			logf.Error(err), logf.ID(ev.ID()), logf.Header(ev.Attributes()))
+		entity = DefaultEntity(ev.Entity())
+	}
+
+	execer := &Execer{
+		state: entity,
+		preFuncs: []Handler{
+			&handlerImpl{fn: r.handleRawData},
+		}, // 新增了 Patches
+		execFunc: entity,
+		postFuncs: []Handler{
+			&handlerImpl{fn: r.handleTentacle},   // 无变化
+			&handlerImpl{fn: r.handleComputed},   // 无变化
+			&handlerImpl{fn: r.handlePersistent}, // 无变化
+			&handlerImpl{fn: r.handleSubscribe},  //
+			&handlerImpl{fn: r.handleTemplate},
+		},
+	} //
+
+	return execer, &Feed{
+		Err:      err,
+		Event:    ev,
+		State:    entity.Raw(),
+		EntityID: entity.ID(),
+		Patches:  conv(e.Patches()),
 	}
 }
 
@@ -731,42 +744,22 @@ type tsDevice struct {
 	Values map[string]interface{} `json:"values"`
 }
 
-func adjustTSData(bytes []byte) (dataAdjust []byte) {
-	// tsDevice1 no ts
-	tsDevice1 := make(map[string]interface{})
-	err := json.Unmarshal(bytes, &tsDevice1)
-	if err == nil && len(tsDevice1) > 0 {
-		tsDeviceAdjustData := make(map[string]*tsData)
-		for k, v := range tsDevice1 {
-			switch v.(type) {
-			case map[string]interface{}:
-				goto dataType2
-			default:
-			}
-			tsDeviceAdjustData[k] = &tsData{TS: time.Now().UnixMilli(), Value: v}
-		}
-		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
-		return
+func adjustTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
+	if ret := adjustDeviceTSData(bytes, feed); len(ret) > 0 {
+		return ret
 	}
-
-	// tsDevice2 has ts
-dataType2:
-	tsDevice2 := tsDevice{}
-	err = json.Unmarshal(bytes, &tsDevice2)
-	if err == nil && tsDevice2.TS != 0 {
-		tsDeviceAdjustData := make(map[string]*tsData)
-		for k, v := range tsDevice2.Values {
-			tsDeviceAdjustData[k] = &tsData{TS: tsDevice2.TS, Value: v}
-		}
-		dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
-		return
+	if ret := adjustGatewayTSData(bytes, feed); len(ret) > 0 {
+		return ret
 	}
+	return []byte{}
+}
 
+func adjustGatewayTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
 	tsGatewayData := make(map[string]*tsDevice)
 	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
 	tsGatewayAdjustData := make(map[string]interface{})
 
-	err = json.Unmarshal(bytes, &tsGatewayData)
+	err := json.Unmarshal(bytes, &tsGatewayData)
 	if err == nil {
 		for k, v := range tsGatewayData {
 			tsGatewayAdjustDataK := map[string]*tsData{}
@@ -781,6 +774,64 @@ dataType2:
 	}
 	log.Error("ts data adjust error", logf.Error(err))
 	return dataAdjust
+}
+
+func adjustDeviceTSData(bytes []byte, feed *Feed) (dataAdjust []byte) {
+	entity, err := NewEntity(feed.EntityID, feed.State)
+	if err != nil {
+		log.Error("ts data adjust error", logf.Error(err))
+		entity = DefaultEntity(feed.EntityID)
+	}
+
+	tsDevice2 := tsDevice{}
+	err = json.Unmarshal(bytes, &tsDevice2)
+	var data = tdtl.New(bytes)
+	var deviceTime int64
+	var deviceData map[string]interface{}
+	if err == nil && tsDevice2.TS != 0 {
+		// schema: {ts:11111, values:{a:1, b:2}}
+		data = data.Get("values")
+		deviceTime = tsDevice2.TS
+		deviceData = tsDevice2.Values
+	} else {
+		// schema: {a:1, b:2}
+		deviceTime = time.Now().UnixMilli()
+		deviceData = make(map[string]interface{})
+		err = json.Unmarshal(bytes, &deviceData)
+	}
+
+	if err != nil || len(deviceData) == 0 {
+		return []byte{}
+	}
+
+	tsDeviceAdjustData := make(map[string]*tsData)
+	for k, _ := range deviceData {
+		typ := entity.Get(fmt.Sprintf("scheme.telemetry.define.field.%s", k)).String()
+		switch typ {
+		case "int":
+			dt := &tsData{TS: deviceTime}
+			val, err := strconv.ParseInt(data.Get(k).Node().To(tdtl.Int).String(), 10, 64)
+			if err != nil {
+				dt.Value = val
+				tsDeviceAdjustData[k] = dt
+			}
+		case "float", "double":
+			dt := &tsData{TS: deviceTime}
+			val, err := strconv.ParseFloat(data.Get(k).Node().To(tdtl.Int).String(), 32)
+			if err != nil {
+				dt.Value = val
+				tsDeviceAdjustData[k] = dt
+			}
+		default:
+			log.Warn("adjustTSData skip transform", logf.Any("scheme.telemetry.define.field", typ))
+			dt := &tsData{TS: deviceTime}
+			dt.Value = data.Get(k).String()
+			tsDeviceAdjustData[k] = dt
+		}
+	}
+	dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+	return dataAdjust
+
 }
 
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
@@ -814,7 +865,7 @@ func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {
 			}
 
 			if prefix == rawDataTelemetryType {
-				bytes = adjustTSData(bytes)
+				bytes = adjustTSData(bytes, feed)
 			}
 
 			path := strings.Join([]string{FieldProperties, prefix}, ".")
