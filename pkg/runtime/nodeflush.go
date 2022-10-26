@@ -34,7 +34,7 @@ import (
 )
 
 func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
-	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
+	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())), logf.Any("feed", feed))
 	entityID := feed.EntityID
 	tenantID := en.GetProp("sysField._tenantId").String()
 	if tenantID == "" {
@@ -50,7 +50,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 		log.L().Error("flush entity state storage", logf.Error(err), logf.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into state storage")
 	}
-	log.L().Debug("flush state", logf.Any("Entity", en))
+	log.L().Debug("flush state done.")
 
 	// 2. flush data.
 	// 2.1 flush search global data.
