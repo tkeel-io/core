@@ -36,13 +36,10 @@ func newTopicHTTPHandler(s TopicHTTPServer) *TopicHTTPHandler {
 	return &TopicHTTPHandler{srv: s}
 }
 
-
-
-
 func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_restful.Response) {
-	in := TopicEventRequest{} 
+	in := TopicEventRequest{}
 	defer req.Request.Body.Close()
-	bytes,err:= ioutil.ReadAll(req.Request.Body)
+	bytes, err := ioutil.ReadAll(req.Request.Body)
 	if nil != err {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
@@ -50,11 +47,10 @@ func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_r
 		return
 	}
 
-
 	res := gjson.GetBytes(bytes, "data")
 	in.RawData = []byte(res.String())
 
-	res =  gjson.GetBytes(bytes, "data_base64")
+	res = gjson.GetBytes(bytes, "data_base64")
 	if res.Type != gjson.Null {
 		// decode base64.
 		base64.StdEncoding.Decode(in.RawData, []byte(res.String()))
@@ -67,7 +63,6 @@ func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_r
 		resp.WriteErrorString(httpCode, tErr.Message)
 		return
 	}
-
 
 	in.Meta = &meta
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
@@ -95,16 +90,9 @@ func (h *TopicHTTPHandler) TopicEventHandler(req *go_restful.Request, resp *go_r
 	}
 }
 
-
-
-
-
-
 func isBase64() bool {
 	return false
 }
-
-
 
 func RegisterTopicHTTPServer(container *go_restful.Container, srv TopicHTTPServer) {
 	var ws *go_restful.WebService

@@ -36,7 +36,7 @@ func newProxyHTTPHandler(s ProxyHTTPServer) *ProxyHTTPHandler {
 
 func (h *ProxyHTTPHandler) Respond(req *go_restful.Request, resp *go_restful.Response) {
 	defer req.Request.Body.Close()
-	bytes,err := ioutil.ReadAll(req.Request.Body)
+	bytes, err := ioutil.ReadAll(req.Request.Body)
 	if nil != err {
 		resp.WriteErrorString(http.StatusBadRequest, err.Error())
 		return
@@ -48,7 +48,7 @@ func (h *ProxyHTTPHandler) Respond(req *go_restful.Request, resp *go_restful.Res
 	}
 
 	ctx := transportHTTP.ContextWithHeader(req.Request.Context(), req.Request.Header)
-	out, err := h.srv.Respond(ctx, 		&RespondRequest{Metadata: meta, Data: bytes})
+	out, err := h.srv.Respond(ctx, &RespondRequest{Metadata: meta, Data: bytes})
 	if err != nil {
 		tErr := errors.FromError(err)
 		httpCode := errors.GRPCToHTTPStatusCode(tErr.GRPCStatus().Code())
