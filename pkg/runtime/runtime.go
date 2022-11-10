@@ -762,7 +762,7 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 
 	tsDevice2 := tsDevice{}
 	err := json.Unmarshal(bytes, &tsDevice2)
-	var data = tdtl.New(bytes)
+	data := tdtl.New(bytes)
 	var deviceTime int64
 	var deviceData map[string]interface{}
 	if err == nil && tsDevice2.TS != 0 {
@@ -810,7 +810,6 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	}
 	dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
 	return dataAdjust
-
 }
 
 func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {

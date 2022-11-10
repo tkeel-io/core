@@ -18,11 +18,12 @@ package runtime
 
 import (
 	"context"
-	"github.com/Shopify/sarama"
-	"github.com/tkeel-io/core/pkg/dispatch"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Shopify/sarama"
+	"github.com/tkeel-io/core/pkg/dispatch"
 
 	"github.com/stretchr/testify/assert"
 	v1 "github.com/tkeel-io/core/api/core/v1"
