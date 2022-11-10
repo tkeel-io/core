@@ -143,3 +143,32 @@ func TestAdd(t *testing.T) {
 	var v interface{}
 	json.Unmarshal(cc.Raw(), &v)
 }
+
+func Test_makeSubPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		dest    string
+		src     string
+		path    string
+		want    string
+		want1   string
+		wantErr bool
+	}{
+		{"1", "{}", "{}", "a.b", "{}", "{}", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := makeSubPath([]byte(tt.dest), []byte(tt.src), tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("makeSubPath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if string(got) != tt.want {
+				t.Errorf("makeSubPath() got = %v, want %v", string(got), tt.want)
+			}
+			if string(got1) != tt.want1 {
+				t.Errorf("makeSubPath() got1 = %v, want %v", string(got1), tt.want1)
+			}
+		})
+	}
+}
