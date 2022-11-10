@@ -18,12 +18,8 @@ package runtime
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
-
-	"github.com/Shopify/sarama"
-	"github.com/tkeel-io/core/pkg/dispatch"
 
 	"github.com/stretchr/testify/assert"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -505,61 +501,4 @@ func TestRuntime_AppendExpression(t *testing.T) {
 	rt.RemoveExpression(ex1.ID)
 	rt.RemoveExpression(ex2.ID)
 	t.Log(rt)
-}
-
-func TestRuntime_PrepareEvent(t *testing.T) {
-	type fields struct {
-		id                  string
-		evalTree            *path.Tree
-		subTree             *path.RefTree
-		enCache             EntityCache
-		entities            map[string]Entity
-		dispatcher          dispatch.Dispatcher
-		expressions         map[string]ExpressionInfo
-		repository          repository.IRepository
-		entityResourcer     EntityResource
-		entitySubscriptions map[string]map[string]*repository.Subscription
-		msgs                chan sarama.ConsumerMessage
-		mlock               sync.RWMutex
-		lock                sync.RWMutex
-		ctx                 context.Context
-		cancel              context.CancelFunc
-	}
-	type args struct {
-		ctx context.Context
-		ev  v1.Event
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   *Execer
-		want1  *Feed
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &Runtime{
-				id:                  tt.fields.id,
-				evalTree:            tt.fields.evalTree,
-				subTree:             tt.fields.subTree,
-				enCache:             tt.fields.enCache,
-				entities:            tt.fields.entities,
-				dispatcher:          tt.fields.dispatcher,
-				expressions:         tt.fields.expressions,
-				repository:          tt.fields.repository,
-				entityResourcer:     tt.fields.entityResourcer,
-				entitySubscriptions: tt.fields.entitySubscriptions,
-				msgs:                tt.fields.msgs,
-				mlock:               tt.fields.mlock,
-				lock:                tt.fields.lock,
-				ctx:                 tt.fields.ctx,
-				cancel:              tt.fields.cancel,
-			}
-			got, got1 := r.PrepareEvent(tt.args.ctx, tt.args.ev)
-			assert.Equalf(t, tt.want, got, "PrepareEvent(%v, %v)", tt.args.ctx, tt.args.ev)
-			assert.Equalf(t, tt.want1, got1, "PrepareEvent(%v, %v)", tt.args.ctx, tt.args.ev)
-		})
-	}
 }
