@@ -18,32 +18,30 @@ const (
 	MetaType            = "x-msg-type"
 	MetaTopic           = "x-msg-topic"
 	MetaEntityID        = "x-msg-en-id"
-	MetaPartitionID 	= "x-msg-partition"	// 实体数据分区ID，并不一定是kafka的partition.
+	MetaPartitionID     = "x-msg-partition" // 实体数据分区ID，并不一定是kafka的partition.
 	MetaEntityType      = "x-msg-en-type"
 	MetaOwner           = "x-msg-owner"
 	MetaSource          = "x-msg-source"
 	MetaVersion         = "x-msg-version"
 	MetaSender          = "x-msg-sender"
-	MetaBorn			= "x-msg-born"
+	MetaBorn            = "x-msg-born"
 	MetaRequestID       = "x-msg-request-id"
 	MetaResponseStatus  = "x-msg-response-status"
 	MetaResponseErrCode = "x-msg-response-errcode"
 	MetaPathConstructor = "x-msg-path-constructor"
 )
 
-type PathConstructor string 
+type PathConstructor string
 
 const (
 	PCDefault PathConstructor = "default"
-	PCScheme PathConstructor = "scheme"
+	PCScheme  PathConstructor = "scheme"
 )
-
-
 
 type EventType string
 
 const (
-	ETSync	   EventType = "core.event.Sync"
+	ETSync     EventType = "core.event.Sync"
 	ETCache    EventType = "core.event.Cache"
 	ETEntity   EventType = "core.event.Entity"
 	ETSystem   EventType = "core.event.System"

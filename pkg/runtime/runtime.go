@@ -782,7 +782,7 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	}
 
 	tsDeviceAdjustData := make(map[string]*tsData)
-	for k, _ := range deviceData {
+	for k := range deviceData {
 		typ := entity.Get(fmt.Sprintf("scheme.telemetry.define.fields.%s.type", k)).String()
 		switch typ {
 		case "int":
