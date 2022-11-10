@@ -163,10 +163,10 @@ func Test_makeSubPath(t *testing.T) {
 				t.Errorf("makeSubPath() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if string(got) != tt.want {
+			if tt.want != string(got) {
 				t.Errorf("makeSubPath() got = %v, want %v", string(got), tt.want)
 			}
-			if string(got1) != tt.want1 {
+			if got1 != tt.want1 {
 				t.Errorf("makeSubPath() got1 = %v, want %v", string(got1), tt.want1)
 			}
 		})
