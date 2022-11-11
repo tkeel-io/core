@@ -379,10 +379,20 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
 		enCache: NewCacheMock(map[string]Entity{
 			"iotd-06a96c8d-c166-447c-afd1-63010636b362": en,
 		}),
-		expressions:     map[string]ExpressionInfo{},
-		subTree:         path.NewRefTree(),
-		evalTree:        path.New(),
-		entityResourcer: EntityResource{},
+		expressions: map[string]ExpressionInfo{},
+		subTree:     path.NewRefTree(),
+		evalTree:    path.New(),
+		entityResourcer: EntityResource{
+			PersistentEntity: func(ctx context.Context, e Entity, feed *Feed) error {
+				return nil
+			},
+			FlushHandler: func(ctx context.Context, e Entity, feed *Feed) error {
+				return nil
+			},
+			RemoveHandler: func(ctx context.Context, e Entity, feed *Feed) error {
+				return nil
+			},
+		},
 	}
 
 	ev := &v1.ProtoEvent{
