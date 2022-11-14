@@ -39,9 +39,9 @@ func (feed *Feed) Copy() *Feed {
 }
 
 // The *Funcs functions are executed in the following order:
-//   * preFuncs()
-//   * execFunc()
-//   * postFuncs()
+//   - preFuncs()
+//   - execFunc()
+//   - postFuncs()
 type Execer struct {
 	state     Entity
 	preFuncs  []Handler

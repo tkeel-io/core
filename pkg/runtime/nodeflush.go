@@ -34,7 +34,7 @@ import (
 )
 
 func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) error {
-	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())))
+	log.L().Debug("flush entity", logf.Eid(en.ID()), logf.Value(string(en.Raw())), logf.Any("feed", feed))
 	entityID := feed.EntityID
 	tenantID := en.GetProp("sysField._tenantId").String()
 	if tenantID == "" {
@@ -50,6 +50,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 		log.L().Error("flush entity state storage", logf.Error(err), logf.Eid(en.ID()))
 		return errors.Wrap(err, "flush entity into state storage")
 	}
+	log.L().Debug("flush state done.")
 
 	// 2. flush data.
 	// 2.1 flush search global data.
@@ -62,7 +63,8 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			//			return errors.Wrap(err, "flush entity into search engine")
 		}
 	}
-	log.L().Debug(string(globalData), logf.String("make search data", ""))
+	log.L().Debug("flush search global data done", logf.Any("globalData", globalData))
+
 	// 2.2 flush search model data.
 	// TODO.
 
@@ -86,6 +88,7 @@ func (n *Node) PersistentEntity(ctx context.Context, en Entity, feed *Feed) erro
 			}
 		}
 	}
+	log.L().Debug("flush timeseries done.", logf.Any("flushData", flushData))
 
 	// 2.4 flush raw data.
 	rawData, err := n.makeRawData(ctx, en)
@@ -230,12 +233,12 @@ func (n *Node) makeSearchData(en Entity, feed *Feed) ([]byte, error) {
 		}
 	}
 
-	//log.L().Info("searchModel", logf.Value(n.searchModel))
+	// log.L().Info("searchModel", logf.Value(n.searchModel))
 	keywords := make([]string, 0, 4)
 	if n.searchModel != nil && len(n.searchModel) > 0 {
 		for _, field := range n.searchModel {
 			val := strings.Trim(string(en.Get(field).Raw()), "\"")
-			//log.L().Info("searchModel:field", logf.Value(val))
+			// log.L().Info("searchModel:field", logf.Value(val))
 			if val != "" {
 				keywords = append(keywords, val)
 			}
