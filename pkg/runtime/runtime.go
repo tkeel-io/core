@@ -760,23 +760,7 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 		entity = DefaultEntity("adjustDeviceTSData.EntityID")
 	}
 
-	tsDevice2 := tsDevice{}
-	err := json.Unmarshal(bytes, &tsDevice2)
-	data := tdtl.New(bytes)
-	var deviceTime int64
-	var deviceData map[string]interface{}
-	if err == nil && tsDevice2.TS != 0 {
-		// schema: {ts:11111, values:{a:1, b:2}}
-		data = data.Get("values")
-		deviceTime = tsDevice2.TS
-		deviceData = tsDevice2.Values
-	} else {
-		// schema: {a:1, b:2}
-		deviceTime = time.Now().UnixMilli()
-		deviceData = make(map[string]interface{})
-		err = json.Unmarshal(bytes, &deviceData)
-	}
-
+	deviceTime, deviceData, data, err := parsePayload(bytes)
 	if err != nil || len(deviceData) == 0 {
 		return []byte{}
 	}
@@ -810,6 +794,26 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	}
 	dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
 	return dataAdjust
+}
+
+func parsePayload(bytes []byte) (int64, map[string]interface{}, *tdtl.Collect, error) {
+	tsDevice2 := tsDevice{}
+	err := json.Unmarshal(bytes, &tsDevice2)
+	data := tdtl.New(bytes)
+	var deviceTime int64
+	var deviceData map[string]interface{}
+	if err == nil && tsDevice2.TS != 0 {
+		// schema: {ts:11111, values:{a:1, b:2}}
+		data = data.Get("values")
+		deviceTime = tsDevice2.TS
+		deviceData = tsDevice2.Values
+	} else {
+		// schema: {a:1, b:2}
+		deviceTime = time.Now().UnixMilli()
+		deviceData = make(map[string]interface{})
+		err = json.Unmarshal(bytes, &deviceData)
+	}
+	return deviceTime, deviceData, data, err
 }
 
 func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {
