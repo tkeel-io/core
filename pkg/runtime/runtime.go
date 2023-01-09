@@ -796,24 +796,70 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	return dataAdjust
 }
 
-func parsePayload(bytes []byte) (int64, map[string]interface{}, *tdtl.Collect, error) {
-	tsDevice2 := tsDevice{}
-	err := json.Unmarshal(bytes, &tsDevice2)
+//func parsePayload(bytes []byte) (int64, map[string]interface{}, *tdtl.Collect, error) {
+//	tsDevice2 := tsDevice{}
+//	err := json.Unmarshal(bytes, &tsDevice2)
+//	data := tdtl.New(bytes)
+//	var deviceTime int64
+//	var deviceData map[string]interface{}
+//	if err == nil && tsDevice2.TS != 0 {
+//		// schema: {ts:11111, values:{a:1, b:2}}
+//		data = data.Get("values")
+//		deviceTime = tsDevice2.TS
+//		deviceData = tsDevice2.Values
+//	} else {
+//		// schema: {a:1, b:2}
+//		deviceTime = time.Now().UnixMilli()
+//		deviceData = make(map[string]interface{})
+//		err = json.Unmarshal(bytes, &deviceData)
+//	}
+//	return deviceTime, deviceData, data, err
+//}
+
+func parsePayload(bytes []byte) (deviceTime int64, deviceData map[string]interface{}, values *tdtl.Collect, err error) {
 	data := tdtl.New(bytes)
-	var deviceTime int64
-	var deviceData map[string]interface{}
-	if err == nil && tsDevice2.TS != 0 {
-		// schema: {ts:11111, values:{a:1, b:2}}
-		data = data.Get("values")
-		deviceTime = tsDevice2.TS
-		deviceData = tsDevice2.Values
+	ts := data.Get("ts").To(tdtl.Int)
+	values = data.Get("values")
+	if ts.Type() != tdtl.Undefined {
+		switch values.Type() {
+		case tdtl.JSON, tdtl.Object:
+			// schema: {ts:11111, values:{a:1, b:2}}
+			tsDevice2 := tsDevice{}
+			err = json.Unmarshal(bytes, &tsDevice2)
+			if err != nil {
+				return 0, nil, nil, err
+			}
+			data = data.Get("values")
+			deviceTime = tsDevice2.TS
+			deviceData = tsDevice2.Values
+			return deviceTime, deviceData, data, nil
+		case tdtl.Null, tdtl.Undefined:
+			// schema: {ts:11111, a:1, b:2}
+			deviceTime, err = strconv.ParseInt(ts.String(), 10, 64)
+			if err != nil {
+				return 0, nil, nil, err
+			}
+			data.Del("ts")
+			deviceData = make(map[string]interface{})
+			err = json.Unmarshal(data.Raw(), &deviceData)
+			if err != nil {
+				return 0, nil, nil, err
+			}
+			return deviceTime, deviceData, data, nil
+		default:
+			log.Warnf("ts data format error, data: %s, values type: %s", string(bytes), values.Type().String())
+			return 0, nil, nil, errors.New("ts data format error")
+		}
 	} else {
 		// schema: {a:1, b:2}
 		deviceTime = time.Now().UnixMilli()
 		deviceData = make(map[string]interface{})
 		err = json.Unmarshal(bytes, &deviceData)
+		if err != nil {
+			return 0, nil, nil, err
+		}
+		return deviceTime, deviceData, data, nil
 	}
-	return deviceTime, deviceData, data, err
 }
 
 func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {
