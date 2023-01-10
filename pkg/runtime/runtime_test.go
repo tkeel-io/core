@@ -18,6 +18,11 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/tkeel-io/core/pkg/resource"
+	"github.com/tkeel-io/core/pkg/resource/tseries"
+	_ "github.com/tkeel-io/core/pkg/resource/tseries/builder"
 	"testing"
 	"time"
 
@@ -66,11 +71,40 @@ var expr2 = `{"ID":"/core/v1/expressions/usr-57bea3a2d74e21ebbedde8268610/iotd-b
 "Description":"iotd-06a96c8d-c166-447c-afd1-63010636b362=映射3,yc1=遥测1"}`
 
 var state = `{
-"properties": {
-"_version": {"type": "number"},
-"ts": {"type": "number"},
-"telemetry": {"src1": 123, "src2": 123}
-}
+	"properties": {
+		"_version": {"type": "number"},
+		"ts": {"type": "number"},
+		"telemetry": {
+			"FFFF": {
+                "ts": 1560000000000,
+				"value": "0"
+			},
+			"GGGG": {
+                "ts": 1560000000000,
+				"value": 0
+			},
+			"fire_confidence": {
+                "ts": 1560000000000,
+				"value": 9.46
+			},
+			"smoke_confidence": {
+                "ts": 1560000000000,
+				"value": 9.46
+			},
+			"switch": {
+                "ts": 1560000000000,
+				"value": 9.46
+			},
+			"temperature": {
+                "ts": 1560000000000,
+				"value": 9.46
+			},
+			"video_time_offset": {
+                "ts": 1560000000000,
+				"value": 9.46
+			}
+		}
+	}
 }`
 
 type dispatcherMock struct{}
@@ -203,11 +237,11 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
     "telemetry": {
       "FFFF": {
         "ts": 1666787329859,
-        "value": 9.79
+        "value": 0
       },
       "GGGG": {
         "ts": 1666777942241,
-        "value": "8.64"
+        "value": "0"
       },
       "fire_confidence": {
         "ts": 1666777942241,
@@ -371,6 +405,19 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
 `))
 	assert.Nil(t, err)
 
+	// default time series.
+	cfg := resource.Metadata{
+		Name: "clickhouse",
+		Properties: map[string]interface{}{
+			"urls":     []string{"clickhouse://default:xxxx@127.0.0.1:9000"},
+			"database": "core",
+			"table":    "timeseries",
+		},
+	}
+	tsdbClient := tseries.NewTimeSerier(cfg.Name)
+	err = tsdbClient.Init(cfg)
+	assert.Nil(t, err)
+
 	rt := &Runtime{
 		dispatcher: &dispatcherMock{},
 		entities: map[string]Entity{
@@ -384,7 +431,15 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
 		evalTree:    path.New(),
 		entityResourcer: EntityResource{
 			PersistentEntity: func(ctx context.Context, e Entity, feed *Feed) error {
-				return nil
+				flushData, tsCount, err := makeTimeSeriesData(ctx, en, feed)
+				fmt.Println(flushData, tsCount, err)
+
+				ret, err := tsdbClient.Write(ctx, flushData)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(ret)
+				return err
 			},
 			FlushHandler: func(ctx context.Context, e Entity, feed *Feed) error {
 				return nil
@@ -407,7 +462,7 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
 					{
 						Path:     "properties.rawData",
 						Operator: "replace",
-						Value:    []byte(`{"id":"iotd-aeb86fb2-e694-431b-b98a-8447c6745817","ts":1666790831700,"values":"ewoJIkZGRkYiOiAiMS4zOSIsCgkiR0dHRyI6ICI5LjY0IiwKCSJmaXJlX2NvbmZpZGVuY2UiOiAiOS40NiIsCgkic21va2VfY29uZmlkZW5jZSI6ICI0LjY0IiwKCSJzd2l0Y2giOiAiMS44MiIsCgkidGVtcGVyYXR1cmUiOiAiNi40NCIsCgkidmlkZW9fdGltZV9vZmZzZXQiOiAiOS44NyIKfQ==","path":"iotd-aeb86fb2-e694-431b-b98a-8447c6745817/v1/devices/me/telemetry","type":"telemetry","mark":"upstream"}`),
+						Value:    []byte(`{"id":"iotd-aeb86fb2-e694-431b-b98a-8447c6745817","ts":1666790831700,"values":"ewogICAgICAgICJ0cyI6IDE1NjAwMDAwLAoJIkZGRkYiOiAwLAoJIkdHR0ciOiAiMCIsCgkiZmlyZV9jb25maWRlbmNlIjogIjkuNDYiLAoJInNtb2tlX2NvbmZpZGVuY2UiOiAiNC42NCIsCgkic3dpdGNoIjogIjEuODIiLAoJInRlbXBlcmF0dXJlIjogIjYuNDQiLAoJInZpZGVvX3RpbWVfb2Zmc2V0IjogIjkuODciCn0=","path":"iotd-aeb86fb2-e694-431b-b98a-8447c6745817/v1/devices/me/telemetry","type":"telemetry","mark":"upstream"}`),
 					},
 				},
 			},
@@ -418,6 +473,7 @@ func TestRuntime_handleEntityEvent(t *testing.T) {
 	newFeed := execer.Exec(context.Background(), feed)
 
 	t.Log(newFeed)
+	select {}
 }
 
 func makeExpr(exprRaw string) repository.Expression {
@@ -511,4 +567,27 @@ func TestRuntime_AppendExpression(t *testing.T) {
 	rt.RemoveExpression(ex1.ID)
 	rt.RemoveExpression(ex2.ID)
 	t.Log(rt)
+}
+
+func Test_parsePayload(t *testing.T) {
+	fmt.Printf("It is now %s\n", time.Now())
+
+	tests := []struct {
+		name     string
+		arg      []byte
+		hasErr   bool
+		wantSize int
+	}{
+		{"1", []byte(`{"ts":11111, "values":{"a":1, "b":2}}`), false, 2},
+		{"2", []byte(`{"ts":11111, "a":1, "b":2}`), false, 2},
+		{"2", []byte(`{ "a":1, "b":2}`), false, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, got1, _, err := parsePayload(tt.arg)
+			assert.Nil(t, err, "parsePayload(%v)", tt.arg)
+			//assert.Equalf(t, tt.wantTS, got, "parsePayload(%v)", tt.arg)
+			assert.Equalf(t, tt.wantSize, len(got1), "parsePayload(%v)", tt.arg)
+		})
+	}
 }
