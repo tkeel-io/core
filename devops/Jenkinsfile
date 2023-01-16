@@ -6,12 +6,26 @@ pipeline {
   }
     parameters {
         string(name:'MANUAL_DEPLOY',defaultValue: 'no',description:'yes or no')
+      
+        string(
+            name:'REGISTRY',
+            defaultValue: 'harbor.tkeel.io:30003',
+            description:'REGISTRY')
 
-        string(name:'REGISTRY',defaultValue: 'harbor.wuxs.vip:30003',description:'REGISTRY')
-        string(name:'REPOSITORY',defaultValue: 'tkeel-io',description:'REPOSITORY')
+        string(
+            name:'REPOSITORY',
+            defaultValue: 'tkeel-io',
+            description:'REPOSITORY')
 
-        string(name:'DOCKER_IMAGE_TAG',defaultValue: '0.1.0',description:'docker image tag')
-        string(name:'HELM_CHART_VERSION',defaultValue: '0.1.0',description:'plugin version')
+        string(
+            name:'DOCKER_IMAGE_TAG',
+            defaultValue: '2.0.0',
+            description:'docker image tag')
+
+        string(
+            name:'HELM_CHART_VERSION',
+            defaultValue: '2.0.0',
+            description:'plugin version')
 
     }
 
