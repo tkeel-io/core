@@ -127,7 +127,7 @@ func (n *Node) makeRawData(ctx context.Context, en Entity) (*rawdata.Request, er
 	return req, nil
 }
 
-func (n *Node) getTimeSeriesKey(patchs []Patch) []string {
+func getTimeSeriesKey(patchs []Patch) []string {
 	prefix := "properties.telemetry."
 	res := make([]string, 0)
 	for _, patch := range patchs {
@@ -139,6 +139,10 @@ func (n *Node) getTimeSeriesKey(patchs []Patch) []string {
 }
 
 func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, int, error) {
+	return makeTimeSeriesData(ctx, en, feed)
+}
+
+func makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TSeriesRequest, int, error) {
 	tsData := en.GetProp("telemetry")
 	log.Info("tsData: ", tsData)
 	var (
@@ -151,7 +155,7 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 		tsCount = 0
 	)
 
-	needWriteKeys := n.getTimeSeriesKey(feed.Changes)
+	needWriteKeys := getTimeSeriesKey(feed.Changes)
 	if len(needWriteKeys) == 0 {
 		return ret, tsCount, nil
 	}
@@ -187,6 +191,19 @@ func (n *Node) makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*
 							tsItem.Timestamp = int64(timestamp) * 1e6
 							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
+						case string:
+							dv, err := strconv.ParseFloat(tttV, 64)
+							if err != nil {
+								log.Errorf("parse string to float32 error: %s", err)
+							} else {
+								tsItem.Fields[k] = float32(dv)
+								timestamp, _ := ts.(float64)
+								tsItem.Timestamp = int64(timestamp) * 1e6
+								ret.Data = append(ret.Data, &tsItem)
+								tsCount++
+							}
+						default:
+							log.Errorf("unknown type: %v", tttV)
 						}
 						continue
 					}
