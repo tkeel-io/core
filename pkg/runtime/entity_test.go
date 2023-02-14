@@ -32,7 +32,7 @@ func TestNewEntity(t *testing.T) {
 	t.Log(string(en.Raw()))
 }
 
-func TestEntity_Handle(t *testing.T) {
+func TestEntity_HandleScheme(t *testing.T) {
 	en, err := NewEntity("en-123", []byte(`{"properties": {"temp": 20}}`))
 	assert.Nil(t, err)
 

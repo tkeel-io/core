@@ -785,6 +785,22 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 				dt.Value = val
 				tsDeviceAdjustData[k] = dt
 			}
+		case "bool":
+			dt := &tsData{TS: deviceTime}
+			str := data.Get(k).String()
+			val, err := strconv.ParseBool(str)
+			if err == nil {
+				dt.Value = val
+				tsDeviceAdjustData[k] = dt
+			}
+		case "enum":
+			dt := &tsData{TS: deviceTime}
+			str := data.Get(k).To(tdtl.Number).String()
+			val, err := strconv.ParseInt(str, 10, 32)
+			if err == nil {
+				dt.Value = val
+				tsDeviceAdjustData[k] = dt
+			}
 		default:
 			log.Warn("adjustTSData skip transform", logf.Any("scheme.telemetry.define.field", typ))
 			dt := &tsData{TS: deviceTime}
