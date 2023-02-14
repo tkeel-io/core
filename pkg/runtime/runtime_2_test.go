@@ -112,6 +112,8 @@ func TestEntity_HandleEntity_Pubsub(t *testing.T) {
 }
 
 func handleEntity(t *testing.T, event v1.PatchEvent, entity Entity) *Feed {
+	t.Helper()
+
 	ctx := context.Background()
 	n := Node{}
 	r := &Runtime{
@@ -123,8 +125,9 @@ func handleEntity(t *testing.T, event v1.PatchEvent, entity Entity) *Feed {
 		entityResourcer: EntityResource{
 			PersistentEntity: func(ctx context.Context, en Entity, feed *Feed) error {
 				globalData, err := n.makeSearchData(en, feed)
-				flushData, tsCount, err := makeTimeSeriesData(ctx, en, feed)
-				t.Log(globalData, flushData, tsCount, err)
+				t.Log(globalData, err)
+				flushData, tsCount, err2 := makeTimeSeriesData(ctx, en, feed)
+				t.Log(flushData, tsCount, err2)
 				return err
 			},
 			FlushHandler: func(ctx context.Context, en Entity, feed *Feed) error {
