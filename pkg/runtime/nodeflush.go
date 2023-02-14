@@ -192,9 +192,9 @@ func makeTimeSeriesData(ctx context.Context, en Entity, feed *Feed) (*tseries.TS
 							ret.Data = append(ret.Data, &tsItem)
 							tsCount++
 						case string:
-							dv, err := strconv.ParseFloat(tttV, 64)
-							if err != nil {
-								log.Errorf("parse string to float32 error: %s", err)
+							dv, err1 := strconv.ParseFloat(tttV, 64)
+							if err1 != nil {
+								log.Errorf("parse string to float32 error: %s", err1)
 							} else {
 								tsItem.Fields[k] = float32(dv)
 								timestamp, _ := ts.(float64)
