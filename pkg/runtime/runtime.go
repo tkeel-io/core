@@ -770,32 +770,31 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 		typ := entity.Get(fmt.Sprintf("scheme.telemetry.define.fields.%s.type", k)).String()
 		switch typ {
 		case "int":
-			dt := &tsData{TS: deviceTime}
 			str := data.Get(k).To(tdtl.Number).String()
-			val, err := strconv.ParseFloat(str, 32)
+			val, err := parseInt(str)
 			if err == nil {
-				dt.Value = int64(val + 0.5)
+				dt := &tsData{TS: deviceTime, Value: val}
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		case "float", "double":
-			dt := &tsData{TS: deviceTime}
 			str := data.Get(k).To(tdtl.Number).String()
 			val, err := strconv.ParseFloat(str, 32)
 			if err == nil {
-				dt.Value = val
+				dt := &tsData{TS: deviceTime, Value: val}
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		case "bool":
-			dt := &tsData{TS: deviceTime}
 			str := data.Get(k).String()
-			val, err := strconv.ParseBool(str)
+			val, err := parseBool(str)
 			if err == nil {
-				if val {
-					dt.Value = 1
-				} else {
-					dt.Value = 0
-				}
+				dt := &tsData{TS: deviceTime, Value: val}
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		case "enum":
 			dt := &tsData{TS: deviceTime}
@@ -804,9 +803,11 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			if err == nil {
 				dt.Value = val
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		default:
-			log.Warn("adjustTSData skip transform", logf.Any("scheme.telemetry.define.field", typ))
+			log.Warn("skip transform", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			dt := &tsData{TS: deviceTime}
 			dt.Value = data.Get(k).String()
 			tsDeviceAdjustData[k] = dt
@@ -816,25 +817,28 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	return dataAdjust
 }
 
-//func parsePayload(bytes []byte) (int64, map[string]interface{}, *tdtl.Collect, error) {
-//	tsDevice2 := tsDevice{}
-//	err := json.Unmarshal(bytes, &tsDevice2)
-//	data := tdtl.New(bytes)
-//	var deviceTime int64
-//	var deviceData map[string]interface{}
-//	if err == nil && tsDevice2.TS != 0 {
-//		// schema: {ts:11111, values:{a:1, b:2}}
-//		data = data.Get("values")
-//		deviceTime = tsDevice2.TS
-//		deviceData = tsDevice2.Values
-//	} else {
-//		// schema: {a:1, b:2}
-//		deviceTime = time.Now().UnixMilli()
-//		deviceData = make(map[string]interface{})
-//		err = json.Unmarshal(bytes, &deviceData)
-//	}
-//	return deviceTime, deviceData, data, err
-//}
+func parseInt(str string) (interface{}, error) {
+	val, err := strconv.ParseFloat(str, 32)
+	if err == nil {
+		return int64(val + 0.5), nil
+	}
+	return nil, err
+}
+
+func parseBool(str string) (interface{}, error) {
+	if val, err := strconv.ParseBool(str); err == nil {
+		if val {
+			return int64(1), nil
+		}
+		return int64(0), nil
+	}
+
+	if val, err := strconv.ParseFloat(str, 32); err == nil {
+		return int64(val), nil
+	}
+
+	return nil, fmt.Errorf("parse error, %s", str)
+}
 
 func parsePayload(bytes []byte) (deviceTime int64, deviceData map[string]interface{}, values *tdtl.Collect, err error) {
 	data := tdtl.New(bytes)
