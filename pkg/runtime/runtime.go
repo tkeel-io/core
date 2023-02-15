@@ -826,18 +826,17 @@ func parseInt(str string) (interface{}, error) {
 }
 
 func parseBool(str string) (interface{}, error) {
-	val, err := strconv.ParseBool(str)
-	if err == nil {
+	if val, err := strconv.ParseBool(str); err == nil {
 		if val {
 			return int64(1), nil
 		}
 		return int64(0), nil
-	} else {
-		val, err := strconv.ParseFloat(str, 32)
-		if err == nil {
-			return int64(val), nil
-		}
 	}
+
+	if val, err := strconv.ParseFloat(str, 32); err == nil {
+		return int64(val), nil
+	}
+
 	return nil, fmt.Errorf("parse error, %s", str)
 }
 
