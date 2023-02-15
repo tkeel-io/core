@@ -776,6 +776,8 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			if err == nil {
 				dt.Value = int64(val + 0.5)
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		case "float", "double":
 			dt := &tsData{TS: deviceTime}
@@ -784,6 +786,8 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			if err == nil {
 				dt.Value = val
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		case "bool":
 			dt := &tsData{TS: deviceTime}
@@ -791,11 +795,19 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			val, err := strconv.ParseBool(str)
 			if err == nil {
 				if val {
-					dt.Value = 1
+					dt.Value = int64(1)
 				} else {
-					dt.Value = 0
+					dt.Value = int64(0)
 				}
 				tsDeviceAdjustData[k] = dt
+			} else {
+				val, err := strconv.ParseFloat(str, 32)
+				if err == nil {
+					dt.Value = int64(val)
+					tsDeviceAdjustData[k] = dt
+				} else {
+					log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
+				}
 			}
 		case "enum":
 			dt := &tsData{TS: deviceTime}
@@ -804,9 +816,11 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			if err == nil {
 				dt.Value = val
 				tsDeviceAdjustData[k] = dt
+			} else {
+				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		default:
-			log.Warn("adjustTSData skip transform", logf.Any("scheme.telemetry.define.field", typ))
+			log.Warn("skip transform", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			dt := &tsData{TS: deviceTime}
 			dt.Value = data.Get(k).String()
 			tsDeviceAdjustData[k] = dt

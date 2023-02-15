@@ -749,9 +749,11 @@ func Test_adjustTSData1(t *testing.T) {
 		args           string
 		wantDataAdjust string
 	}{
-		{
-			"1", `{"ts":111,"field_bool":1}`, "",
-		},
+		{"1", `{"ts":111,"field_bool":1.0}`, `{"field_bool":{"ts":111,"value":1}}`},
+		{"2", `{"ts":111,"field_bool":true}`, `{"field_bool":{"ts":111,"value":1}}`},
+		{"2", `{"ts":111,"field_bool":1}`, `{"field_bool":{"ts":111,"value":1}}`},
+		{"2", `{"ts":111,"field_bool":false}`, `{"field_bool":{"ts":111,"value":0}}`},
+		{"2", `{"ts":111,"field_bool":0.0}`, `{"field_bool":{"ts":111,"value":0}}`},
 	}
 	bytes := []byte(entityStr)
 	entity, err := NewEntity("foo", bytes)
