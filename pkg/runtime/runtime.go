@@ -790,7 +790,11 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			str := data.Get(k).String()
 			val, err := strconv.ParseBool(str)
 			if err == nil {
-				dt.Value = val
+				if val {
+					dt.Value = 1
+				} else {
+					dt.Value = 0
+				}
 				tsDeviceAdjustData[k] = dt
 			}
 		case "enum":
