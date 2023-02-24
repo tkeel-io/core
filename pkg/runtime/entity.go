@@ -35,9 +35,7 @@ const (
 
 )
 
-var (
-	schemeCache = NewNodeCache()
-)
+var schemeCache = NewNodeCache()
 
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
 
@@ -275,7 +273,7 @@ func (e *entity) cleanTelemetry() {
 		})
 	tdtl.New(e.Get("scheme.telemetry.define.fields").Raw()).
 		Foreach(func(key []byte, value *tdtl.Collect) {
-			delKeys[string(key)] = false //don't delete
+			delKeys[string(key)] = false // don't delete
 		})
 
 	cc := e.state.Copy()

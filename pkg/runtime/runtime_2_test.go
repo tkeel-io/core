@@ -20,13 +20,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/kit/log"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"testing"
 	"time"
+
+	"github.com/tkeel-io/core/pkg/repository"
+	"github.com/tkeel-io/kit/log"
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -162,16 +163,16 @@ func TestEntity_HandleEntity_benchmark(t *testing.T) {
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
 			ret := handleEntity(t, v, e)
-			//t.Log(ret.EntityID)
+			// t.Log(ret.EntityID)
 			noop(ret)
 		}
 	}))
 	time.Sleep(3 * time.Second)
-	//e.(*entity).cleanTelemetry()
+	// e.(*entity).cleanTelemetry()
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
 			ret := handleEntity(t, v, e)
-			//t.Log(ret.EntityID)
+			// t.Log(ret.EntityID)
 			noop(ret)
 		}
 	}))
@@ -193,10 +194,10 @@ func handleEntity(t *testing.T, event v1.PatchEvent, entity Entity) *Feed {
 		entityResourcer: EntityResource{
 			PersistentEntity: func(ctx context.Context, en Entity, feed *Feed) error {
 				globalData, err := n.makeSearchData(en, feed)
-				//t.Log(globalData, err)
+				// t.Log(globalData, err)
 				noop(globalData, err)
 				flushData, tsCount, err2 := makeTimeSeriesData(ctx, en, feed)
-				//t.Log(flushData, tsCount, err2)
+				// t.Log(flushData, tsCount, err2)
 				noop(flushData, tsCount, err2)
 				return err
 			},
@@ -238,7 +239,7 @@ func handleEntity(t *testing.T, event v1.PatchEvent, entity Entity) *Feed {
 }
 
 func p(fn func()) time.Duration {
-	cup, _ := os.OpenFile(fmt.Sprintf("profile.%d.cpu", time.Now().Unix()), os.O_CREATE|os.O_RDWR, 0644)
+	cup, _ := os.OpenFile(fmt.Sprintf("profile.%d.cpu", time.Now().Unix()), os.O_CREATE|os.O_RDWR, 0o644)
 	defer cup.Close()
 	pprof.StartCPUProfile(cup)
 	defer pprof.StopCPUProfile()

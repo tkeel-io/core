@@ -1,8 +1,9 @@
 package runtime
 
 import (
-	"github.com/tkeel-io/tdtl"
 	"sync"
+
+	"github.com/tkeel-io/tdtl"
 )
 
 type NodeCache struct {
