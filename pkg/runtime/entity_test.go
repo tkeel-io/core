@@ -172,3 +172,23 @@ func Test_makeSubPath(t *testing.T) {
 		})
 	}
 }
+
+func Test_isFieldScheme(t *testing.T) {
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"1", args{"scheme.attributes.define.fields.serial-N"}, true},
+		{"2", args{"scheme"}, true},
+		{"3", args{"schem"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, isFieldScheme(tt.args.path), "isFieldScheme(%v)", tt.args.path)
+		})
+	}
+}
