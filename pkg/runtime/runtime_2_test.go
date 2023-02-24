@@ -252,7 +252,7 @@ func p(fn func()) time.Duration {
 	runtime.GC()
 	start := time.Now()
 	fn() // get up-to-date statistics
-	ret := time.Now().Sub(start)
+	ret := time.Since(start)
 	if err := pprof.WriteHeapProfile(mem); err != nil {
 		log.Fatal("could not write memory profile: ", err)
 	}
