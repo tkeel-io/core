@@ -807,7 +807,7 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 				log.L().Error("parse error", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			}
 		default:
-			log.Warn("skip transform", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
+			log.Debug("skip transform", logf.Any("key", k), logf.Any("value", data.Get(k).String()), logf.Any("schema", typ))
 			dt := &tsData{TS: deviceTime}
 			dt.Value = data.Get(k).String()
 			tsDeviceAdjustData[k] = dt

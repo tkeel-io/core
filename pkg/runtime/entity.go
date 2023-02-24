@@ -35,6 +35,10 @@ const (
 
 )
 
+var (
+	schemeCache = NewNodeCache()
+)
+
 type PathConstructor func(pc v1.PathConstructor, destVal, setVal []byte, path string) ([]byte, string, error)
 
 type entity struct {
@@ -56,7 +60,8 @@ func NewEntity(id string, state []byte) (Entity, error) {
 	}
 
 	return &entity{
-			id: id, state: *s,
+			id:              id,
+			state:           *s,
 			pathConstructor: pathConstructor,
 		},
 		errors.Wrap(s.Error(), "new entity")
@@ -67,6 +72,16 @@ func (e *entity) ID() string {
 }
 
 func (e *entity) Get(path string) tdtl.Node {
+	if isFieldScheme(path) {
+		ret, ok := schemeCache.Get(e.id, path)
+		if ok {
+			return ret
+		}
+
+		ret = e.state.Get(path)
+		schemeCache.Set(e.id, path, ret)
+		return ret
+	}
 	return e.state.Get(path)
 }
 
@@ -79,7 +94,11 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 	pc := feed.Event.Attr(v1.MetaPathConstructor)
 
 	cc := e.state.Copy()
+	cleanSchemaCache := false
 	for _, patch := range feed.Patches {
+		if isFieldScheme(patch.Path) {
+			cleanSchemaCache = true
+		}
 		switch patch.Op {
 		case xjson.OpAdd:
 			cc.Append(patch.Path, patch.Value)
@@ -152,6 +171,13 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 
 	if cc.Error() == nil {
 		e.state = *cc
+		version := e.Version()
+		if version%100 == 99 {
+			e.cleanTelemetry()
+		}
+		if cleanSchemaCache {
+			schemeCache.Delete(e.id)
+		}
 		e.Update()
 	} else {
 		log.L().Error("update entity", logf.Error(cc.Error()), logf.Eid(e.id),
@@ -241,6 +267,26 @@ func (e *entity) Update() {
 	e.state.Set(FieldLastTime, tdtl.NewInt64(lastTime))
 }
 
+func (e *entity) cleanTelemetry() {
+	delKeys := map[string]bool{}
+	tdtl.New(e.GetProp("telemetry").Raw()).
+		Foreach(func(key []byte, value *tdtl.Collect) {
+			delKeys[string(key)] = true
+		})
+	tdtl.New(e.Get("scheme.telemetry.define.fields").Raw()).
+		Foreach(func(key []byte, value *tdtl.Collect) {
+			delKeys[string(key)] = false //don't delete
+		})
+
+	cc := e.state.Copy()
+	for k, del := range delKeys {
+		if del {
+			cc.Del("properties.telemetry." + k)
+		}
+	}
+	e.state = *cc
+}
+
 func pathConstructor(pc v1.PathConstructor, destVal, setVal []byte, path string) (_ []byte, _ string, err error) {
 	switch pc {
 	case v1.PCScheme:
@@ -315,4 +361,8 @@ func makeScheme(segs []string, data []byte) []byte {
 	bytes, _ := json.Marshal(cfg)
 
 	return bytes
+}
+
+func isFieldScheme(path string) bool {
+	return strings.Index(path, FieldScheme) == 0
 }
