@@ -744,7 +744,7 @@ type tsDevice struct {
 	Values map[string]interface{} `json:"values"`
 }
 
-func adjustTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
+func adjustTSData(bytes []byte, entity Entity) []byte {
 	if ret := adjustDeviceTSData(bytes, entity); len(ret) > 0 {
 		return ret
 	}
@@ -754,7 +754,7 @@ func adjustTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 	return []byte{}
 }
 
-func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
+func adjustDeviceTSData(bytes []byte, entity Entity) []byte {
 	if entity == nil {
 		log.Info("ts data adjust error")
 		entity = DefaultEntity("adjustDeviceTSData.EntityID")
@@ -813,7 +813,7 @@ func adjustDeviceTSData(bytes []byte, entity Entity) (dataAdjust []byte) {
 			tsDeviceAdjustData[k] = dt
 		}
 	}
-	dataAdjust, _ = json.Marshal(tsDeviceAdjustData)
+	dataAdjust, _ := json.Marshal(tsDeviceAdjustData)
 	return dataAdjust
 }
 
@@ -840,31 +840,31 @@ func parseBool(str string) (interface{}, error) {
 	return nil, fmt.Errorf("parse error, %s", str)
 }
 
-func parsePayload(bytes []byte) (deviceTime int64, deviceData map[string]interface{}, values *tdtl.Collect, err error) {
+func parsePayload(bytes []byte) (int64, map[string]interface{}, *tdtl.Collect, error) {
 	data := tdtl.New(bytes)
 	ts := data.Get("ts").To(tdtl.Int)
-	values = data.Get("values")
+	values := data.Get("values")
 	if ts.Type() != tdtl.Undefined {
 		switch values.Type() {
 		case tdtl.JSON, tdtl.Object:
 			// schema: {ts:11111, values:{a:1, b:2}}
 			tsDevice2 := tsDevice{}
-			err = json.Unmarshal(bytes, &tsDevice2)
+			err := json.Unmarshal(bytes, &tsDevice2)
 			if err != nil {
 				return 0, nil, nil, err
 			}
 			data = data.Get("values")
-			deviceTime = tsDevice2.TS
-			deviceData = tsDevice2.Values
+			deviceTime := tsDevice2.TS
+			deviceData := tsDevice2.Values
 			return deviceTime, deviceData, data, nil
 		case tdtl.Null, tdtl.Undefined:
 			// schema: {ts:11111, a:1, b:2}
-			deviceTime, err = strconv.ParseInt(ts.String(), 10, 64)
+			deviceTime, err := strconv.ParseInt(ts.String(), 10, 64)
 			if err != nil {
 				return 0, nil, nil, err
 			}
 			data.Del("ts")
-			deviceData = make(map[string]interface{})
+			deviceData := make(map[string]interface{})
 			err = json.Unmarshal(data.Raw(), &deviceData)
 			if err != nil {
 				return 0, nil, nil, err
@@ -876,9 +876,9 @@ func parsePayload(bytes []byte) (deviceTime int64, deviceData map[string]interfa
 		}
 	} else {
 		// schema: {a:1, b:2}
-		deviceTime = time.Now().UnixMilli()
-		deviceData = make(map[string]interface{})
-		err = json.Unmarshal(bytes, &deviceData)
+		deviceTime := time.Now().UnixMilli()
+		deviceData := make(map[string]interface{})
+		err := json.Unmarshal(bytes, &deviceData)
 		if err != nil {
 			return 0, nil, nil, err
 		}
@@ -886,7 +886,7 @@ func parsePayload(bytes []byte) (deviceTime int64, deviceData map[string]interfa
 	}
 }
 
-func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {
+func adjustGatewayTSData(bytes []byte, _ Entity) []byte {
 	tsGatewayData := make(map[string]*tsDevice)
 	//		tsGatewayAdjustData := make(map[string]map[string]*tsData)
 	tsGatewayAdjustData := make(map[string]interface{})
@@ -901,11 +901,11 @@ func adjustGatewayTSData(bytes []byte, _ Entity) (dataAdjust []byte) {
 			}
 			tsGatewayAdjustData[k] = tsGatewayAdjustDataK
 		}
-		dataAdjust, _ = json.Marshal(tsGatewayAdjustData)
-		return
+		dataAdjust, _ := json.Marshal(tsGatewayAdjustData)
+		return dataAdjust
 	}
 	log.Error("ts data adjust error", logf.Error(err))
-	return dataAdjust
+	return nil
 }
 
 func (r *Runtime) handleRawData(ctx context.Context, feed *Feed) *Feed {

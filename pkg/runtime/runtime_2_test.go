@@ -32,7 +32,6 @@ import (
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/builder"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
-	"github.com/tkeel-io/core/third_party/jsonpatch"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 )
@@ -169,7 +168,7 @@ func TestEntity_HandleEntity_benchmark(t *testing.T) {
 		}
 	}))
 	time.Sleep(3 * time.Second)
-	e.(*entity).cleanTelemetry()
+	cleanTelemetry(e)
 	t.Log(p(func() {
 		for i := 0; i < 200; i++ {
 			ret := handleEntity(t, v, e)
@@ -178,6 +177,23 @@ func TestEntity_HandleEntity_benchmark(t *testing.T) {
 		}
 	}))
 }
+
+func cleanTelemetry(e Entity) {
+	switch e := e.(type) {
+	case *entity:
+		e.cleanTelemetry()
+	}
+}
+
+func entityCopy(e Entity) *tdtl.JSONNode {
+	switch e := e.(type) {
+	case *entity:
+		return e.state.Copy()
+	}
+	return nil
+}
+
+// e.(*entity).
 
 func Test_merge(t *testing.T) {
 	patch := Patch{
@@ -190,12 +206,12 @@ func Test_merge(t *testing.T) {
 	t.Log(err)
 	e, err := NewEntity("iotd-e130acba-1fd5-4e4f-8b51-5824d930e19f", bytes)
 	t.Log(err)
-	e.(*entity).cleanTelemetry()
+	cleanTelemetry(e)
 	feed := &Feed{}
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
 			// cc1 := cc.Copy()
-			cc := e.(*entity).state.Copy()
+			cc := entityCopy(e)
 			err := merge(cc, patch, e, feed)
 			if err != nil {
 				t.Log(err)
@@ -216,12 +232,12 @@ func Test_merge1(t *testing.T) {
 	t.Log(err)
 	e, err := NewEntity("iotd-e130acba-1fd5-4e4f-8b51-5824d930e19f", bytes)
 	t.Log(err)
-	e.(*entity).cleanTelemetry()
+	cleanTelemetry(e)
 	feed := &Feed{}
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
 			// cc1 := cc.Copy()
-			cc := e.(*entity).state.Copy()
+			cc := entityCopy(e)
 			err := merge1(cc, patch, e, feed)
 			if err != nil {
 				t.Log(err)
@@ -229,27 +245,6 @@ func Test_merge1(t *testing.T) {
 			noop(feed)
 		}
 	}))
-}
-
-func Example_A() {
-	// Let's create a merge patch from these two documents...
-	original := []byte(`{"name": "John", "age": 24, "height": 3.21}`)
-	target := []byte(`{"name": "Jane", "age": 24}`)
-
-	patch, err := jsonpatch.CreateMergePatch(original, target)
-	if err != nil {
-		panic(err)
-	}
-
-	// Now lets apply the patch against a different JSON document...
-
-	alternative := []byte(`{"name": "Tina", "age": 28, "height": 3.75}`)
-	modifiedAlternative, err := jsonpatch.MergePatch(alternative, patch)
-
-	fmt.Printf("patch document:   %s\n", patch)
-	fmt.Printf("updated alternative doc: %s\n", modifiedAlternative)
-
-	// Output:
 }
 
 func noop(...interface{}) {}

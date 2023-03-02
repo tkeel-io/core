@@ -187,7 +187,7 @@ func merge(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
 		cc.Set(patch.Path, patch.Value)
 		return nil
 	}
-	if tc.Type() != tdtl.Object && tc.Type() != tdtl.Object {
+	if cc.Type() != tdtl.Object && tc.Type() != tdtl.Object {
 		feed.Err = errors.New("datatype is not object")
 		feed.Patches = []Patch{}
 		feed.State = e.Raw()
