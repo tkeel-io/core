@@ -2,10 +2,11 @@ package runtime
 
 import (
 	"context"
-	jsonpatch "github.com/evanphx/json-patch"
 	"strconv"
 	"strings"
 	"time"
+
+	jsonpatch "github.com/evanphx/json-patch"
 
 	"github.com/pkg/errors"
 	v1 "github.com/tkeel-io/core/api/core/v1"
@@ -182,7 +183,6 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 }
 
 func merge(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
-	//fmt.Println("merge", patch.Path, patch.Value, cc)
 	tc := cc.Get(patch.Path)
 	if tc.Type() == tdtl.Null {
 		cc.Set(patch.Path, patch.Value)
@@ -207,7 +207,6 @@ func merge(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
 }
 
 func merge1(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
-	//fmt.Println("merge", patch.Path, patch.Value, cc)
 	mval := cc.Get(patch.Path).Merge(patch.Value)
 	err := mval.Error()
 	if tdtl.Object != mval.Type() {

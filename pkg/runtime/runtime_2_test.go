@@ -20,14 +20,15 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	jsonpatch "github.com/evanphx/json-patch"
-	xjson "github.com/tkeel-io/core/pkg/util/json"
-	"github.com/tkeel-io/tdtl"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"testing"
 	"time"
+
+	jsonpatch "github.com/evanphx/json-patch"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
+	"github.com/tkeel-io/tdtl"
 
 	"github.com/tkeel-io/core/pkg/repository"
 	"github.com/tkeel-io/kit/log"
@@ -195,7 +196,7 @@ func Test_merge(t *testing.T) {
 	feed := &Feed{}
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
-			//cc1 := cc.Copy()
+			// cc1 := cc.Copy()
 			cc := e.(*entity).state.Copy()
 			err := merge(cc, patch, e, feed)
 			if err != nil {
@@ -205,6 +206,7 @@ func Test_merge(t *testing.T) {
 		}
 	}))
 }
+
 func Test_merge1(t *testing.T) {
 	patch := Patch{
 		Op:    xjson.OpMerge,
@@ -220,7 +222,7 @@ func Test_merge1(t *testing.T) {
 	feed := &Feed{}
 	t.Log(p(func() {
 		for i := 0; i < 100; i++ {
-			//cc1 := cc.Copy()
+			// cc1 := cc.Copy()
 			cc := e.(*entity).state.Copy()
 			err := merge1(cc, patch, e, feed)
 			if err != nil {
@@ -250,7 +252,6 @@ func Example_A() {
 	fmt.Printf("updated alternative doc: %s\n", modifiedAlternative)
 
 	// Output:
-
 }
 
 func noop(...interface{}) {}
