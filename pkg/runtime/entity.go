@@ -12,6 +12,7 @@ import (
 	logf "github.com/tkeel-io/core/pkg/logfield"
 	"github.com/tkeel-io/core/pkg/scheme"
 	xjson "github.com/tkeel-io/core/pkg/util/json"
+	"github.com/tkeel-io/core/third_party/jsonpatch"
 	"github.com/tkeel-io/kit/log"
 	"github.com/tkeel-io/tdtl"
 	"github.com/tkeel-io/tdtl/pkg/json/jsonparser"
@@ -104,20 +105,10 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 		case xjson.OpMerge:
 			var err error
 			if patch.Value.Type() != tdtl.Null {
-				mval := cc.Get(patch.Path).Merge(patch.Value)
-				if err = mval.Error(); tdtl.Object != mval.Type() {
-					log.Error("patch merge", logf.Eid(e.id), logf.Error(err),
-						logf.Any("patches", feed.Patches), logf.Event(feed.Event))
-					err = xerrors.ErrInternal
-				}
-
-				if nil != err {
-					feed.Err = err
-					feed.Patches = []Patch{}
-					feed.State = e.Raw()
+				err = merge(cc, patch, e, feed)
+				if err != nil {
 					return feed
 				}
-				cc.Set(patch.Path, mval)
 			} else {
 				log.L().Error("merge entity error, patch value is null", logf.Eid(e.id), logf.Error(cc.Error()),
 					logf.Any("patches", feed.Patches), logf.Event(feed.Event))
@@ -188,6 +179,49 @@ func (e *entity) Handle(ctx context.Context, feed *Feed) *Feed { //nolint
 	feed.Patches = []Patch{}
 	feed.State = e.Raw()
 	return feed
+}
+
+func merge(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
+	tc := cc.Get(patch.Path)
+	if tc.Type() == tdtl.Null {
+		cc.Set(patch.Path, patch.Value)
+		return nil
+	}
+	if cc.Type() != tdtl.Object && tc.Type() != tdtl.Object {
+		feed.Err = errors.New("datatype is not object")
+		feed.Patches = []Patch{}
+		feed.State = e.Raw()
+		return feed.Err
+	}
+	ntc, err := jsonpatch.MergePatch(tc.Raw(), patch.Value.Raw())
+	if err != nil {
+		feed.Err = errors.New("datatype is not object")
+		feed.Patches = []Patch{}
+		feed.State = e.Raw()
+		return feed.Err
+	}
+
+	cc.Set(patch.Path, tdtl.New(ntc))
+	return nil
+}
+
+func merge1(cc *tdtl.JSONNode, patch Patch, e Entity, feed *Feed) error {
+	mval := cc.Get(patch.Path).Merge(patch.Value)
+	err := mval.Error()
+	if tdtl.Object != mval.Type() {
+		log.Error("patch merge", logf.Eid(e.ID()), logf.Error(err),
+			logf.Any("patches", feed.Patches), logf.Event(feed.Event))
+		err = xerrors.ErrInternal
+	}
+
+	if nil != err {
+		feed.Err = err
+		feed.Patches = []Patch{}
+		feed.State = e.Raw()
+		return err
+	}
+	cc.Set(patch.Path, mval)
+	return nil
 }
 
 func (e *entity) Raw() []byte {

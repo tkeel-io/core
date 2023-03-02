@@ -34,6 +34,8 @@ count.out
 test
 profile.out
 tmp.out
+*.mem
+*.cpu
 
 
 # OSX leaves these everywhere on SMB shares
