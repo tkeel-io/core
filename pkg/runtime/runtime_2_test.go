@@ -26,17 +26,15 @@ import (
 	"testing"
 	"time"
 
-	jsonpatch "github.com/evanphx/json-patch"
-	xjson "github.com/tkeel-io/core/pkg/util/json"
-	"github.com/tkeel-io/tdtl"
-
-	"github.com/tkeel-io/core/pkg/repository"
-	"github.com/tkeel-io/kit/log"
-
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	v1 "github.com/tkeel-io/core/api/core/v1"
+	"github.com/tkeel-io/core/pkg/repository"
 	_ "github.com/tkeel-io/core/pkg/resource/tseries/builder"
+	xjson "github.com/tkeel-io/core/pkg/util/json"
 	"github.com/tkeel-io/core/pkg/util/path"
+	"github.com/tkeel-io/core/third_party/jsonpatch"
+	"github.com/tkeel-io/kit/log"
+	"github.com/tkeel-io/tdtl"
 )
 
 func TestEntity_HandleEntity_RawData(t *testing.T) {
